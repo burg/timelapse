@@ -35,14 +35,14 @@
 
 #include "InitializeFocus.h"
 
+#include "DecoderContext.h"
 #include "Document.h"
+#include "EncoderContext.h"
 #include "FocusController.h"
 #include "Frame.h"
-#include "DecoderContext.h"
-#include "EncoderContext.h"
+#include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
@@ -53,8 +53,8 @@ void InitializeFocus::dispatch(ReplayController& controller)
     PassRefPtr<Frame> framePtr(document->frame());
 
     // Setting active/focus is idempotent, so set it whether or not it needs to be set.
-    controller.page().userInputProxy().focusSetActive(m_active, true);
-    controller.page().userInputProxy().focusSetFocused(m_focus, true);
+    controller.page().replayProxy().focusSetActive(m_active, true);
+    controller.page().replayProxy().focusSetFocused(m_focus, true);
     controller.page().focusController().setFocusedFrame(framePtr);
 }
 

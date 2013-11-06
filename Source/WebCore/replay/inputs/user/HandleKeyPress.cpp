@@ -43,7 +43,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -118,7 +117,7 @@ size_t HandleKeyPress::memorySize() const
 
 void HandleKeyPress::dispatch(ReplayController& controller)
 {
-    controller.page().userInputProxy().handleKeyPressEvent(platformEvent(), true);
+    controller.page().replayProxy().handleKeyPressEvent(platformEvent(), true);
 }
 
 void InputCoder<PlatformKeyboardEvent>::encode(EncoderContext& encoder, const PlatformKeyboardEvent& input)

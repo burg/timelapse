@@ -35,7 +35,6 @@
 
 #include "ReplayController.h"
 
-#include "AsyncEventProxy.h"
 #include "CacheController.h"
 #include "CaptureInputIterator.h"
 #include "DisableCache.h"
@@ -51,8 +50,6 @@
 #include "Logging.h"
 #include "MainFrame.h"
 #include "NavigateToPage.h"
-#include "NavigationProxy.h"
-#include "NetworkProxy.h"
 #include "Node.h"
 #include "Page.h"
 #include "ReplayInputIterator.h"
@@ -62,7 +59,6 @@
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
 #include "URL.h"
-#include "UserInputProxy.h"
 #include <stdarg.h>
 #include <wtf/text/CString.h>
 
@@ -433,10 +429,7 @@ bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, b
 
 void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 {
-    m_page.userInputProxy().setProxyMode(mode);
-    m_page.asyncEventProxy().setProxyMode(mode);
-    m_page.navigationProxy().setProxyMode(mode);
-    m_page.networkProxy().setProxyMode(mode);
+    m_page.replayProxy().setMode(mode);
 }
 
 bool ReplayController::capturing() const

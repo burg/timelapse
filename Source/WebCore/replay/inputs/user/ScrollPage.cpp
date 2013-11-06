@@ -40,7 +40,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
@@ -109,9 +108,9 @@ String ScrollPage::toString() const
 void ScrollPage::dispatch(ReplayController& controller)
 {
     if (isLogicalScroll())
-        controller.page().userInputProxy().scrollRecursivelyLogical(logicalScrollDirection(), scrollGranularity(), true);
+        controller.page().replayProxy().scrollRecursivelyLogical(logicalScrollDirection(), scrollGranularity(), true);
     else
-        controller.page().userInputProxy().scrollRecursively(scrollDirection(), scrollGranularity(), true);
+        controller.page().replayProxy().scrollRecursively(scrollDirection(), scrollGranularity(), true);
 }
 
 void InputCoder<ScrollPage>::encode(EncoderContext& encoder, const ScrollPage& input)

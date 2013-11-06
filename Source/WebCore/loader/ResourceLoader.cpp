@@ -39,9 +39,9 @@
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
 #include "LoaderStrategy.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
+#include "ReplayProxy.h"
 #include "ResourceBuffer.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
@@ -238,7 +238,7 @@ void ResourceLoader::willSendRequest(ResourceRequest& request, const ResourceRes
     // We need a resource identifier for all requests, even if FrameLoader is never going to see it (such as with CORS preflight requests).
     bool createdResourceIdentifier = false;
     if (!m_identifier) {
-        m_identifier = m_frame->page()->networkProxy().createUniqueIdentifierWithRequest(request);
+        m_identifier = m_frame->page()->replayProxy().createUniqueIdentifierWithRequest(request);
         createdResourceIdentifier = true;
     }
 
@@ -577,7 +577,7 @@ InputIterator* ResourceLoader::activeIterator() const
     InputIterator* pageIt = m_frame->page() ? m_frame->page()->replayController().activeIterator() : nullptr;
     if (!pageIt)
         return nullptr;
-    
+
     bool isFrameNavigating = m_frame->loader().state() == FrameStateProvisional;
     bool isProvisionalResourceLoading = documentLoader() == m_frame->loader().activeDocumentLoader();
     return (isFrameNavigating && isProvisionalResourceLoading) ? pageIt : nullptr;

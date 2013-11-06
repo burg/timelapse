@@ -45,8 +45,8 @@
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
-#include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayProxy.h"
 #include "ResourceRequest.h"
 #include "ScriptCallStack.h"
 #include "ScriptExecutionContext.h"
@@ -90,7 +90,7 @@ WebSocketChannel::WebSocketChannel(Document* document, WebSocketChannelClient* c
 #endif
 {
     if (Page* page = m_document->page())
-        m_identifier = page->networkProxy().createUniqueIdentifier();
+        m_identifier = page->replayProxy().createUniqueIdentifier();
 }
 
 WebSocketChannel::~WebSocketChannel()

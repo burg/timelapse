@@ -40,8 +40,8 @@
 #include "DOMWindow.h"
 #include "EncoderContext.h"
 #include "Frame.h"
+#include "Page.h"
 #include "ReplayController.h"
-#include "UserInputProxy.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
 
@@ -56,7 +56,7 @@ void SendResizeEvent::dispatch(ReplayController& controller)
 {
     Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
     document->domWindow()->resizeTo((float) m_width, (float) m_height);
-    controller.page().userInputProxy().sendResizeEvent(document->frame(), true);
+    controller.page().replayProxy().sendResizeEvent(document->frame(), true);
 }
 
 const AtomicString& SendResizeEvent::type() const

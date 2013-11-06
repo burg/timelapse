@@ -38,7 +38,6 @@
 #include "Frame.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NavigationProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 
@@ -56,7 +55,7 @@ void StopLoadingFrame::dispatch(ReplayController& controller)
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller.page().navigationProxy().stopLoadingFrame(frame, true);
+    controller.page().replayProxy().stopLoadingFrame(frame, true);
 }
 
 const AtomicString& StopLoadingFrame::type() const

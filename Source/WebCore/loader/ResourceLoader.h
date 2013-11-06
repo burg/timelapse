@@ -160,7 +160,6 @@ public:
 protected:
     ResourceLoader(Frame*, ResourceLoaderOptions);
 
-    friend class NetworkProxy; // HACK: access to casting to ResourceHandleClient
     friend class ResourceLoadScheduler; // for access to start()
     // start() actually sends the load to the network (unless the load is being
     // deferred) and should only be called by ResourceLoadScheduler or setDefersLoading().

@@ -44,7 +44,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {

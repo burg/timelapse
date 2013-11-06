@@ -55,7 +55,6 @@ class Debugger;
 namespace WebCore {
 
 class AlternativeTextClient;
-class AsyncEventProxy;
 class BackForwardController;
 class BackForwardClient;
 class Chrome;
@@ -79,8 +78,6 @@ class InspectorClient;
 class InspectorController;
 class MainFrame;
 class MediaCanStartListener;
-class NavigationProxy;
-class NetworkProxy;
 class Node;
 class PageActivityAssertionToken;
 class PageConsole;
@@ -94,12 +91,12 @@ class ProgressTracker;
 class Range;
 class RenderObject;
 class RenderTheme;
+class ReplayProxy;
 class VisibleSelection;
 class ScrollableArea;
 class ScrollingCoordinator;
 class Settings;
 class StorageNamespace;
-class UserInputProxy;
 class ValidationMessageClient;
 
 typedef uint64_t LinkHash;
@@ -202,10 +199,7 @@ public:
 #if ENABLE(CONTEXT_MENUS)
     ContextMenuController& contextMenuController() const { return *m_contextMenuController; }
 #endif
-    NavigationProxy& navigationProxy() const { return *m_navigationProxy; }
-    NetworkProxy& networkProxy() const { return *m_networkProxy; }
-    AsyncEventProxy& asyncEventProxy() const { return *m_asyncEventProxy; }
-    UserInputProxy& userInputProxy() const { return *m_userInputProxy; }
+    ReplayProxy& replayProxy() const { return *m_replayProxy;; }
 #if ENABLE(WEB_REPLAY)
     ReplayController& replayController() const { return *m_replayController; }
 #endif
@@ -460,10 +454,7 @@ private:
 #if ENABLE(CONTEXT_MENUS)
     const std::unique_ptr<ContextMenuController> m_contextMenuController;
 #endif
-    const std::unique_ptr<NavigationProxy> m_navigationProxy;
-    const std::unique_ptr<NetworkProxy> m_networkProxy;
-    const std::unique_ptr<AsyncEventProxy> m_asyncEventProxy;
-    const std::unique_ptr<UserInputProxy> m_userInputProxy;
+    const std::unique_ptr<ReplayProxy> m_replayProxy;
 #if ENABLE(WEB_REPLAY)
     const std::unique_ptr<ReplayController> m_replayController;
 #endif

@@ -44,20 +44,20 @@
 
 namespace WebCore {
 
-int frameIndexFromDocument(Document* document)
+int frameIndexFromDocument(const Document* document)
 {
     ASSERT(document);
     ASSERT(document->frame());
     return frameIndexFromFrame(document->frame());
 }
 
-int frameIndexFromFrame(Frame* targetFrame)
+int frameIndexFromFrame(const Frame* targetFrame)
 {
     ASSERT(targetFrame);
 
     int index = 0;
-    Frame* mainFrame = &targetFrame->tree().top();
-    for (Frame* frame = mainFrame; frame; index++, frame = frame->tree().traverseNext(mainFrame))
+    const Frame* mainFrame = &targetFrame->tree().top();
+    for (const Frame* frame = mainFrame; frame; index++, frame = frame->tree().traverseNext(mainFrame))
         if (frame == targetFrame)
             return index;
 

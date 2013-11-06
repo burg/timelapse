@@ -35,7 +35,7 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NavigationProxy.h"
+#include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 
@@ -45,7 +45,7 @@ void TryClosePage::dispatch(ReplayController& controller)
 {
     ASSERT(sealed());
 
-    controller.page().navigationProxy().tryClosePage(true);
+    controller.page().replayProxy().tryClosePage(true);
 }
 
 const AtomicString& TryClosePage::type() const

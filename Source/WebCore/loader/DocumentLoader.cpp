@@ -52,9 +52,9 @@
 #include "Logging.h"
 #include "MainFrame.h"
 #include "MemoryCache.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "PolicyChecker.h"
+#include "ReplayProxy.h"
 #include "ResourceBuffer.h"
 #include "SchemeRegistry.h"
 #include "SecurityPolicy.h"
@@ -1397,7 +1397,7 @@ void DocumentLoader::startLoadingMainResource()
     m_applicationCacheHost->maybeLoadMainResource(m_request, m_substituteData);
 
     if (m_substituteData.isValid()) {
-        m_identifierForLoadWithoutResourceLoader = m_frame->page()->networkProxy().createUniqueIdentifierWithRequest(m_request);
+        m_identifierForLoadWithoutResourceLoader = m_frame->page()->replayProxy().createUniqueIdentifierWithRequest(m_request);
         frameLoader()->notifier().assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, m_request);
         frameLoader()->notifier().dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, m_request, ResourceResponse());
         handleSubstituteDataLoadSoon();
@@ -1420,7 +1420,7 @@ void DocumentLoader::startLoadingMainResource()
     }
 
     if (!mainResourceLoader()) {
-        m_identifierForLoadWithoutResourceLoader = m_frame->page()->networkProxy().createUniqueIdentifierWithRequest(m_request);
+        m_identifierForLoadWithoutResourceLoader = m_frame->page()->replayProxy().createUniqueIdentifierWithRequest(m_request);
         frameLoader()->notifier().assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, request);
         frameLoader()->notifier().dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, request, ResourceResponse());
     }

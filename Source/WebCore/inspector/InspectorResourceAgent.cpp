@@ -53,9 +53,9 @@
 #include "InstrumentingAgents.h"
 #include "URL.h"
 #include "MemoryCache.h"
-#include "NetworkProxy.h"
 #include "NetworkResourcesData.h"
 #include "Page.h"
+#include "ReplayProxy.h"
 #include "ResourceBuffer.h"
 #include "ResourceError.h"
 #include "ResourceLoader.h"
@@ -336,7 +336,7 @@ void InspectorResourceAgent::didLoadResourceFromMemoryCache(DocumentLoader* load
 {
     String loaderId = m_pageAgent->loaderId(loader);
     String frameId = m_pageAgent->frameId(loader->frame());
-    unsigned long identifier = loader->frame()->page()->networkProxy().createUniqueIdentifier();
+    unsigned long identifier = loader->frame()->page()->replayProxy().createUniqueIdentifier();
     String requestId = IdentifiersFactory::requestId(identifier);
     m_resourcesData->resourceCreated(requestId, loaderId);
     m_resourcesData->addCachedResource(requestId, resource);

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2011, 2012 Brian Burg.
- *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
+ *  Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -65,8 +65,8 @@ private:
     double m_time;
 };
 
-int frameIndexFromDocument(Document*);
-int frameIndexFromFrame(Frame*);
+int frameIndexFromDocument(const Document*);
+int frameIndexFromFrame(const Frame*);
 Document* documentFromFrameIndex(Page* page, int frameIndex);
 Frame* frameFromFrameIndex(Page* page, int frameIndex);
 

@@ -112,7 +112,6 @@
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/MainFrame.h>
 #include <WebCore/MouseEvent.h>
-#include <WebCore/NavigationProxy.h>
 #include <WebCore/Page.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PluginDocument.h>
@@ -121,6 +120,7 @@
 #include <WebCore/RenderLayer.h>
 #include <WebCore/RenderTreeAsText.h>
 #include <WebCore/RenderView.h>
+#include <WebCore/ReplayProxy.h>
 #include <WebCore/ResourceBuffer.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceResponse.h>
@@ -136,7 +136,6 @@
 #include <WebCore/SubframeLoader.h>
 #include <WebCore/SubstituteData.h>
 #include <WebCore/TextIterator.h>
-#include <WebCore/UserInputProxy.h>
 #include <WebCore/VisiblePosition.h>
 #include <WebCore/markup.h>
 #include <runtime/JSCJSValue.h>
@@ -816,7 +815,7 @@ void WebPage::tryClose()
 {
     SendStopResponsivenessTimer stopper(this);
 
-    if (!corePage()->navigationProxy().tryClosePage()) {
+    if (!corePage()->replayProxy().tryClosePage()) {
         send(Messages::WebPageProxy::StopResponsivenessTimer());
         return;
     }
@@ -850,7 +849,7 @@ void WebPage::loadURLRequest(const ResourceRequest& request, const SandboxExtens
     m_loaderClient.willLoadURLRequest(this, request, userData.get());
 
     // Initate the load in WebCore.
-    corePage()->navigationProxy().loadURLRequest(FrameLoadRequest(m_mainFrame->coreFrame(), request));
+    corePage()->replayProxy().loadURLRequest(FrameLoadRequest(m_mainFrame->coreFrame(), request));
 }
 
 void WebPage::loadDataImpl(PassRefPtr<SharedBuffer> sharedBuffer, const String& MIMEType, const String& encodingName, const URL& baseURL, const URL& unreachableURL, CoreIPC::MessageDecoder& decoder)
@@ -870,7 +869,7 @@ void WebPage::loadDataImpl(PassRefPtr<SharedBuffer> sharedBuffer, const String& 
     m_loaderClient.willLoadDataRequest(this, request, substituteData.content(), substituteData.mimeType(), substituteData.textEncoding(), substituteData.failingURL(), userData.get());
 
     // Initate the load in WebCore.
-    corePage()->navigationProxy().loadURLRequest(FrameLoadRequest(m_mainFrame->coreFrame(), request, substituteData));
+    corePage()->replayProxy().loadURLRequest(FrameLoadRequest(m_mainFrame->coreFrame(), request, substituteData));
 }
 
 void WebPage::loadData(const CoreIPC::DataReference& data, const String& MIMEType, const String& encodingName, const String& baseURLString, CoreIPC::MessageDecoder& decoder)
@@ -922,14 +921,14 @@ void WebPage::stopLoadingFrame(uint64_t frameID)
     if (!frame)
         return;
 
-    corePage()->navigationProxy().stopLoadingFrame(frame->coreFrame());
+    corePage()->replayProxy().stopLoadingFrame(frame->coreFrame());
 }
 
 void WebPage::stopLoading()
 {
     SendStopResponsivenessTimer stopper(this);
 
-    corePage()->navigationProxy().stopLoadingFrame(m_mainFrame->coreFrame());
+    corePage()->replayProxy().stopLoadingFrame(m_mainFrame->coreFrame());
 }
 
 void WebPage::setDefersLoading(bool defersLoading)
@@ -942,7 +941,7 @@ void WebPage::reload(bool reloadFromOrigin, const SandboxExtension::Handle& sand
     SendStopResponsivenessTimer stopper(this);
 
     m_sandboxExtensionTracker.beginLoad(m_mainFrame.get(), sandboxExtensionHandle);
-    corePage()->navigationProxy().reloadFrame(m_mainFrame->coreFrame(), reloadFromOrigin);
+    corePage()->replayProxy().reloadFrame(m_mainFrame->coreFrame(), reloadFromOrigin);
 }
 
 void WebPage::goForward(uint64_t backForwardItemID)
@@ -1543,7 +1542,7 @@ static bool handleContextMenuEvent(const PlatformMouseEvent& platformMouseEvent,
     if (result.innerNonSharedNode())
         frame = result.innerNonSharedNode()->document().frame();
 
-    bool handled = page->corePage()->userInputProxy().handleContextMenuEvent(platformMouseEvent, frame);
+    bool handled = page->corePage()->replayProxy().handleContextMenuEvent(platformMouseEvent, frame);
     if (handled)
         page->contextMenu()->show();
 
@@ -1565,7 +1564,7 @@ static bool handleMouseEvent(const WebMouseEvent& mouseEvent, WebPage* page, boo
             if (isContextClick(platformMouseEvent))
                 page->corePage()->contextMenuController().clearContextMenu();
 #endif
-            bool handled = page->corePage()->userInputProxy().handleMousePressEvent(platformMouseEvent);
+            bool handled = page->corePage()->replayProxy().handleMousePressEvent(platformMouseEvent);
 #if ENABLE(CONTEXT_MENUS)
             if (isContextClick(platformMouseEvent))
                 handled = handleContextMenuEvent(platformMouseEvent, page);
@@ -1573,12 +1572,12 @@ static bool handleMouseEvent(const WebMouseEvent& mouseEvent, WebPage* page, boo
             return handled;
         }
         case PlatformEvent::MouseReleased:
-            return page->corePage()->userInputProxy().handleMouseReleaseEvent(platformMouseEvent);
+            return page->corePage()->replayProxy().handleMouseReleaseEvent(platformMouseEvent);
 
         case PlatformEvent::MouseMoved:
             if (onlyUpdateScrollbars)
-                return page->corePage()->userInputProxy().handleMouseMoveOnScrollbarEvent(platformMouseEvent);
-            return page->corePage()->userInputProxy().handleMouseMoveEvent(platformMouseEvent);
+                return page->corePage()->replayProxy().handleMouseMoveOnScrollbarEvent(platformMouseEvent);
+            return page->corePage()->replayProxy().handleMouseMoveEvent(platformMouseEvent);
         default:
             ASSERT_NOT_REACHED();
             return false;
@@ -1658,7 +1657,7 @@ static bool handleWheelEvent(const WebWheelEvent& wheelEvent, Page* page)
         return false;
 
     PlatformWheelEvent platformWheelEvent = platform(wheelEvent);
-    return page->userInputProxy().handleWheelEvent(platformWheelEvent);
+    return page->replayProxy().handleWheelEvent(platformWheelEvent);
 }
 
 void WebPage::wheelEvent(const WebWheelEvent& wheelEvent)
@@ -1687,7 +1686,7 @@ static bool handleKeyEvent(const WebKeyboardEvent& keyboardEvent, Page* page)
 
     if (keyboardEvent.type() == WebEvent::Char && keyboardEvent.isSystemKey())
         return page->focusController().focusedOrMainFrame().eventHandler().handleAccessKey(platform(keyboardEvent));
-    return page->userInputProxy().handleKeyPressEvent(platform(keyboardEvent));
+    return page->replayProxy().handleKeyPressEvent(platform(keyboardEvent));
 }
 
 void WebPage::keyEvent(const WebKeyboardEvent& keyboardEvent)
@@ -1821,12 +1820,12 @@ void WebPage::touchEventSyncForTesting(const WebTouchEvent& touchEvent, bool& ha
 
 bool WebPage::scroll(Page* page, ScrollDirection direction, ScrollGranularity granularity)
 {
-    return page->userInputProxy().scrollRecursively(direction, granularity);
+    return page->replayProxy().scrollRecursively(direction, granularity);
 }
 
 bool WebPage::logicalScroll(Page* page, ScrollLogicalDirection direction, ScrollGranularity granularity)
 {
-    return page->userInputProxy().scrollRecursivelyLogical(direction, granularity);
+    return page->replayProxy().scrollRecursivelyLogical(direction, granularity);
 }
 
 bool WebPage::scrollBy(uint32_t scrollDirection, uint32_t scrollGranularity)
@@ -1843,7 +1842,7 @@ void WebPage::centerSelectionInVisibleArea()
 
 void WebPage::setActive(bool isActive)
 {
-    m_page->userInputProxy().focusSetActive(isActive);
+    m_page->replayProxy().focusSetActive(isActive);
 
 #if PLATFORM(MAC)
     // Tell all our plug-in views that the window focus changed.
@@ -1925,7 +1924,7 @@ void WebPage::viewWillEndLiveResize()
 
 void WebPage::setFocused(bool isFocused)
 {
-    m_page->userInputProxy().focusSetFocused(isFocused);
+    m_page->replayProxy().focusSetFocused(isFocused);
 }
 
 void WebPage::setInitialFocus(bool forward, bool isKeyboardEventValid, const WebKeyboardEvent& event)
@@ -3604,7 +3603,7 @@ void WebPage::setVisibilityState(uint32_t visibilityState, bool isInitialState)
             view->show();
     }
 
-    m_page->userInputProxy().setPageVisibility(state, isInitialState);
+    m_page->replayProxy().setPageVisibility(state, isInitialState);
     m_visibilityState = state;
 
     if (state == WebCore::PageVisibilityStateHidden) {

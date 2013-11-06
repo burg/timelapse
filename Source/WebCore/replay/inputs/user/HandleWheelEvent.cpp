@@ -40,7 +40,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
@@ -136,7 +135,7 @@ String HandleWheelEvent::toString() const
 
 void HandleWheelEvent::dispatch(ReplayController& controller)
 {
-    controller.page().userInputProxy().handleWheelEvent(const_cast<PlatformWheelEvent&>(platformEvent()), true);
+    controller.page().replayProxy().handleWheelEvent(const_cast<PlatformWheelEvent&>(platformEvent()), true);
 }
 
 size_t HandleWheelEvent::memorySize() const

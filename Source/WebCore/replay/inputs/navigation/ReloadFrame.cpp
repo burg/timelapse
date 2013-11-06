@@ -38,7 +38,6 @@
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "Frame.h"
-#include "NavigationProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 
@@ -57,7 +56,7 @@ void ReloadFrame::dispatch(ReplayController& controller)
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller.page().navigationProxy().reloadFrame(frame, m_endToEndReload, true);
+    controller.page().replayProxy().reloadFrame(frame, m_endToEndReload, true);
 }
 
 const AtomicString& ReloadFrame::type() const

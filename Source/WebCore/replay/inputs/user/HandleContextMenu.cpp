@@ -42,14 +42,13 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 
 namespace WebCore {
 
 void HandleContextMenu::dispatch(ReplayController& controller)
 {
     Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
-    controller.page().userInputProxy().handleContextMenuEvent(platformEvent(), document->frame(), true);
+    controller.page().replayProxy().handleContextMenuEvent(platformEvent(), document->frame(), true);
 }
 
 const AtomicString& HandleContextMenu::type() const

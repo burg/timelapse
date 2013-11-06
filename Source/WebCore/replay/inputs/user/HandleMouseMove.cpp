@@ -40,7 +40,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 
 namespace WebCore {
 
@@ -52,9 +51,9 @@ const AtomicString& HandleMouseMove::type() const
 void HandleMouseMove::dispatch(ReplayController& controller)
 {
     if (m_scrollbarTargeted)
-        controller.page().userInputProxy().handleMouseMoveOnScrollbarEvent(platformEvent(), true);
+        controller.page().replayProxy().handleMouseMoveOnScrollbarEvent(platformEvent(), true);
     else
-        controller.page().userInputProxy().handleMouseMoveEvent(platformEvent(), true);
+        controller.page().replayProxy().handleMouseMoveEvent(platformEvent(), true);
 }
 
 void InputCoder<HandleMouseMove>::encode(EncoderContext& encoder, const HandleMouseMove& input)

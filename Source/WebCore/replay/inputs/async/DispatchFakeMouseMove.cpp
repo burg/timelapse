@@ -35,7 +35,6 @@
 
 #include "DispatchFakeMouseMove.h"
 
-#include "AsyncEventProxy.h"
 #include "Document.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -57,7 +56,7 @@ void DispatchFakeMouseMove::dispatch(ReplayController& controller)
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller.page().asyncEventProxy().dispatchFakeMouseMove(*frame, platformEvent(), true);
+    controller.page().replayProxy().dispatchFakeMouseMove(*frame, platformEvent(), true);
 }
 
 const AtomicString& DispatchFakeMouseMove::type() const

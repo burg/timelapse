@@ -36,7 +36,6 @@
 
 #include "EventLoopInputDispatcher.h"
 #include "ReplayProxy.h"
-#include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/Noncopyable.h>
 

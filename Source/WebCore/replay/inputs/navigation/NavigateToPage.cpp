@@ -40,7 +40,6 @@
 #include "EncoderContext.h"
 #include "MainFrame.h"
 #include "NavigationScheduler.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "SecurityOrigin.h"

@@ -36,7 +36,6 @@
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "FrameLoadRequest.h"
-#include "NavigationProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -57,7 +56,7 @@ LoadURLRequest::~LoadURLRequest() {}
 
 void LoadURLRequest::dispatch(ReplayController& controller)
 {
-    controller.page().navigationProxy().loadURLRequest(*m_request);
+    controller.page().replayProxy().loadURLRequest(*m_request);
 }
 
 const AtomicString& LoadURLRequest::type() const

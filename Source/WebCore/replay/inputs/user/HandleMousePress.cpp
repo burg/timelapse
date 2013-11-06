@@ -40,7 +40,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "UserInputProxy.h"
 
 namespace WebCore {
 
@@ -51,7 +50,7 @@ const AtomicString& HandleMousePress::type() const
 
 void HandleMousePress::dispatch(ReplayController& controller)
 {
-    controller.page().userInputProxy().handleMousePressEvent(platformEvent(), true);
+    controller.page().replayProxy().handleMousePressEvent(platformEvent(), true);
 }
 
 void InputCoder<HandleMousePress>::encode(EncoderContext& encoder, const HandleMousePress& input)

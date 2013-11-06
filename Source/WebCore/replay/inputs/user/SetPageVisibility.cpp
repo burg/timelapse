@@ -38,7 +38,6 @@
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "Page.h"
-#include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/replay/InputIterator.h>
 
@@ -94,7 +93,7 @@ String SetPageVisibility::toString() const
 
 void SetPageVisibility::dispatch(ReplayController& controller)
 {
-    controller.page().userInputProxy().setPageVisibility(m_visibilityState, m_isInitialState, true);
+    controller.page().replayProxy().setPageVisibility(m_visibilityState, m_isInitialState, true);
 }
 
 void InputCoder<SetPageVisibility>::encode(EncoderContext& encoder, const SetPageVisibility& input)

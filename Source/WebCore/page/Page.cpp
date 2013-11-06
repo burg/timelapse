@@ -22,7 +22,6 @@
 
 #include "AlternativeTextClient.h"
 #include "AnimationController.h"
-#include "AsyncEventProxy.h"
 #include "BackForwardClient.h"
 #include "BackForwardController.h"
 #include "Chrome.h"
@@ -55,9 +54,7 @@
 #include "Logging.h"
 #include "MainFrame.h"
 #include "MediaCanStartListener.h"
-#include "NavigationProxy.h"
 #include "Navigator.h"
-#include "NetworkProxy.h"
 #include "NetworkStateNotifier.h"
 #include "PageActivityAssertionToken.h"
 #include "PageCache.h"
@@ -74,6 +71,7 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
+#include "ReplayProxy.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SchemeRegistry.h"
 #include "ScriptController.h"
@@ -85,7 +83,6 @@
 #include "StyleResolver.h"
 #include "SubframeLoader.h"
 #include "TextResourceDecoder.h"
-#include "UserInputProxy.h"
 #include "VisitedLinkState.h"
 #include "VoidCallback.h"
 #include "Widget.h"
@@ -141,10 +138,7 @@ Page::Page(PageClients& pageClients)
 #if ENABLE(CONTEXT_MENUS)
     , m_contextMenuController(std::make_unique<ContextMenuController>(*this, *pageClients.contextMenuClient))
 #endif
-    , m_navigationProxy(std::make_unique<NavigationProxy>(*this))
-    , m_networkProxy(std::make_unique<NetworkProxy>(*this))
-    , m_asyncEventProxy(std::make_unique<AsyncEventProxy>(*this))
-    , m_userInputProxy(std::make_unique<UserInputProxy>(*this))
+    , m_replayProxy(std::make_unique<ReplayProxy>(*this))
 #if ENABLE(WEB_REPLAY)
     , m_replayController(std::make_unique<ReplayController>(*this))
 #endif

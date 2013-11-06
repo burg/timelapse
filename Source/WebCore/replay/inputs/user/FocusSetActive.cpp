@@ -40,7 +40,6 @@
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "Page.h"
-#include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -60,7 +59,7 @@ String FocusSetActive::toString() const
 
 void FocusSetActive::dispatch(ReplayController& controller)
 {
-    controller.page().userInputProxy().focusSetActive(m_toState, true);
+    controller.page().replayProxy().focusSetActive(m_toState, true);
 }
 
 void InputCoder<FocusSetActive>::encode(EncoderContext& encoder, const FocusSetActive& input)

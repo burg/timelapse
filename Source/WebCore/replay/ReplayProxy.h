@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +27,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UserInputProxy_h
-#define UserInputProxy_h
+#ifndef ReplayProxy_h
+#define ReplayProxy_h
 
-#include "ReplayProxy.h"
 #include "ScrollTypes.h"
 #include <wtf/Noncopyable.h>
 
@@ -42,36 +39,71 @@
 
 namespace WebCore {
 
+struct FrameLoadRequest;
+
+class Frame;
 class Page;
-class PlatformKeyboardEvent;
 class PlatformMouseEvent;
 class PlatformWheelEvent;
+class PlatformKeyboardEvent;
+class ReplayController;
+class ResourceLoader;
+class ResourceRequest;
 
-class UserInputProxy : public ReplayProxy {
-    WTF_MAKE_NONCOPYABLE(UserInputProxy); WTF_MAKE_FAST_ALLOCATED;
+class ReplayProxy {
+    WTF_MAKE_NONCOPYABLE(ReplayProxy);
+
 public:
-    UserInputProxy(Page&);
-    virtual ~UserInputProxy() {}
+    enum ProxyMode {
+        Capturing,
+        Open,
+        Replaying,
+    };
 
-    bool handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, const Frame* frame, bool fromReplay = false);
-    bool handleMousePressEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);
-    bool handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);
-    bool handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);
-    bool handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);
-    bool handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool fromReplay = false);
-    bool handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, bool fromReplay = false);
-    bool handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent, bool fromReplay = false);
+    ReplayProxy(Page& page);
+    virtual ~ReplayProxy();
+
+    virtual void setMode(ProxyMode mode);
+    ProxyMode mode() const { return m_mode; }
+
+    // Networking APIs.
+    unsigned long createUniqueIdentifier();
+    // This is used to find differing ResourceRequest details during replay.
+    unsigned long createUniqueIdentifierWithRequest(const ResourceRequest&);
+
+    // User input APIs.
+    void dispatchFakeMouseMove(Frame&, const PlatformMouseEvent&, bool fromReplay = false);
+    bool handleContextMenuEvent(const PlatformMouseEvent&, const Frame*, bool fromReplay = false);
+    bool handleMousePressEvent(const PlatformMouseEvent&, bool fromReplay = false);
+    bool handleMouseReleaseEvent(const PlatformMouseEvent&, bool fromReplay = false);
+    bool handleMouseMoveEvent(const PlatformMouseEvent&, bool fromReplay = false);
+    bool handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent&, bool fromReplay = false);
+    bool handleWheelEvent(const PlatformWheelEvent&, bool fromReplay = false);
+    bool handleKeyPressEvent(const PlatformKeyboardEvent&, bool fromReplay = false);
+    bool handleAccessKeyEvent(const PlatformKeyboardEvent&, bool fromReplay = false);
     void focusSetActive(bool active, bool fromReplay = false);
     void focusSetFocused(bool focused, bool fromReplay = false);
     bool scrollRecursively(ScrollDirection, ScrollGranularity, bool fromReplay = false);
     bool scrollRecursivelyLogical(ScrollLogicalDirection, ScrollGranularity, bool fromReplay = false);
-    void sendResizeEvent(const Frame* frame, bool dispatchSynchronously, bool fromReplay = false);
-
+    void sendResizeEvent(const Frame*, bool dispatchSynchronously, bool fromReplay = false);
 #if ENABLE(PAGE_VISIBILITY_API)
     void setPageVisibility(PageVisibilityState, bool isInitialState, bool fromReplay = false);
 #endif
+
+    // Navigation APIs.
+    void loadURLRequest(const FrameLoadRequest&, bool fromReplay = false);
+    void reloadFrame(Frame*, bool endToEndReload, bool fromReplay = false);
+    void stopLoadingFrame(Frame*, bool fromReplay = false);
+    bool tryClosePage(bool fromReplay = false);
+
+private:
+    Page& m_page;
+    ProxyMode m_mode;
+
+    // For numbering resource loaders.
+    unsigned long m_nextUniqueIdentifier;
 };
 
 } // namespace WebCore
 
-#endif // UserInputProxy_h
+#endif // ReplayProxy_h
