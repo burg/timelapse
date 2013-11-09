@@ -1,3 +1,398 @@
+2013-11-08  Mark Lam  <mark.lam@apple.com>
+
+        Move breakpoint (and exception break) functionality into JSC::Debugger.
+        https://bugs.webkit.org/show_bug.cgi?id=121796.
+
+        Reviewed by Geoffrey Garen.
+
+        * WebView/WebScriptDebugger.h:
+        * WebView/WebScriptDebugger.mm:
+        (WebScriptDebugger::WebScriptDebugger):
+        (WebScriptDebugger::handlePause):
+
+2013-11-07  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Remove a PLATFORM(IOS) from WebKit Private Header
+        https://bugs.webkit.org/show_bug.cgi?id=124014
+
+        Reviewed by Timothy Hatcher.
+
+        Make the previously iOS only WebInspectorDidStartSearchingForNode
+        and WebInspectorDidStopSearchingForNode notifications non iOS specific.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorClient::didSetSearchingForNode):
+        * WebInspector/WebInspector.h:
+        * WebInspector/WebInspector.mm:
+        * WebKit.exp:
+
+2013-11-07  Mark Lam  <mark.lam@apple.com>
+
+        Cosmetic: rename xxxId to xxxID for ScriptId, SourceId, and BreakpointId.
+        https://bugs.webkit.org/show_bug.cgi?id=123945.
+
+        Reviewed by Geoffrey Garen.
+
+        * WebView/WebScriptDebugger.mm:
+        (WebScriptDebugger::exception):
+
+2013-11-06  Daniel Bates  <dabates@apple.com>
+
+        [iOS] Upstream Letterpress effect
+        https://bugs.webkit.org/show_bug.cgi?id=123932
+
+        Reviewed by Sam Weinig.
+
+        Add feature define ENABLE_LETTERPRESS disabled by default. We only enable
+        letterpress on iOS.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-11-04  Alexey Proskuryakov  <ap@apple.com>
+
+        DumpRenderTree should reset its preferences file on launch
+        https://bugs.webkit.org/show_bug.cgi?id=29751
+
+        Reviewed by Dan Bernstein.
+
+        * WebView/WebView.mm:
+        (-[WebView _retrieveKeyboardUIModeFromPreferences:]):
+        Further fix reading of AppleKeyboardUIMode - reading it from kCFPreferencesAnyApplication
+        domain meant that current application's domain was explcitly ignored, and the only
+        way to override the setting in DRT was through argument domain.
+
+2013-11-01  Jer Noble  <jer.noble@apple.com>
+
+        [PluginProxy] Add a setting to disable video plugin proxy support in HTMLMediaElement.
+        https://bugs.webkit.org/show_bug.cgi?id=123621
+
+        Reviewed by Eric Carlson.
+
+        Add a new isVideoPluginProxyEnabled setting.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]): Set isVideoPluginProxyEnabled preference.
+        (-[WebPreferences isVideoPluginProxyEnabled]): Pass through to Settings.
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]): Set isVideoPluginProxyEnabled preference.
+
+2013-11-01  Andy Estes  <aestes@apple.com>
+
+        [iOS] Make some headers Private
+        https://bugs.webkit.org/show_bug.cgi?id=123626
+
+        Reviewed by Andreas Kling.
+
+        * Configurations/WebKit.xcconfig: Exclude iOS Private headers from the Mac build.
+
+2013-10-31  Alexey Proskuryakov  <ap@apple.com>
+
+        Enable WebCrypto on Mac
+        https://bugs.webkit.org/show_bug.cgi?id=123587
+
+        Reviewed by Anders Carlsson.
+
+        * Configurations/FeatureDefines.xcconfig: Do it.
+
+2013-10-30  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Remove code for Mac Lion
+        https://bugs.webkit.org/show_bug.cgi?id=123542
+
+        Reviewed by Anders Carlsson.
+
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView attachRootLayer:]):
+        * WebView/WebView.mm:
+
+2013-10-29  Andy Estes  <aestes@apple.com>
+
+        [iOS] Upstream Source/WebKit/ios/
+        https://bugs.webkit.org/show_bug.cgi?id=123470
+
+        Reviewed by Sam Weinig.
+
+        * Configurations/WebKit.xcconfig: Excluded some iOS files from the Mac build.
+
+2013-10-29  Alexey Proskuryakov  <ap@apple.com>
+
+        Result of focus-option-control-on-page.html depends on system preferences
+        https://bugs.webkit.org/show_bug.cgi?id=123304
+
+        Reviewed by Simon Fraser.
+
+        * WebView/WebView.mm: (-[WebView _retrieveKeyboardUIModeFromPreferences:]):
+        Read the preference from its correct domain. This doesn't affect behavior in practice
+        and isn't part of the fix, but it's a good opportunity to correct this code.
+
+2013-10-29  Jer Noble  <jer.noble@apple.com>
+
+        [MSE] [Mac] Enable MediaSource on the Mac
+        https://bugs.webkit.org/show_bug.cgi?id=122484
+
+        Reviewed by Darin Adler.
+
+        Enable ENABLE_MEDIA_SOURCE.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-10-28  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Upstream remaining PLATFORM(IOS) and ENABLE(REMOTE_INSPECTOR) pieces
+        https://bugs.webkit.org/show_bug.cgi?id=123411
+
+        Reviewed by Timothy Hatcher.
+
+        Upstream iOS node highlighting and view indication.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        * WebInspector/WebInspector.h:
+        * WebInspector/WebInspector.mm:
+        * WebInspector/WebNodeHighlight.h:
+        * WebInspector/WebNodeHighlight.mm:
+        (-[WebHighlightLayer initWithHighlightView:webView:]):
+        (-[WebHighlightLayer layoutSublayers]):
+        (-[WebHighlightLayer actionForKey:]):
+        (-[WebNodeHighlight initWithTargetView:inspectorController:]):
+        (-[WebNodeHighlight dealloc]):
+        (-[WebNodeHighlight attach]):
+        * WebInspector/WebNodeHighlightView.h:
+        * WebInspector/WebNodeHighlightView.mm:
+        (-[WebNodeHighlightView initWithWebNodeHighlight:]):
+        (-[WebNodeHighlightView dealloc]):
+        (-[WebNodeHighlightView _attach:numLayers:]):
+        (findIntersectionOnLineBetweenPoints):
+        (quadIntersection):
+        (layerPathWithHole):
+        (layerPath):
+        (-[WebNodeHighlightView _layoutForNodeHighlight:parent:]):
+        (-[WebNodeHighlightView _layoutForRectsHighlight:parent:]):
+        (-[WebNodeHighlightView layoutSublayers:]):
+        * WebInspector/WebNodeHighlighter.mm:
+        (-[WebNodeHighlighter highlight]):
+        * WebView/WebIndicateLayer.h: Added.
+        * WebView/WebIndicateLayer.mm: Added.
+        (-[WebIndicateLayer layoutSublayers]):
+        (-[WebIndicateLayer actionForKey:]):
+        * WebView/WebView.mm:
+        (-[WebView setIndicatingForRemoteInspector:]):
+        (-[WebView setHostApplicationBundleId:name:]):
+        (-[WebView hostApplicationBundleId]):
+        (-[WebView hostApplicationName]):
+        * WebView/WebViewData.h:
+        * WebView/WebViewData.mm:
+        (-[WebViewPrivate dealloc]):
+
+2013-10-28  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        Parsing support for -webkit-text-decoration-skip: ink
+        https://bugs.webkit.org/show_bug.cgi?id=123358
+
+        Reviewed by Dean Jackson.
+
+        Adding ENABLE(CSS3_TEXT_DECORATION)
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-10-25  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Upstream ENABLE(REMOTE_INSPECTOR) and enable on iOS and Mac
+        https://bugs.webkit.org/show_bug.cgi?id=123111
+
+        Reviewed by Timothy Hatcher.
+
+        The actual implementation at the WebCoreSupport/WebInspectorClient level
+        is the same as INSPECTOR_SERVER. Give debuggable pages a pageIdentifer.
+
+        * Configurations/FeatureDefines.xcconfig:
+        * Misc/WebKitLogging.h:
+        Misc.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        (WebInspectorClient::pageId):
+        (WebInspectorClient::setPageId):
+        Give WebInspectorClient's a page identifier.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorClient::WebInspectorClient):
+        (WebInspectorClient::inspectorDestroyed):
+        (WebInspectorClient::sendMessageToFrontend):
+        (WebInspectorClient::sendMessageToBackend):
+        (WebInspectorClient::setupRemoteConnection):
+        (WebInspectorClient::teardownRemoteConnection):
+        (WebInspectorClient::hasLocalSession):
+        (WebInspectorClient::canBeRemotelyInspected):
+        (WebInspectorClient::inspectedWebView):
+        A WebInspectorClient can be either local or remote. Add handling
+        for remote connections.
+
+        * WebInspector/remote/WebInspectorClientRegistry.h: Added.
+        * WebInspector/remote/WebInspectorClientRegistry.mm: Added.
+        (+[WebInspectorClientRegistry sharedRegistry]):
+        (-[WebInspectorClientRegistry init]):
+        (-[WebInspectorClientRegistry _getNextAvailablePageId]):
+        (-[WebInspectorClientRegistry registerClient:]):
+        (-[WebInspectorClientRegistry unregisterClient:]):
+        (-[WebInspectorClientRegistry clientForPageId:]):
+        (-[WebInspectorClientRegistry inspectableWebViews]):
+        Registry for all potentially debuggable pages. All WebInspectorClient instances.
+
+        * WebInspector/remote/WebInspectorRelayDefinitions.h: Added.
+        Constants (message keys) shared between WebKit and the XPC process.
+
+        * WebInspector/remote/WebInspectorServer.h: Added.
+        * WebInspector/remote/WebInspectorServer.mm: Added.
+        (-[WebInspectorServer init]):
+        (-[WebInspectorServer dealloc]):
+        (-[WebInspectorServer start]):
+        (-[WebInspectorServer stop]):
+        (-[WebInspectorServer isEnabled]):
+        (-[WebInspectorServer xpcConnection]):
+        (-[WebInspectorServer setupXPCConnectionIfNeeded]):
+        (-[WebInspectorServer pushListing]):
+        (-[WebInspectorServer hasActiveDebugSession]):
+        (-[WebInspectorServer setHasActiveDebugSession:]):
+        (-[WebInspectorServer xpcConnection:receivedMessage:userInfo:]):
+        (-[WebInspectorServer xpcConnectionFailed:]):
+        (-[WebInspectorServer didRegisterClient:]):
+        (-[WebInspectorServer didUnregisterClient:]):
+        Singleton to start/stop remote inspection. Handles the connection to the XPC
+        and hands off connections to the connection controller.
+
+        * WebInspector/remote/WebInspectorServerWebViewConnection.h: Added.
+        * WebInspector/remote/WebInspectorServerWebViewConnection.mm: Added.
+        (-[WebInspectorServerWebViewConnection initWithController:connectionIdentifier:destination:identifier:]):
+        (-[WebInspectorServerWebViewConnection setupChannel]):
+        (-[WebInspectorServerWebViewConnection dealloc]):
+        (-[WebInspectorServerWebViewConnection connectionIdentifier]):
+        (-[WebInspectorServerWebViewConnection identifier]):
+        (-[WebInspectorServerWebViewConnection clearChannel]):
+        (-[WebInspectorServerWebViewConnection sendMessageToFrontend:]):
+        (-[WebInspectorServerWebViewConnection sendMessageToBackend:]):
+        (-[WebInspectorServerWebViewConnection receivedData:]):
+        (-[WebInspectorServerWebViewConnection receivedDidClose:]):
+        An individual remote debug session connection.
+
+        * WebInspector/remote/WebInspectorServerWebViewConnectionController.h: Added.
+        * WebInspector/remote/WebInspectorServerWebViewConnectionController.mm: Added.
+        (-[WebInspectorServerWebViewConnectionController initWithServer:]):
+        (-[WebInspectorServerWebViewConnectionController dealloc]):
+        (-[WebInspectorServerWebViewConnectionController closeAllConnections]):
+        (-[WebInspectorServerWebViewConnectionController _listingForWebView:pageId:registry:]):
+        (-[WebInspectorServerWebViewConnectionController _pushListing:]):
+        (-[WebInspectorServerWebViewConnectionController pushListing:]):
+        (-[WebInspectorServerWebViewConnectionController pushListing]):
+        (-[WebInspectorServerWebViewConnectionController _receivedSetup:]):
+        (-[WebInspectorServerWebViewConnectionController _receivedData:]):
+        (-[WebInspectorServerWebViewConnectionController _receivedDidClose:]):
+        (-[WebInspectorServerWebViewConnectionController _receivedGetListing:]):
+        (-[WebInspectorServerWebViewConnectionController _receivedIndicate:]):
+        (-[WebInspectorServerWebViewConnectionController _receivedConnectionDied:]):
+        (-[WebInspectorServerWebViewConnectionController receivedMessage:userInfo:]):
+        (-[WebInspectorServerWebViewConnectionController connectionClosing:]):
+        (-[WebInspectorServerWebViewConnectionController sendMessageToFrontend:userInfo:]):
+        ConnectionController:
+          - Holds all the current ongoing remote debug connections.
+          - Simplifies multi-threaded work on iOS.
+          - Dispatches incoming messages from the remote connection.
+
+        * WebInspector/remote/WebInspectorRemoteChannel.h: Added.
+        * WebInspector/remote/WebInspectorRemoteChannel.mm: Added.
+        (+[WebInspectorRemoteChannel createChannelForPageId:connection:]):
+        (-[WebInspectorRemoteChannel initWithRemote:local:]):
+        (-[WebInspectorRemoteChannel closeFromLocalSide]):
+        (-[WebInspectorRemoteChannel closeFromRemoteSide]):
+        (-[WebInspectorRemoteChannel sendMessageToFrontend:]):
+        (-[WebInspectorRemoteChannel sendMessageToBackend:]):
+        Thin interface between the remote connection and web inspector client.
+        This simplifies breaking the connection from either side, e.g. the
+        page closing, or the remote connection disconnecting.
+
+        * WebInspector/remote/WebInspectorXPCWrapper.h: Added.
+        * WebInspector/remote/WebInspectorXPCWrapper.m: Added.
+        (-[WebInspectorXPCWrapper initWithConnection:]):
+        (-[WebInspectorXPCWrapper close]):
+        (-[WebInspectorXPCWrapper dealloc]):
+        (-[WebInspectorXPCWrapper _deserializeMessage:]):
+        (-[WebInspectorXPCWrapper _handleEvent:]):
+        (-[WebInspectorXPCWrapper sendMessage:userInfo:]):
+        (-[WebInspectorXPCWrapper available]):
+        * WebKit.exp:
+        XPC Connection wrapper handling a simple message format.
+
+        * WebView/WebViewData.h:
+        * WebView/WebViewData.mm:
+        (-[WebViewPrivate init]):
+        (-[WebViewPrivate dealloc]):
+        * WebView/WebViewInternal.h:
+        * WebView/WebViewPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        (+[WebView sharedWebInspectorServer]):
+        (+[WebView _enableRemoteInspector]):
+        (+[WebView _disableRemoteInspector]):
+        (+[WebView _disableAutoStartRemoteInspector]):
+        (+[WebView _isRemoteInspectorEnabled]):
+        (+[WebView _hasRemoteInspectorSession]):
+        (-[WebView canBeRemotelyInspected]):
+        (-[WebView allowsRemoteInspection]):
+        (-[WebView setAllowsRemoteInspection:]):
+        (-[WebView setIndicatingForRemoteInspector:]):
+        (-[WebView setRemoteInspectorUserInfo:]):
+        (-[WebView remoteInspectorUserInfo]):
+        Remote inspector private API.
+          - Enable / disable globally
+          - Allow / disallow per webview
+          - Optionally attach a userInfo dictionary on the WebView that is published with listing.
+          - Indicate a WebView (implementation to land later)
+
+        (-[WebView _didCommitLoadForFrame:]):
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::dispatchDidReceiveTitle):
+        Pages changed, pushed page listing.
+
+2013-10-25  Mark Rowe  <mrowe@apple.com>
+
+        Fix or disable some deprecation warnings.
+
+        Reviewed by Darin Adler.
+
+        * Panels/WebAuthenticationPanel.m:
+        (-[WebAuthenticationPanel cancel:]): On newer OS versions, use the modern API.
+        (-[WebAuthenticationPanel logIn:]): Ditto.
+        (-[WebAuthenticationPanel runAsSheetOnWindow:withChallenge:]): Ditto. Translate the
+        response code in to the form that -sheetDidEnd:responseCode:contextInfo: expects.
+        * WebView/WebClipView.mm:
+        (-[WebClipView initWithFrame:]): Disable deprecation warnings since it's not obvious
+        how to avoid calling -releaseGState here.
+
+2013-10-24  Mark Rowe  <mrowe@apple.com>
+
+        Remove references to OS X 10.7 from Xcode configuration settings.
+
+        Now that we're not building for OS X 10.7 they're no longer needed.
+
+        Reviewed by Anders Carlsson.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/FeatureDefines.xcconfig:
+        * Configurations/Version.xcconfig:
+
+2013-10-24  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/15312643> Prepare for the mysterious future.
+
+        Reviewed by David Kilzer.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/FeatureDefines.xcconfig:
+        * Configurations/Version.xcconfig:
+
 2013-10-24  Anders Carlsson  <andersca@apple.com>
 
         Stop bringing in the std namespace

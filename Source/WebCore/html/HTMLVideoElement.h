@@ -75,13 +75,11 @@ private:
     HTMLVideoElement(const QualifiedName&, Document&, bool);
 
     virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE;
-#if !ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
-#endif
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual void didAttachRenderers() OVERRIDE;
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet&) OVERRIDE;
     virtual bool isVideo() const OVERRIDE { return true; }
     virtual bool hasVideo() const OVERRIDE { return player() && player()->hasVideo(); }
     virtual bool supportsFullscreen() const OVERRIDE;

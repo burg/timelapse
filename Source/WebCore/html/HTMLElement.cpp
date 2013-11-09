@@ -138,13 +138,13 @@ unsigned HTMLElement::parseBorderWidthAttribute(const AtomicString& value) const
     return borderWidth;
 }
 
-void HTMLElement::applyBorderAttributeToStyle(const AtomicString& value, MutableStylePropertySet* style)
+void HTMLElement::applyBorderAttributeToStyle(const AtomicString& value, MutableStylePropertySet& style)
 {
     addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(value), CSSPrimitiveValue::CSS_PX);
     addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 }
 
-void HTMLElement::mapLanguageAttributeToLocale(const AtomicString& value, MutableStylePropertySet* style)
+void HTMLElement::mapLanguageAttributeToLocale(const AtomicString& value, MutableStylePropertySet& style)
 {
     if (!value.isEmpty()) {
         // Have to quote so the locale id is treated as a string instead of as a CSS keyword.
@@ -162,7 +162,7 @@ bool HTMLElement::isPresentationAttribute(const QualifiedName& name) const
     return StyledElement::isPresentationAttribute(name);
 }
 
-void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet& style)
 {
     if (name == alignAttr) {
         if (equalIgnoringCase(value, "middle"))
@@ -461,7 +461,7 @@ void HTMLElement::setInnerText(const String& text, ExceptionCode& ec)
     // FIXME: Can the renderer be out of date here? Do we need to call updateStyleIfNeeded?
     // For example, for the contents of textarea elements that are display:none?
     auto r = renderer();
-    if (r && r->style()->preserveNewline()) {
+    if (r && r->style().preserveNewline()) {
         if (!text.contains('\r')) {
             replaceChildrenWithText(*this, text, ec);
             return;
@@ -602,7 +602,7 @@ void HTMLElement::insertAdjacentText(const String& where, const String& text, Ex
     insertAdjacent(where, textNode.get(), ec);
 }
 
-void HTMLElement::applyAlignmentAttributeToStyle(const AtomicString& alignment, MutableStylePropertySet* style)
+void HTMLElement::applyAlignmentAttributeToStyle(const AtomicString& alignment, MutableStylePropertySet& style)
 {
     // Vertical alignment with respect to the current baseline of the text
     // right or left means floating images.
@@ -781,11 +781,11 @@ bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
     return StyledElement::rendererIsNeeded(style);
 }
 
-RenderElement* HTMLElement::createRenderer(RenderStyle& style)
+RenderElement* HTMLElement::createRenderer(PassRef<RenderStyle> style)
 {
     if (hasLocalName(wbrTag))
-        return new RenderLineBreak(*this);
-    return RenderElement::createFor(*this, style);
+        return new RenderLineBreak(*this, std::move(style));
+    return RenderElement::createFor(*this, std::move(style));
 }
 
 HTMLFormElement* HTMLElement::virtualForm() const
@@ -906,7 +906,7 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildAttributeChanged(Element
     Node* strongDirectionalityTextNode;
     TextDirection textDirection = directionality(&strongDirectionalityTextNode);
     setHasDirAutoFlagRecursively(child, false);
-    if (!renderer() || !renderer()->style() || renderer()->style()->direction() == textDirection)
+    if (!renderer() || renderer()->style().direction() == textDirection)
         return;
     auto lineage = elementLineage(this);
     for (auto elementToAdjust = lineage.begin(), end = lineage.end(); elementToAdjust != end; ++elementToAdjust) {
@@ -922,7 +922,7 @@ void HTMLElement::calculateAndAdjustDirectionality()
     Node* strongDirectionalityTextNode;
     TextDirection textDirection = directionality(&strongDirectionalityTextNode);
     setHasDirAutoFlagRecursively(this, true, strongDirectionalityTextNode);
-    if (renderer() && renderer()->style() && renderer()->style()->direction() != textDirection)
+    if (renderer() && renderer()->style().direction() != textDirection)
         setNeedsStyleRecalc();
 }
 
@@ -965,7 +965,7 @@ bool HTMLElement::isURLAttribute(const Attribute& attribute) const
     return StyledElement::isURLAttribute(attribute);
 }
 
-void HTMLElement::addHTMLLengthToStyle(MutableStylePropertySet* style, CSSPropertyID propertyID, const String& value)
+void HTMLElement::addHTMLLengthToStyle(MutableStylePropertySet& style, CSSPropertyID propertyID, const String& value)
 {
     // FIXME: This function should not spin up the CSS parser, but should instead just figure out the correct
     // length unit and make the appropriate parsed value.
@@ -1054,7 +1054,7 @@ static RGBA32 parseColorStringWithCrazyLegacyRules(const String& colorString)
 }
 
 // Color parsing that matches HTML's "rules for parsing a legacy color value"
-void HTMLElement::addHTMLColorToStyle(MutableStylePropertySet* style, CSSPropertyID propertyID, const String& attributeValue)
+void HTMLElement::addHTMLColorToStyle(MutableStylePropertySet& style, CSSPropertyID propertyID, const String& attributeValue)
 {
     // An empty string doesn't apply a color. (One containing only whitespace does, which is why this check occurs before stripping.)
     if (attributeValue.isEmpty())
@@ -1071,7 +1071,7 @@ void HTMLElement::addHTMLColorToStyle(MutableStylePropertySet* style, CSSPropert
     if (!parsedColor.isValid())
         parsedColor.setRGB(parseColorStringWithCrazyLegacyRules(colorString));
 
-    style->setProperty(propertyID, cssValuePool().createColorValue(parsedColor.rgb()));
+    style.setProperty(propertyID, cssValuePool().createColorValue(parsedColor.rgb()));
 }
 
 } // namespace WebCore

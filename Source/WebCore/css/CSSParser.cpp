@@ -519,7 +519,7 @@ static inline bool isColorPropertyID(CSSPropertyID propertyId)
     case CSSPropertyWebkitBorderEndColor:
     case CSSPropertyWebkitBorderStartColor:
     case CSSPropertyWebkitColumnRuleColor:
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     case CSSPropertyWebkitTextDecorationColor:
 #endif
     case CSSPropertyWebkitTextEmphasisColor:
@@ -1442,9 +1442,9 @@ void CSSParser::parseSelector(const String& string, CSSSelectorList& selectorLis
 
 PassRef<ImmutableStylePropertySet> CSSParser::parseInlineStyleDeclaration(const String& string, Element* element)
 {
-    CSSParserContext context = element->document().elementSheet().contents()->parserContext();
+    CSSParserContext context = element->document().elementSheet().contents().parserContext();
     context.mode = strictToCSSParserMode(element->isHTMLElement() && !element->document().inQuirksMode());
-    return CSSParser(context).parseDeclaration(string, element->document().elementSheet().contents());
+    return CSSParser(context).parseDeclaration(string, &element->document().elementSheet().contents());
 }
 
 PassRef<ImmutableStylePropertySet> CSSParser::parseDeclaration(const String& string, StyleSheetContents* contextStyleSheet)
@@ -2036,9 +2036,9 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
     case CSSPropertyTextUnderlineColor:
     case CSSPropertyTextOverlineColor:
     case CSSPropertyWebkitColumnRuleColor:
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     case CSSPropertyWebkitTextDecorationColor:
-#endif // CSS3_TEXT
+#endif
     case CSSPropertyWebkitTextEmphasisColor:
     case CSSPropertyWebkitTextFillColor:
     case CSSPropertyWebkitTextStrokeColor:
@@ -2350,7 +2350,7 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
         break;
     }
 
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     case CSSPropertyWebkitTextDecoration:
         // [ <text-decoration-line> || <text-decoration-style> || <text-decoration-color> ] | inherit
         return parseShorthand(CSSPropertyWebkitTextDecoration, webkitTextDecorationShorthand(), important);
@@ -2358,23 +2358,27 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
 
     case CSSPropertyTextDecoration:
     case CSSPropertyWebkitTextDecorationsInEffect:
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     case CSSPropertyWebkitTextDecorationLine:
-#endif // CSS3_TEXT
+#endif
         // none | [ underline || overline || line-through || blink ] | inherit
         return parseTextDecoration(propId, important);
 
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     case CSSPropertyWebkitTextDecorationStyle:
         // solid | double | dotted | dashed | wavy
         if (id == CSSValueSolid || id == CSSValueDouble || id == CSSValueDotted || id == CSSValueDashed || id == CSSValueWavy)
             validPrimitive = true;
         break;
 
+    case CSSPropertyWebkitTextDecorationSkip:
+        // none | [ objects || spaces || ink || edges || box-decoration ]
+        return parseTextDecorationSkip(important);
+
     case CSSPropertyWebkitTextUnderlinePosition:
         // auto | alphabetic | under
         return parseTextUnderlinePosition(important);
-#endif // CSS3_TEXT
+#endif
 
     case CSSPropertyZoom:          // normal | reset | document | <number> | <percentage> | inherit
         if (id == CSSValueNormal || id == CSSValueReset || id == CSSValueDocument)
@@ -2709,7 +2713,6 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
         parsedValue = parseGridPosition();
         break;
 
-    case CSSPropertyWebkitGridArea:
     case CSSPropertyWebkitGridColumn:
     case CSSPropertyWebkitGridRow: {
         if (!cssGridLayoutEnabled())
@@ -2717,6 +2720,11 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
 
         return parseGridItemPositionShorthand(propId, important);
     }
+
+    case CSSPropertyWebkitGridArea:
+        if (!cssGridLayoutEnabled())
+            return false;
+        return parseGridAreaShorthand(important);
 
     case CSSPropertyWebkitGridTemplate:
         if (!cssGridLayoutEnabled())
@@ -4867,6 +4875,11 @@ PassRefPtr<CSSValue> CSSParser::parseGridPosition()
         return cssValuePool().createIdentifierValue(CSSValueAuto);
     }
 
+    if (value->id != CSSValueSpan && value->unit == CSSPrimitiveValue::CSS_IDENT) {
+        m_valueList->next();
+        return cssValuePool().createValue(value->string, CSSPrimitiveValue::CSS_STRING);
+    }
+
     RefPtr<CSSPrimitiveValue> numericValue;
     RefPtr<CSSPrimitiveValue> gridLineName;
     bool hasSeenSpanKeyword = false;
@@ -4907,33 +4920,94 @@ PassRefPtr<CSSValue> CSSParser::parseGridPosition()
     return values.release();
 }
 
+static PassRefPtr<CSSValue> gridMissingGridPositionValue(CSSValue* value)
+{
+    if (value->isPrimitiveValue() && toCSSPrimitiveValue(value)->isString())
+        return value;
+
+    return cssValuePool().createIdentifierValue(CSSValueAuto);
+}
+
 bool CSSParser::parseGridItemPositionShorthand(CSSPropertyID shorthandId, bool important)
 {
     ShorthandScope scope(this, shorthandId);
     const StylePropertyShorthand& shorthand = shorthandForProperty(shorthandId);
-    if (!parseValue(shorthand.properties()[0], important))
+    ASSERT(shorthand.length() == 2);
+
+    RefPtr<CSSValue> startValue = parseGridPosition();
+    if (!startValue)
         return false;
 
-    size_t index = 1;
-    for (; index < shorthand.length(); ++index) {
-        if (!m_valueList->current())
-            break;
-
+    RefPtr<CSSValue> endValue;
+    if (m_valueList->current()) {
         if (!isForwardSlashOperator(m_valueList->current()))
             return false;
 
         if (!m_valueList->next())
             return false;
 
-        if (!parseValue(shorthand.properties()[index], important))
+        endValue = parseGridPosition();
+        if (!endValue || m_valueList->current())
             return false;
-    }
+    } else
+        endValue = gridMissingGridPositionValue(startValue.get());
 
-    // Only some values out of the {2|4} positions were specified, the other values should be set to 'auto'.
-    // FIXME: If the first property was <ident>, the opposite value should be the same <ident>.
-    for (; index < shorthand.length(); ++index)
-        addProperty(shorthand.properties()[index], cssValuePool().createIdentifierValue(CSSValueAuto), important);
+    addProperty(shorthand.properties()[0], startValue, important);
+    addProperty(shorthand.properties()[1], endValue, important);
+    return true;
+}
 
+bool CSSParser::parseGridAreaShorthand(bool important)
+{
+    ASSERT(cssGridLayoutEnabled());
+
+    ShorthandScope scope(this, CSSPropertyWebkitGridArea);
+    ASSERT(shorthandForProperty(CSSPropertyWebkitGridArea).length() == 4);
+
+    RefPtr<CSSValue> rowStartValue = parseGridPosition();
+    if (!rowStartValue)
+        return false;
+
+    RefPtr<CSSValue> columnStartValue;
+    if (!parseSingleGridAreaLonghand(columnStartValue))
+        return false;
+
+    RefPtr<CSSValue> rowEndValue;
+    if (!parseSingleGridAreaLonghand(rowEndValue))
+        return false;
+
+    RefPtr<CSSValue> columnEndValue;
+    if (!parseSingleGridAreaLonghand(columnEndValue))
+        return false;
+
+    if (!columnStartValue)
+        columnStartValue = gridMissingGridPositionValue(rowStartValue.get());
+
+    if (!rowEndValue)
+        rowEndValue = gridMissingGridPositionValue(rowStartValue.get());
+
+    if (!columnEndValue)
+        columnEndValue = gridMissingGridPositionValue(columnStartValue.get());
+
+    addProperty(CSSPropertyWebkitGridRowStart, rowStartValue, important);
+    addProperty(CSSPropertyWebkitGridColumnStart, columnStartValue, important);
+    addProperty(CSSPropertyWebkitGridRowEnd, rowEndValue, important);
+    addProperty(CSSPropertyWebkitGridColumnEnd, columnEndValue, important);
+    return true;
+}
+
+bool CSSParser::parseSingleGridAreaLonghand(RefPtr<CSSValue>& property)
+{
+    if (!m_valueList->current())
+        return true;
+
+    if (!isForwardSlashOperator(m_valueList->current()))
+        return false;
+
+    if (!m_valueList->next())
+        return false;
+
+    property = parseGridPosition();
     return true;
 }
 
@@ -4949,23 +5023,32 @@ bool CSSParser::parseGridTrackList(CSSPropertyID propId, bool important)
     }
 
     RefPtr<CSSValueList> values = CSSValueList::createSpaceSeparated();
+    // Handle leading track names
+    while (m_valueList->current() && m_valueList->current()->unit == CSSPrimitiveValue::CSS_STRING) {
+        RefPtr<CSSPrimitiveValue> name = createPrimitiveStringValue(m_valueList->current());
+        values->append(name.release());
+        m_valueList->next();
+    }
+
+    bool seenTrackSize = false;
     while (m_valueList->current()) {
-        while (m_valueList->current() && m_valueList->current()->unit == CSSPrimitiveValue::CSS_STRING) {
-            RefPtr<CSSPrimitiveValue> name = createPrimitiveStringValue(m_valueList->current());
-            values->append(name);
-            m_valueList->next();
-        }
-
-        // This allows trailing <string>* per the specification.
-        if (!m_valueList->current())
-            break;
-
         RefPtr<CSSPrimitiveValue> primitiveValue = parseGridTrackSize();
         if (!primitiveValue)
             return false;
 
+        seenTrackSize = true;
         values->append(primitiveValue.release());
+
+        while (m_valueList->current() && m_valueList->current()->unit == CSSPrimitiveValue::CSS_STRING) {
+            RefPtr<CSSPrimitiveValue> name = createPrimitiveStringValue(m_valueList->current());
+            values->append(name.release());
+            m_valueList->next();
+        }
     }
+
+    if (!seenTrackSize)
+        return false;
+
     addProperty(propId, values.release(), important);
     return true;
 }
@@ -5922,12 +6005,12 @@ bool CSSParser::parseFontFaceSrcURI(CSSValueList* valueList)
 
     CSSParserValue* value = m_valueList->next();
     if (!value) {
-        valueList->append(uriValue.release());
+        valueList->append(uriValue.releaseNonNull());
         return true;
     }
     if (value->unit == CSSParserValue::Operator && value->iValue == ',') {
         m_valueList->next();
-        valueList->append(uriValue.release());
+        valueList->append(uriValue.releaseNonNull());
         return true;
     }
 
@@ -5940,7 +6023,7 @@ bool CSSParser::parseFontFaceSrcURI(CSSValueList* valueList)
     if (!args || args->size() != 1 || (args->current()->unit != CSSPrimitiveValue::CSS_STRING && args->current()->unit != CSSPrimitiveValue::CSS_IDENT))
         return false;
     uriValue->setFormat(args->current()->string);
-    valueList->append(uriValue.release());
+    valueList->append(uriValue.releaseNonNull());
     value = m_valueList->next();
     if (value && value->unit == CSSParserValue::Operator && value->iValue == ',')
         m_valueList->next();
@@ -6811,8 +6894,7 @@ bool CSSParser::parseReflect(CSSPropertyID propId, bool important)
             return false;
     }
 
-    RefPtr<CSSReflectValue> reflectValue = CSSReflectValue::create(direction.release(), offset.release(), mask.release());
-    addProperty(propId, reflectValue.release(), important);
+    addProperty(propId, CSSReflectValue::create(direction.release(), offset.release(), mask.release()), important);
     m_valueList->next();
     return true;
 }
@@ -9691,7 +9773,7 @@ bool CSSParser::parsePerspectiveOrigin(CSSPropertyID propId, CSSPropertyID& prop
 
 void CSSParser::addTextDecorationProperty(CSSPropertyID propId, PassRefPtr<CSSValue> value, bool important)
 {
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     // The text-decoration-line property takes priority over text-decoration, unless the latter has important priority set.
     if (propId == CSSPropertyTextDecoration && !important && !inShorthand()) {
         for (unsigned i = 0; i < m_parsedProperties.size(); ++i) {
@@ -9699,7 +9781,7 @@ void CSSParser::addTextDecorationProperty(CSSPropertyID propId, PassRefPtr<CSSVa
                 return;
         }
     }
-#endif // CSS3_TEXT
+#endif // CSS3_TEXT_DECORATION
     addProperty(propId, value, important);
 }
 
@@ -9720,6 +9802,9 @@ bool CSSParser::parseTextDecoration(CSSPropertyID propId, bool important)
         case CSSValueLineThrough:
         case CSSValueOverline:
         case CSSValueUnderline:
+#if ENABLE(LETTERPRESS)
+        case CSSValueWebkitLetterpress:
+#endif
             list->append(cssValuePool().createIdentifierValue(value->id));
             break;
         default:
@@ -9739,7 +9824,25 @@ bool CSSParser::parseTextDecoration(CSSPropertyID propId, bool important)
     return false;
 }
 
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
+bool CSSParser::parseTextDecorationSkip(bool important)
+{
+    // The text-decoration-skip property has syntax "none | [ objects || spaces || ink || edges || box-decoration ]".
+    // However, only 'none' and 'ink' are implemented yet, so we will parse syntax "none | ink" for now.
+    CSSParserValue* value = m_valueList->current();
+    do {
+        switch (value->id) {
+        case CSSValueNone:
+        case CSSValueInk:
+            addProperty(CSSPropertyWebkitTextDecorationSkip, cssValuePool().createIdentifierValue(value->id), important);
+            return true;
+        default:
+            break;
+        }
+    } while ((value = m_valueList->next()));
+    return false;
+}
+
 bool CSSParser::parseTextUnderlinePosition(bool important)
 {
     // The text-underline-position property has sintax "auto | alphabetic | [ under || [ left | right ] ]".
@@ -9760,7 +9863,7 @@ bool CSSParser::parseTextUnderlinePosition(bool important)
     }
     return false;
 }
-#endif // CSS3_TEXT
+#endif // CSS3_TEXT_DECORATION
 
 bool CSSParser::parseTextEmphasisStyle(bool important)
 {

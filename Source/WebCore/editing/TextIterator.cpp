@@ -36,8 +36,8 @@
 #include "HTMLTextFormControlElement.h"
 #include "InlineTextBox.h"
 #include "NodeTraversal.h"
-#include "Range.h"
 #include "RenderImage.h"
+#include "RenderIterator.h"
 #include "RenderTableCell.h"
 #include "RenderTableRow.h"
 #include "RenderTextControl.h"
@@ -217,7 +217,7 @@ static inline bool ignoresContainerClip(Node* node)
     RenderObject* renderer = node->renderer();
     if (!renderer || renderer->isTextOrLineBreak())
         return false;
-    return renderer->style()->hasOutOfFlowPosition();
+    return renderer->style().hasOutOfFlowPosition();
 }
 
 static void pushFullyClippedState(BitStack& stack, Node* node)
@@ -245,12 +245,12 @@ static void setUpFullyClippedStack(BitStack& stack, Node* node)
     ASSERT(stack.size() == 1 + depthCrossingShadowBoundaries(node));
 }
     
-static bool isRendererReplacedElement(RenderObject* renderer)
+bool isRendererReplacedElement(RenderObject* renderer)
 {
     if (!renderer)
         return false;
     
-    if (renderer->isImage() || renderer->isWidget())
+    if (renderer->isImage() || renderer->isWidget() || renderer->isMedia())
         return true;
     
     if (renderer->node() && renderer->node()->isElementNode()) {
@@ -491,7 +491,7 @@ bool TextIterator::handleTextNode()
     String str = renderer->text();
 
     // handle pre-formatted text
-    if (!renderer->style()->collapseWhiteSpace()) {
+    if (!renderer->style().collapseWhiteSpace()) {
         int runStart = m_offset;
         if (m_lastTextNodeEndedWithCollapsedSpace && hasVisibleTextNode(renderer)) {
             emitCharacter(' ', m_node, 0, runStart, runStart);
@@ -507,7 +507,7 @@ bool TextIterator::handleTextNode()
                 return false;
             }
         }
-        if (renderer->style()->visibility() != VISIBLE && !m_ignoresStyleVisibility)
+        if (renderer->style().visibility() != VISIBLE && !m_ignoresStyleVisibility)
             return false;
         int strLength = str.length();
         int end = (m_node == m_endContainer) ? m_endOffset : INT_MAX;
@@ -520,8 +520,8 @@ bool TextIterator::handleTextNode()
         return true;
     }
 
-    if (renderer->simpleLines()) {
-        if (renderer->style()->visibility() != VISIBLE && !m_ignoresStyleVisibility)
+    if (renderer->simpleLineLayout()) {
+        if (renderer->style().visibility() != VISIBLE && !m_ignoresStyleVisibility)
             return true;
         // This code aims to produce same results as handleTextBox() below so test results don't change. It does not make much logical sense.
         unsigned runEnd = m_offset;
@@ -558,7 +558,7 @@ bool TextIterator::handleTextNode()
         handleTextNodeFirstLetter(static_cast<RenderTextFragment*>(renderer));
 
     if (!renderer->firstTextBox() && str.length() > 0 && !shouldHandleFirstLetter) {
-        if (renderer->style()->visibility() != VISIBLE && !m_ignoresStyleVisibility)
+        if (renderer->style().visibility() != VISIBLE && !m_ignoresStyleVisibility)
             return false;
         m_lastTextNodeEndedWithCollapsedSpace = true; // entire block is collapsed space
         return true;
@@ -585,7 +585,7 @@ bool TextIterator::handleTextNode()
 void TextIterator::handleTextBox()
 {    
     RenderText* renderer = m_firstLetterText ? m_firstLetterText : toRenderText(m_node->renderer());
-    if (renderer->style()->visibility() != VISIBLE && !m_ignoresStyleVisibility) {
+    if (renderer->style().visibility() != VISIBLE && !m_ignoresStyleVisibility) {
         m_textBox = 0;
         return;
     }
@@ -666,31 +666,26 @@ void TextIterator::handleTextBox()
     }
 }
 
-static inline RenderText* firstRenderTextInFirstLetter(RenderObject* firstLetter)
+static inline RenderText* firstRenderTextInFirstLetter(RenderBoxModelObject* firstLetter)
 {
     if (!firstLetter)
-        return 0;
+        return nullptr;
 
     // FIXME: Should this check descendent objects?
-    for (RenderObject* current = firstLetter->firstChildSlow(); current; current = current->nextSibling()) {
-        if (current->isText())
-            return toRenderText(current);
-    }
-    return 0;
+    return childrenOfType<RenderText>(*firstLetter).first();
 }
 
 void TextIterator::handleTextNodeFirstLetter(RenderTextFragment* renderer)
 {
-    if (renderer->firstLetter()) {
-        RenderObject* r = renderer->firstLetter();
-        if (r->style()->visibility() != VISIBLE && !m_ignoresStyleVisibility)
+    if (auto firstLetter = renderer->firstLetter()) {
+        if (firstLetter->style().visibility() != VISIBLE && !m_ignoresStyleVisibility)
             return;
-        if (RenderText* firstLetter = firstRenderTextInFirstLetter(r)) {
+        if (RenderText* firstLetterText = firstRenderTextInFirstLetter(firstLetter)) {
             m_handledFirstLetter = true;
             m_remainingTextBox = m_textBox;
-            m_textBox = firstLetter->firstTextBox();
+            m_textBox = firstLetterText->firstTextBox();
             m_sortedTextBoxes.clear();
-            m_firstLetterText = firstLetter;
+            m_firstLetterText = firstLetterText;
         }
     }
     m_handledFirstLetter = true;
@@ -702,7 +697,7 @@ bool TextIterator::handleReplacedElement()
         return false;
 
     RenderObject* renderer = m_node->renderer();
-    if (renderer->style()->visibility() != VISIBLE && !m_ignoresStyleVisibility)
+    if (renderer->style().visibility() != VISIBLE && !m_ignoresStyleVisibility)
         return false;
 
     if (m_lastTextNodeEndedWithCollapsedSpace) {
@@ -723,6 +718,9 @@ bool TextIterator::handleReplacedElement()
 
     if (m_emitsObjectReplacementCharacters && renderer && renderer->isReplaced()) {
         emitCharacter(objectReplacementCharacter, m_node->parentNode(), m_node, 0, 1);
+        // Don't process subtrees for embedded objects. If the text there is required,
+        // it must be explicitly asked by specifying a range falling inside its boundaries.
+        m_handledChildren = true;
         return true;
     }
 
@@ -757,11 +755,11 @@ bool TextIterator::handleReplacedElement()
 
 bool TextIterator::hasVisibleTextNode(RenderText* renderer)
 {
-    if (renderer->style()->visibility() == VISIBLE)
+    if (renderer->style().visibility() == VISIBLE)
         return true;
     if (renderer->isTextFragment()) {
         RenderTextFragment* fragment = static_cast<RenderTextFragment*>(renderer);
-        if (fragment->firstLetter() && fragment->firstLetter()->style()->visibility() == VISIBLE)
+        if (fragment->firstLetter() && fragment->firstLetter()->style().visibility() == VISIBLE)
             return true;
     }
     return false;
@@ -871,13 +869,10 @@ static bool shouldEmitExtraNewlineForNode(Node* node)
         || node->hasTagName(h5Tag)
         || node->hasTagName(h6Tag)
         || node->hasTagName(pTag)) {
-        RenderStyle* style = r->style();
-        if (style) {
-            int bottomMargin = toRenderBox(r)->collapsedMarginAfter();
-            int fontSize = style->fontDescription().computedPixelSize();
-            if (bottomMargin * 2 >= fontSize)
-                return true;
-        }
+        int bottomMargin = toRenderBox(r)->collapsedMarginAfter();
+        int fontSize = toRenderBox(r)->style().fontDescription().computedPixelSize();
+        if (bottomMargin * 2 >= fontSize)
+            return true;
     }
     
     return false;
@@ -888,7 +883,7 @@ static int collapsedSpaceLength(RenderText* renderer, int textEnd)
     const UChar* characters = renderer->text()->characters();
     int length = renderer->text()->length();
     for (int i = textEnd; i < length; ++i) {
-        if (!renderer->style()->isCollapsibleWhiteSpace(characters[i]))
+        if (!renderer->style().isCollapsibleWhiteSpace(characters[i]))
             return i - textEnd;
     }
 
@@ -949,7 +944,7 @@ bool TextIterator::shouldRepresentNodeOffsetZero()
     // If this node is unrendered or invisible the VisiblePosition checks below won't have much meaning.
     // Additionally, if the range we are iterating over contains huge sections of unrendered content, 
     // we would create VisiblePositions on every call to this function without this check.
-    if (!m_node->renderer() || m_node->renderer()->style()->visibility() != VISIBLE
+    if (!m_node->renderer() || m_node->renderer()->style().visibility() != VISIBLE
         || (m_node->renderer()->isRenderBlockFlow() && !toRenderBlock(m_node->renderer())->height() && !m_node->hasTagName(bodyTag)))
         return false;
 
@@ -1217,10 +1212,10 @@ void SimplifiedBackwardsTextIterator::advance()
             RenderObject* renderer = m_node->renderer();
             if (renderer && renderer->isText() && m_node->nodeType() == Node::TEXT_NODE) {
                 // FIXME: What about CDATA_SECTION_NODE?
-                if (renderer->style()->visibility() == VISIBLE && m_offset > 0)
+                if (renderer->style().visibility() == VISIBLE && m_offset > 0)
                     m_handledNode = handleTextNode();
             } else if (renderer && (renderer->isImage() || renderer->isWidget())) {
-                if (renderer->style()->visibility() == VISIBLE && m_offset > 0)
+                if (renderer->style().visibility() == VISIBLE && m_offset > 0)
                     m_handledNode = handleReplacedElement();
             } else
                 m_handledNode = handleNonTextNode();
@@ -2351,8 +2346,8 @@ inline size_t SearchBuffer::append(const UChar* characters, size_t length)
     ASSERT(U_SUCCESS(status));
     ASSERT(numFoldedCharacters);
     ASSERT(numFoldedCharacters <= maxFoldedCharacters);
-    if (!error && numFoldedCharacters) {
-        numFoldedCharacters = min(numFoldedCharacters, maxFoldedCharacters);
+    if (U_SUCCESS(status) && numFoldedCharacters) {
+        numFoldedCharacters = std::min(numFoldedCharacters, maxFoldedCharacters);
         append(foldedCharacters[0], true);
         for (int i = 1; i < numFoldedCharacters; ++i)
             append(foldedCharacters[i], false);

@@ -75,7 +75,8 @@ public:
         SpeedChanged = 1 << 22,
         TimeOffsetChanged = 1 << 23,
         BackingStoreChanged = 1 << 24,
-        FiltersChanged = 1 << 25
+        FiltersChanged = 1 << 25,
+        EdgeAntialiasingMaskChanged = 1 << 26
     };
 
     struct LayerCreationProperties {
@@ -86,6 +87,8 @@ public:
 
         LayerID layerID;
         WebCore::PlatformCALayer::LayerType type;
+
+        uint32_t hostingContextID;
     };
 
     struct LayerProperties {
@@ -123,6 +126,7 @@ public:
         double timeOffset;
         RemoteLayerBackingStore backingStore;
         WebCore::FilterOperations filters;
+        unsigned edgeAntialiasingMask;
     };
 
     explicit RemoteLayerTreeTransaction();

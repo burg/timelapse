@@ -200,27 +200,20 @@ void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource
     speculationCheck(kind, jsValueSource, edge.node(), jumpToFail, recovery);
 }
 
-JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind, JSValueSource jsValueSource, Node* node)
+void SpeculativeJIT::emitInvalidationPoint(Node* node)
 {
     if (!m_compileOkay)
-        return 0;
-    ASSERT(m_isCheckingArgumentTypes || m_canExit);
-    m_jit.appendExitInfo(JITCompiler::JumpList());
-    OSRExit& exit = m_jit.jitCode()->osrExit[
-        m_jit.jitCode()->appendOSRExit(OSRExit(
-            kind, jsValueSource,
-            m_jit.graph().methodOfGettingAValueProfileFor(node),
-            this, m_stream->size()))];
-    exit.m_watchpointIndex = m_jit.jitCode()->appendWatchpoint(
-        JumpReplacementWatchpoint(m_jit.watchpointLabel()));
-    if (m_speculationDirection == ForwardSpeculation)
-        convertLastOSRExitToForward();
-    return &m_jit.jitCode()->watchpoints[exit.m_watchpointIndex];
-}
-
-JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind)
-{
-    return speculationWatchpoint(kind, JSValueSource(), 0);
+        return;
+    ASSERT(m_canExit);
+    ASSERT(m_speculationDirection == BackwardSpeculation);
+    OSRExitCompilationInfo& info = m_jit.appendExitInfo(JITCompiler::JumpList());
+    m_jit.jitCode()->appendOSRExit(OSRExit(
+        UncountableInvalidation, JSValueSource(),
+        m_jit.graph().methodOfGettingAValueProfileFor(node),
+        this, m_stream->size()));
+    info.m_replacementSource = m_jit.watchpointLabel();
+    ASSERT(info.m_replacementSource.isSet());
+    noResult(node);
 }
 
 void SpeculativeJIT::convertLastOSRExitToForward(const ValueRecovery& valueRecovery)
@@ -678,10 +671,19 @@ JITCompiler::Jump SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGPR, A
         return m_jit.branch32(
             MacroAssembler::NotEqual, tempGPR, TrustedImm32(IsArray | shape));
         
-    default:
+    case Array::NonArray:
+    case Array::OriginalNonArray:
+        m_jit.and32(TrustedImm32(IsArray | IndexingShapeMask), tempGPR);
+        return m_jit.branch32(
+            MacroAssembler::NotEqual, tempGPR, TrustedImm32(shape));
+        
+    case Array::PossiblyArray:
         m_jit.and32(TrustedImm32(IndexingShapeMask), tempGPR);
         return m_jit.branch32(MacroAssembler::NotEqual, tempGPR, TrustedImm32(shape));
     }
+    
+    RELEASE_ASSERT_NOT_REACHED();
+    return JITCompiler::Jump();
 }
 
 JITCompiler::JumpList SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGPR, ArrayMode arrayMode)
@@ -758,7 +760,7 @@ void SpeculativeJIT::checkArray(Node* node)
     
     switch (node->arrayMode().type()) {
     case Array::String:
-        expectedClassInfo = JSString::info();
+        RELEASE_ASSERT_NOT_REACHED(); // Should have been a Phantom(String:)
         break;
     case Array::Int32:
     case Array::Double:
@@ -1354,8 +1356,6 @@ void SpeculativeJIT::compilePeepHoleObjectEquality(Node* node, Node* branchNode)
     GPRReg op2GPR = op2.gpr();
     
     if (masqueradesAsUndefinedWatchpointIsStillValid()) {
-        speculationWatchpointForMasqueradesAsUndefined();
-
         if (m_state.forNode(node->child1()).m_type & ~SpecObject) {
             speculationCheck(
                 BadType, JSValueSource::unboxedCell(op1GPR), node->child1(), 
@@ -1555,37 +1555,6 @@ void SpeculativeJIT::compileMovHintAndCheck(Node* node)
     compileMovHint(node);
     speculate(node, node->child1());
     noResult(node);
-}
-
-void SpeculativeJIT::compileInlineStart(Node* node)
-{
-    InlineCallFrame* inlineCallFrame = node->codeOrigin.inlineCallFrame;
-    InlineStartData* data = node->inlineStartData();
-    int argumentCountIncludingThis = inlineCallFrame->arguments.size();
-    for (int i = 0; i < argumentCountIncludingThis; ++i) {
-        ArgumentPosition& position = m_jit.graph().m_argumentPositions[
-            data->argumentPositionStart + i];
-        VariableAccessData* variable = position.someVariable();
-        ValueSource source;
-        if (!variable)
-            source = ValueSource(SourceIsDead);
-        else {
-            source = ValueSource::forFlushFormat(
-                variable->machineLocal(),
-                m_jit.graph().m_argumentPositions[data->argumentPositionStart + i].flushFormat());
-        }
-        inlineCallFrame->arguments[i] = source.valueRecovery();
-    }
-    
-    RELEASE_ASSERT(inlineCallFrame->isClosureCall == !!data->calleeVariable);
-    
-    if (inlineCallFrame->isClosureCall) {
-        ValueSource source = ValueSource::forFlushFormat(
-            data->calleeVariable->machineLocal(),
-            data->calleeVariable->flushFormat());
-        inlineCallFrame->calleeRecovery = source.valueRecovery();
-    } else
-        RELEASE_ASSERT(inlineCallFrame->calleeRecovery.isConstant());
 }
 
 void SpeculativeJIT::bail()
@@ -2036,18 +2005,6 @@ void SpeculativeJIT::compileGetByValOnString(Node* node)
     }
 #endif
 
-    if (node->arrayMode().isOutOfBounds()) {
-        JSGlobalObject* globalObject = m_jit.globalObjectFor(node->codeOrigin);
-        if (globalObject->stringPrototypeChainIsSane()) {
-            m_jit.addLazily(
-                speculationWatchpoint(),
-                globalObject->stringPrototype()->structure()->transitionWatchpointSet());
-            m_jit.addLazily(
-                speculationWatchpoint(),
-                globalObject->objectPrototype()->structure()->transitionWatchpointSet());
-        }
-    }
-
     ASSERT(ArrayMode(Array::String).alreadyChecked(m_jit.graph(), node, m_state.forNode(node->child1())));
 
     // unsigned comparison so we can filter out negative indices and indices that are too large
@@ -2075,17 +2032,9 @@ void SpeculativeJIT::compileGetByValOnString(Node* node)
     // 8 bit string values don't need the isASCII check.
     cont8Bit.link(&m_jit);
 
-#if CPU(X86)
-    // Don't have enough register, construct our own indexed address and load.
-    m_jit.lshift32(MacroAssembler::TrustedImm32(2), scratchReg);
+    m_jit.lshift32(MacroAssembler::TrustedImm32(sizeof(void*) == 4 ? 2 : 3), scratchReg);
     m_jit.addPtr(MacroAssembler::TrustedImmPtr(m_jit.vm()->smallStrings.singleCharacterStrings()), scratchReg);
     m_jit.loadPtr(scratchReg, scratchReg);
-#else
-    GPRTemporary smallStrings(this);
-    GPRReg smallStringsReg = smallStrings.gpr();
-    m_jit.move(MacroAssembler::TrustedImmPtr(m_jit.vm()->smallStrings.singleCharacterStrings()), smallStringsReg);
-    m_jit.loadPtr(MacroAssembler::BaseIndex(smallStringsReg, scratchReg, MacroAssembler::ScalePtr, 0), scratchReg);
-#endif
 
     addSlowPathGenerator(
         slowPathCall(
@@ -4561,7 +4510,7 @@ void SpeculativeJIT::compileAllocatePropertyStorage(Node* node)
         emitAllocateBasicStorage(
             TrustedImm32(initialOutOfLineCapacity * sizeof(JSValue)), scratchGPR);
 
-    m_jit.addPtr(JITCompiler::TrustedImm32(sizeof(JSValue)), scratchGPR);
+    m_jit.addPtr(JITCompiler::TrustedImm32(sizeof(IndexingHeader)), scratchGPR);
         
     addSlowPathGenerator(
         slowPathCall(slowPath, this, operationAllocatePropertyStorageWithInitialCapacity, scratchGPR));
@@ -4604,7 +4553,7 @@ void SpeculativeJIT::compileReallocatePropertyStorage(Node* node)
     JITCompiler::Jump slowPath =
         emitAllocateBasicStorage(TrustedImm32(newSize), scratchGPR2);
 
-    m_jit.addPtr(JITCompiler::TrustedImm32(sizeof(JSValue)), scratchGPR2);
+    m_jit.addPtr(JITCompiler::TrustedImm32(sizeof(IndexingHeader)), scratchGPR2);
         
     addSlowPathGenerator(
         slowPathCall(slowPath, this, operationAllocatePropertyStorage, scratchGPR2, newSize / sizeof(JSValue)));
@@ -4761,6 +4710,7 @@ void SpeculativeJIT::compileNewTypedArray(Node* node)
 
     slowCases.append(m_jit.branch32(
         MacroAssembler::Above, sizeGPR, TrustedImm32(JSArrayBufferView::fastSizeLimit)));
+    slowCases.append(m_jit.branchTest32(MacroAssembler::Zero, sizeGPR));
     
     m_jit.move(sizeGPR, scratchGPR);
     m_jit.lshift32(TrustedImm32(logElementSize(type)), scratchGPR);

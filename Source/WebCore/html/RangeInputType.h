@@ -39,10 +39,9 @@ class SliderThumbElement;
 
 class RangeInputType FINAL : public InputType {
 public:
-    static OwnPtr<InputType> create(HTMLInputElement&);
+    explicit RangeInputType(HTMLInputElement&);
 
 private:
-    explicit RangeInputType(HTMLInputElement&);
     virtual void attach() OVERRIDE;
     virtual bool isRangeControl() const OVERRIDE;
     virtual const AtomicString& formControlType() const OVERRIDE;
@@ -54,7 +53,7 @@ private:
     virtual bool isSteppable() const OVERRIDE;
     virtual void handleMouseDownEvent(MouseEvent*) OVERRIDE;
     virtual void handleKeydownEvent(KeyboardEvent*) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderStyle&) const OVERRIDE;
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) const OVERRIDE;
     virtual void createShadowSubtree() OVERRIDE;
     virtual Decimal parseToNumber(const String&, const Decimal&) const OVERRIDE;
     virtual String serialize(const Decimal&) const OVERRIDE;

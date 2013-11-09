@@ -40,7 +40,7 @@
 namespace WebCore {
 bool ShapeOutsideInfo::isEnabledFor(const RenderBox* box)
 {
-    ShapeValue* shapeValue = box->style()->shapeOutside();
+    ShapeValue* shapeValue = box->style().shapeOutside();
     if (!box->isFloating() || !shapeValue)
         return false;
 
@@ -48,7 +48,7 @@ bool ShapeOutsideInfo::isEnabledFor(const RenderBox* box)
     case ShapeValue::Shape:
         return shapeValue->shape();
     case ShapeValue::Image:
-        return shapeValue->isImageValid();
+        return shapeValue->isImageValid() && checkShapeImageOrigin(box->document(), *(shapeValue->image()->cachedImage()));
     default:
         return false;
     }
@@ -57,17 +57,17 @@ bool ShapeOutsideInfo::isEnabledFor(const RenderBox* box)
 void ShapeOutsideInfo::updateDeltasForContainingBlockLine(const RenderBlockFlow* containingBlock, const FloatingObject* floatingObject, LayoutUnit lineTop, LayoutUnit lineHeight)
 {
     LayoutUnit shapeTop = containingBlock->logicalTopForFloat(floatingObject) + std::max(LayoutUnit(), containingBlock->marginBeforeForChild(*m_renderer));
-    LayoutUnit lineTopInShapeCoordinates = lineTop - shapeTop + logicalTopOffset();
+    LayoutUnit floatRelativeLineTop = lineTop - shapeTop;
 
-    if (shapeSizeDirty() || m_lineTop != lineTopInShapeCoordinates || m_lineHeight != lineHeight) {
-        m_lineTop = lineTopInShapeCoordinates;
-        m_shapeLineTop = lineTopInShapeCoordinates - logicalTopOffset();
+    if (shapeSizeDirty() || m_lineTop != floatRelativeLineTop || m_lineHeight != lineHeight) {
+        m_lineTop = floatRelativeLineTop;
+        m_shapeLineTop = floatRelativeLineTop - logicalTopOffset();
         m_lineHeight = lineHeight;
 
         LayoutUnit floatMarginBoxWidth = containingBlock->logicalWidthForFloat(floatingObject);
 
         if (lineOverlapsShapeBounds()) {
-            SegmentList segments = computeSegmentsForLine(lineTopInShapeCoordinates, lineHeight);
+            SegmentList segments = computeSegmentsForLine(floatRelativeLineTop, lineHeight);
             if (segments.size()) {
                 LayoutUnit rawLeftMarginBoxDelta = segments.first().logicalLeft + containingBlock->marginStartForChild(*m_renderer);
                 m_leftMarginBoxDelta = clampTo<LayoutUnit>(rawLeftMarginBoxDelta, LayoutUnit(), floatMarginBoxWidth);
@@ -92,7 +92,7 @@ void ShapeOutsideInfo::updateDeltasForContainingBlockLine(const RenderBlockFlow*
 
 ShapeValue* ShapeOutsideInfo::shapeValue() const
 {
-    return m_renderer->style()->shapeOutside();
+    return m_renderer->style().shapeOutside();
 }
 
 }

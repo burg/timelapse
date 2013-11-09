@@ -942,7 +942,7 @@ bool EventHandler::handleMouseReleaseEvent(const MouseEventWithHitTestResults& e
         VisibleSelection newSelection;
         Node* node = event.targetNode();
         bool caretBrowsing = m_frame.settings().caretBrowsingEnabled();
-        if (node && (caretBrowsing || node->rendererIsEditable()) && node->renderer()) {
+        if (node && node->renderer() && (caretBrowsing || node->rendererIsEditable())) {
             VisiblePosition pos = node->renderer()->positionForPoint(event.localPoint());
             newSelection = VisibleSelection(pos);
         }
@@ -1287,7 +1287,7 @@ OptionalCursor EventHandler::selectCursor(const HitTestResult& result, bool shif
         return NoCursorChange;
 
     auto renderer = node->renderer();
-    RenderStyle* style = renderer ? renderer->style() : 0;
+    RenderStyle* style = renderer ? &renderer->style() : nullptr;
     bool horizontalText = !style || style->isHorizontalWritingMode();
     const Cursor& iBeam = horizontalText ? iBeamCursor() : verticalTextCursor();
 

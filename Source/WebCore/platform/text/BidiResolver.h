@@ -135,8 +135,6 @@ struct BidiCharacterRun {
         }
     }
 
-    void destroy() { delete this; }
-
     int start() const { return m_start; }
     int stop() const { return m_stop; }
     unsigned char level() const { return m_level; }
@@ -534,7 +532,7 @@ void BidiResolver<Iterator, Run>::createBidiRunsForLine(const Iterator& end, Vis
         m_direction = override == VisualLeftToRightOverride ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
         appendRun();
         m_runs.setLogicallyLastRun(m_runs.lastRun());
-        if (override == VisualRightToLeftOverride)
+        if (override == VisualRightToLeftOverride && m_runs.runCount())
             m_runs.reverseRuns(0, m_runs.runCount() - 1);
         return;
     }

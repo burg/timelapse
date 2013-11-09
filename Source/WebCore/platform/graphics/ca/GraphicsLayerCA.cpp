@@ -818,19 +818,27 @@ void GraphicsLayerCA::setContentsToSolidColor(const Color& color)
         return;
 
     m_contentsSolidColor = color;
+    
+    bool contentsLayerChanged = false;
 
-    if (m_contentsSolidColor.isValid()) {
-        m_contentsLayerPurpose = ContentsLayerForBackgroundColor;
-        m_contentsLayer = createPlatformCALayer(PlatformCALayer::LayerTypeLayer, this);
+    if (m_contentsSolidColor.isValid() && m_contentsSolidColor.alpha()) {
+        if (!m_contentsLayer || m_contentsLayerPurpose != ContentsLayerForBackgroundColor) {
+            m_contentsLayerPurpose = ContentsLayerForBackgroundColor;
+            m_contentsLayer = createPlatformCALayer(PlatformCALayer::LayerTypeLayer, this);
 #ifndef NDEBUG
-        m_contentsLayer->setName("Background Color Layer");
+            m_contentsLayer->setName("Background Color Layer");
 #endif
+            contentsLayerChanged = true;
+        }
     } else {
+        contentsLayerChanged = m_contentsLayer;
         m_contentsLayerPurpose = NoContentsLayer;
         m_contentsLayer = 0;
     }
 
-    noteSublayersChanged();
+    if (contentsLayerChanged)
+        noteSublayersChanged();
+
     noteLayerPropertyChanged(ContentsColorLayerChanged);
 }
 
@@ -1214,11 +1222,11 @@ bool GraphicsLayerCA::platformCALayerShowRepaintCounter(PlatformCALayer* platfor
     // so we don't want to overpaint the repaint counter when called with the TileController's own layer.
     if (m_isPageTiledBackingLayer && platformLayer)
         return false;
-    
+
     return isShowingRepaintCounter();
 }
 
-void GraphicsLayerCA::platformCALayerPaintContents(GraphicsContext& context, const IntRect& clip)
+void GraphicsLayerCA::platformCALayerPaintContents(PlatformCALayer*, GraphicsContext& context, const IntRect& clip)
 {
     paintGraphicsLayerContents(context, clip);
 }
@@ -1228,9 +1236,14 @@ void GraphicsLayerCA::platformCALayerSetNeedsToRevalidateTiles()
     noteLayerPropertyChanged(TilingAreaChanged, m_isCommittingChanges ? DontScheduleFlush : ScheduleFlush);
 }
 
-float GraphicsLayerCA::platformCALayerDeviceScaleFactor()
+float GraphicsLayerCA::platformCALayerDeviceScaleFactor() const
 {
     return deviceScaleFactor();
+}
+
+float GraphicsLayerCA::platformCALayerContentsScaleMultiplierForNewTiles(PlatformCALayer*) const
+{
+    return client() ? client()->contentsScaleMultiplierForNewTiles(this) : 1;
 }
 
 void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState, float pageScaleFactor, const FloatPoint& positionRelativeToBase, const FloatRect& oldVisibleRect, TransformationMatrix* transformFromRoot)
@@ -3004,7 +3017,7 @@ void GraphicsLayerCA::setupContentsLayer(PlatformCALayer* contentsLayer)
 
     if (isShowingDebugBorder()) {
         contentsLayer->setBorderColor(Color(0, 0, 128, 180));
-        contentsLayer->setBorderWidth(1.0f);
+        contentsLayer->setBorderWidth(4);
     }
 }
 

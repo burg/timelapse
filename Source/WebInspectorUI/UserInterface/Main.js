@@ -177,6 +177,8 @@ WebInspector.loaded = function()
 
 WebInspector.contentLoaded = function()
 {
+    console.log("contentLoaded", this);
+
     // Check for a nightly build by looking for a plus in the version number and a small number of stylesheets (indicating combined resources).
     var versionMatch = / AppleWebKit\/([^ ]+)/.exec(navigator.userAgent);
     if (versionMatch && versionMatch[1].indexOf("+") !== -1 && document.styleSheets.length < 10)
@@ -339,7 +341,7 @@ WebInspector.sidebarPanelForCurrentContentView = function()
 WebInspector.sidebarPanelForRepresentedObject = function(representedObject)
 {
     if (representedObject instanceof WebInspector.Frame || representedObject instanceof WebInspector.Resource ||
-        representedObject instanceof WebInspector.Script)
+        representedObject instanceof WebInspector.Script || representedObject instanceof WebInspector.ContentFlow)
         return this.resourceSidebarPanel;
 
     if (representedObject instanceof WebInspector.DOMStorageObject || representedObject instanceof WebInspector.CookieStorageObject ||
@@ -856,6 +858,8 @@ WebInspector._revealAndSelectRepresentedObjectInNavigationSidebar = function(rep
         return;
 
     var selectedSidebarPanel = this.navigationSidebar.selectedSidebarPanel;
+    if (!selectedSidebarPanel)
+        return;
 
     // If the tree outline is processing a selection currently then we can assume the selection does not
     // need to be changed. This is needed to allow breakpoints tree elements to be selected without jumping
@@ -886,7 +890,7 @@ WebInspector._updateNavigationSidebarForCurrentContentView = function()
     // Ensure the navigation sidebar panel is allowed by the current content view, if not ask the sidebar panel
     // to show the content view for the current selection.
     var allowedNavigationSidebarPanels = currentContentView.allowedNavigationSidebarPanels;
-    if (!allowedNavigationSidebarPanels.contains(selectedSidebarPanel.identifier)) {
+    if (allowedNavigationSidebarPanels.length && !allowedNavigationSidebarPanels.contains(selectedSidebarPanel.identifier)) {
         selectedSidebarPanel.showContentViewForCurrentSelection();
 
         // Fetch the current content view again, since it likely changed.
@@ -1018,9 +1022,13 @@ WebInspector._contentBrowserCurrentContentViewDidChange = function(event)
     if (!currentContentView)
         return;
 
+    var selectedSidebarPanel = this.navigationSidebar.selectedSidebarPanel;
+    if (!selectedSidebarPanel)
+        return;
+
     // Ensure the navigation sidebar panel is allowed by the current content view, if not change the navigation sidebar panel
     // to the last navigation sidebar panel used with the content view or the first one allowed.
-    var selectedSidebarPanelIdentifier = this.navigationSidebar.selectedSidebarPanel.identifier;
+    var selectedSidebarPanelIdentifier = selectedSidebarPanel.identifier;
 
     var allowedNavigationSidebarPanels = currentContentView.allowedNavigationSidebarPanels;
     if (allowedNavigationSidebarPanels.length && !allowedNavigationSidebarPanels.contains(selectedSidebarPanelIdentifier)) {
@@ -1044,7 +1052,7 @@ WebInspector._contentBrowserRepresentedObjectsDidChange = function(event)
     // changes are recorded in _lastSelectedDetailsSidebarPanelSetting.
     this._ignoreDetailsSidebarPanelSelectedEvent = true;
 
-    for (var i = 0; i < this.detailsSidebarPanels.length; ++i) {
+    for (var i = 0; i < this._detailsSidebarPanelSelected.length; ++i) {
         var sidebarPanel = this.detailsSidebarPanels[i];
         if (sidebarPanel.inspect(currentRepresentedObjects)) {
             var currentSidebarPanelIndex = currentSidebarPanels.indexOf(sidebarPanel);

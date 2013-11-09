@@ -30,9 +30,7 @@
 #include "ApplyStyleCommand.h"
 #include "BeforeTextInsertedEvent.h"
 #include "BreakBlockquoteCommand.h"
-#include "CSSPropertyNames.h"
 #include "CSSStyleDeclaration.h"
-#include "CSSValueKeywords.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Element.h"
@@ -41,14 +39,11 @@
 #include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
 #include "FrameSelection.h"
-#include "HTMLElement.h"
 #include "HTMLInputElement.h"
-#include "HTMLInterchange.h"
 #include "HTMLNames.h"
 #include "HTMLTitleElement.h"
 #include "NodeList.h"
 #include "NodeRenderStyle.h"
-#include "NodeTraversal.h"
 #include "RenderInline.h"
 #include "RenderObject.h"
 #include "RenderText.h"
@@ -61,7 +56,6 @@
 #include "htmlediting.h"
 #include "markup.h"
 #include <wtf/StdLibExtras.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -560,7 +554,7 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
             // Mutate using the CSSOM wrapper so we get the same event behavior as a script.
             if (isBlock(element))
                 element->style()->setPropertyInternal(CSSPropertyDisplay, "inline", false, IGNORE_EXCEPTION);
-            if (element->renderer() && element->renderer()->style()->isFloating())
+            if (element->renderer() && element->renderer()->style().isFloating())
                 element->style()->setPropertyInternal(CSSPropertyFloat, "none", false, IGNORE_EXCEPTION);
         }
     }
@@ -910,8 +904,8 @@ void ReplaceSelectionCommand::doApply()
         return;
     
     // We can skip matching the style if the selection is plain text.
-    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style()->userModify() == READ_WRITE_PLAINTEXT_ONLY)
-        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style()->userModify() == READ_WRITE_PLAINTEXT_ONLY))
+    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().userModify() == READ_WRITE_PLAINTEXT_ONLY)
+        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().userModify() == READ_WRITE_PLAINTEXT_ONLY))
         m_matchStyle = false;
     
     if (m_matchStyle) {
@@ -1288,7 +1282,7 @@ void ReplaceSelectionCommand::addSpacesForSmartReplace()
 
     bool needsTrailingSpace = !isEndOfParagraph(endOfInsertedContent) && !isCharacterSmartReplaceExemptConsideringNonBreakingSpace(endOfInsertedContent.characterAfter(), false);
     if (needsTrailingSpace && endNode) {
-        bool collapseWhiteSpace = !endNode->renderer() || endNode->renderer()->style()->collapseWhiteSpace();
+        bool collapseWhiteSpace = !endNode->renderer() || endNode->renderer()->style().collapseWhiteSpace();
         if (endNode->isTextNode()) {
             insertTextIntoNode(toText(endNode), endOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " ");
             if (m_endOfInsertedContent.containerNode() == endNode)
@@ -1312,7 +1306,7 @@ void ReplaceSelectionCommand::addSpacesForSmartReplace()
 
     bool needsLeadingSpace = !isStartOfParagraph(startOfInsertedContent) && !isCharacterSmartReplaceExemptConsideringNonBreakingSpace(startOfInsertedContent.previous().characterAfter(), true);
     if (needsLeadingSpace && startNode) {
-        bool collapseWhiteSpace = !startNode->renderer() || startNode->renderer()->style()->collapseWhiteSpace();
+        bool collapseWhiteSpace = !startNode->renderer() || startNode->renderer()->style().collapseWhiteSpace();
         if (startNode->isTextNode()) {
             insertTextIntoNode(toText(startNode), startOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " ");
             if (m_endOfInsertedContent.containerNode() == startNode && m_endOfInsertedContent.offsetInContainerNode())

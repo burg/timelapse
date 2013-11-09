@@ -26,7 +26,6 @@
 #include "config.h"
 #include "EventDispatcher.h"
 
-#include "ContainerNode.h"
 #include "EventContext.h"
 #include "FocusEvent.h"
 #include "FrameView.h"
@@ -39,7 +38,6 @@
 #include "ScopedEventQueue.h"
 #include "ShadowRoot.h"
 #include "TouchEvent.h"
-#include <wtf/RefPtr.h>
 
 #if ENABLE(SVG)
 #include "SVGElementInstance.h"
@@ -207,7 +205,7 @@ void EventDispatcher::dispatchScopedEvent(Node& node, PassRefPtr<Event> event)
 {
     // We need to set the target here because it can go away by the time we actually fire the event.
     event->setTarget(&eventTargetRespectingTargetRules(node));
-    ScopedEventQueue::instance()->enqueueEvent(event);
+    ScopedEventQueue::instance().enqueueEvent(event);
 }
 
 void EventDispatcher::dispatchSimulatedClick(Element* element, Event* underlyingEvent, SimulatedClickMouseEventOptions mouseEventOptions, SimulatedClickVisualOptions visualOptions)

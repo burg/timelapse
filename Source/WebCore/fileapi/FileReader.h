@@ -55,7 +55,7 @@ typedef int ExceptionCode;
 
 class FileReader FINAL : public RefCounted<FileReader>, public ActiveDOMObject, public EventTargetWithInlineData, public FileReaderLoaderClient {
 public:
-    static PassRefPtr<FileReader> create(ScriptExecutionContext*);
+    static PassRefPtr<FileReader> create(ScriptExecutionContext&);
 
     virtual ~FileReader();
 
@@ -101,7 +101,7 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(loadend);
 
 private:
-    explicit FileReader(ScriptExecutionContext*);
+    explicit FileReader(ScriptExecutionContext&);
 
     // ActiveDOMObject
     virtual bool canSuspend() const OVERRIDE;
@@ -121,7 +121,7 @@ private:
     RefPtr<Blob> m_blob;
     FileReaderLoader::ReadType m_readType;
     String m_encoding;
-    OwnPtr<FileReaderLoader> m_loader;
+    std::unique_ptr<FileReaderLoader> m_loader;
     RefPtr<FileError> m_error;
     double m_lastProgressNotificationTimeMS;
 };

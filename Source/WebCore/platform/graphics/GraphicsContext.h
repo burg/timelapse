@@ -95,8 +95,11 @@ namespace WebCore {
     class TransformationMatrix;
 
     enum TextDrawingMode {
-        TextModeFill      = 1 << 0,
-        TextModeStroke    = 1 << 1,
+        TextModeFill = 1 << 0,
+        TextModeStroke = 1 << 1,
+#if ENABLE(LETTERPRESS)
+        TextModeLetterpress = 1 << 2,
+#endif
     };
     typedef unsigned TextDrawingModeFlags;
 
@@ -105,10 +108,10 @@ namespace WebCore {
         SolidStroke,
         DottedStroke,
         DashedStroke,
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
         DoubleStroke,
         WavyStroke,
-#endif // CSS3_TEXT
+#endif // CSS3_TEXT_DECORATION
     };
 
     enum InterpolationQuality {
@@ -330,6 +333,7 @@ namespace WebCore {
         };
         FloatRect roundToDevicePixels(const FloatRect&, RoundingMode = RoundAllSides);
 
+        FloatRect computeLineBoundsForText(const FloatPoint&, float width, bool printing);
         void drawLineForText(const FloatPoint&, float width, bool printing);
         enum DocumentMarkerLineStyle {
             DocumentMarkerSpellingLineStyle,

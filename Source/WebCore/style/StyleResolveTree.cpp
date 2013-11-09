@@ -27,6 +27,7 @@
 #include "StyleResolveTree.h"
 
 #include "AXObjectCache.h"
+#include "AnimationController.h"
 #include "CSSFontSelector.h"
 #include "Element.h"
 #include "ElementIterator.h"
@@ -124,7 +125,7 @@ static bool isRendererReparented(const RenderObject* renderer)
 {
     if (!renderer->node()->isElementNode())
         return false;
-    if (renderer->style() && !renderer->style()->flowThread().isEmpty())
+    if (!renderer->style().flowThread().isEmpty())
         return true;
     return false;
 }
@@ -236,10 +237,10 @@ static void createRendererIfNeeded(Element& element, PassRefPtr<RenderStyle> res
         nextRenderer = nextSiblingRenderer(element, renderingParentNode);
     }
 
-    RenderElement* newRenderer = element.createRenderer(*style);
+    RenderElement* newRenderer = element.createRenderer(style.releaseNonNull());
     if (!newRenderer)
         return;
-    if (!parentRenderer->isChildAllowed(*newRenderer, *style)) {
+    if (!parentRenderer->isChildAllowed(*newRenderer, newRenderer->style())) {
         newRenderer->destroy();
         return;
     }
@@ -248,8 +249,14 @@ static void createRendererIfNeeded(Element& element, PassRefPtr<RenderStyle> res
     // for the first time. Otherwise code using inRenderFlowThread() in the styleWillChange and styleDidChange will fail.
     newRenderer->setFlowThreadState(parentRenderer->flowThreadState());
 
+    // Code below updateAnimations() can depend on Element::renderer() already being set.
     element.setRenderer(newRenderer);
-    newRenderer->setAnimatableStyle(style.releaseNonNull()); // setAnimatableStyle() can depend on renderer() already being set.
+
+    // FIXME: There's probably a better way to factor this.
+    // This just does what setAnimatedStyle() does, except with setStyleInternal() instead of setStyle().
+    newRenderer->setStyleInternal(newRenderer->animation().updateAnimations(*newRenderer, newRenderer->style()));
+
+    newRenderer->initializeStyle();
 
 #if ENABLE(FULLSCREEN_API)
     Document& document = element.document();
@@ -371,7 +378,8 @@ static void createTextRendererIfNeeded(Text& textNode)
     if (!renderingParentNode->childShouldCreateRenderer(&textNode))
         return;
 
-    RenderStyle& style = *parentRenderer->style();
+    // FIXME: constify this RenderStyle&.
+    RenderStyle& style = parentRenderer->style();
 
     if (!textRendererIsNeeded(textNode, *parentRenderer, style))
         return;
@@ -420,7 +428,7 @@ void updateTextRendererAfterContentChange(Text& textNode, unsigned offsetOfRepla
         return;
     }
     RenderObject* parentRenderer = NodeRenderingTraversal::parent(&textNode)->renderer();
-    if (!textRendererIsNeeded(textNode, *parentRenderer, *textRenderer->style())) {
+    if (!textRendererIsNeeded(textNode, *parentRenderer, textRenderer->style())) {
         detachTextRenderer(textNode);
         attachTextRenderer(textNode);
         reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(textNode);
@@ -552,9 +560,9 @@ static void detachRenderTree(Element& current, DetachType detachType)
 
 static bool pseudoStyleCacheIsInvalid(RenderElement* renderer, RenderStyle* newStyle)
 {
-    const RenderStyle* currentStyle = renderer->style();
+    const RenderStyle& currentStyle = renderer->style();
 
-    const PseudoStyleCache* pseudoStyleCache = currentStyle->cachedPseudoStyles();
+    const PseudoStyleCache* pseudoStyleCache = currentStyle.cachedPseudoStyles();
     if (!pseudoStyleCache)
         return false;
 
@@ -804,7 +812,7 @@ void resolveTree(Document& document, Change change)
                 documentStyle.get().font().update(styleResolver->fontSelector());
         }
 
-        Style::Change documentChange = determineChange(&documentStyle.get(), document.renderView()->style(), document.settings());
+        Style::Change documentChange = determineChange(&documentStyle.get(), &document.renderView()->style(), document.settings());
         if (documentChange != NoChange)
             document.renderView()->setStyle(std::move(documentStyle));
         else

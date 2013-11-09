@@ -603,7 +603,7 @@ void WebPage::performDictionaryLookupForRange(Frame* frame, Range* range, NSDict
         return;
 
     RenderObject* renderer = range->startContainer()->renderer();
-    RenderStyle* style = renderer->style();
+    const RenderStyle& style = renderer->style();
 
     Vector<FloatQuad> quads;
     range->textQuads(quads);
@@ -613,7 +613,7 @@ void WebPage::performDictionaryLookupForRange(Frame* frame, Range* range, NSDict
     IntRect rangeRect = frame->view()->contentsToWindow(quads[0].enclosingBoundingBox());
 
     DictionaryPopupInfo dictionaryPopupInfo;
-    dictionaryPopupInfo.origin = FloatPoint(rangeRect.x(), rangeRect.y() + (style->fontMetrics().ascent() * pageScaleFactor()));
+    dictionaryPopupInfo.origin = FloatPoint(rangeRect.x(), rangeRect.y() + (style.fontMetrics().ascent() * pageScaleFactor()));
     dictionaryPopupInfo.options = (CFDictionaryRef)options;
 
     NSAttributedString *nsAttributedString = [WebHTMLConverter editingAttributedStringFromRange:range];
@@ -989,10 +989,10 @@ void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef context, PDFDocument *p
     }
 }
 
-void WebPage::didUpdateInWindowStateTimerFired()
+void WebPage::didUpdateViewStateTimerFired()
 {
     [CATransaction flush];
-    send(Messages::WebPageProxy::DidUpdateInWindowState());
+    send(Messages::WebPageProxy::DidUpdateViewState());
 }
 
 } // namespace WebKit

@@ -74,7 +74,7 @@ webkit2_h_api += \
 	$(WebKit2)/UIProcess/API/C/WKKeyValueStorageManager.h \
 	$(WebKit2)/UIProcess/API/C/WKMediaCacheManager.h \
 	$(WebKit2)/UIProcess/API/C/WKNativeEvent.h \
-	$(WebKit2)/UIProcess/API/C/WKNavigationData.h \
+	$(WebKit2)/UIProcess/API/C/WKNavigationDataRef.h \
 	$(WebKit2)/UIProcess/API/C/WKNetworkInfo.h \
 	$(WebKit2)/UIProcess/API/C/WKNetworkInfoManager.h \
 	$(WebKit2)/UIProcess/API/C/WKNotification.h \
@@ -322,6 +322,7 @@ webkit2_sources += \
 	Source/WebKit2/Shared/FontInfo.h \
 	Source/WebKit2/Shared/HTTPCookieAcceptPolicy.h \
 	Source/WebKit2/Shared/ResourceCachesToClear.h \
+	Source/WebKit2/Shared/ViewState.h \
 	Source/WebKit2/Shared/WebMemorySampler.h \
 	Source/WebKit2/Shared/APIClient.h \
 	Source/WebKit2/Shared/APIClientTraits.cpp \
@@ -632,8 +633,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/API/C/WKMediaCacheManager.cpp \
 	Source/WebKit2/UIProcess/API/C/WKMediaCacheManager.h \
 	Source/WebKit2/UIProcess/API/C/WKNativeEvent.h \
-	Source/WebKit2/UIProcess/API/C/WKNavigationData.cpp \
-	Source/WebKit2/UIProcess/API/C/WKNavigationData.h \
+	Source/WebKit2/UIProcess/API/C/WKNavigationDataRef.cpp \
+	Source/WebKit2/UIProcess/API/C/WKNavigationDataRef.h \
 	Source/WebKit2/UIProcess/API/C/WKNetworkInfo.cpp \
 	Source/WebKit2/UIProcess/API/C/WKNetworkInfo.h \
 	Source/WebKit2/UIProcess/API/C/WKNetworkInfoManager.cpp \
@@ -1043,7 +1044,6 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/Cookies/soup/WebCookieManagerSoup.cpp \
 	Source/WebKit2/WebProcess/Cookies/soup/WebKitSoupCookieJarSqlite.cpp \
 	Source/WebKit2/WebProcess/Cookies/soup/WebKitSoupCookieJarSqlite.h \
-	Source/WebKit2/WebProcess/Databases/IndexedDB/WebIDBFactoryBackend.cpp \
 	Source/WebKit2/WebProcess/Databases/IndexedDB/WebIDBFactoryBackend.h \
 	Source/WebKit2/WebProcess/FullScreen/WebFullScreenManager.cpp \
 	Source/WebKit2/WebProcess/FullScreen/WebFullScreenManager.h \

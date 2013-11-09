@@ -33,14 +33,14 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-LabelsNodeList::LabelsNodeList(Node& forNode)
+LabelsNodeList::LabelsNodeList(LabelableElement& forNode)
     : LiveNodeList(forNode, LabelsNodeListType, InvalidateOnForAttrChange, NodeListIsRootedAtDocument)
 {
 }
 
 LabelsNodeList::~LabelsNodeList()
 {
-    ownerNode().nodeLists()->removeCacheWithAtomicName(this, LabelsNodeListType, starAtom);
+    ownerNode().nodeLists()->removeCacheWithAtomicName(this, starAtom);
 } 
     
 bool LabelsNodeList::nodeMatches(Element* testNode) const

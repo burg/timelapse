@@ -62,8 +62,8 @@ static RenderMathMLOperator::StretchyCharacter stretchyCharacters[13] = {
     { 0x222b, 0x2320, 0x23ae, 0x2321, 0x0    } // integral sign
 };
 
-RenderMathMLOperator::RenderMathMLOperator(MathMLElement& element)
-    : RenderMathMLBlock(element)
+RenderMathMLOperator::RenderMathMLOperator(MathMLElement& element, PassRef<RenderStyle> style)
+    : RenderMathMLBlock(element, std::move(style))
     , m_stretchHeight(0)
     , m_operator(0)
     , m_operatorType(Default)
@@ -71,8 +71,8 @@ RenderMathMLOperator::RenderMathMLOperator(MathMLElement& element)
 {
 }
 
-RenderMathMLOperator::RenderMathMLOperator(MathMLElement& element, UChar operatorChar)
-    : RenderMathMLBlock(element)
+RenderMathMLOperator::RenderMathMLOperator(MathMLElement& element, PassRef<RenderStyle> style, UChar operatorChar)
+    : RenderMathMLBlock(element, std::move(style))
     , m_stretchHeight(0)
     , m_operator(convertHyphenMinusToMinusSign(operatorChar))
     , m_operatorType(Default)
@@ -109,7 +109,7 @@ void RenderMathMLOperator::styleDidChange(StyleDifference diff, const RenderStyl
 
 FloatRect RenderMathMLOperator::glyphBoundsForCharacter(UChar character)
 {
-    GlyphData data = style()->font().glyphDataForCharacter(character, false);
+    GlyphData data = style().font().glyphDataForCharacter(character, false);
     return data.fontData->boundsForGlyph(data.glyph);
 }
 
@@ -121,7 +121,7 @@ float RenderMathMLOperator::glyphHeightForCharacter(UChar character)
 float RenderMathMLOperator::advanceForCharacter(UChar character)
 {
     // Hyphen minus is always replaced by the minus sign in rendered text.
-    GlyphData data = style()->font().glyphDataForCharacter(convertHyphenMinusToMinusSign(character), false);
+    GlyphData data = style().font().glyphDataForCharacter(convertHyphenMinusToMinusSign(character), false);
     return data.fontData->widthForGlyph(data.glyph);
 }
 
@@ -173,13 +173,13 @@ void RenderMathMLOperator::updateFromElement()
     element().setRenderer(savedRenderer);
     
     auto newStyle = RenderStyle::create();
-    newStyle.get().inheritFrom(style());
+    newStyle.get().inheritFrom(&style());
     newStyle.get().setDisplay(FLEX);
 
-    RenderMathMLBlock* container = new RenderMathMLBlock(element());
+    RenderMathMLBlock* container = new RenderMathMLBlock(element(), std::move(newStyle));
     // This container doesn't offer any useful information to accessibility.
     container->setIgnoreInAccessibilityTree(true);
-    container->setStyle(std::move(newStyle));
+    container->initializeStyle();
 
     addChild(container);
     RenderText* text;
@@ -256,7 +256,7 @@ void RenderMathMLOperator::updateStyle()
     UChar stretchedCharacter;
     bool allowStretching = shouldAllowStretching(stretchedCharacter);
 
-    float stretchedCharacterHeight = style()->fontMetrics().floatHeight();
+    float stretchedCharacterHeight = style().fontMetrics().floatHeight();
     m_isStretched = allowStretching && expandedStretchHeight() > stretchedCharacterHeight;
 
     // Sometimes we cannot stretch an operator properly, so in that case, we should just use the original size.
@@ -281,7 +281,7 @@ void RenderMathMLOperator::computeLogicalHeight(LayoutUnit logicalHeight, Layout
 
 LayoutRect RenderMathMLOperator::paintCharacter(PaintInfo& info, UChar character, const LayoutPoint& origin, CharacterPaintTrimming trim)
 {
-    GlyphData data = style()->font().glyphDataForCharacter(character, false);
+    GlyphData data = style().font().glyphDataForCharacter(character, false);
     FloatRect glyphBounds = data.fontData->boundsForGlyph(data.glyph);
 
     LayoutRect glyphPaintRect(origin, LayoutSize(glyphBounds.x() + glyphBounds.width(), glyphBounds.height()));
@@ -313,7 +313,7 @@ LayoutRect RenderMathMLOperator::paintCharacter(PaintInfo& info, UChar character
     GraphicsContextStateSaver stateSaver(*info.context);
     info.context->clip(clipBounds);
 
-    info.context->drawText(style()->font(), TextRun(&character, 1), origin);
+    info.context->drawText(style().font(), TextRun(&character, 1), origin);
 
     return glyphPaintRect;
 }
@@ -322,7 +322,11 @@ void RenderMathMLOperator::fillWithExtensionGlyph(PaintInfo& info, const LayoutP
 {
     ASSERT(m_stretchyCharacter);
     ASSERT(m_stretchyCharacter->extensionGlyph);
-    ASSERT(from.y() < to.y());
+    ASSERT(from.y() <= to.y());
+
+    // If there is no space for the extension glyph, we don't need to do anything.
+    if (from.y() == to.y())
+        return;
 
     GraphicsContextStateSaver stateSaver(*info.context);
 
@@ -364,7 +368,7 @@ void RenderMathMLOperator::paint(PaintInfo& info, const LayoutPoint& paintOffset
     }
 
     GraphicsContextStateSaver stateSaver(*info.context);
-    info.context->setFillColor(style()->visitedDependentColor(CSSPropertyColor), style()->colorSpace());
+    info.context->setFillColor(style().visitedDependentColor(CSSPropertyColor), style().colorSpace());
 
     ASSERT(m_stretchyCharacter->topGlyph);
     ASSERT(m_stretchyCharacter->bottomGlyph);
@@ -382,7 +386,7 @@ void RenderMathMLOperator::paint(PaintInfo& info, const LayoutPoint& paintOffset
     if (m_stretchyCharacter->middleGlyph) {
         // Center the glyph origin between the start and end glyph paint extents. Then shift it half the paint height toward the bottom glyph.
         FloatRect middleGlyphBounds = glyphBoundsForCharacter(m_stretchyCharacter->middleGlyph);
-        LayoutPoint middleGlyphOrigin(operatorTopLeft.x(), topGlyphOrigin.y() + y());
+        LayoutPoint middleGlyphOrigin(operatorTopLeft.x(), topGlyphOrigin.y());
         middleGlyphOrigin.moveBy(LayoutPoint(0, (bottomGlyphPaintRect.y() - topGlyphPaintRect.maxY()) / 2.0));
         middleGlyphOrigin.moveBy(LayoutPoint(0, middleGlyphBounds.height() / 2.0));
 

@@ -69,16 +69,20 @@ public:
     SVGElement& element() const { return toSVGElement(nodeForNonAnonymous()); }
 
 protected:
-    explicit RenderSVGModelObject(SVGElement&);
+    RenderSVGModelObject(SVGElement&, PassRef<RenderStyle>);
 
     virtual void willBeDestroyed() OVERRIDE;
 
 private:
+    virtual bool isRenderSVGModelObject() const OVERRIDE FINAL { return true; }
+
     // This method should never be called, SVG uses a different nodeAtPoint method
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
     virtual void absoluteFocusRingQuads(Vector<FloatQuad>&) OVERRIDE FINAL;
     bool m_hasSVGShadow;
 };
+
+RENDER_OBJECT_TYPE_CASTS(RenderSVGModelObject, isRenderSVGModelObject());
 
 }
 

@@ -35,7 +35,7 @@ class RenderTextFragment;
 // to date as the button changes.
 class RenderButton FINAL : public RenderFlexibleBox {
 public:
-    explicit RenderButton(HTMLFormControlElement&);
+    RenderButton(HTMLFormControlElement&, PassRef<RenderStyle>);
     virtual ~RenderButton();
 
     HTMLFormControlElement& formControlElement() const;
@@ -63,7 +63,7 @@ private:
     virtual const char* renderName() const OVERRIDE { return "RenderButton"; }
     virtual bool isRenderButton() const OVERRIDE { return true; }
 
-    virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle) OVERRIDE;
+    virtual void styleWillChange(StyleDifference, const RenderStyle& newStyle) OVERRIDE;
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
     virtual bool hasLineIfEmpty() const OVERRIDE;

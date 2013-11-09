@@ -44,8 +44,8 @@
 
 namespace WebCore {
 
-RenderNamedFlowThread::RenderNamedFlowThread(Document& document, PassRefPtr<WebKitNamedFlow> namedFlow)
-    : RenderFlowThread(document)
+RenderNamedFlowThread::RenderNamedFlowThread(Document& document, PassRef<RenderStyle> style, PassRefPtr<WebKitNamedFlow> namedFlow)
+    : RenderFlowThread(document, std::move(style))
     , m_flowThreadChildList(adoptPtr(new FlowThreadChildList()))
     , m_overset(true)
     , m_namedFlow(namedFlow)
@@ -89,21 +89,18 @@ void RenderNamedFlowThread::updateWritingMode()
     RenderRegion* firstRegion = m_regionList.first();
     if (!firstRegion)
         return;
-    if (style()->writingMode() == firstRegion->style()->writingMode())
+    if (style().writingMode() == firstRegion->style().writingMode())
         return;
 
     // The first region defines the principal writing mode for the entire flow.
-    auto newStyle = RenderStyle::clone(style());
-    newStyle.get().setWritingMode(firstRegion->style()->writingMode());
+    auto newStyle = RenderStyle::clone(&style());
+    newStyle.get().setWritingMode(firstRegion->style().writingMode());
     setStyle(std::move(newStyle));
 }
 
 RenderObject* RenderNamedFlowThread::nextRendererForNode(Node* node) const
 {
-    FlowThreadChildList::const_iterator it = m_flowThreadChildList->begin();
-    FlowThreadChildList::const_iterator end = m_flowThreadChildList->end();
-
-    for (; it != end; ++it) {
+    for (auto it = m_flowThreadChildList->begin(), end = m_flowThreadChildList->end(); it != end; ++it) {
         RenderObject* child = *it;
         ASSERT(child->node());
         unsigned short position = node->compareDocumentPosition(child->node());
@@ -119,9 +116,9 @@ RenderObject* RenderNamedFlowThread::previousRendererForNode(Node* node) const
     if (m_flowThreadChildList->isEmpty())
         return 0;
 
-    FlowThreadChildList::const_iterator begin = m_flowThreadChildList->begin();
-    FlowThreadChildList::const_iterator end = m_flowThreadChildList->end();
-    FlowThreadChildList::const_iterator it = end;
+    auto begin = m_flowThreadChildList->begin();
+    auto end = m_flowThreadChildList->end();
+    auto it = end;
 
     do {
         --it;
@@ -166,9 +163,7 @@ bool RenderNamedFlowThread::dependsOn(RenderNamedFlowThread* otherRenderFlowThre
         return true;
 
     // Recursively traverse the m_layoutBeforeThreadsSet.
-    RenderNamedFlowThreadCountedSet::const_iterator iterator = m_layoutBeforeThreadsSet.begin();
-    RenderNamedFlowThreadCountedSet::const_iterator end = m_layoutBeforeThreadsSet.end();
-    for (; iterator != end; ++iterator) {
+    for (auto iterator = m_layoutBeforeThreadsSet.begin(), end = m_layoutBeforeThreadsSet.end(); iterator != end; ++iterator) {
         const RenderNamedFlowThread* beforeFlowThread = (*iterator).key;
         if (beforeFlowThread->dependsOn(otherRenderFlowThread))
             return true;
@@ -196,21 +191,21 @@ static bool compareRenderRegions(const RenderRegion* firstRegion, const RenderRe
 
         // If the second region is contained in the first one, the first region is "less" if it's :before.
         if (position & Node::DOCUMENT_POSITION_CONTAINED_BY) {
-            ASSERT(secondRegion->style()->styleType() == NOPSEUDO);
-            return firstRegion->style()->styleType() == BEFORE;
+            ASSERT(secondRegion->style().styleType() == NOPSEUDO);
+            return firstRegion->style().styleType() == BEFORE;
         }
 
         // If the second region contains the first region, the first region is "less" if the second is :after.
         if (position & Node::DOCUMENT_POSITION_CONTAINS) {
-            ASSERT(firstRegion->style()->styleType() == NOPSEUDO);
-            return secondRegion->style()->styleType() == AFTER;
+            ASSERT(firstRegion->style().styleType() == NOPSEUDO);
+            return secondRegion->style().styleType() == AFTER;
         }
 
         return (position & Node::DOCUMENT_POSITION_FOLLOWING);
     }
 
     // FIXME: Currently it's not possible for an element to be both a region and have pseudo-children. The case is covered anyway.
-    switch (firstRegion->style()->styleType()) {
+    switch (firstRegion->style().styleType()) {
     case BEFORE:
         // The second region can be the node or the after pseudo-element (before is smaller than any of those).
         return true;
@@ -219,7 +214,7 @@ static bool compareRenderRegions(const RenderRegion* firstRegion, const RenderRe
         return false;
     case NOPSEUDO:
         // The second region can either be the before or the after pseudo-element (the node is only smaller than the after pseudo-element).
-        return firstRegion->style()->styleType() == AFTER;
+        return firstRegion->style().styleType() == AFTER;
     default:
         break;
     }
@@ -235,7 +230,7 @@ static void addRegionToList(RenderRegionList& regionList, RenderRegion* renderRe
         regionList.add(renderRegion);
     else {
         // Find the first region "greater" than renderRegion.
-        RenderRegionList::iterator it = regionList.begin();
+        auto it = regionList.begin();
         while (it != regionList.end() && !compareRenderRegions(renderRegion, *it))
             ++it;
         regionList.insertBefore(it, renderRegion);
@@ -329,7 +324,7 @@ void RenderNamedFlowThread::computeOversetStateForRegions(LayoutUnit oldClientAf
         height = isHorizontalWritingMode() ? visualOverflowRect().maxY() : visualOverflowRect().maxX();
 
     RenderRegion* lastReg = lastRegion();
-    for (RenderRegionList::iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
+    for (auto iter = m_regionList.begin(), end = m_regionList.end(); iter != end; ++iter) {
         RenderRegion* region = *iter;
         LayoutUnit flowMin = height - (isHorizontalWritingMode() ? region->flowThreadPortionRect().y() : region->flowThreadPortionRect().x());
         LayoutUnit flowMax = height - (isHorizontalWritingMode() ? region->flowThreadPortionRect().maxY() : region->flowThreadPortionRect().maxX());
@@ -366,7 +361,7 @@ void RenderNamedFlowThread::computeOversetStateForRegions(LayoutUnit oldClientAf
 void RenderNamedFlowThread::checkInvalidRegions()
 {
     Vector<RenderRegion*> newValidRegions;
-    for (RenderRegionList::iterator iter = m_invalidRegionList.begin(); iter != m_invalidRegionList.end(); ++iter) {
+    for (auto iter = m_invalidRegionList.begin(), end = m_invalidRegionList.end(); iter != end; ++iter) {
         RenderRegion* region = *iter;
         // The only reason a region would be invalid is because it has a parent flow thread.
         ASSERT(!region->isValid() && region->parentNamedFlowThread());
@@ -376,7 +371,7 @@ void RenderNamedFlowThread::checkInvalidRegions()
         newValidRegions.append(region);
     }
 
-    for (Vector<RenderRegion*>::iterator iter = newValidRegions.begin(); iter != newValidRegions.end(); ++iter) {
+    for (auto iter = newValidRegions.begin(), end = newValidRegions.end(); iter != end; ++iter) {
         RenderRegion* region = *iter;
         m_invalidRegionList.remove(region);
         region->parentNamedFlowThread()->m_observerThreadsSet.remove(this);
@@ -421,7 +416,7 @@ void RenderNamedFlowThread::removeDependencyOnFlowThread(RenderNamedFlowThread* 
 
 void RenderNamedFlowThread::pushDependencies(RenderNamedFlowThreadList& list)
 {
-    for (RenderNamedFlowThreadCountedSet::iterator iter = m_layoutBeforeThreadsSet.begin(); iter != m_layoutBeforeThreadsSet.end(); ++iter) {
+    for (auto iter = m_layoutBeforeThreadsSet.begin(), end = m_layoutBeforeThreadsSet.end(); iter != end; ++iter) {
         RenderNamedFlowThread* flowThread = (*iter).key;
         if (list.contains(flowThread))
             continue;
@@ -447,11 +442,13 @@ void RenderNamedFlowThread::registerNamedFlowContentElement(Element& contentElem
         unsigned short position = contentElement.compareDocumentPosition(element);
         if (position & Node::DOCUMENT_POSITION_FOLLOWING) {
             m_contentElements.insertBefore(element, &contentElement);
+            InspectorInstrumentation::didRegisterNamedFlowContentElement(&document(), m_namedFlow.get(), &contentElement, element);
             return;
         }
     }
 
     m_contentElements.add(&contentElement);
+    InspectorInstrumentation::didRegisterNamedFlowContentElement(&document(), m_namedFlow.get(), &contentElement);
 }
 
 void RenderNamedFlowThread::unregisterNamedFlowContentElement(Element& contentElement)
@@ -465,6 +462,8 @@ void RenderNamedFlowThread::unregisterNamedFlowContentElement(Element& contentEl
 
     if (canBeDestroyed())
         setMarkForDestruction();
+
+    InspectorInstrumentation::didUnregisterNamedFlowContentElement(&document(), m_namedFlow.get(), &contentElement);
 }
 
 bool RenderNamedFlowThread::hasContentElement(Element& contentElement) const

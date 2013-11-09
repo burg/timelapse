@@ -142,8 +142,8 @@ static void buildRendererHighlight(RenderObject* renderer, RenderRegion* region,
             if (!renderBox->isOutOfFlowPositioned() && region) {
                 RenderBox::LogicalExtentComputedValues computedValues;
                 renderBox->computeLogicalWidthInRegion(computedValues, region);
-                margins.mutableLogicalLeft(renderBox->style()->writingMode()) = computedValues.m_margins.m_start;
-                margins.mutableLogicalRight(renderBox->style()->writingMode()) = computedValues.m_margins.m_end;
+                margins.mutableLogicalLeft(renderBox->style().writingMode()) = computedValues.m_margins.m_start;
+                margins.mutableLogicalRight(renderBox->style().writingMode()) = computedValues.m_margins.m_end;
             }
 
             paddingBox = renderBox->clientBoxRectInRegion(region);
@@ -312,6 +312,11 @@ void InspectorOverlay::highlightQuad(PassOwnPtr<FloatQuad> quad, const Highlight
 Node* InspectorOverlay::highlightedNode() const
 {
     return m_highlightNode.get();
+}
+
+void InspectorOverlay::didSetSearchingForNode(bool enabled)
+{
+    m_client->didSetSearchingForNode(enabled);
 }
 
 void InspectorOverlay::update()

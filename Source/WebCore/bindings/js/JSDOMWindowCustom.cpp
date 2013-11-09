@@ -21,7 +21,6 @@
 #include "config.h"
 #include "JSDOMWindowCustom.h"
 
-#include "BindingSecurity.h"
 #include "Frame.h"
 #include "HTMLCollection.h"
 #include "HTMLDocument.h"
@@ -101,8 +100,7 @@ static JSValue namedItemGetter(ExecState* exec, JSValue slotBase, PropertyName p
 
     if (UNLIKELY(toHTMLDocument(document)->windowNamedItemContainsMultipleElements(*atomicPropertyName))) {
         RefPtr<HTMLCollection> collection = document->windowNamedItems(atomicPropertyName);
-        ASSERT(!collection->isEmpty());
-        ASSERT(!collection->hasExactlyOneItem());
+        ASSERT(collection->length() > 1);
         return toJS(exec, thisObj->globalObject(), WTF::getPtr(collection));
     }
 

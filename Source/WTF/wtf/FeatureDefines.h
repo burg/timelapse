@@ -112,6 +112,10 @@
 #define ENABLE_POINTER_LOCK 0
 #endif
 
+#if !defined(ENABLE_REMOTE_INSPECTOR)
+#define ENABLE_REMOTE_INSPECTOR 1
+#endif
+
 #if !defined(ENABLE_REPAINT_THROTTLING)
 #define ENABLE_REPAINT_THROTTLING 0
 #endif
@@ -122,6 +126,10 @@
 
 #if !defined(ENABLE_TEXT_CARET)
 #define ENABLE_TEXT_CARET 0
+#endif
+
+#if !defined(ENABLE_TEXT_SELECTION)
+#define ENABLE_TEXT_SELECTION 0
 #endif
 
 #if !defined(ENABLE_TOUCH_EVENTS)
@@ -174,6 +182,10 @@
 #define ENABLE_FULLSCREEN_API 1
 #endif
 
+#if !defined(ENABLE_REMOTE_INSPECTOR)
+#define ENABLE_REMOTE_INSPECTOR 1
+#endif
+
 #if !defined(ENABLE_RUBBER_BANDING)
 #define ENABLE_RUBBER_BANDING 1
 #endif
@@ -214,6 +226,10 @@
 
 #if !defined(ENABLE_INPUT_TYPE_COLOR_POPOVER)
 #define ENABLE_INPUT_TYPE_COLOR_POPOVER 1
+#endif
+
+#if !defined(ENABLE_MEDIA_SOURCE)
+#define ENABLE_MEDIA_SOURCE 1
 #endif
 
 #endif /* PLATFORM(MAC) && !PLATFORM(IOS) */
@@ -280,6 +296,10 @@
 #define ENABLE_SUBPIXEL_LAYOUT 1
 #endif
 
+#if !defined(ENABLE_8BIT_TEXTRUN)
+#define ENABLE_8BIT_TEXTRUN 1
+#endif
+
 #endif /* PLATFORM(EFL) */
 
 /* --------- Gtk port (Unix, Windows, Mac) --------- */
@@ -289,6 +309,10 @@
 #if !defined(ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH)
 #define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 1
 #endif
+#endif
+
+#if !defined(ENABLE_8BIT_TEXTRUN)
+#define ENABLE_8BIT_TEXTRUN 1
 #endif
 
 #endif /* PLATFORM(GTK) */
@@ -579,6 +603,10 @@
 #define ENABLE_LEGACY_VIEWPORT_ADAPTION 0
 #endif
 
+#if !defined(ENABLE_LETTERPRESS)
+#define ENABLE_LETTERPRESS 0
+#endif
+
 #if !defined(ENABLE_LINK_PREFETCH)
 #define ENABLE_LINK_PREFETCH 0
 #endif
@@ -697,6 +725,10 @@
 #define ENABLE_REPAINT_THROTTLING 0
 #endif
 
+#if !defined(ENABLE_REMOTE_INSPECTOR)
+#define ENABLE_REMOTE_INSPECTOR 0
+#endif
+
 #if !defined(ENABLE_REQUEST_ANIMATION_FRAME)
 #define ENABLE_REQUEST_ANIMATION_FRAME 0
 #endif
@@ -761,6 +793,10 @@
 
 #if !defined(ENABLE_TEXT_CARET)
 #define ENABLE_TEXT_CARET 1
+#endif
+
+#if !defined(ENABLE_TEXT_SELECTION)
+#define ENABLE_TEXT_SELECTION 1
 #endif
 
 #if !defined(ENABLE_THREADED_HTML_PARSER)
@@ -855,6 +891,10 @@
 
 #if ENABLE(CSS_SHADERS) && !ENABLE(WEBGL)
 #error "ENABLE(CSS_SHADERS) requires ENABLE(WEBGL)"
+#endif
+
+#if ENABLE(REMOTE_INSPECTOR) && !ENABLE(INSPECTOR)
+#error "ENABLE(REMOTE_INSPECTOR) requires ENABLE(INSPECTOR)"
 #endif
 
 #endif /* WTF_FeatureDefines_h */

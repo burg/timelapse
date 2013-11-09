@@ -27,7 +27,6 @@
 #include "Frame.h"
 #include "HTMLImageElement.h"
 #include "HTMLMapElement.h"
-#include "HTMLNames.h"
 #include "HitTestResult.h"
 #include "Path.h"
 #include "RenderImage.h"
@@ -106,7 +105,7 @@ Path HTMLAreaElement::computePath(RenderElement* obj) const
         size = obj->absoluteOutlineBounds().size();
     
     Path p = getRegion(size);
-    float zoomFactor = obj->style()->effectiveZoom();
+    float zoomFactor = obj->style().effectiveZoom();
     if (zoomFactor != 1.0f) {
         AffineTransform zoomTransform;
         zoomTransform.scale(zoomFactor);
@@ -201,7 +200,7 @@ bool HTMLAreaElement::isMouseFocusable() const
 bool HTMLAreaElement::isFocusable() const
 {
     HTMLImageElement* image = imageElement();
-    if (!image || !image->renderer() || image->renderer()->style()->visibility() != VISIBLE)
+    if (!image || !image->renderer() || image->renderer()->style().visibility() != VISIBLE)
         return false;
 
     return supportsFocus() && Element::tabIndex() >= 0;

@@ -35,7 +35,7 @@ class RenderObject;
 
 class RenderSVGResourceMarker FINAL : public RenderSVGResourceContainer {
 public:
-    explicit RenderSVGResourceMarker(SVGMarkerElement&);
+    RenderSVGResourceMarker(SVGMarkerElement&, PassRef<RenderStyle>);
     virtual ~RenderSVGResourceMarker();
 
     SVGMarkerElement& markerElement() const { return toSVGMarkerElement(RenderSVGResourceContainer::element()); }
@@ -55,7 +55,7 @@ public:
     virtual const AffineTransform& localToParentTransform() const;
     AffineTransform markerTransformation(const FloatPoint& origin, float angle, float strokeWidth) const;
 
-    virtual bool applyResource(RenderObject*, RenderStyle*, GraphicsContext*&, unsigned short) { return false; }
+    virtual bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, unsigned short) OVERRIDE { return false; }
     virtual FloatRect resourceBoundingBox(const RenderObject&) OVERRIDE { return FloatRect(); }
 
     FloatPoint referencePoint() const;

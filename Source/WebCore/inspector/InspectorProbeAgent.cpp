@@ -36,7 +36,6 @@
 
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
-#include "InspectorState.h"
 #include "InstrumentingAgents.h"
 #include "MainFrame.h"
 #include "Page.h"
@@ -53,16 +52,17 @@ namespace ProbeAgentState {
 static const char probesEnabled[] = "probesEnabled";
 }
 
-InspectorProbeAgent::InspectorProbeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage, InjectedScriptManager* injectedScriptManager)
-: InspectorBaseAgent<InspectorProbeAgent>("Probe", instrumentingAgents, state)
-, m_nextProbeId(1)
-, m_nextSampleId(1)
+InspectorProbeAgent::InspectorProbeAgent(InstrumentingAgents* instrumentingAgents, Page* inspectedPage, InjectedScriptManager* injectedScriptManager)
+: InspectorBaseAgent<InspectorProbeAgent>("Probe", instrumentingAgents)
+//, m_nextProbeId(1)
+//, m_nextSampleId(1)
 , m_instrumentingAgents(instrumentingAgents)
-, m_frontend(0)
+, m_frontend(nullptr)
 , m_inspectedPage(inspectedPage)
 , m_injectedScriptManager(injectedScriptManager)
-, m_probeMap(ProbeMap())
-, m_urlToScriptIdMap(UrlToScriptIdMap()) {}
+//, m_probeMap(ProbeMap())
+//, m_urlToScriptIdMap(UrlToScriptIdMap())
+, m_enabled(false) {}
 
 InspectorProbeAgent::~InspectorProbeAgent()
 {
@@ -82,40 +82,45 @@ void InspectorProbeAgent::setFrontend(InspectorFrontend* frontend)
 
 void InspectorProbeAgent::clearFrontend()
 {
-    m_frontend = 0;
+    m_frontend = nullptr;
 
     if (!enabled())
         return;
 
     disable();
-    m_state->setBoolean(ProbeAgentState::probesEnabled, false);
 }
 
 void InspectorProbeAgent::clearResources()
 {
     ScriptState* state = mainWorldExecState(&m_inspectedPage->mainFrame());
-    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    m_injectedScriptManager->injectedScriptFor(state);
+//  InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    /*
     for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
         injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
+    */
 }
 
 void InspectorProbeAgent::enable()
 {
     m_instrumentingAgents->setInspectorProbeAgent(this);
-
-    PageScriptDebugServer::shared().setProbesActivated(true);
-    PageScriptDebugServer::shared().addListener(this, m_inspectedPage);
+    PageScriptDebugServer::shared().activateBreakpoints();
+    m_enabled = true;
+    // PageScriptDebugServer::shared().addListener(this, m_inspectedPage);
 }
 
 void InspectorProbeAgent::disable()
 {
+    m_instrumentingAgents->setInspectorProbeAgent(nullptr);
+    PageScriptDebugServer::shared().deactivateBreakpoints();
+    m_enabled = false;
+    /*
     for (UrlToScriptIdMap::iterator it = m_urlToScriptIdMap.begin(); it != m_urlToScriptIdMap.end(); ++it)
         PageScriptDebugServer::shared().clearProbesForScriptId(it->value);
 
     m_urlToScriptIdMap.clear();
 
-    PageScriptDebugServer::shared().removeListener(this, m_inspectedPage);
-    m_instrumentingAgents->setInspectorProbeAgent(0);
+    // PageScriptDebugServer::shared().removeListener(this, m_inspectedPage);
 
     ScriptState* state = mainWorldExecState(&m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
@@ -123,15 +128,12 @@ void InspectorProbeAgent::disable()
         injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
 
     m_probeMap.clear();
-}
-
-bool InspectorProbeAgent::enabled()
-{
-    return m_state->getBoolean(ProbeAgentState::probesEnabled);
+    */
 }
 
 // ProbeCommandHandler API
 
+/*
 void InspectorProbeAgent::captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
 {
     RefPtr<ScriptProbe> probe = prpProbe;
@@ -151,6 +153,7 @@ void InspectorProbeAgent::captureProbeSample(ScriptState*, PassRefPtr<ScriptProb
     if (m_frontend)
         m_frontend->probeSampleReceived(result.release());
 }
+*/
 
 void InspectorProbeAgent::enable(ErrorString*)
 {
@@ -158,7 +161,6 @@ void InspectorProbeAgent::enable(ErrorString*)
         return;
 
     enable();
-    m_state->setBoolean(ProbeAgentState::probesEnabled, true);
 }
 
 void InspectorProbeAgent::disable(ErrorString*)
@@ -167,16 +169,17 @@ void InspectorProbeAgent::disable(ErrorString*)
         return;
 
     disable();
-    m_state->setBoolean(ProbeAgentState::probesEnabled, false);
 }
 
 void InspectorProbeAgent::setProbesActive(ErrorString*, bool state)
 {
-    PageScriptDebugServer::shared().setProbesActivated(state);
+    PageScriptDebugServer::shared().setBreakpointsActivated(state);
 }
 
 void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& resultArray)
 {
+    UNUSED_PARAM(resultArray);
+    /*
     resultArray = TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe>::create();
     for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
         RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
@@ -188,10 +191,16 @@ void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::A
         probeObject->setUrl(it->value->url());
         resultArray->addItem(probeObject.release());
     }
+    */
 }
 
 void InspectorProbeAgent::getProbeSamples(ErrorString* errorString, int probeId, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample> >& result)
 {
+    UNUSED_PARAM(errorString);
+    UNUSED_PARAM(probeId);
+    UNUSED_PARAM(result);
+    
+    /*
     ProbeMap::iterator it = m_probeMap.find(probeId);
     if (it == m_probeMap.end()) {
         *errorString = "Couldn't find probe with specified probeId";
@@ -200,6 +209,7 @@ void InspectorProbeAgent::getProbeSamples(ErrorString* errorString, int probeId,
 
     result = TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample>::create();
     // TODO: (Issue #316): Iterate through sample storage, create inspector objects for each sample.
+    */
 }
 
 void InspectorProbeAgent::removeProbe(ErrorString* errorString, int probeId)
@@ -209,6 +219,8 @@ void InspectorProbeAgent::removeProbe(ErrorString* errorString, int probeId)
         return;
     }
 
+    UNUSED_PARAM(probeId);
+    /*
     ProbeMap::iterator findProbeResult = m_probeMap.find(probeId);
     if (findProbeResult == m_probeMap.end()) {
         *errorString = "Couldn't find probe with specified probeId";
@@ -230,10 +242,15 @@ void InspectorProbeAgent::removeProbe(ErrorString* errorString, int probeId)
 
     ScriptId scriptId = findScriptIdResult->value;
     PageScriptDebugServer::shared().removeProbeForScriptId(scriptId, probe);
+    */
 }
 
 void InspectorProbeAgent::enableProbe(ErrorString* errorString, int probeId)
 {
+    UNUSED_PARAM(errorString);
+    UNUSED_PARAM(probeId);
+    
+    /*
     ProbeMap::iterator it = m_probeMap.find(probeId);
     if (it == m_probeMap.end()) {
         *errorString = "Couldn't find probe with specified probeId";
@@ -243,10 +260,15 @@ void InspectorProbeAgent::enableProbe(ErrorString* errorString, int probeId)
     it->value->enable();
     if (m_frontend)
         m_frontend->probeEnabled(probeId);
+    */
 }
 
 void InspectorProbeAgent::disableProbe(ErrorString* errorString, int probeId)
 {
+    UNUSED_PARAM(errorString);
+    UNUSED_PARAM(probeId);
+    
+    /*
     ProbeMap::iterator it = m_probeMap.find(probeId);
     if (it == m_probeMap.end()) {
         *errorString = "Couldn't find probe with specified probeId";
@@ -256,6 +278,7 @@ void InspectorProbeAgent::disableProbe(ErrorString* errorString, int probeId)
     it->value->disable();
     if (m_frontend)
         m_frontend->probeDisabled(probeId);
+    */
 }
 
 void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const String& url, int lineNumber, int columnNumber, const String& expression)
@@ -269,6 +292,13 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
         *errorString = "Cannot create a probe with a zero-length expression.";
         return;
     }
+    
+    UNUSED_PARAM(url);
+    UNUSED_PARAM(lineNumber);
+    UNUSED_PARAM(columnNumber);
+    UNUSED_PARAM(expression);
+    
+    /*
     const String& nonNullUrl = (url.isNull()) ? emptyString() : url;
     TextPosition position(OrdinalNumber::fromZeroBasedInt(lineNumber), OrdinalNumber::fromZeroBasedInt(columnNumber));
     RefPtr<ScriptProbe> probe = ScriptProbe::create(m_nextProbeId++, nonNullUrl, position, expression);
@@ -295,10 +325,11 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
 
     if (m_frontend)
         m_frontend->probeResolved(probe->uid(), String::number(findResult->value));
+    */
 }
 
 // ScriptDebugListener API
-
+/*
 void InspectorProbeAgent::didParseSource(const String& scriptId, const Script& script)
 {
     const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
@@ -315,18 +346,7 @@ void InspectorProbeAgent::didParseSource(const String& scriptId, const Script& s
             m_frontend->probeResolved(it->value->uid(), scriptId);
     }
 }
-
-void InspectorProbeAgent::failedToParseSource(const String&, const String&, int, int, const String&)
-{
-}
-
-void InspectorProbeAgent::didPause(ScriptState*, const ScriptValue&, const ScriptValue&)
-{
-}
-
-void InspectorProbeAgent::didContinue()
-{
-}
+*/
 
 }; // namespace WebCore
 

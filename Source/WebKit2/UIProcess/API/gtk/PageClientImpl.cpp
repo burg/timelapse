@@ -126,11 +126,6 @@ void PageClientImpl::didRelaunchProcess()
     notImplemented();
 }
 
-void PageClientImpl::takeFocus(bool)
-{
-    notImplemented();
-}
-
 void PageClientImpl::toolTipChanged(const String&, const String& newToolTip)
 {
     webkitWebViewBaseSetTooltipText(WEBKIT_WEB_VIEW_BASE(m_viewWidget), newToolTip.utf8().data());
@@ -269,11 +264,6 @@ void PageClientImpl::preferencesDidChange()
     notImplemented();
 }
 
-void PageClientImpl::flashBackingStoreUpdates(const Vector<IntRect>&)
-{
-    notImplemented();
-}
-
 void PageClientImpl::updateTextInputState()
 {
     webkitWebViewBaseUpdateTextInputState(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
@@ -287,6 +277,11 @@ void PageClientImpl::startDrag(const WebCore::DragData& dragData, PassRefPtr<Sha
 void PageClientImpl::handleDownloadRequest(DownloadProxy* download)
 {
     webkitWebViewBaseHandleDownloadRequest(WEBKIT_WEB_VIEW_BASE(m_viewWidget), download);
+}
+
+bool PageClientImpl::isWindowVisible()
+{
+    return webkitWebViewBaseIsWindowVisible(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
 }
 
 } // namespace WebKit

@@ -62,12 +62,12 @@ typedef String ErrorString;
 class ScriptArguments;
 class ScriptValue;
 
-class InspectorProbeAgent : public InspectorBaseAgent<InspectorProbeAgent>, public ScriptDebugListener, public InspectorBackendDispatcher::ProbeCommandHandler {
+class InspectorProbeAgent : public InspectorBaseAgent<InspectorProbeAgent>, public InspectorBackendDispatcher::ProbeCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorProbeAgent);
 public:
-    static PassOwnPtr<InspectorProbeAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page, InjectedScriptManager* InjectedScriptManager)
+    static PassOwnPtr<InspectorProbeAgent> create(InstrumentingAgents* instrumentingAgents, Page* page, InjectedScriptManager* injectedScriptManager)
     {
-        return adoptPtr(new InspectorProbeAgent(instrumentingAgents, state, page, InjectedScriptManager));
+        return adoptPtr(new InspectorProbeAgent(instrumentingAgents, page, injectedScriptManager));
     }
 
     ~InspectorProbeAgent();
@@ -76,6 +76,7 @@ public:
     void clearFrontend();
     // Called when the main frame navigates.
     void clearResources();
+    bool enabled() const { return m_enabled; }
 
     // ProbeCommandHandler API
     virtual void enable(ErrorString*);
@@ -91,19 +92,18 @@ public:
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
     // ScriptDebugListener API
-    virtual void didParseSource(const String& scriptId, const Script&);
-    virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage);
-    virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
-    virtual void didContinue();
+    /*
+    virtual void didParseSource(SourceID, const Script&);
     virtual void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
+    */
 
 private:
-    InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*, InjectedScriptManager*);
+    InspectorProbeAgent(InstrumentingAgents*, Page*, InjectedScriptManager*);
     String objectGroupForProbeId(int probeId) const;
-    bool enabled();
     void enable();
     void disable();
 
+/*
     typedef intptr_t ScriptId;
     typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
     typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
@@ -111,14 +111,18 @@ private:
 
     int m_nextProbeId;
     int m_nextSampleId;
+*/
 
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Probe* m_frontend;
     Page* m_inspectedPage;
     InjectedScriptManager* m_injectedScriptManager;
 
+/*
     ProbeMap m_probeMap;
     UrlToScriptIdMap m_urlToScriptIdMap;
+*/
+    bool m_enabled;
 };
 
 } // namespace WebCore

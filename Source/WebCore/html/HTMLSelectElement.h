@@ -28,13 +28,13 @@
 
 #include "Event.h"
 #include "HTMLFormControlElementWithState.h"
-#include "HTMLOptionsCollection.h"
 #include "TypeAhead.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class HTMLOptionElement;
+class HTMLOptionsCollection;
 
 class HTMLSelectElement : public HTMLFormControlElementWithState, public TypeAheadDataSource {
 public:
@@ -132,7 +132,7 @@ private:
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
 
     virtual bool childShouldCreateRenderer(const Node*) const OVERRIDE;
-    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual bool appendFormData(FormDataList&, bool) OVERRIDE;
 
     virtual void reset() OVERRIDE;

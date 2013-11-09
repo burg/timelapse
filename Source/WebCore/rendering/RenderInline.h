@@ -33,8 +33,8 @@ class Position;
 
 class RenderInline : public RenderBoxModelObject {
 public:
-    explicit RenderInline(Element&);
-    explicit RenderInline(Document&);
+    RenderInline(Element&, PassRef<RenderStyle>);
+    RenderInline(Document&, PassRef<RenderStyle>);
 
     virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = 0) OVERRIDE;
 
@@ -146,7 +146,7 @@ private:
         return IntRect(0, 0, boundingBox.width(), boundingBox.height());
     }
 
-    virtual InlineFlowBox* createInlineFlowBox(); // Subclassed by SVG and Ruby
+    virtual std::unique_ptr<InlineFlowBox> createInlineFlowBox(); // Subclassed by RenderSVGInline
 
     virtual void dirtyLinesFromChangedChild(RenderObject* child) OVERRIDE FINAL { m_lineBoxes.dirtyLinesFromChangedChild(this, child); }
 

@@ -32,8 +32,8 @@
 
 namespace WebCore {
 
-RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element)
-    : RenderTextControl(element)
+RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, PassRef<RenderStyle> style)
+    : RenderTextControl(element, std::move(style))
 {
 }
 
@@ -94,11 +94,6 @@ PassRef<RenderStyle> RenderTextControlMultiLine::createInnerTextStyle(const Rend
     return textBlockStyle;
 }
 
-RenderStyle* RenderTextControlMultiLine::textBaseStyle() const
-{
-    return style();
-}
-
 RenderObject* RenderTextControlMultiLine::layoutSpecialExcludedChild(bool relayoutChildren)
 {
     RenderObject* placeholderRenderer = RenderTextControl::layoutSpecialExcludedChild(relayoutChildren);
@@ -107,7 +102,7 @@ RenderObject* RenderTextControlMultiLine::layoutSpecialExcludedChild(bool relayo
     if (!placeholderRenderer->isBox())
         return placeholderRenderer;
     RenderBox* placeholderBox = toRenderBox(placeholderRenderer);
-    placeholderBox->style()->setLogicalWidth(Length(contentLogicalWidth() - placeholderBox->borderAndPaddingLogicalWidth(), Fixed));
+    placeholderBox->style().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox->borderAndPaddingLogicalWidth(), Fixed));
     placeholderBox->layoutIfNeeded();
     placeholderBox->setX(borderLeft() + paddingLeft());
     placeholderBox->setY(borderTop() + paddingTop());

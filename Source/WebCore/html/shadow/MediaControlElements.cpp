@@ -32,7 +32,6 @@
 #if ENABLE(VIDEO)
 #include "MediaControlElements.h"
 
-#include "CaptionUserPreferences.h"
 #include "DOMTokenList.h"
 #include "EventHandler.h"
 #include "EventNames.h"
@@ -44,19 +43,15 @@
 #include "Language.h"
 #include "LocalizedStrings.h"
 #include "MediaControls.h"
-#include "MouseEvent.h"
-#include "Page.h"
 #include "PageGroup.h"
 #include "RenderLayer.h"
 #include "RenderMediaControlElements.h"
 #include "RenderSlider.h"
-#include "RenderTheme.h"
 #include "RenderVideo.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #if ENABLE(VIDEO_TRACK)
-#include "TextTrack.h"
 #include "TextTrackList.h"
 #endif
 
@@ -337,9 +332,9 @@ void MediaControlTimelineContainerElement::setTimeDisplaysHidden(bool hidden)
     }
 }
 
-RenderElement* MediaControlTimelineContainerElement::createRenderer(RenderStyle&)
+RenderElement* MediaControlTimelineContainerElement::createRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderMediaControlTimelineContainer(*this);
+    return new RenderMediaControlTimelineContainer(*this, std::move(style));
 }
 
 // ----------------------------
@@ -356,9 +351,9 @@ PassRefPtr<MediaControlVolumeSliderContainerElement> MediaControlVolumeSliderCon
     return element.release();
 }
 
-RenderElement* MediaControlVolumeSliderContainerElement::createRenderer(RenderStyle&)
+RenderElement* MediaControlVolumeSliderContainerElement::createRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderMediaVolumeSliderContainer(*this);
+    return new RenderMediaVolumeSliderContainer(*this, std::move(style));
 }
 
 void MediaControlVolumeSliderContainerElement::defaultEventHandler(Event* event)
@@ -1210,9 +1205,9 @@ PassRefPtr<MediaControlTextTrackContainerElement> MediaControlTextTrackContainer
     return element.release();
 }
 
-RenderElement* MediaControlTextTrackContainerElement::createRenderer(RenderStyle&)
+RenderElement* MediaControlTextTrackContainerElement::createRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderTextTrackContainerElement(*this);
+    return new RenderTextTrackContainerElement(*this, std::move(style));
 }
 
 const AtomicString& MediaControlTextTrackContainerElement::textTrackContainerElementShadowPseudoId()

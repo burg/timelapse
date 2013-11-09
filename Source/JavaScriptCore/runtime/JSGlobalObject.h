@@ -87,6 +87,7 @@ struct HashTable;
     macro(JSArrayBuffer, arrayBuffer, arrayBuffer, JSArrayBuffer, ArrayBuffer) \
     macro(WeakMap, weakMap, weakMap, JSWeakMap, WeakMap) \
     macro(ArrayIterator, arrayIterator, arrayIterator, JSArrayIterator, ArrayIterator) \
+    macro(ArgumentsIterator, argumentsIterator, argumentsIterator, JSArgumentsIterator, ArgumentsIterator) \
 
 #define DECLARE_SIMPLE_BUILTIN_TYPE(capitalName, lowerName, properName, instanceType, jsName) \
     class JS ## capitalName; \
@@ -149,9 +150,7 @@ private:
 
 protected:
 
-    // Add one so we don't need to index with -1 to get current frame pointer.
-    // An index of -1 is an error for some compilers.
-    Register m_globalCallFrame[JSStack::CallFrameHeaderSize + 1];
+    Register m_globalCallFrame[JSStack::CallFrameHeaderSize];
 
     WriteBarrier<JSObject> m_globalThis;
 

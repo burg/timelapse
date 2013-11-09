@@ -31,7 +31,6 @@
 /* Include compiler specific macros */
 #include <wtf/Compiler.h>
 
-
 /* ==== PLATFORM handles OS, operating environment, graphics API, and
    CPU. This macro will be phased out in favor of platform adaptation
    macros, policy decision macros, and top-level port definitions. ==== */
@@ -69,6 +68,7 @@
 /* CPU(HPPA) - HP PA-RISC */
 #if defined(__hppa__) || defined(__hppa64__)
 #define WTF_CPU_HPPA 1
+#define WTF_CPU_BIG_ENDIAN 1
 #endif
 
 /* CPU(IA64) - Itanium / IA-64 */
@@ -692,12 +692,13 @@
 #define ENABLE_JIT 0
 #endif
 
-/* The JIT is enabled by default on all x86, x86-64, ARM & MIPS platforms. */
+/* The JIT is enabled by default on all x86, x86-64, ARM & MIPS platforms except Win64. */
 #if !defined(ENABLE_JIT) \
     && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)) \
     && (OS(DARWIN) || !COMPILER(GCC) || GCC_VERSION_AT_LEAST(4, 1, 0)) \
     && !OS(WINCE) \
-    && !OS(QNX)
+    && !OS(QNX) \
+    && !(OS(WINDOWS) && CPU(X86_64))
 #define ENABLE_JIT 1
 #endif
 
@@ -968,24 +969,30 @@
 #define ENABLE_BINDING_INTEGRITY 1
 #endif
 
-#if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if PLATFORM(IOS) || PLATFORM(MAC)
 #define WTF_USE_AVFOUNDATION 1
 #endif
 
-#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 60000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 60000) || ((PLATFORM(MAC) && !PLATFORM(IOS)) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
 #define WTF_USE_COREMEDIA 1
+#define HAVE_AVFOUNDATION_VIDEO_OUTPUT 1
 #endif
 
-#if (PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 50000) || ((PLATFORM(MAC) && !PLATFORM(IOS)) || (OS(WINDOWS) && USE(CG)) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
 #define HAVE_AVFOUNDATION_MEDIA_SELECTION_GROUP 1
 #endif
 
-#if (PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 70000) || (((PLATFORM(MAC) && !PLATFORM(IOS)) || (OS(WINDOWS) && USE(CG))) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
 #define HAVE_AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT 1
+#define HAVE_MEDIA_ACCESSIBILITY_FRAMEWORK 1
 #endif
 
-#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 70000) || ((PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
-#define HAVE_MEDIA_ACCESSIBILITY_FRAMEWORK 1
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 60000) || ((PLATFORM(MAC) && !PLATFORM(IOS)) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
+#define HAVE_AVFOUNDATION_LOADER_DELEGATE 1
+#endif
+
+#if (PLATFORM(MAC) && !PLATFORM(IOS)) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#define WTF_USE_VIDEOTOOLBOX 1
 #endif
 
 #if PLATFORM(MAC) || PLATFORM(GTK) || (PLATFORM(WIN) && !USE(WINGDI) && !PLATFORM(WIN_CAIRO))
@@ -994,10 +1001,6 @@
 
 #if PLATFORM(MAC)
 #define WTF_USE_REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR 1
-#endif
-
-#if PLATFORM(MAC) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
-#define HAVE_INVERTED_WHEEL_EVENTS 1
 #endif
 
 #if PLATFORM(MAC) && !PLATFORM(IOS)
@@ -1022,11 +1025,12 @@
 #define WTF_USE_AUTOMATIC_TEXT_REPLACEMENT 1
 #endif
 
-#if !PLATFORM(IOS) && (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
+#if PLATFORM(MAC) && !PLATFORM(IOS)
 /* Some platforms provide UI for suggesting autocorrection. */
 #define WTF_USE_AUTOCORRECTION_PANEL 1
 #endif
-#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
+
+#if PLATFORM(MAC)
 /* Some platforms use spelling and autocorrection markers to provide visual cue. On such platform, if word with marker is edited, we need to remove the marker. */
 #define WTF_USE_MARKER_REMOVAL_UPON_EDITING 1
 #endif
@@ -1037,6 +1041,11 @@
 
 #if PLATFORM(MAC) || PLATFORM(IOS)
 #define WTF_USE_AUDIO_SESSION 1
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(EFL)
+#undef ENABLE_OPENTYPE_VERTICAL
+#define ENABLE_OPENTYPE_VERTICAL 1
 #endif
 
 #endif /* WTF_Platform_h */

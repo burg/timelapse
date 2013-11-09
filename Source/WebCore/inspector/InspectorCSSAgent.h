@@ -89,9 +89,9 @@ public:
 
     static CSSStyleRule* asCSSStyleRule(CSSRule*);
 
-    static PassOwnPtr<InspectorCSSAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InspectorDOMAgent* domAgent)
+    static PassOwnPtr<InspectorCSSAgent> create(InstrumentingAgents* instrumentingAgents, InspectorDOMAgent* domAgent)
     {
-        return adoptPtr(new InspectorCSSAgent(instrumentingAgents, state, domAgent));
+        return adoptPtr(new InspectorCSSAgent(instrumentingAgents, domAgent));
     }
     ~InspectorCSSAgent();
 
@@ -99,7 +99,6 @@ public:
     virtual void setFrontend(InspectorFrontend*);
     virtual void clearFrontend();
     virtual void discardAgent();
-    virtual void restore();
     virtual void enable(ErrorString*);
     virtual void disable(ErrorString*);
     void reset();
@@ -110,6 +109,8 @@ public:
     void regionLayoutUpdated(WebKitNamedFlow*, int documentNodeId);
     void didChangeRegionOverset(Document*, WebKitNamedFlow*);
     void regionOversetChanged(WebKitNamedFlow*, int documentNodeId);
+    void didRegisterNamedFlowContentElement(Document*, WebKitNamedFlow*, Node* contentElement, Node* nextContentElement = nullptr);
+    void didUnregisterNamedFlowContentElement(Document*, WebKitNamedFlow*, Node* contentElement);
 
     virtual void getComputedStyleForNode(ErrorString*, int nodeId, RefPtr<TypeBuilder::Array<TypeBuilder::CSS::CSSComputedStyleProperty>>&);
     virtual void getInlineStylesForNode(ErrorString*, int nodeId, RefPtr<TypeBuilder::CSS::CSSStyle>& inlineStyle, RefPtr<TypeBuilder::CSS::CSSStyle>& attributes);
@@ -145,7 +146,7 @@ private:
     class SetRuleSelectorAction;
     class AddRuleAction;
 
-    InspectorCSSAgent(InstrumentingAgents*, InspectorCompositeState*, InspectorDOMAgent*);
+    InspectorCSSAgent(InstrumentingAgents*, InspectorDOMAgent*);
 
     typedef HashMap<String, RefPtr<InspectorStyleSheet>> IdToInspectorStyleSheet;
     typedef HashMap<CSSStyleSheet*, RefPtr<InspectorStyleSheet>> CSSStyleSheetToInspectorStyleSheet;

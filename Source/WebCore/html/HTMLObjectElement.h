@@ -63,12 +63,14 @@ public:
 
     virtual bool canContainRangeEndPoint() const { return useFallbackContent(); }
 
+    bool hasFallbackContent() const;
+
 private:
     HTMLObjectElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet&) OVERRIDE;
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
     virtual void removedFrom(ContainerNode&) OVERRIDE;
@@ -87,8 +89,6 @@ private:
     virtual void updateWidget(PluginCreationOption);
     void updateDocNamedItem();
 
-    bool hasFallbackContent() const;
-    
     // FIXME: This function should not deal with url or serviceType
     // so that we can better share code between <object> and <embed>.
     void parametersForPlugin(Vector<String>& paramNames, Vector<String>& paramValues, String& url, String& serviceType);

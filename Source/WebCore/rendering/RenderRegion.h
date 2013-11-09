@@ -35,9 +35,10 @@
 
 namespace WebCore {
 
-class Element;
 struct LayerFragment;
 typedef Vector<LayerFragment, 1> LayerFragments;
+
+class Element;
 class RenderBox;
 class RenderBoxRegionInfo;
 class RenderFlowThread;
@@ -152,8 +153,8 @@ public:
     virtual bool canHaveGeneratedChildren() const OVERRIDE { return true; }
 
 protected:
-    RenderRegion(Element&, RenderFlowThread*);
-    RenderRegion(Document&, RenderFlowThread*);
+    RenderRegion(Element&, PassRef<RenderStyle>, RenderFlowThread*);
+    RenderRegion(Document&, PassRef<RenderStyle>, RenderFlowThread*);
 
     RenderOverflow* ensureOverflowForBox(const RenderBox*);
 

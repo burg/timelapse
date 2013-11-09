@@ -71,6 +71,7 @@
 #include "RenderHTMLCanvas.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
+#include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderLineBreak.h"
 #include "RenderListBox.h"
@@ -79,6 +80,7 @@
 #include "RenderMathMLFraction.h"
 #include "RenderMathMLOperator.h"
 #include "RenderMenuList.h"
+#include "RenderSVGRoot.h"
 #include "RenderSVGShape.h"
 #include "RenderText.h"
 #include "RenderTextControl.h"
@@ -640,10 +642,8 @@ String AccessibilityRenderObject::textUnderElement(AccessibilityTextUnderElement
     // Math operators create RenderText nodes on the fly that are not tied into the DOM in a reasonable way,
     // so rangeOfContents does not work for them (nor does regular text selection).
     if (m_renderer->isText() && isMathElement()) {
-        for (RenderObject* parent = m_renderer->parent(); parent; parent = parent->parent()) {
-            if (parent->isRenderMathMLBlock() && toRenderMathMLBlock(parent)->isRenderMathMLOperator())
-                return toRenderText(m_renderer)->text();
-        }
+        if (ancestorsOfType<RenderMathMLOperator>(*m_renderer).first())
+            return toRenderText(*m_renderer).text();
     }
 #endif
 
@@ -652,13 +652,37 @@ String AccessibilityRenderObject::textUnderElement(AccessibilityTextUnderElement
     if (m_renderer->isText() || mode.childrenInclusion == AccessibilityTextUnderElementMode::TextUnderElementModeIncludeAllChildren) {
         // If possible, use a text iterator to get the text, so that whitespace
         // is handled consistently.
-        if (Node* node = this->node()) {
-            if (Frame* frame = node->document().frame()) {
-                // catch stale WebCoreAXObject (see <rdar://problem/3960196>)
-                if (frame->document() != &node->document())
-                    return String();
+        Document* nodeDocument = 0;
+        RefPtr<Range> textRange;
+        if (Node* node = m_renderer->node()) {
+            nodeDocument = &node->document();
+            textRange = rangeOfContents(*node);
+        } else {
+            // For anonymous blocks, we work around not having a direct node to create a range from
+            // defining one based in the two external positions defining the boundaries of the subtree.
+            RenderObject* firstChildRenderer = m_renderer->firstChildSlow();
+            RenderObject* lastChildRenderer = m_renderer->lastChildSlow();
+            if (firstChildRenderer && lastChildRenderer) {
+                ASSERT(firstChildRenderer->node());
+                ASSERT(lastChildRenderer->node());
 
-                return plainText(rangeOfContents(*node).get(), textIteratorBehaviorForTextRange());
+                // We define the start and end positions for the range as the ones right before and after
+                // the first and the last nodes in the DOM tree that is wrapped inside the anonymous block.
+                Node* firstNodeInBlock = firstChildRenderer->node();
+                Position startPosition = positionInParentBeforeNode(firstNodeInBlock);
+                Position endPosition = positionInParentAfterNode(lastChildRenderer->node());
+
+                nodeDocument = &firstNodeInBlock->document();
+                textRange = Range::create(*nodeDocument, startPosition, endPosition);
+            }
+        }
+
+        if (nodeDocument && textRange) {
+            if (Frame* frame = nodeDocument->frame()) {
+                // catch stale WebCoreAXObject (see <rdar://problem/3960196>)
+                if (frame->document() != nodeDocument)
+                    return String();
+                return plainText(textRange.get(), textIteratorBehaviorForTextRange());
             }
         }
     
@@ -849,12 +873,9 @@ Path AccessibilityRenderObject::elementPath() const
         Path path = toRenderSVGShape(m_renderer)->path();
         
         // The SVG path is in terms of the parent's bounding box. The path needs to be offset to frame coordinates.
-        for (RenderObject* parent = m_renderer->parent(); parent; parent = parent->parent()) {
-            if (parent->isSVGRoot()) {
-                LayoutPoint parentOffset = axObjectCache()->getOrCreate(parent)->elementRect().location();
-                path.transform(AffineTransform().translate(parentOffset.x(), parentOffset.y()));
-                break;
-            }
+        if (auto svgRoot = ancestorsOfType<RenderSVGRoot>(*m_renderer).first()) {
+            LayoutPoint parentOffset = axObjectCache()->getOrCreate(&*svgRoot)->elementRect().location();
+            path.transform(AffineTransform().translate(parentOffset.x(), parentOffset.y()));
         }
         
         return path;
@@ -917,7 +938,7 @@ ESpeak AccessibilityRenderObject::speakProperty() const
     if (!m_renderer)
         return AccessibilityObject::speakProperty();
     
-    return m_renderer->style()->speak();
+    return m_renderer->style().speak();
 }
     
 void AccessibilityRenderObject::addRadioButtonGroupMembers(AccessibilityChildrenVector& linkedUIElements) const
@@ -1100,7 +1121,7 @@ AccessibilityObjectInclusion AccessibilityRenderObject::defaultObjectInclusion()
     if (!m_renderer)
         return IgnoreObject;
 
-    if (m_renderer->style()->visibility() != VISIBLE) {
+    if (m_renderer->style().visibility() != VISIBLE) {
         // aria-hidden is meant to override visibility as the determinant in AX hierarchy inclusion.
         if (equalIgnoringCase(getAttribute(aria_hiddenAttr), "false"))
             return DefaultBehavior;
@@ -1145,10 +1166,8 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
         return accessibilityIgnoreAttachment();
     
     // ignore popup menu items because AppKit does
-    for (RenderObject* parent = m_renderer->parent(); parent; parent = parent->parent()) {
-        if (parent->isBoxModelObject() && toRenderBoxModelObject(parent)->isMenuList())
-            return true;
-    }
+    if (ancestorsOfType<RenderMenuList>(*m_renderer).first())
+        return true;
 
     // find out if this element is inside of a label element.
     // if so, it may be ignored because it's the label for a checkbox or radio button
@@ -1202,9 +1221,14 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
     if (hasContentEditableAttributeSet())
         return false;
     
-    // List items play an important role in defining the structure of lists. They should not be ignored.
-    if (roleValue() == ListItemRole)
+    switch (roleValue()) {
+    case AudioRole:
+    case ListItemRole:
+    case VideoRole:
         return false;
+    default:
+        break;
+    }
     
     // if this element has aria attributes on it, it should not be ignored.
     if (supportsARIAAttributes())
@@ -1218,15 +1242,6 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
     if (isMathElement())
         return false;
 #endif
-    
-    // <span> tags are inline tags and not meant to convey information if they have no other aria
-    // information on them. If we don't ignore them, they may emit signals expected to come from
-    // their parent. In addition, because included spans are GroupRole objects, and GroupRole
-    // objects are often containers with meaningful information, the inclusion of a span can have
-    // the side effect of causing the immediate parent accessible to be ignored. This is especially
-    // problematic for platforms which have distinct roles for textual block elements.
-    if (node && node->hasTagName(spanTag))
-        return true;
     
     if (m_renderer->isRenderBlockFlow() && m_renderer->childrenInline() && !canSetFocusAttribute())
         return !toRenderBlockFlow(m_renderer)->hasLines() && !mouseButtonListener();
@@ -1282,15 +1297,9 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
     if (isWebArea() || isSeamlessWebArea() || m_renderer->isListMarker())
         return false;
     
-    // Using the help text, title or accessibility description (so we
-    // check if there's some kind of accessible name for the element)
-    // to decide an element's visibility is not as definitive as
-    // previous checks, so this should remain as one of the last.
-    //
-    // These checks are simplified in the interest of execution speed;
-    // for example, any element having an alt attribute will make it
-    // not ignored, rather than just images.
-    if (!getAttribute(aria_helpAttr).isEmpty() || !getAttribute(aria_describedbyAttr).isEmpty() || !getAttribute(altAttr).isEmpty() || !getAttribute(titleAttr).isEmpty())
+    // Using the presence of an accessible name to decide an element's visibility is not
+    // as definitive as previous checks, so this should remain as one of the last.
+    if (hasAttributesRequiredForInclusion())
         return false;
 
     // Don't ignore generic focusable elements like <div tabindex=0>
@@ -1298,13 +1307,14 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
     if (isGenericFocusableElement() && node->firstChild())
         return false;
 
-    if (!ariaAccessibilityDescription().isEmpty())
-        return false;
-
-#if ENABLE(MATHML)
-    if (!getAttribute(MathMLNames::alttextAttr).isEmpty())
-        return false;
-#endif
+    // <span> tags are inline tags and not meant to convey information if they have no other aria
+    // information on them. If we don't ignore them, they may emit signals expected to come from
+    // their parent. In addition, because included spans are GroupRole objects, and GroupRole
+    // objects are often containers with meaningful information, the inclusion of a span can have
+    // the side effect of causing the immediate parent accessible to be ignored. This is especially
+    // problematic for platforms which have distinct roles for textual block elements.
+    if (node && node->hasTagName(spanTag))
+        return true;
 
     // Other non-ignored host language elements
     if (node && node->hasTagName(dfnTag))
@@ -1468,13 +1478,13 @@ URL AccessibilityRenderObject::url() const
 bool AccessibilityRenderObject::isUnvisited() const
 {
     // FIXME: Is it a privacy violation to expose unvisited information to accessibility APIs?
-    return m_renderer->style()->isLink() && m_renderer->style()->insideLink() == InsideUnvisitedLink;
+    return m_renderer->style().isLink() && m_renderer->style().insideLink() == InsideUnvisitedLink;
 }
 
 bool AccessibilityRenderObject::isVisited() const
 {
     // FIXME: Is it a privacy violation to expose visited information to accessibility APIs?
-    return m_renderer->style()->isLink() && m_renderer->style()->insideLink() == InsideVisitedLink;
+    return m_renderer->style().isLink() && m_renderer->style().insideLink() == InsideVisitedLink;
 }
 
 void AccessibilityRenderObject::setElementAttributeValue(const QualifiedName& attributeName, bool value)
@@ -2286,10 +2296,9 @@ void AccessibilityRenderObject::handleActiveDescendantChanged()
     if (!element)
         return;
     if (!renderer()->frame().selection().isFocusedAndActive() || renderer()->document().focusedElement() != element)
-        return; 
-    AccessibilityRenderObject* activedescendant = static_cast<AccessibilityRenderObject*>(activeDescendant());
-    
-    if (activedescendant && shouldNotifyActiveDescendant())
+        return;
+
+    if (toAccessibilityRenderObject(activeDescendant()) && shouldNotifyActiveDescendant())
         renderer()->document().axObjectCache()->postNotification(m_renderer, AXObjectCache::AXActiveDescendantChanged);
 }
 
@@ -2528,6 +2537,13 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
     if (node && node->hasTagName(addressTag))
         return LandmarkContentInfoRole;
 
+#if ENABLE(VIDEO)
+    if (node && isHTMLVideoElement(node))
+        return VideoRole;
+    if (node && isHTMLAudioElement(node))
+        return AudioRole;
+#endif
+    
     // The HTML element should not be exposed as an element. That's what the RenderView element does.
     if (node && node->hasTagName(htmlTag))
         return IgnoredRole;
@@ -2542,8 +2558,8 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
     if (m_renderer->isRenderBlockFlow())
         return GroupRole;
     
-    // If the element does not have role, but it has ARIA attributes, accessibility should fallback to exposing it as a group.
-    if (supportsARIAAttributes())
+    // If the element does not have role, but it has ARIA attributes, or accepts tab focus, accessibility should fallback to exposing it as a group.
+    if (supportsARIAAttributes() || canSetFocusAttribute())
         return GroupRole;
     
     return UnknownRole;
@@ -2594,7 +2610,7 @@ bool AccessibilityRenderObject::inheritsPresentationalRole() const
         if (!parent->isAccessibilityRenderObject())
             continue;
         
-        Node* elementNode = static_cast<AccessibilityRenderObject*>(parent)->node();
+        Node* elementNode = toAccessibilityRenderObject(parent)->node();
         if (!elementNode || !elementNode->isElementNode())
             continue;
         
@@ -3185,7 +3201,7 @@ bool AccessibilityRenderObject::hasBoldFont() const
     if (!m_renderer)
         return false;
     
-    return m_renderer->style()->fontDescription().weight() >= FontWeightBold;
+    return m_renderer->style().fontDescription().weight() >= FontWeightBold;
 }
 
 bool AccessibilityRenderObject::hasItalicFont() const
@@ -3193,7 +3209,7 @@ bool AccessibilityRenderObject::hasItalicFont() const
     if (!m_renderer)
         return false;
     
-    return m_renderer->style()->fontDescription().italic() == FontItalicOn;
+    return m_renderer->style().fontDescription().italic() == FontItalicOn;
 }
 
 bool AccessibilityRenderObject::hasPlainText() const
@@ -3201,11 +3217,11 @@ bool AccessibilityRenderObject::hasPlainText() const
     if (!m_renderer)
         return false;
     
-    RenderStyle* style = m_renderer->style();
+    const RenderStyle& style = m_renderer->style();
     
-    return style->fontDescription().weight() == FontWeightNormal
-        && style->fontDescription().italic() == FontItalicOff
-        && style->textDecorationsInEffect() == TextDecorationNone;
+    return style.fontDescription().weight() == FontWeightNormal
+        && style.fontDescription().italic() == FontItalicOff
+        && style.textDecorationsInEffect() == TextDecorationNone;
 }
 
 bool AccessibilityRenderObject::hasSameFont(RenderObject* renderer) const
@@ -3213,7 +3229,7 @@ bool AccessibilityRenderObject::hasSameFont(RenderObject* renderer) const
     if (!m_renderer || !renderer)
         return false;
     
-    return m_renderer->style()->fontDescription().families() == renderer->style()->fontDescription().families();
+    return m_renderer->style().fontDescription().families() == renderer->style().fontDescription().families();
 }
 
 bool AccessibilityRenderObject::hasSameFontColor(RenderObject* renderer) const
@@ -3221,7 +3237,7 @@ bool AccessibilityRenderObject::hasSameFontColor(RenderObject* renderer) const
     if (!m_renderer || !renderer)
         return false;
     
-    return m_renderer->style()->visitedDependentColor(CSSPropertyColor) == renderer->style()->visitedDependentColor(CSSPropertyColor);
+    return m_renderer->style().visitedDependentColor(CSSPropertyColor) == renderer->style().visitedDependentColor(CSSPropertyColor);
 }
 
 bool AccessibilityRenderObject::hasSameStyle(RenderObject* renderer) const
@@ -3237,7 +3253,7 @@ bool AccessibilityRenderObject::hasUnderline() const
     if (!m_renderer)
         return false;
     
-    return m_renderer->style()->textDecorationsInEffect() & TextDecorationUnderline;
+    return m_renderer->style().textDecorationsInEffect() & TextDecorationUnderline;
 }
 
 String AccessibilityRenderObject::nameForMSAA() const

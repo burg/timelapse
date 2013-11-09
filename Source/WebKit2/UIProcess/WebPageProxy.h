@@ -37,6 +37,7 @@
 #include "PlatformProcessIdentifier.h"
 #include "SandboxExtension.h"
 #include "ShareableBitmap.h"
+#include "ViewState.h"
 #include "WKBase.h"
 #include "WKPagePrivate.h"
 #include "WebColorPicker.h"
@@ -49,6 +50,7 @@
 #include "WebHitTestResult.h"
 #include "WebLoaderClient.h"
 #include "WebPageContextMenuClient.h"
+#include "WebPageCreationParameters.h"
 #include <WebCore/AlternativeTextClient.h> // FIXME: Needed by WebPageProxyMessages.h for DICTATION_ALTERNATIVES.
 #include "WebPageProxyMessages.h"
 #include "WebPolicyClient.h"
@@ -147,7 +149,6 @@ struct DictionaryPopupInfo;
 struct EditorState;
 struct PlatformPopupMenuData;
 struct PrintInfo;
-struct WebPageCreationParameters;
 struct WebPopupItem;
 
 #if ENABLE(VIBRATION)
@@ -296,6 +297,7 @@ public:
     String activeURL() const;
     String provisionalURL() const;
     String committedURL() const;
+    String unreachableURL() const;
 
     bool willHandleHorizontalScrollEvents() const;
 
@@ -323,22 +325,13 @@ public:
     bool canScrollView();
     void scrollView(const WebCore::IntRect& scrollRect, const WebCore::IntSize& scrollOffset);
 
-    enum {
-        ViewWindowIsActive = 1 << 0,
-        ViewIsFocused = 1 << 1,
-        ViewIsVisible = 1 << 2,
-        ViewIsInWindow = 1 << 3,
-        WindowIsVisible = 1 << 4
-    };
-    typedef unsigned ViewStateFlags;
-    void viewStateDidChange(ViewStateFlags flags);
     enum class WantsReplyOrNot { DoesNotWantReply, DoesWantReply };
-    void viewInWindowStateDidChange(WantsReplyOrNot = WantsReplyOrNot::DoesNotWantReply);
-    bool isInWindow() const { return m_isInWindow; }
-    void waitForDidUpdateInWindowState();
+    void viewStateDidChange(ViewState::Flags mayHaveChanged, WantsReplyOrNot = WantsReplyOrNot::DoesNotWantReply);
+    bool isInWindow() const { return m_viewState & ViewState::IsInWindow; }
+    void waitForDidUpdateViewState();
 
     WebCore::IntSize viewSize() const;
-    bool isViewVisible() const { return m_isVisible; }
+    bool isViewVisible() const { return m_viewState & ViewState::IsVisible; }
     bool isViewWindowActive() const;
 
     void executeEditCommand(const String& commandName);
@@ -387,7 +380,6 @@ public:
     bool executeKeypressCommands(const Vector<WebCore::KeypressCommand>&);
 
     void sendComplexTextInputToPlugin(uint64_t pluginComplexTextInputIdentifier, const String& textInput);
-    CGContextRef containingWindowGraphicsContext();
     bool shouldDelayWindowOrderingForEvent(const WebMouseEvent&);
     bool acceptsFirstMouse(int eventNumber, const WebMouseEvent&);
 
@@ -473,7 +465,7 @@ public:
     void listenForLayoutMilestones(WebCore::LayoutMilestones);
 
     void setVisibilityState(WebCore::PageVisibilityState, bool isInitialState);
-    void didUpdateInWindowState() { m_waitingForDidUpdateInWindowState = false; }
+    void didUpdateViewState() { m_waitingForDidUpdateViewState = false; }
 
     bool hasHorizontalScrollbar() const { return m_mainFrameHasHorizontalScrollbar; }
     bool hasVerticalScrollbar() const { return m_mainFrameHasVerticalScrollbar; }
@@ -636,7 +628,10 @@ public:
     void didChooseFilesForOpenPanel(const Vector<String>&);
     void didCancelForOpenPanel();
 
-    WebPageCreationParameters creationParameters() const;
+    WebPageCreationParameters creationParameters() const
+    {
+        return m_creationParameters;
+    }
 
 #if USE(COORDINATED_GRAPHICS)
     void findZoomableAreaForPoint(const WebCore::IntPoint&, const WebCore::IntSize&);
@@ -678,20 +673,9 @@ public:
 
     const String& pendingAPIRequestURL() const { return m_pendingAPIRequestURL; }
 
-    void flashBackingStoreUpdates(const Vector<WebCore::IntRect>& updateRects);
-
 #if PLATFORM(MAC)
     void handleAlternativeTextUIResult(const String& result);
 #endif
-
-    static void setDebugPaintFlags(WKPageDebugPaintFlags flags) { s_debugPaintFlags = flags; }
-    static WKPageDebugPaintFlags debugPaintFlags() { return s_debugPaintFlags; }
-
-    // Color to be used with kWKDebugFlashViewUpdates.
-    static WebCore::Color viewUpdatesFlashColor();
-
-    // Color to be used with kWKDebugFlashBackingStoreUpdates.
-    static WebCore::Color backingStoreUpdatesFlashColor();
 
     void saveDataToFileInDownloadsFolder(const String& suggestedFilename, const String& mimeType, const String& originatingURLString, WebData*);
     void savePDFToFileInDownloadsFolder(const String& suggestedFilename, const String& originatingURLString, const CoreIPC::DataReference&);
@@ -759,6 +743,9 @@ public:
 private:
     WebPageProxy(PageClient*, PassRefPtr<WebProcessProxy>, WebPageGroup*, uint64_t pageID);
     void platformInitialize();
+    void initializeCreationParameters();
+
+    void updateViewState(ViewState::Flags flagsToUpdate = ViewState::AllFlags);
 
     void resetState();
     void resetStateAfterProcessExited();
@@ -1092,11 +1079,7 @@ private:
 
     double m_estimatedProgress;
 
-    // Whether the web page is contained in a top-level window.
-    bool m_isInWindow;
-
-    // Whether the page is visible; if the backing view is visible and inserted into a window.
-    bool m_isVisible;
+    ViewState::Flags m_viewState;
 
     bool m_canGoBack;
     bool m_canGoForward;
@@ -1224,8 +1207,6 @@ private:
 
     uint64_t m_renderTreeSize;
 
-    static WKPageDebugPaintFlags s_debugPaintFlags;
-
     bool m_shouldSendEventsSynchronously;
 
     bool m_suppressVisibilityUpdates;
@@ -1235,7 +1216,7 @@ private:
     float m_mediaVolume;
     bool m_mayStartMediaWhenInWindow;
 
-    bool m_waitingForDidUpdateInWindowState;
+    bool m_waitingForDidUpdateViewState;
 
 #if PLATFORM(MAC)
     WebCore::Timer<WebPageProxy> m_exposedRectChangedTimer;
@@ -1254,6 +1235,8 @@ private:
 #endif
         
     WebCore::ScrollPinningBehavior m_scrollPinningBehavior;
+
+    WebPageCreationParameters m_creationParameters;
 };
 
 } // namespace WebKit

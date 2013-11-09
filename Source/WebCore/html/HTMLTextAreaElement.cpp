@@ -151,7 +151,7 @@ bool HTMLTextAreaElement::isPresentationAttribute(const QualifiedName& name) con
     return HTMLTextFormControlElement::isPresentationAttribute(name);
 }
 
-void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet& style)
 {
     if (name == wrapAttr) {
         if (shouldWrapText()) {
@@ -208,9 +208,9 @@ void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const Atomic
         HTMLTextFormControlElement::parseAttribute(name, value);
 }
 
-RenderElement* HTMLTextAreaElement::createRenderer(RenderStyle&)
+RenderElement* HTMLTextAreaElement::createRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderTextControlMultiLine(*this);
+    return new RenderTextControlMultiLine(*this, std::move(style));
 }
 
 bool HTMLTextAreaElement::appendFormData(FormDataList& encoding, bool)

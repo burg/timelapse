@@ -28,11 +28,8 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSParser.h"
-#include "CSSPropertyNames.h"
-#include "CSSValueKeywords.h"
 #include "CSSValuePool.h"
 #include "Document.h"
-#include "EditingStyle.h"
 #include "Editor.h"
 #include "ElementIterator.h"
 #include "Frame.h"
@@ -41,13 +38,11 @@
 #include "HTMLNames.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
-#include "Range.h"
 #include "RenderObject.h"
 #include "RenderText.h"
 #include "StylePropertySet.h"
 #include "StyleResolver.h"
 #include "Text.h"
-#include "TextIterator.h"
 #include "TextNodeTraversal.h"
 #include "VisibleUnits.h"
 #include "htmlediting.h"
@@ -1021,7 +1016,7 @@ void ApplyStyleCommand::applyInlineStyleToPushDown(Node* node, EditingStyle* sty
 
     if (node->renderer()->isText() && static_cast<RenderText*>(node->renderer())->isAllCollapsibleWhitespace())
         return;
-    if (node->renderer()->isBR() && !node->renderer()->style()->preserveNewline())
+    if (node->renderer()->isBR() && !node->renderer()->style().preserveNewline())
         return;
 
     // We can't wrap node with the styled element here because new styled element will never be removed if we did.

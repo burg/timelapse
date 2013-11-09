@@ -38,6 +38,7 @@
 #include "HTMLNames.h"
 #include "HitTestLocation.h"
 #include "HitTestResult.h"
+#include "InlineElementBox.h"
 #include "InlineIterator.h"
 #include "InlineTextBox.h"
 #include "LayoutRepainter.h"
@@ -50,6 +51,7 @@
 #include "RenderDeprecatedFlexibleBox.h"
 #include "RenderFlexibleBox.h"
 #include "RenderInline.h"
+#include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderMarquee.h"
 #include "RenderNamedFlowThread.h"
@@ -144,15 +146,15 @@ private:
     bool m_hadVerticalLayoutOverflow;
 };
 
-RenderBlock::RenderBlock(Element& element, unsigned baseTypeFlags)
-    : RenderBox(element, baseTypeFlags | RenderBlockFlag)
+RenderBlock::RenderBlock(Element& element, PassRef<RenderStyle> style, unsigned baseTypeFlags)
+    : RenderBox(element, std::move(style), baseTypeFlags | RenderBlockFlag)
     , m_lineHeight(-1)
     , m_hasMarginBeforeQuirk(false)
     , m_hasMarginAfterQuirk(false)
     , m_beingDestroyed(false)
     , m_hasMarkupTruncation(false)
     , m_hasBorderOrPaddingLogicalWidthChanged(false)
-    , m_forceLineBoxLayout(false)
+    , m_lineLayoutPath(UndeterminedPath)
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     , m_widthForTextAutosizing(-1)
     , m_lineCountForTextAutosizing(NOT_SET)
@@ -160,15 +162,15 @@ RenderBlock::RenderBlock(Element& element, unsigned baseTypeFlags)
 {
 }
 
-RenderBlock::RenderBlock(Document& document, unsigned baseTypeFlags)
-    : RenderBox(document, baseTypeFlags | RenderBlockFlag)
+RenderBlock::RenderBlock(Document& document, PassRef<RenderStyle> style, unsigned baseTypeFlags)
+    : RenderBox(document, std::move(style), baseTypeFlags | RenderBlockFlag)
     , m_lineHeight(-1)
     , m_hasMarginBeforeQuirk(false)
     , m_hasMarginAfterQuirk(false)
     , m_beingDestroyed(false)
     , m_hasMarkupTruncation(false)
     , m_hasBorderOrPaddingLogicalWidthChanged(false)
-    , m_forceLineBoxLayout(false)
+    , m_lineLayoutPath(UndeterminedPath)
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     , m_widthForTextAutosizing(-1)
     , m_lineCountForTextAutosizing(NOT_SET)
@@ -237,14 +239,14 @@ void RenderBlock::willBeDestroyed()
     RenderBox::willBeDestroyed();
 }
 
-void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
+void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
-    RenderStyle* oldStyle = style();
+    const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
 
-    setReplaced(newStyle->isDisplayInlineType());
+    setReplaced(newStyle.isDisplayInlineType());
     
-    if (oldStyle && parent() && diff == StyleDifferenceLayout && oldStyle->position() != newStyle->position()) {
-        if (newStyle->position() == StaticPosition)
+    if (oldStyle && parent() && diff == StyleDifferenceLayout && oldStyle->position() != newStyle.position()) {
+        if (newStyle.position() == StaticPosition)
             // Clear our positioned objects list. Our absolutely positioned descendants will be
             // inserted into our containing block's positioned objects list during layout.
             removePositionedObjects(0, NewContainingBlock);
@@ -252,8 +254,8 @@ void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle* newSt
             // Remove our absolutely positioned descendants from their current containing block.
             // They will be inserted into our positioned objects list during layout.
             auto cb = parent();
-            while (cb && (cb->style()->position() == StaticPosition || (cb->isInline() && !cb->isReplaced())) && !cb->isRenderView()) {
-                if (cb->style()->position() == RelativePosition && cb->isInline() && !cb->isReplaced()) {
+            while (cb && (cb->style().position() == StaticPosition || (cb->isInline() && !cb->isReplaced())) && !cb->isRenderView()) {
+                if (cb->style().position() == RelativePosition && cb->isInline() && !cb->isReplaced()) {
                     cb = cb->containingBlock();
                     break;
                 }
@@ -286,10 +288,10 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
 {
     RenderBox::styleDidChange(diff, oldStyle);
     
-    RenderStyle* newStyle = style();
+    RenderStyle& newStyle = style();
     
 #if ENABLE(CSS_SHAPES)
-    updateShapeInsideInfoAfterStyleChange(newStyle->resolvedShapeInside(), oldStyle ? oldStyle->resolvedShapeInside() : 0);
+    updateShapeInsideInfoAfterStyleChange(newStyle.resolvedShapeInside(), oldStyle ? oldStyle->resolvedShapeInside() : 0);
 #endif
 
     if (!isAnonymousBlock()) {
@@ -297,7 +299,7 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
         for (RenderBlock* currCont = blockElementContinuation(); currCont; currCont = currCont->blockElementContinuation()) {
             RenderBoxModelObject* nextCont = currCont->continuation();
             currCont->setContinuation(0);
-            currCont->setStyle(*newStyle);
+            currCont->setStyle(newStyle);
             currCont->setContinuation(nextCont);
         }
     }
@@ -307,7 +309,7 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
     
     // It's possible for our border/padding to change, but for the overall logical width of the block to
     // end up being the same. We keep track of this change so in layoutBlock, we can know to set relayoutChildren=true.
-    m_hasBorderOrPaddingLogicalWidthChanged = oldStyle && diff == StyleDifferenceLayout && needsLayout() && borderOrPaddingLogicalWidthChanged(oldStyle, newStyle);
+    m_hasBorderOrPaddingLogicalWidthChanged = oldStyle && diff == StyleDifferenceLayout && needsLayout() && borderOrPaddingLogicalWidthChanged(oldStyle, &newStyle);
 }
 
 RenderBlock* RenderBlock::continuationBefore(RenderObject* beforeChild)
@@ -357,9 +359,9 @@ void RenderBlock::addChildToContinuation(RenderObject* newChild, RenderObject* b
 
     // A continuation always consists of two potential candidates: a block or an anonymous
     // column span box holding column span children.
-    bool childIsNormal = newChild->isInline() || !newChild->style()->columnSpan();
-    bool bcpIsNormal = beforeChildParent->isInline() || !beforeChildParent->style()->columnSpan();
-    bool flowIsNormal = flow->isInline() || !flow->style()->columnSpan();
+    bool childIsNormal = newChild->isInline() || !newChild->style().columnSpan();
+    bool bcpIsNormal = beforeChildParent->isInline() || !beforeChildParent->style().columnSpan();
+    bool flowIsNormal = flow->isInline() || !flow->style().columnSpan();
 
     if (flow == beforeChildParent) {
         flow->addChildIgnoringContinuation(newChild, beforeChild);
@@ -403,7 +405,7 @@ void RenderBlock::addChildToAnonymousColumnBlocks(RenderObject* newChild, Render
     }
 
     // See if the child can be placed in the box.
-    bool newChildHasColumnSpan = !newChild->isInline() && newChild->style()->columnSpan();
+    bool newChildHasColumnSpan = !newChild->isInline() && newChild->style().columnSpan();
     bool beforeChildParentHoldsColumnSpans = beforeChildParent->isAnonymousColumnSpanBlock();
 
     if (newChildHasColumnSpan == beforeChildParentHoldsColumnSpans) {
@@ -460,7 +462,7 @@ RenderBlock* RenderBlock::containingColumnsBlock(bool allowAnonymousColumnBlock)
         if (!currBlock->createsAnonymousWrapper())
             firstChildIgnoringAnonymousWrappers = currBlock;
 
-        if (currBlock->style()->specifiesColumns() && (allowAnonymousColumnBlock || !currBlock->isAnonymousColumnsBlock()))
+        if (currBlock->style().specifiesColumns() && (allowAnonymousColumnBlock || !currBlock->isAnonymousColumnsBlock()))
             return firstChildIgnoringAnonymousWrappers;
             
         if (currBlock->isAnonymousColumnSpanBlock())
@@ -476,9 +478,9 @@ RenderBlock* RenderBlock::clone() const
         cloneBlock = createAnonymousBlock();
         cloneBlock->setChildrenInline(childrenInline());
     } else {
-        auto cloneRenderer = element()->createRenderer(*style());
+        auto cloneRenderer = element()->createRenderer(style());
         cloneBlock = toRenderBlock(cloneRenderer);
-        cloneBlock->setStyle(*style());
+        cloneBlock->initializeStyle();
 
         // This takes care of setting the right value of childrenInline in case
         // generated content is added to cloneBlock and 'this' does not have
@@ -682,7 +684,7 @@ RenderBlock* RenderBlock::columnsBlockForSpanningElement(RenderObject* newChild)
     // cross the streams and have to cope with both types of continuations mixed together).
     // This function currently supports (1) and (2).
     RenderBlock* columnsBlockAncestor = 0;
-    if (!newChild->isText() && newChild->style()->columnSpan() && !newChild->isBeforeOrAfterContent()
+    if (!newChild->isText() && newChild->style().columnSpan() && !newChild->isBeforeOrAfterContent()
         && !newChild->isFloatingOrOutOfFlowPositioned() && !newChild->isInline() && !isAnonymousColumnSpanBlock()) {
         columnsBlockAncestor = containingColumnsBlock(false);
         if (columnsBlockAncestor) {
@@ -822,6 +824,8 @@ void RenderBlock::addChildIgnoringAnonymousColumnBlocks(RenderObject* newChild, 
         }
     }
 
+    invalidateLineLayoutPath();
+
     RenderBox::addChild(newChild, beforeChild);
  
     // Handle placement of run-ins.
@@ -892,6 +896,13 @@ void RenderBlock::deleteLines()
 {
     if (AXObjectCache* cache = document().existingAXObjectCache())
         cache->recomputeIsIgnored(this);
+}
+
+void RenderBlock::invalidateLineLayoutPath()
+{
+    if (m_lineLayoutPath == ForceLineBoxesPath)
+        return;
+    m_lineLayoutPath = UndeterminedPath;
 }
 
 void RenderBlock::makeChildrenNonInline(RenderObject* insertionPoint)
@@ -1088,7 +1099,7 @@ void RenderBlock::removeChild(RenderObject& oldChild)
             ASSERT(!inlineChildrenBlock->continuation());
             // Cache this value as it might get changed in setStyle() call.
             bool inlineChildrenBlockHasLayer = inlineChildrenBlock->hasLayer();
-            inlineChildrenBlock->setStyle(RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK));
+            inlineChildrenBlock->setStyle(RenderStyle::createAnonymousStyleWithDisplay(&style(), BLOCK));
             removeChildInternal(*inlineChildrenBlock, inlineChildrenBlockHasLayer ? NotifyChildren : DontNotifyChildren);
             
             // Now just put the inlineChildrenBlock inside the blockChildrenBlock.
@@ -1115,6 +1126,8 @@ void RenderBlock::removeChild(RenderObject& oldChild)
         }
     }
 
+    invalidateLineLayoutPath();
+
     RenderBox::removeChild(oldChild);
 
     RenderObject* child = prev ? prev : next;
@@ -1129,8 +1142,8 @@ void RenderBlock::removeChild(RenderObject& oldChild)
         // are floating, then we need to pull the content up also.
         RenderBlock* anonBlock = toRenderBlock((prev && prev->isAnonymousBlock()) ? prev : next);
         if ((anonBlock->previousSibling() || anonBlock->nextSibling())
-            && (!anonBlock->previousSibling() || (anonBlock->previousSibling()->style()->styleType() != NOPSEUDO && anonBlock->previousSibling()->isFloating() && !anonBlock->previousSibling()->previousSibling()))
-            && (!anonBlock->nextSibling() || (anonBlock->nextSibling()->style()->styleType() != NOPSEUDO && anonBlock->nextSibling()->isFloating() && !anonBlock->nextSibling()->nextSibling()))) {
+            && (!anonBlock->previousSibling() || (anonBlock->previousSibling()->style().styleType() != NOPSEUDO && anonBlock->previousSibling()->isFloating() && !anonBlock->previousSibling()->previousSibling()))
+            && (!anonBlock->nextSibling() || (anonBlock->nextSibling()->style().styleType() != NOPSEUDO && anonBlock->nextSibling()->isFloating() && !anonBlock->nextSibling()->nextSibling()))) {
             collapseAnonymousBoxChild(this, anonBlock);
         }
     }
@@ -1178,16 +1191,16 @@ bool RenderBlock::isSelfCollapsingBlock() const
     // (e) have specified that one of our margins can't collapse using a CSS extension
     if (logicalHeight() > 0
         || isTable() || borderAndPaddingLogicalHeight()
-        || style()->logicalMinHeight().isPositive()
-        || style()->marginBeforeCollapse() == MSEPARATE || style()->marginAfterCollapse() == MSEPARATE)
+        || style().logicalMinHeight().isPositive()
+        || style().marginBeforeCollapse() == MSEPARATE || style().marginAfterCollapse() == MSEPARATE)
         return false;
 
-    Length logicalHeightLength = style()->logicalHeight();
+    Length logicalHeightLength = style().logicalHeight();
     bool hasAutoHeight = logicalHeightLength.isAuto();
     if (logicalHeightLength.isPercent() && !document().inQuirksMode()) {
         hasAutoHeight = true;
         for (RenderBlock* cb = containingBlock(); !cb->isRenderView(); cb = cb->containingBlock()) {
-            if (cb->style()->logicalHeight().isFixed() || cb->isTableCell())
+            if (cb->style().logicalHeight().isFixed() || cb->isTableCell())
                 hasAutoHeight = false;
         }
     }
@@ -1252,7 +1265,7 @@ void RenderBlock::removeFromDelayedUpdateScrollInfoSet()
 void RenderBlock::updateScrollInfoAfterLayout()
 {
     if (hasOverflowClip()) {
-        if (style()->isFlippedBlocksWritingMode()) {
+        if (style().isFlippedBlocksWritingMode()) {
             // FIXME: https://bugs.webkit.org/show_bug.cgi?id=97937
             // Workaround for now. We cannot delay the scroll info for overflow
             // for items with opposite writing directions, as the contents needs
@@ -1311,12 +1324,12 @@ LayoutSize RenderBlock::logicalOffsetFromShapeAncestorContainer(const RenderBloc
         if (!containerBlock)
             return LayoutSize();
 
-        if (containerBlock->style()->writingMode() != currentBlock->style()->writingMode()) {
+        if (containerBlock->style().writingMode() != currentBlock->style().writingMode()) {
             // We have to put the block rect in container coordinates
             // and we have to take into account both the container and current block flipping modes
             // Bug 118073: Flipping inline and block directions at the same time will not work,
             // as one of the flipped dimensions will not yet have been set to its final size
-            if (containerBlock->style()->isFlippedBlocksWritingMode()) {
+            if (containerBlock->style().isFlippedBlocksWritingMode()) {
                 if (containerBlock->isHorizontalWritingMode())
                     blockRect.setY(currentBlock->height() - blockRect.maxY());
                 else
@@ -1340,14 +1353,14 @@ void RenderBlock::imageChanged(WrappedImagePtr image, const IntRect*)
     if (!parent() || !everHadLayout())
         return;
 
-    ShapeValue* shapeValue = style()->shapeInside();
+    ShapeValue* shapeValue = style().shapeInside();
     if (shapeValue && shapeValue->image() && shapeValue->image()->data() == image) {
         ShapeInsideInfo* shapeInsideInfo = ensureShapeInsideInfo();
         shapeInsideInfo->dirtyShapeSize();
         markShapeInsideDescendantsForLayout();
     }
 
-    ShapeValue* shapeOutsideValue = style()->shapeOutside();
+    ShapeValue* shapeOutsideValue = style().shapeOutside();
     if (isFloating() && shapeOutsideValue && shapeOutsideValue->image() && shapeOutsideValue->image()->data() == image)
         parent()->setNeedsLayoutAndPrefWidthsRecalc();
 }
@@ -1375,12 +1388,10 @@ void RenderBlock::markShapeInsideDescendantsForLayout()
         setNeedsLayout();
         return;
     }
-    for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
-        if (!child->isRenderBlock())
-            continue;
-        RenderBlock* childBlock = toRenderBlock(child);
+
+    auto blockChildren = childrenOfType<RenderBlock>(*this);
+    for (auto childBlock = blockChildren.begin(), end = blockChildren.end(); childBlock != end; ++childBlock)
         childBlock->markShapeInsideDescendantsForLayout();
-    }
 }
 
 ShapeInsideInfo* RenderBlock::layoutShapeInsideInfo() const
@@ -1613,9 +1624,9 @@ void RenderBlock::addOverflowFromPositionedObjects()
         RenderBox* positionedObject = *it;
         
         // Fixed positioned elements don't contribute to layout overflow, since they don't scroll with the content.
-        if (positionedObject->style()->position() != FixedPosition) {
+        if (positionedObject->style().position() != FixedPosition) {
             LayoutUnit x = positionedObject->x();
-            if (style()->shouldPlaceBlockDirectionScrollbarOnLogicalLeft())
+            if (style().shouldPlaceBlockDirectionScrollbarOnLogicalLeft())
                 x -= verticalScrollbarWidth();
             addOverflowFromChild(positionedObject, LayoutSize(x, positionedObject->y()));
         }
@@ -1624,7 +1635,7 @@ void RenderBlock::addOverflowFromPositionedObjects()
 
 void RenderBlock::addVisualOverflowFromTheme()
 {
-    if (!style()->hasAppearance())
+    if (!style().hasAppearance())
         return;
 
     IntRect inflatedRect = pixelSnappedBorderBoxRect();
@@ -1675,12 +1686,12 @@ RenderBoxModelObject& RenderBlock::createReplacementRunIn(RenderBoxModelObject& 
 
     RenderBoxModelObject* newRunIn = 0;
     if (!runIn.isRenderBlockFlow())
-        newRunIn = new RenderBlockFlow(*runIn.element());
+        newRunIn = new RenderBlockFlow(*runIn.element(), runIn.style());
     else
-        newRunIn = new RenderInline(*runIn.element());
+        newRunIn = new RenderInline(*runIn.element(), runIn.style());
 
     runIn.element()->setRenderer(newRunIn);
-    newRunIn->setStyle(*runIn.style());
+    newRunIn->initializeStyle();
 
     runIn.moveAllChildrenTo(newRunIn, true);
 
@@ -1792,9 +1803,9 @@ LayoutUnit RenderBlock::computeStartPositionDeltaForChildAvoidingFloats(const Re
     if (region)
         blockOffset = max(blockOffset, blockOffset + (region->logicalTopForFlowThreadContent() - offsetFromLogicalTopOfFirstPage()));
 
-    LayoutUnit startOff = startOffsetForLine(blockOffset, false, region, logicalHeightForChild(child));
+    LayoutUnit startOff = startOffsetForLineInRegion(blockOffset, false, region, logicalHeightForChild(child));
 
-    if (style()->textAlign() != WEBKIT_CENTER && !child.style()->marginStartUsing(style()).isAuto()) {
+    if (style().textAlign() != WEBKIT_CENTER && !child.style().marginStartUsing(&style()).isAuto()) {
         if (childMarginStart < 0)
             startOff += childMarginStart;
         newPosition = max(newPosition, startOff); // Let the float sit in the child's margin if it can fit.
@@ -1807,7 +1818,7 @@ LayoutUnit RenderBlock::computeStartPositionDeltaForChildAvoidingFloats(const Re
 void RenderBlock::determineLogicalLeftPositionForChild(RenderBox& child, ApplyLayoutDeltaMode applyDelta)
 {
     LayoutUnit startPosition = borderStart() + paddingStart();
-    if (style()->shouldPlaceBlockDirectionScrollbarOnLogicalLeft())
+    if (style().shouldPlaceBlockDirectionScrollbarOnLogicalLeft())
         startPosition -= verticalScrollbarWidth();
     LayoutUnit totalAvailableLogicalWidth = borderAndPaddingLogicalWidth() + availableLogicalWidth();
 
@@ -1820,7 +1831,7 @@ void RenderBlock::determineLogicalLeftPositionForChild(RenderBox& child, ApplyLa
     if (child.avoidsFloats() && containsFloats() && !flowThreadContainingBlock())
         newPosition += computeStartPositionDeltaForChildAvoidingFloats(child, marginStartForChild(child));
 
-    setLogicalLeftForChild(child, style()->isLeftToRightDirection() ? newPosition : totalAvailableLogicalWidth - newPosition - logicalWidthForChild(child), applyDelta);
+    setLogicalLeftForChild(child, style().isLeftToRightDirection() ? newPosition : totalAvailableLogicalWidth - newPosition - logicalWidthForChild(child), applyDelta);
 }
 
 void RenderBlock::setLogicalLeftForChild(RenderBox& child, LayoutUnit logicalLeft, ApplyLayoutDeltaMode applyDelta)
@@ -1926,7 +1937,7 @@ bool RenderBlock::simplifiedLayout()
     if ((!posChildNeedsLayout() && !needsSimplifiedNormalFlowLayout()) || normalChildNeedsLayout() || selfNeedsLayout())
         return false;
 
-    LayoutStateMaintainer statePusher(&view(), this, locationOffset(), hasColumns() || hasTransform() || hasReflection() || style()->isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(&view(), this, locationOffset(), hasColumns() || hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
     
     if (needsPositionedMovementLayout() && !tryLayoutDoingPositionedMovementOnly())
         return false;
@@ -1971,18 +1982,18 @@ bool RenderBlock::simplifiedLayout()
 
 void RenderBlock::markFixedPositionObjectForLayoutIfNeeded(RenderObject& child)
 {
-    if (child.style()->position() != FixedPosition)
+    if (child.style().position() != FixedPosition)
         return;
 
-    bool hasStaticBlockPosition = child.style()->hasStaticBlockPosition(isHorizontalWritingMode());
-    bool hasStaticInlinePosition = child.style()->hasStaticInlinePosition(isHorizontalWritingMode());
+    bool hasStaticBlockPosition = child.style().hasStaticBlockPosition(isHorizontalWritingMode());
+    bool hasStaticInlinePosition = child.style().hasStaticInlinePosition(isHorizontalWritingMode());
     if (!hasStaticBlockPosition && !hasStaticInlinePosition)
         return;
 
     auto o = child.parent();
-    while (o && !o->isRenderView() && o->style()->position() != AbsolutePosition)
+    while (o && !o->isRenderView() && o->style().position() != AbsolutePosition)
         o = o->parent();
-    if (o->style()->position() != AbsolutePosition)
+    if (o->style().position() != AbsolutePosition)
         return;
 
     RenderBox& box = toRenderBox(child);
@@ -2027,7 +2038,7 @@ void RenderBlock::layoutPositionedObjects(bool relayoutChildren, bool fixedPosit
         // non-positioned block.  Rather than trying to detect all of these movement cases, we just always lay out positioned
         // objects that are positioned implicitly like this.  Such objects are rare, and so in typical DHTML menu usage (where everything is
         // positioned explicitly) this should not incur a performance penalty.
-        if (relayoutChildren || (r.style()->hasStaticBlockPosition(isHorizontalWritingMode()) && r.parent() != this))
+        if (relayoutChildren || (r.style().hasStaticBlockPosition(isHorizontalWritingMode()) && r.parent() != this))
             r.setChildNeedsLayout(MarkOnlyThis);
             
         // If relayoutChildren is set and the child has percentage padding or an embedded content box, we also need to invalidate the childs pref widths.
@@ -2120,7 +2131,7 @@ void RenderBlock::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     // Our scrollbar widgets paint exactly when we tell them to, so that they work properly with
     // z-index.  We paint after we painted the background/border, so that the scrollbars will
     // sit above the background/border.
-    if (hasOverflowClip() && style()->visibility() == VISIBLE && (phase == PaintPhaseBlockBackground || phase == PaintPhaseChildBlockBackground) && paintInfo.shouldPaintWithinRoot(*this) && !paintInfo.paintRootBackgroundOnly())
+    if (hasOverflowClip() && style().visibility() == VISIBLE && (phase == PaintPhaseBlockBackground || phase == PaintPhaseChildBlockBackground) && paintInfo.shouldPaintWithinRoot(*this) && !paintInfo.paintRootBackgroundOnly())
         layer()->paintOverflowControls(paintInfo.context, roundedIntPoint(adjustedPaintOffset), paintInfo.rect);
 }
 
@@ -2129,10 +2140,10 @@ void RenderBlock::paintColumnRules(PaintInfo& paintInfo, const LayoutPoint& pain
     if (paintInfo.context->paintingDisabled())
         return;
 
-    const Color& ruleColor = style()->visitedDependentColor(CSSPropertyWebkitColumnRuleColor);
-    bool ruleTransparent = style()->columnRuleIsTransparent();
-    EBorderStyle ruleStyle = style()->columnRuleStyle();
-    LayoutUnit ruleThickness = style()->columnRuleWidth();
+    const Color& ruleColor = style().visitedDependentColor(CSSPropertyWebkitColumnRuleColor);
+    bool ruleTransparent = style().columnRuleIsTransparent();
+    EBorderStyle ruleStyle = style().columnRuleStyle();
+    LayoutUnit ruleThickness = style().columnRuleWidth();
     LayoutUnit colGap = columnGap();
     bool renderRule = ruleStyle > BHIDDEN && !ruleTransparent;
     if (!renderRule)
@@ -2144,7 +2155,7 @@ void RenderBlock::paintColumnRules(PaintInfo& paintInfo, const LayoutPoint& pain
     bool antialias = shouldAntialiasLines(paintInfo.context);
 
     if (colInfo->progressionAxis() == ColumnInfo::InlineAxis) {
-        bool leftToRight = style()->isLeftToRightDirection() ^ colInfo->progressionIsReversed();
+        bool leftToRight = style().isLeftToRightDirection() ^ colInfo->progressionIsReversed();
         LayoutUnit currLogicalLeftOffset = leftToRight ? LayoutUnit() : contentLogicalWidth();
         LayoutUnit ruleAdd = logicalLeftOffsetForContent();
         LayoutUnit ruleLogicalLeft = leftToRight ? LayoutUnit() : contentLogicalWidth();
@@ -2176,7 +2187,7 @@ void RenderBlock::paintColumnRules(PaintInfo& paintInfo, const LayoutPoint& pain
             ruleLogicalLeft = currLogicalLeftOffset;
         }
     } else {
-        bool topToBottom = !style()->isFlippedBlocksWritingMode() ^ colInfo->progressionIsReversed();
+        bool topToBottom = !style().isFlippedBlocksWritingMode() ^ colInfo->progressionIsReversed();
         LayoutUnit ruleLeft = isHorizontalWritingMode()
             ? borderLeft() + paddingLeft()
             : colGap / 2 - colGap - ruleThickness / 2 + (!colInfo->progressionIsReversed() ? borderAndPaddingBefore() : borderAndPaddingAfter());
@@ -2220,7 +2231,7 @@ LayoutUnit RenderBlock::initialBlockOffsetForPainting() const
         LayoutRect colRect = columnRectAt(colInfo, 0);
         result = isHorizontalWritingMode() ? colRect.y() : colRect.x();
         result -= borderAndPaddingBefore();
-        if (style()->isFlippedBlocksWritingMode())
+        if (style().isFlippedBlocksWritingMode())
             result = -result;
     }
     return result;
@@ -2237,7 +2248,7 @@ LayoutUnit RenderBlock::blockDeltaForPaintingNextColumn() const
         else
             blockDelta -= (colInfo->columnHeight() + colGap);
     }
-    if (style()->isFlippedBlocksWritingMode())
+    if (style().isFlippedBlocksWritingMode())
         blockDelta = -blockDelta;
     return blockDelta;
 }
@@ -2328,7 +2339,7 @@ void RenderBlock::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOf
 bool RenderBlock::paintChild(RenderBox& child, PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect)
 {
     // Check for page-break-before: always, and if it's set, break and bail.
-    bool checkBeforeAlways = !childrenInline() && (usePrintRect && child.style()->pageBreakBefore() == PBALWAYS);
+    bool checkBeforeAlways = !childrenInline() && (usePrintRect && child.style().pageBreakBefore() == PBALWAYS);
     LayoutUnit absoluteChildY = paintOffset.y() + child.y();
     if (checkBeforeAlways
         && absoluteChildY > paintInfo.rect.y()
@@ -2353,7 +2364,7 @@ bool RenderBlock::paintChild(RenderBox& child, PaintInfo& paintInfo, const Layou
         child.paint(paintInfoForChild, childPoint);
 
     // Check for page-break-after: always, and if it's set, break and bail.
-    bool checkAfterAlways = !childrenInline() && (usePrintRect && child.style()->pageBreakAfter() == PBALWAYS);
+    bool checkAfterAlways = !childrenInline() && (usePrintRect && child.style().pageBreakAfter() == PBALWAYS);
     if (checkAfterAlways
         && (absoluteChildY + child.height()) > paintInfo.rect.y()
         && (absoluteChildY + child.height()) < paintInfo.rect.maxY()) {
@@ -2392,14 +2403,14 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     PaintPhase paintPhase = paintInfo.phase;
 
     // 1. paint background, borders etc
-    if ((paintPhase == PaintPhaseBlockBackground || paintPhase == PaintPhaseChildBlockBackground) && style()->visibility() == VISIBLE) {
+    if ((paintPhase == PaintPhaseBlockBackground || paintPhase == PaintPhaseChildBlockBackground) && style().visibility() == VISIBLE) {
         if (hasBoxDecorations())
             paintBoxDecorations(paintInfo, paintOffset);
         if (hasColumns() && !paintInfo.paintRootBackgroundOnly())
             paintColumnRules(paintInfo, paintOffset);
     }
 
-    if (paintPhase == PaintPhaseMask && style()->visibility() == VISIBLE) {
+    if (paintPhase == PaintPhaseMask && style().visibility() == VISIBLE) {
         paintMask(paintInfo, paintOffset);
         return;
     }
@@ -2436,13 +2447,13 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     }
 
     // 5. paint outline.
-    if ((paintPhase == PaintPhaseOutline || paintPhase == PaintPhaseSelfOutline) && hasOutline() && style()->visibility() == VISIBLE)
+    if ((paintPhase == PaintPhaseOutline || paintPhase == PaintPhaseSelfOutline) && hasOutline() && style().visibility() == VISIBLE)
         paintOutline(paintInfo, LayoutRect(paintOffset, size()));
 
     // 6. paint continuation outlines.
     if ((paintPhase == PaintPhaseOutline || paintPhase == PaintPhaseChildOutlines)) {
         RenderInline* inlineCont = inlineElementContinuation();
-        if (inlineCont && inlineCont->hasOutline() && inlineCont->style()->visibility() == VISIBLE) {
+        if (inlineCont && inlineCont->hasOutline() && inlineCont->style().visibility() == VISIBLE) {
             RenderInline* inlineRenderer = toRenderInline(inlineCont->element()->renderer());
             RenderBlock* cb = containingBlock();
 
@@ -2472,19 +2483,6 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
         paintCaret(paintInfo, paintOffset, CursorCaret);
         paintCaret(paintInfo, paintOffset, DragCaret);
     }
-}
-
-LayoutPoint RenderBlock::flipFloatForWritingModeForChild(const FloatingObject* child, const LayoutPoint& point) const
-{
-    if (!style()->isFlippedBlocksWritingMode())
-        return point;
-    
-    // This is similar to RenderBox::flipForWritingModeForChild. We have to subtract out our left/top offsets twice, since
-    // it's going to get added back in. We hide this complication here so that the calling code looks normal for the unflipped
-    // case.
-    if (isHorizontalWritingMode())
-        return LayoutPoint(point.x(), point.y() + height() - child->renderer().height() - 2 * yPositionForFloatIncludingMargin(child));
-    return LayoutPoint(point.x() + width() - child->renderer().width() - 2 * xPositionForFloatIncludingMargin(child), point.y());
 }
 
 RenderInline* RenderBlock::inlineElementContinuation() const
@@ -2565,7 +2563,7 @@ void RenderBlock::paintContinuationOutlines(PaintInfo& info, const LayoutPoint& 
 
 bool RenderBlock::shouldPaintSelectionGaps() const
 {
-    return selectionState() != SelectionNone && style()->visibility() == VISIBLE && isSelectionRoot();
+    return selectionState() != SelectionNone && style().visibility() == VISIBLE && isSelectionRoot();
 }
 
 bool RenderBlock::isSelectionRoot() const
@@ -2618,6 +2616,7 @@ GapRects RenderBlock::selectionGapRectsForRepaint(const RenderLayerModelObject* 
 
 void RenderBlock::paintSelection(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+#if ENABLE(TEXT_SELECTION)
     if (shouldPaintSelectionGaps() && paintInfo.phase == PaintPhaseForeground) {
         LogicalSelectionOffsetCaches cache(*this);
         LayoutUnit lastTop = 0;
@@ -2640,6 +2639,10 @@ void RenderBlock::paintSelection(PaintInfo& paintInfo, const LayoutPoint& paintO
             }
         }
     }
+#else
+    UNUSED_PARAM(paintInfo);
+    UNUSED_PARAM(paintOffset);
+#endif
 }
 
 static void clipOutPositionedObjects(const PaintInfo* paintInfo, const LayoutPoint& offset, TrackedRendererListHashSet* positionedObjects)
@@ -2699,7 +2702,7 @@ GapRects RenderBlock::selectionGaps(RenderBlock& rootBlock, const LayoutPoint& r
     if (!isRenderBlockFlow()) // FIXME: Make multi-column selection gap filling work someday.
         return result;
 
-    if (hasColumns() || hasTransform() || style()->columnSpan()) {
+    if (hasColumns() || hasTransform() || style().columnSpan()) {
         // FIXME: We should learn how to gap fill multiple columns and transforms eventually.
         lastLogicalTop = blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalHeight();
         lastLogicalLeft = logicalLeftSelectionOffset(rootBlock, logicalHeight(), cache);
@@ -2813,7 +2816,7 @@ LayoutRect RenderBlock::blockSelectionGap(RenderBlock& rootBlock, const LayoutPo
 
     LayoutRect gapRect = rootBlock.logicalRectToPhysicalRect(rootBlockPhysicalPosition, LayoutRect(logicalLeft, logicalTop, logicalWidth, logicalHeight));
     if (paintInfo)
-        paintInfo->context->fillRect(pixelSnappedIntRect(gapRect), selectionBackgroundColor(), style()->colorSpace());
+        paintInfo->context->fillRect(pixelSnappedIntRect(gapRect), selectionBackgroundColor(), style().colorSpace());
     return gapRect;
 }
 
@@ -2830,7 +2833,7 @@ LayoutRect RenderBlock::logicalLeftSelectionGap(RenderBlock& rootBlock, const La
 
     LayoutRect gapRect = rootBlock.logicalRectToPhysicalRect(rootBlockPhysicalPosition, LayoutRect(rootBlockLogicalLeft, rootBlockLogicalTop, rootBlockLogicalWidth, logicalHeight));
     if (paintInfo)
-        paintInfo->context->fillRect(pixelSnappedIntRect(gapRect), selObj->selectionBackgroundColor(), selObj->style()->colorSpace());
+        paintInfo->context->fillRect(pixelSnappedIntRect(gapRect), selObj->selectionBackgroundColor(), selObj->style().colorSpace());
     return gapRect;
 }
 
@@ -2847,13 +2850,13 @@ LayoutRect RenderBlock::logicalRightSelectionGap(RenderBlock& rootBlock, const L
 
     LayoutRect gapRect = rootBlock.logicalRectToPhysicalRect(rootBlockPhysicalPosition, LayoutRect(rootBlockLogicalLeft, rootBlockLogicalTop, rootBlockLogicalWidth, logicalHeight));
     if (paintInfo)
-        paintInfo->context->fillRect(pixelSnappedIntRect(gapRect), selObj->selectionBackgroundColor(), selObj->style()->colorSpace());
+        paintInfo->context->fillRect(pixelSnappedIntRect(gapRect), selObj->selectionBackgroundColor(), selObj->style().colorSpace());
     return gapRect;
 }
 
 void RenderBlock::getSelectionGapInfo(SelectionState state, bool& leftGap, bool& rightGap)
 {
-    bool ltr = style()->isLeftToRightDirection();
+    bool ltr = style().isLeftToRightDirection();
     leftGap = (state == RenderObject::SelectionInside) ||
               (state == RenderObject::SelectionEnd && ltr) ||
               (state == RenderObject::SelectionStart && !ltr);
@@ -3108,14 +3111,14 @@ void RenderBlock::clearPercentHeightDescendantsFrom(RenderBox& parent)
 LayoutUnit RenderBlock::textIndentOffset() const
 {
     LayoutUnit cw = 0;
-    if (style()->textIndent().isPercent())
+    if (style().textIndent().isPercent())
         cw = containingBlock()->availableLogicalWidth();
-    return minimumValueForLength(style()->textIndent(), cw);
+    return minimumValueForLength(style().textIndent(), cw);
 }
 
 LayoutUnit RenderBlock::logicalLeftOffsetForContent(RenderRegion* region) const
 {
-    LayoutUnit logicalLeftOffset = style()->isHorizontalWritingMode() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
+    LayoutUnit logicalLeftOffset = style().isHorizontalWritingMode() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
     if (!region)
         return logicalLeftOffset;
     LayoutRect boxRect = borderBoxRectInRegion(region);
@@ -3124,7 +3127,7 @@ LayoutUnit RenderBlock::logicalLeftOffsetForContent(RenderRegion* region) const
 
 LayoutUnit RenderBlock::logicalRightOffsetForContent(RenderRegion* region) const
 {
-    LayoutUnit logicalRightOffset = style()->isHorizontalWritingMode() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
+    LayoutUnit logicalRightOffset = style().isHorizontalWritingMode() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
     logicalRightOffset += availableLogicalWidth();
     if (!region)
         return logicalRightOffset;
@@ -3136,10 +3139,10 @@ LayoutUnit RenderBlock::adjustLogicalLeftOffsetForLine(LayoutUnit offsetFromFloa
 {
     LayoutUnit left = offsetFromFloats;
 
-    if (applyTextIndent && style()->isLeftToRightDirection())
+    if (applyTextIndent && style().isLeftToRightDirection())
         left += textIndentOffset();
 
-    if (style()->lineAlign() == LineAlignNone)
+    if (style().lineAlign() == LineAlignNone)
         return left;
     
     // Push in our left offset so that it is aligned with the character grid.
@@ -3148,11 +3151,11 @@ LayoutUnit RenderBlock::adjustLogicalLeftOffsetForLine(LayoutUnit offsetFromFloa
         return left;
 
     RenderBlock* lineGrid = layoutState->lineGrid();
-    if (!lineGrid || lineGrid->style()->writingMode() != style()->writingMode())
+    if (!lineGrid || lineGrid->style().writingMode() != style().writingMode())
         return left;
 
     // FIXME: Should letter-spacing apply? This is complicated since it doesn't apply at the edge?
-    float maxCharWidth = lineGrid->style()->font().primaryFont()->maxCharWidth();
+    float maxCharWidth = lineGrid->style().font().primaryFont()->maxCharWidth();
     if (!maxCharWidth)
         return left;
 
@@ -3176,10 +3179,10 @@ LayoutUnit RenderBlock::adjustLogicalRightOffsetForLine(LayoutUnit offsetFromFlo
 {
     LayoutUnit right = offsetFromFloats;
     
-    if (applyTextIndent && !style()->isLeftToRightDirection())
+    if (applyTextIndent && !style().isLeftToRightDirection())
         right -= textIndentOffset();
     
-    if (style()->lineAlign() == LineAlignNone)
+    if (style().lineAlign() == LineAlignNone)
         return right;
     
     // Push in our right offset so that it is aligned with the character grid.
@@ -3188,11 +3191,11 @@ LayoutUnit RenderBlock::adjustLogicalRightOffsetForLine(LayoutUnit offsetFromFlo
         return right;
 
     RenderBlock* lineGrid = layoutState->lineGrid();
-    if (!lineGrid || lineGrid->style()->writingMode() != style()->writingMode())
+    if (!lineGrid || lineGrid->style().writingMode() != style().writingMode())
         return right;
 
     // FIXME: Should letter-spacing apply? This is complicated since it doesn't apply at the edge?
-    float maxCharWidth = lineGrid->style()->font().primaryFont()->maxCharWidth();
+    float maxCharWidth = lineGrid->style().font().primaryFont()->maxCharWidth();
     if (!maxCharWidth)
         return right;
 
@@ -3215,7 +3218,7 @@ LayoutUnit RenderBlock::adjustLogicalRightOffsetForLine(LayoutUnit offsetFromFlo
 bool RenderBlock::avoidsFloats() const
 {
     // Floats can't intrude into our box if we have a non-auto column count or width.
-    return RenderBox::avoidsFloats() || !style()->hasAutoColumnCount() || !style()->hasAutoColumnWidth();
+    return RenderBox::avoidsFloats() || !style().hasAutoColumnCount() || !style().hasAutoColumnWidth();
 }
 
 bool RenderBlock::isPointInOverflowControl(HitTestResult& result, const LayoutPoint& locationInContainer, const LayoutPoint& accumulatedOffset)
@@ -3282,10 +3285,10 @@ bool RenderBlock::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     }
 
     // Check if the point is outside radii.
-    if (!isRenderView() && style()->hasBorderRadius()) {
+    if (!isRenderView() && style().hasBorderRadius()) {
         LayoutRect borderRect = borderBoxRect();
         borderRect.moveBy(adjustedLocation);
-        RoundedRect border = style()->getRoundedBorderFor(borderRect, &view());
+        RoundedRect border = style().getRoundedBorderFor(borderRect, &view());
         if (!locationInContainer.intersects(border))
             return false;
     }
@@ -3309,7 +3312,7 @@ public:
     ColumnRectIterator(const RenderBlock& block)
         : m_block(block)
         , m_colInfo(block.columnInfo())
-        , m_direction(m_block.style()->isFlippedBlocksWritingMode() ? 1 : -1)
+        , m_direction(m_block.style().isFlippedBlocksWritingMode() ? 1 : -1)
         , m_isHorizontal(block.isHorizontalWritingMode())
         , m_logicalLeft(block.logicalLeftOffsetForContent())
     {
@@ -3464,7 +3467,7 @@ VisiblePosition RenderBlock::positionForPointWithInlineChildren(const LayoutPoin
 
 static inline bool isChildHitTestCandidate(RenderBox& box)
 {
-    return box.height() && box.style()->visibility() == VISIBLE && !box.isFloatingOrOutOfFlowPositioned();
+    return box.height() && box.style().visibility() == VISIBLE && !box.isFloatingOrOutOfFlowPositioned();
 }
 
 VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point)
@@ -3496,7 +3499,7 @@ VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point)
     while (lastCandidateBox && !isChildHitTestCandidate(*lastCandidateBox))
         lastCandidateBox = lastCandidateBox->previousSiblingBox();
 
-    bool blocksAreFlipped = style()->isFlippedBlocksWritingMode();
+    bool blocksAreFlipped = style().isFlippedBlocksWritingMode();
     if (lastCandidateBox) {
         if (pointInLogicalContents.y() > logicalTopForChild(*lastCandidateBox)
             || (!blocksAreFlipped && pointInLogicalContents.y() == logicalTopForChild(*lastCandidateBox)))
@@ -3540,9 +3543,9 @@ LayoutUnit RenderBlock::availableLogicalWidth() const
 
 int RenderBlock::columnGap() const
 {
-    if (style()->hasNormalColumnGap())
-        return style()->fontDescription().computedPixelSize(); // "1em" is recommended as the normal gap setting. Matches <p> margins.
-    return static_cast<int>(style()->columnGap());
+    if (style().hasNormalColumnGap())
+        return style().fontDescription().computedPixelSize(); // "1em" is recommended as the normal gap setting. Matches <p> margins.
+    return static_cast<int>(style().columnGap());
 }
 
 void RenderBlock::calcColumnWidth()
@@ -3556,20 +3559,20 @@ void RenderBlock::calcColumnWidth()
     LayoutUnit desiredColumnWidth = contentLogicalWidth();
     
     // For now, we don't support multi-column layouts when printing, since we have to do a lot of work for proper pagination.
-    if (document().paginated() || (style()->hasAutoColumnCount() && style()->hasAutoColumnWidth()) || !style()->hasInlineColumnAxis()) {
+    if (document().paginated() || (style().hasAutoColumnCount() && style().hasAutoColumnWidth()) || !style().hasInlineColumnAxis()) {
         setDesiredColumnCountAndWidth(desiredColumnCount, desiredColumnWidth);
         return;
     }
         
     LayoutUnit availWidth = desiredColumnWidth;
     LayoutUnit colGap = columnGap();
-    LayoutUnit colWidth = max<LayoutUnit>(1, LayoutUnit(style()->columnWidth()));
-    int colCount = max<int>(1, style()->columnCount());
+    LayoutUnit colWidth = max<LayoutUnit>(1, LayoutUnit(style().columnWidth()));
+    int colCount = max<int>(1, style().columnCount());
 
-    if (style()->hasAutoColumnWidth() && !style()->hasAutoColumnCount()) {
+    if (style().hasAutoColumnWidth() && !style().hasAutoColumnCount()) {
         desiredColumnCount = colCount;
         desiredColumnWidth = max<LayoutUnit>(0, (availWidth - ((desiredColumnCount - 1) * colGap)) / desiredColumnCount);
-    } else if (!style()->hasAutoColumnWidth() && style()->hasAutoColumnCount()) {
+    } else if (!style().hasAutoColumnWidth() && style().hasAutoColumnCount()) {
         desiredColumnCount = max<LayoutUnit>(1, (availWidth + colGap) / (colWidth + colGap));
         desiredColumnWidth = ((availWidth + colGap) / desiredColumnCount) - colGap;
     } else {
@@ -3583,10 +3586,10 @@ bool RenderBlock::requiresColumns(int desiredColumnCount) const
 {
     // If overflow-y is set to paged-x or paged-y on the body or html element, we'll handle the paginating
     // in the RenderView instead.
-    bool isPaginated = (style()->overflowY() == OPAGEDX || style()->overflowY() == OPAGEDY) && !(isRoot() || isBody());
+    bool isPaginated = (style().overflowY() == OPAGEDX || style().overflowY() == OPAGEDY) && !(isRoot() || isBody());
 
     return firstChild()
-        && (desiredColumnCount != 1 || !style()->hasAutoColumnWidth() || !style()->hasInlineColumnAxis() || isPaginated)
+        && (desiredColumnCount != 1 || !style().hasAutoColumnWidth() || !style().hasInlineColumnAxis() || isPaginated)
         && !firstChild()->isAnonymousColumnsBlock()
         && !firstChild()->isAnonymousColumnSpanBlock();
 }
@@ -3612,8 +3615,8 @@ void RenderBlock::setDesiredColumnCountAndWidth(int count, LayoutUnit width)
         }
         info->setDesiredColumnCount(count);
         info->setDesiredColumnWidth(width);
-        info->setProgressionAxis(style()->hasInlineColumnAxis() ? ColumnInfo::InlineAxis : ColumnInfo::BlockAxis);
-        info->setProgressionIsReversed(style()->columnProgression() == ReverseColumnProgression);
+        info->setProgressionAxis(style().hasInlineColumnAxis() ? ColumnInfo::InlineAxis : ColumnInfo::BlockAxis);
+        info->setProgressionIsReversed(style().columnProgression() == ReverseColumnProgression);
     }
 }
 
@@ -3682,7 +3685,7 @@ LayoutRect RenderBlock::columnRectAt(ColumnInfo* colInfo, unsigned index) const
     LayoutUnit colLogicalLeft = logicalLeftOffsetForContent();
     LayoutUnit colGap = columnGap();
     if (colInfo->progressionAxis() == ColumnInfo::InlineAxis) {
-        if (style()->isLeftToRightDirection() ^ colInfo->progressionIsReversed())
+        if (style().isLeftToRightDirection() ^ colInfo->progressionIsReversed())
             colLogicalLeft += index * (colLogicalWidth + colGap);
         else
             colLogicalLeft += contentLogicalWidth() - colLogicalWidth - index * (colLogicalWidth + colGap);
@@ -3741,9 +3744,9 @@ void RenderBlock::adjustPointToColumnContents(LayoutPoint& point) const
 
                 // We're inside the column.  Translate the x and y into our column coordinate space.
                 if (colInfo->progressionAxis() == ColumnInfo::InlineAxis)
-                    point.move(columnPoint.x() - colRect.x(), (!style()->isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset));
+                    point.move(columnPoint.x() - colRect.x(), (!style().isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset));
                 else
-                    point.move((!style()->isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset) - colRect.x() + borderLeft() + paddingLeft(), 0);
+                    point.move((!style().isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset) - colRect.x() + borderLeft() + paddingLeft(), 0);
                 return;
             }
 
@@ -3773,9 +3776,9 @@ void RenderBlock::adjustPointToColumnContents(LayoutPoint& point) const
 
                 // We're inside the column.  Translate the x and y into our column coordinate space.
                 if (colInfo->progressionAxis() == ColumnInfo::InlineAxis)
-                    point.move((!style()->isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset), columnPoint.y() - colRect.y());
+                    point.move((!style().isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset), columnPoint.y() - colRect.y());
                 else
-                    point.move(0, (!style()->isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset) - colRect.y() + borderTop() + paddingTop());
+                    point.move(0, (!style().isFlippedBlocksWritingMode() ? logicalOffset : -logicalOffset) - colRect.y() + borderTop() + paddingTop());
                 return;
             }
 
@@ -3847,7 +3850,7 @@ void RenderBlock::adjustRectForColumns(LayoutRect& r) const
 LayoutPoint RenderBlock::flipForWritingModeIncludingColumns(const LayoutPoint& point) const
 {
     ASSERT(hasColumns());
-    if (!hasColumns() || !style()->isFlippedBlocksWritingMode())
+    if (!hasColumns() || !style().isFlippedBlocksWritingMode())
         return point;
     ColumnInfo* colInfo = columnInfo();
     LayoutUnit columnLogicalHeight = colInfo->columnHeight();
@@ -3860,7 +3863,7 @@ LayoutPoint RenderBlock::flipForWritingModeIncludingColumns(const LayoutPoint& p
 void RenderBlock::adjustStartEdgeForWritingModeIncludingColumns(LayoutRect& rect) const
 {
     ASSERT(hasColumns());
-    if (!hasColumns() || !style()->isFlippedBlocksWritingMode())
+    if (!hasColumns() || !style().isFlippedBlocksWritingMode())
         return;
     
     ColumnInfo* colInfo = columnInfo();
@@ -3926,7 +3929,7 @@ void RenderBlock::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Lay
 
     adjustIntrinsicLogicalWidthsForColumns(minLogicalWidth, maxLogicalWidth);
 
-    if (!style()->autoWrap() && childrenInline()) {
+    if (!style().autoWrap() && childrenInline()) {
         // A horizontal marquee with inline children has no minimum width.
         if (layer() && layer()->marquee() && layer()->marquee()->isHorizontal())
             minLogicalWidth = 0;
@@ -3952,21 +3955,21 @@ void RenderBlock::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
-    RenderStyle* styleToUse = style();
-    if (!isTableCell() && styleToUse->logicalWidth().isFixed() && styleToUse->logicalWidth().value() >= 0 
-        && !(isDeprecatedFlexItem() && !styleToUse->logicalWidth().intValue()))
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalWidth().value());
+    const RenderStyle& styleToUse = style();
+    if (!isTableCell() && styleToUse.logicalWidth().isFixed() && styleToUse.logicalWidth().value() >= 0
+        && !(isDeprecatedFlexItem() && !styleToUse.logicalWidth().intValue()))
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalWidth().value());
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
     
-    if (styleToUse->logicalMinWidth().isFixed() && styleToUse->logicalMinWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMinWidth().value()));
-        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMinWidth().value()));
+    if (styleToUse.logicalMinWidth().isFixed() && styleToUse.logicalMinWidth().value() > 0) {
+        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
+        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
     }
     
-    if (styleToUse->logicalMaxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMaxWidth().value()));
-        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMaxWidth().value()));
+    if (styleToUse.logicalMaxWidth().isFixed()) {
+        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
+        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
     }
     
     // Table layout uses integers, ceil the preferred widths to ensure that they can contain the contents.
@@ -3987,17 +3990,17 @@ void RenderBlock::adjustIntrinsicLogicalWidthsForColumns(LayoutUnit& minLogicalW
     // FIXME: make this method virtual and move the code to RenderMultiColumnBlock once the old
     // multicol code is gone.
 
-    if (!style()->hasAutoColumnCount() || !style()->hasAutoColumnWidth()) {
+    if (!style().hasAutoColumnCount() || !style().hasAutoColumnWidth()) {
         // The min/max intrinsic widths calculated really tell how much space elements need when
         // laid out inside the columns. In order to eventually end up with the desired column width,
         // we need to convert them to values pertaining to the multicol container.
-        int columnCount = style()->hasAutoColumnCount() ? 1 : style()->columnCount();
+        int columnCount = style().hasAutoColumnCount() ? 1 : style().columnCount();
         LayoutUnit columnWidth;
         LayoutUnit gapExtra = (columnCount - 1) * columnGap();
-        if (style()->hasAutoColumnWidth())
+        if (style().hasAutoColumnWidth())
             minLogicalWidth = minLogicalWidth * columnCount + gapExtra;
         else {
-            columnWidth = style()->columnWidth();
+            columnWidth = style().columnWidth();
             minLogicalWidth = min(minLogicalWidth, columnWidth);
         }
         // FIXME: If column-count is auto here, we should resolve it to calculate the maximum
@@ -4082,13 +4085,13 @@ static LayoutUnit getBPMWidth(LayoutUnit childValue, Length cssUnit)
 
 static LayoutUnit getBorderPaddingMargin(const RenderBoxModelObject* child, bool endOfInline)
 {
-    RenderStyle* childStyle = child->style();
+    const RenderStyle& childStyle = child->style();
     if (endOfInline)
-        return getBPMWidth(child->marginEnd(), childStyle->marginEnd()) +
-               getBPMWidth(child->paddingEnd(), childStyle->paddingEnd()) +
+        return getBPMWidth(child->marginEnd(), childStyle.marginEnd()) +
+               getBPMWidth(child->paddingEnd(), childStyle.paddingEnd()) +
                child->borderEnd();
-    return getBPMWidth(child->marginStart(), childStyle->marginStart()) +
-               getBPMWidth(child->paddingStart(), childStyle->paddingStart()) +
+    return getBPMWidth(child->marginStart(), childStyle.marginStart()) +
+               getBPMWidth(child->paddingStart(), childStyle.paddingStart()) +
                child->borderStart();
 }
 
@@ -4099,8 +4102,8 @@ static inline void stripTrailingSpace(float& inlineMax, float& inlineMin,
         // Collapse away the trailing space at the end of a block.
         RenderText* t = toRenderText(trailingSpaceChild);
         const UChar space = ' ';
-        const Font& font = t->style()->font(); // FIXME: This ignores first-line.
-        float spaceWidth = font.width(RenderBlock::constructTextRun(t, font, &space, 1, *t->style()));
+        const Font& font = t->style().font(); // FIXME: This ignores first-line.
+        float spaceWidth = font.width(RenderBlock::constructTextRun(t, font, &space, 1, t->style()));
         inlineMax -= spaceWidth + font.wordSpacing();
         if (inlineMin > inlineMax)
             inlineMin = inlineMax;
@@ -4137,7 +4140,7 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
     float inlineMax = 0;
     float inlineMin = 0;
 
-    RenderStyle* styleToUse = style();
+    const RenderStyle& styleToUse = style();
     RenderBlock* containingBlock = this->containingBlock();
     LayoutUnit cw = containingBlock ? containingBlock->contentLogicalWidth() : LayoutUnit();
 
@@ -4149,10 +4152,10 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
     // Firefox and Opera will allow a table cell to grow to fit an image inside it under
     // very specific cirucumstances (in order to match common WinIE renderings). 
     // Not supporting the quirk has caused us to mis-render some real sites. (See Bugzilla 10517.) 
-    bool allowImagesToBreak = !document().inQuirksMode() || !isTableCell() || !styleToUse->logicalWidth().isIntrinsicOrAuto();
+    bool allowImagesToBreak = !document().inQuirksMode() || !isTableCell() || !styleToUse.logicalWidth().isIntrinsicOrAuto();
 
     bool autoWrap, oldAutoWrap;
-    autoWrap = oldAutoWrap = styleToUse->autoWrap();
+    autoWrap = oldAutoWrap = styleToUse.autoWrap();
 
     InlineMinMaxIterator childIterator(this);
 
@@ -4161,13 +4164,13 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
     // Signals the text indent was more negative than the min preferred width
     bool hasRemainingNegativeTextIndent = false;
 
-    LayoutUnit textIndent = minimumValueForLength(styleToUse->textIndent(), cw);
+    LayoutUnit textIndent = minimumValueForLength(styleToUse.textIndent(), cw);
     RenderObject* prevFloat = 0;
     bool isPrevChildInlineFlow = false;
     bool shouldBreakLineAfterText = false;
     while (RenderObject* child = childIterator.next()) {
-        autoWrap = child->isReplaced() ? child->parent()->style()->autoWrap() : 
-            child->style()->autoWrap();
+        autoWrap = child->isReplaced() ? child->parent()->style().autoWrap() : 
+            child->style().autoWrap();
 
         if (!child->isBR()) {
             // Step One: determine whether or not we need to go ahead and
@@ -4205,7 +4208,7 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
             // values (if any of them are larger than our current min/max).  We then look at
             // the width of the last non-breakable run and use that to start a new line
             // (unless we end in whitespace).
-            RenderStyle* childStyle = child->style();
+            const RenderStyle& childStyle = child->style();
             float childMin = 0;
             float childMax = 0;
 
@@ -4230,8 +4233,8 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
                 } else {
                     // Inline replaced elts add in their margins to their min/max values.
                     LayoutUnit margins = 0;
-                    Length startMargin = childStyle->marginStart();
-                    Length endMargin = childStyle->marginEnd();
+                    Length startMargin = childStyle.marginStart();
+                    Length endMargin = childStyle.marginEnd();
                     if (startMargin.isFixed())
                         margins += adjustFloatForSubPixelLayout(startMargin.value());
                     if (endMargin.isFixed())
@@ -4251,8 +4254,8 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
                 bool clearPreviousFloat;
                 if (child->isFloating()) {
                     clearPreviousFloat = (prevFloat
-                        && ((prevFloat->style()->floating() == LeftFloat && (childStyle->clear() & CLEFT))
-                            || (prevFloat->style()->floating() == RightFloat && (childStyle->clear() & CRIGHT))));
+                        && ((prevFloat->style().floating() == LeftFloat && (childStyle.clear() & CLEFT))
+                            || (prevFloat->style().floating() == RightFloat && (childStyle.clear() & CRIGHT))));
                     prevFloat = child;
                 } else
                     clearPreviousFloat = false;
@@ -4312,7 +4315,7 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
                 // Case (3). Text.
                 RenderText* t = toRenderText(child);
 
-                if (t->style()->hasTextCombine() && t->isCombineText())
+                if (t->style().hasTextCombine() && t->isCombineText())
                     toRenderCombineText(*t).combineText();
 
                 // Determine if we have a breakable character.  Pass in
@@ -4426,7 +4429,7 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
         oldAutoWrap = autoWrap;
     }
 
-    if (styleToUse->collapseWhiteSpace())
+    if (styleToUse.collapseWhiteSpace())
         stripTrailingSpace(inlineMax, inlineMin, trailingSpaceChild);
 
     updatePreferredWidth(minLogicalWidth, inlineMin);
@@ -4435,8 +4438,8 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
 
 void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    RenderStyle* styleToUse = style();
-    bool nowrap = styleToUse->whiteSpace() == NOWRAP;
+    const RenderStyle& styleToUse = style();
+    bool nowrap = styleToUse.whiteSpace() == NOWRAP;
 
     RenderObject* child = firstChild();
     RenderBlock* containingBlock = this->containingBlock();
@@ -4448,14 +4451,14 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
             continue;
         }
 
-        RenderStyle* childStyle = child->style();
+        const RenderStyle& childStyle = child->style();
         if (child->isFloating() || (child->isBox() && toRenderBox(child)->avoidsFloats())) {
             LayoutUnit floatTotalWidth = floatLeftWidth + floatRightWidth;
-            if (childStyle->clear() & CLEFT) {
+            if (childStyle.clear() & CLEFT) {
                 maxLogicalWidth = max(floatTotalWidth, maxLogicalWidth);
                 floatLeftWidth = 0;
             }
-            if (childStyle->clear() & CRIGHT) {
+            if (childStyle.clear() & CRIGHT) {
                 maxLogicalWidth = max(floatTotalWidth, maxLogicalWidth);
                 floatRightWidth = 0;
             }
@@ -4464,8 +4467,8 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
         // A margin basically has three types: fixed, percentage, and auto (variable).
         // Auto and percentage margins simply become 0 when computing min/max width.
         // Fixed margins can be added in as is.
-        Length startMarginLength = childStyle->marginStartUsing(styleToUse);
-        Length endMarginLength = childStyle->marginEndUsing(styleToUse);
+        Length startMarginLength = childStyle.marginStartUsing(&styleToUse);
+        Length endMarginLength = childStyle.marginEndUsing(&styleToUse);
         LayoutUnit margin = 0;
         LayoutUnit marginStart = 0;
         LayoutUnit marginEnd = 0;
@@ -4500,7 +4503,7 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
                 // Determine a left and right max value based off whether or not the floats can fit in the
                 // margins of the object.  For negative margins, we will attempt to overlap the float if the negative margin
                 // is smaller than the float width.
-                bool ltr = containingBlock ? containingBlock->style()->isLeftToRightDirection() : styleToUse->isLeftToRightDirection();
+                bool ltr = containingBlock ? containingBlock->style().isLeftToRightDirection() : styleToUse.isLeftToRightDirection();
                 LayoutUnit marginLogicalLeft = ltr ? marginStart : marginEnd;
                 LayoutUnit marginLogicalRight = ltr ? marginEnd : marginStart;
                 LayoutUnit maxLeft = marginLogicalLeft > 0 ? max(floatLeftWidth, marginLogicalLeft) : floatLeftWidth + marginLogicalLeft;
@@ -4514,7 +4517,7 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
         }
         
         if (child->isFloating()) {
-            if (childStyle->floating() == LeftFloat)
+            if (childStyle.floating() == LeftFloat)
                 floatLeftWidth += w;
             else
                 floatRightWidth += w;
@@ -4552,13 +4555,13 @@ LayoutUnit RenderBlock::lineHeight(bool firstLine, LineDirectionMode direction, 
         return RenderBox::lineHeight(firstLine, direction, linePositionMode);
 
     if (firstLine && document().styleSheetCollection().usesFirstLineRules()) {
-        RenderStyle* s = firstLine ? firstLineStyle() : style();
-        if (s != style())
-            return s->computedLineHeight(&view());
+        RenderStyle& s = firstLine ? firstLineStyle() : style();
+        if (&s != &style())
+            return s.computedLineHeight(&view());
     }
     
     if (m_lineHeight == -1)
-        m_lineHeight = style()->computedLineHeight(&view());
+        m_lineHeight = style().computedLineHeight(&view());
 
     return m_lineHeight;
 }
@@ -4574,7 +4577,7 @@ int RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLine, Lin
         // FIXME: Might be better to have a custom CSS property instead, so that if the theme
         // is turned off, checkboxes/radios will still have decent baselines.
         // FIXME: Need to patch form controls to deal with vertical lines.
-        if (style()->hasAppearance() && !theme()->isControlContainer(style()->appearance()))
+        if (style().hasAppearance() && !theme()->isControlContainer(style().appearance()))
             return theme()->baselinePosition(this);
             
         // CSS2.1 states that the baseline of an inline block is the baseline of the last line box in
@@ -4595,8 +4598,8 @@ int RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLine, Lin
         return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
     }
 
-    const RenderStyle* style = firstLine ? firstLineStyle() : this->style();
-    const FontMetrics& fontMetrics = style->fontMetrics();
+    const RenderStyle& style = firstLine ? firstLineStyle() : this->style();
+    const FontMetrics& fontMetrics = style.fontMetrics();
     return fontMetrics.ascent(baselineType) + (lineHeight(firstLine, direction, linePositionMode) - fontMetrics.height()) / 2;
 }
 
@@ -4605,8 +4608,8 @@ LayoutUnit RenderBlock::minLineHeightForReplacedRenderer(bool isFirstLine, Layou
     if (!document().inNoQuirksMode() && replacedHeight)
         return replacedHeight;
 
-    const RenderStyle* style = isFirstLine ? firstLineStyle() : this->style();
-    if (!(style->lineBoxContain() & LineBoxContainBlock))
+    const RenderStyle& style = isFirstLine ? firstLineStyle() : this->style();
+    if (!(style.lineBoxContain() & LineBoxContainBlock))
         return 0;
 
     return std::max<LayoutUnit>(replacedHeight, lineHeight(isFirstLine, isHorizontalWritingMode() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes));
@@ -4644,7 +4647,7 @@ int RenderBlock::inlineBlockBaseline(LineDirectionMode lineDirection) const
     }
 
     if (!haveNormalFlowChild && hasLineIfEmpty()) {
-        auto& fontMetrics = firstLineStyle()->fontMetrics();
+        auto& fontMetrics = firstLineStyle().fontMetrics();
         return fontMetrics.ascent()
              + (lineHeight(true, lineDirection, PositionOfInteriorLineBoxes) - fontMetrics.height()) / 2
              + (lineDirection == HorizontalLine ? borderTop() + paddingTop() : borderRight() + paddingRight());
@@ -4658,7 +4661,7 @@ RenderBlock* RenderBlock::firstLineBlock() const
     RenderBlock* firstLineBlock = const_cast<RenderBlock*>(this);
     bool hasPseudo = false;
     while (true) {
-        hasPseudo = firstLineBlock->style()->hasPseudoStyle(FIRST_LINE);
+        hasPseudo = firstLineBlock->style().hasPseudoStyle(FIRST_LINE);
         if (hasPseudo)
             break;
         RenderElement* parentBlock = firstLineBlock->parent();
@@ -4682,7 +4685,7 @@ RenderBlock* RenderBlock::firstLineBlock() const
 
 static RenderStyle* styleForFirstLetter(RenderObject* firstLetterBlock, RenderObject* firstLetterContainer)
 {
-    RenderStyle* pseudoStyle = firstLetterBlock->getCachedPseudoStyle(FIRST_LETTER, firstLetterContainer->firstLineStyle());
+    RenderStyle* pseudoStyle = firstLetterBlock->getCachedPseudoStyle(FIRST_LETTER, &firstLetterContainer->firstLineStyle());
     // Force inline display (except for floating first-letters).
     pseudoStyle->setDisplay(pseudoStyle->isFloating() ? BLOCK : INLINE);
     // CSS2 says first-letter can't be positioned.
@@ -4713,7 +4716,7 @@ static inline RenderBlock* findFirstLetterBlock(RenderBlock* start)
         // first-letter, though.
         // FIXME: Remove when buttons are implemented with align-items instead
         // of flexbox.
-        bool canHaveFirstLetterRenderer = firstLetterBlock->style()->hasPseudoStyle(FIRST_LETTER)
+        bool canHaveFirstLetterRenderer = firstLetterBlock->style().hasPseudoStyle(FIRST_LETTER)
             && firstLetterBlock->canHaveGeneratedChildren()
             && (!firstLetterBlock->isFlexibleBox() || firstLetterBlock->isRenderButton());
         if (canHaveFirstLetterRenderer)
@@ -4736,14 +4739,14 @@ void RenderBlock::updateFirstLetterStyle(RenderObject* firstLetterBlock, RenderO
     RenderStyle* pseudoStyle = styleForFirstLetter(firstLetterBlock, firstLetterContainer);
     ASSERT(firstLetter->isFloating() || firstLetter->isInline());
 
-    if (Style::determineChange(firstLetter->style(), pseudoStyle, &frame().settings()) == Style::Detach) {
+    if (Style::determineChange(&firstLetter->style(), pseudoStyle, &frame().settings()) == Style::Detach) {
         // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
         RenderBoxModelObject* newFirstLetter;
         if (pseudoStyle->display() == INLINE)
-            newFirstLetter = new RenderInline(document());
+            newFirstLetter = new RenderInline(document(), *pseudoStyle);
         else
-            newFirstLetter = new RenderBlockFlow(document());
-        newFirstLetter->setStyle(*pseudoStyle);
+            newFirstLetter = new RenderBlockFlow(document(), *pseudoStyle);
+        newFirstLetter->initializeStyle();
 
         // Move the first letter into the new renderer.
         LayoutStateDisabler layoutStateDisabler(&view());
@@ -4758,7 +4761,7 @@ void RenderBlock::updateFirstLetterStyle(RenderObject* firstLetterBlock, RenderO
         if (RenderTextFragment* remainingText = toRenderBoxModelObject(firstLetter)->firstLetterRemainingText()) {
             ASSERT(remainingText->isAnonymous() || remainingText->textNode()->renderer() == remainingText);
             // Replace the old renderer with the new one.
-            remainingText->setFirstLetter(newFirstLetter);
+            remainingText->setFirstLetter(*newFirstLetter);
             newFirstLetter->setFirstLetterRemainingText(remainingText);
         }
         // To prevent removal of single anonymous block in RenderBlock::removeChild and causing
@@ -4777,10 +4780,10 @@ void RenderBlock::createFirstLetterRenderer(RenderObject* firstLetterBlock, Rend
     RenderStyle* pseudoStyle = styleForFirstLetter(firstLetterBlock, firstLetterContainer);
     RenderBoxModelObject* firstLetter = 0;
     if (pseudoStyle->display() == INLINE)
-        firstLetter = new RenderInline(document());
+        firstLetter = new RenderInline(document(), *pseudoStyle);
     else
-        firstLetter = new RenderBlockFlow(document());
-    firstLetter->setStyle(*pseudoStyle);
+        firstLetter = new RenderBlockFlow(document(), *pseudoStyle);
+    firstLetter->initializeStyle();
     firstLetterContainer->addChild(firstLetter, currentTextChild);
 
     // The original string is going to be either a generated content string or a DOM node's
@@ -4824,7 +4827,7 @@ void RenderBlock::createFirstLetterRenderer(RenderObject* firstLetterBlock, Rend
 
         firstLetterContainer->addChild(remainingText, currentTextChild);
         firstLetterContainer->removeChild(*currentTextChild);
-        remainingText->setFirstLetter(firstLetter);
+        remainingText->setFirstLetter(*firstLetter);
         firstLetter->setFirstLetterRemainingText(remainingText);
         
         // construct text fragment for the first letter
@@ -4845,7 +4848,7 @@ void RenderBlock::updateFirstLetter()
     if (!document().styleSheetCollection().usesFirstLetterRules())
         return;
     // Don't recur
-    if (style()->styleType() == FIRST_LETTER)
+    if (style().styleType() == FIRST_LETTER)
         return;
 
     RenderElement* firstLetterBlock = findFirstLetterBlock(this);
@@ -4861,14 +4864,14 @@ void RenderBlock::updateFirstLetter()
         if (current.isListMarker())
             descendant = current.nextSibling();
         else if (current.isFloatingOrOutOfFlowPositioned()) {
-            if (current.style()->styleType() == FIRST_LETTER) {
+            if (current.style().styleType() == FIRST_LETTER) {
                 descendant = current.firstChild();
                 break;
             }
             descendant = current.nextSibling();
         } else if (current.isReplaced() || current.isRenderButton() || current.isMenuList())
             break;
-        else if (current.style()->hasPseudoStyle(FIRST_LETTER) && current.canHaveGeneratedChildren())  {
+        else if (current.style().hasPseudoStyle(FIRST_LETTER) && current.canHaveGeneratedChildren())  {
             // We found a lower-level node with first-letter, which supersedes the higher-level style
             firstLetterBlock = &current;
             descendant = current.firstChild();
@@ -4879,7 +4882,7 @@ void RenderBlock::updateFirstLetter()
     if (!descendant)
         return;
 
-    if (descendant->parent()->style()->styleType() == FIRST_LETTER) {
+    if (descendant->parent()->style().styleType() == FIRST_LETTER) {
         // Destroy the first-letter object if it is no longer the first child.
         RenderObject* remainingText = descendant->parent()->nextSibling();
         if (remainingText && descendant->node() != remainingText->node()) {
@@ -4986,7 +4989,7 @@ void RenderBlock::updateDragState(bool dragOn)
         continuation->updateDragState(dragOn);
 }
 
-RenderStyle* RenderBlock::outlineStyleForRepaint() const
+const RenderStyle& RenderBlock::outlineStyleForRepaint() const
 {
     return isAnonymousBlockContinuation() ? continuation()->style() : style();
 }
@@ -5080,155 +5083,13 @@ RenderBox* RenderBlock::createAnonymousBoxWithSameTypeAs(const RenderObject* par
         return createAnonymousColumnsWithParentRenderer(parent);
     if (isAnonymousColumnSpanBlock())
         return createAnonymousColumnSpanWithParentRenderer(parent);
-    return createAnonymousWithParentRendererAndDisplay(parent, style()->display());
+    return createAnonymousWithParentRendererAndDisplay(parent, style().display());
 }
 
-bool RenderBlock::hasNextPage(LayoutUnit logicalOffset, PageBoundaryRule pageBoundaryRule) const
-{
-    ASSERT(view().layoutState() && view().layoutState()->isPaginated());
-
-    RenderFlowThread* flowThread = flowThreadContainingBlock();
-    if (!flowThread)
-        return true; // Printing and multi-column both make new pages to accommodate content.
-
-    // See if we're in the last region.
-    LayoutUnit pageOffset = offsetFromLogicalTopOfFirstPage() + logicalOffset;
-    RenderRegion* region = flowThread->regionAtBlockOffset(this, pageOffset, this);
-    if (!region)
-        return false;
-    if (region->isLastRegion())
-        return region->isRenderRegionSet() || region->style()->regionFragment() == BreakRegionFragment
-            || (pageBoundaryRule == IncludePageBoundary && pageOffset == region->logicalTopForFlowThreadContent());
-    return true;
-}
-
-LayoutUnit RenderBlock::nextPageLogicalTop(LayoutUnit logicalOffset, PageBoundaryRule pageBoundaryRule) const
-{
-    LayoutUnit pageLogicalHeight = pageLogicalHeightForOffset(logicalOffset);
-    if (!pageLogicalHeight)
-        return logicalOffset;
-    
-    // The logicalOffset is in our coordinate space.  We can add in our pushed offset.
-    LayoutUnit remainingLogicalHeight = pageRemainingLogicalHeightForOffset(logicalOffset);
-    if (pageBoundaryRule == ExcludePageBoundary)
-        return logicalOffset + (remainingLogicalHeight ? remainingLogicalHeight : pageLogicalHeight);
-    return logicalOffset + remainingLogicalHeight;
-}
 
 ColumnInfo::PaginationUnit RenderBlock::paginationUnit() const
 {
     return ColumnInfo::Column;
-}
-
-LayoutUnit RenderBlock::pageLogicalTopForOffset(LayoutUnit offset) const
-{
-    LayoutUnit firstPageLogicalTop = isHorizontalWritingMode() ? view().layoutState()->m_pageOffset.height() : view().layoutState()->m_pageOffset.width();
-    LayoutUnit blockLogicalTop = isHorizontalWritingMode() ? view().layoutState()->m_layoutOffset.height() : view().layoutState()->m_layoutOffset.width();
-
-    LayoutUnit cumulativeOffset = offset + blockLogicalTop;
-    RenderFlowThread* flowThread = flowThreadContainingBlock();
-    if (!flowThread) {
-        LayoutUnit pageLogicalHeight = view().layoutState()->pageLogicalHeight();
-        if (!pageLogicalHeight)
-            return 0;
-        return cumulativeOffset - roundToInt(cumulativeOffset - firstPageLogicalTop) % roundToInt(pageLogicalHeight);
-    }
-    return flowThread->pageLogicalTopForOffset(cumulativeOffset);
-}
-
-LayoutUnit RenderBlock::pageLogicalHeightForOffset(LayoutUnit offset) const
-{
-    RenderFlowThread* flowThread = flowThreadContainingBlock();
-    if (!flowThread)
-        return view().layoutState()->m_pageLogicalHeight;
-    return flowThread->pageLogicalHeightForOffset(offset + offsetFromLogicalTopOfFirstPage());
-}
-
-LayoutUnit RenderBlock::pageRemainingLogicalHeightForOffset(LayoutUnit offset, PageBoundaryRule pageBoundaryRule) const
-{
-    offset += offsetFromLogicalTopOfFirstPage();
-    
-    RenderFlowThread* flowThread = flowThreadContainingBlock();
-    if (!flowThread) {
-        LayoutUnit pageLogicalHeight = view().layoutState()->m_pageLogicalHeight;
-        LayoutUnit remainingHeight = pageLogicalHeight - intMod(offset, pageLogicalHeight);
-        if (pageBoundaryRule == IncludePageBoundary) {
-            // If includeBoundaryPoint is true the line exactly on the top edge of a
-            // column will act as being part of the previous column.
-            remainingHeight = intMod(remainingHeight, pageLogicalHeight);
-        }
-        return remainingHeight;
-    }
-    
-    return flowThread->pageRemainingLogicalHeightForOffset(offset, pageBoundaryRule);
-}
-
-LayoutUnit RenderBlock::adjustForUnsplittableChild(RenderBox& child, LayoutUnit logicalOffset, bool includeMargins)
-{
-    bool checkColumnBreaks = view().layoutState()->isPaginatingColumns();
-    bool checkPageBreaks = !checkColumnBreaks && view().layoutState()->m_pageLogicalHeight;
-    RenderFlowThread* flowThread = flowThreadContainingBlock();
-    bool checkRegionBreaks = flowThread && flowThread->isRenderNamedFlowThread();
-    bool isUnsplittable = child.isUnsplittableForPagination() || (checkColumnBreaks && child.style()->columnBreakInside() == PBAVOID)
-        || (checkPageBreaks && child.style()->pageBreakInside() == PBAVOID)
-        || (checkRegionBreaks && child.style()->regionBreakInside() == PBAVOID);
-    if (!isUnsplittable)
-        return logicalOffset;
-    LayoutUnit childLogicalHeight = logicalHeightForChild(child) + (includeMargins ? marginBeforeForChild(child) + marginAfterForChild(child) : LayoutUnit());
-    LayoutUnit pageLogicalHeight = pageLogicalHeightForOffset(logicalOffset);
-    bool hasUniformPageLogicalHeight = !flowThread || flowThread->regionsHaveUniformLogicalHeight();
-    updateMinimumPageHeight(logicalOffset, childLogicalHeight);
-    if (!pageLogicalHeight || (hasUniformPageLogicalHeight && childLogicalHeight > pageLogicalHeight)
-        || !hasNextPage(logicalOffset))
-        return logicalOffset;
-    LayoutUnit remainingLogicalHeight = pageRemainingLogicalHeightForOffset(logicalOffset, ExcludePageBoundary);
-    if (remainingLogicalHeight < childLogicalHeight) {
-        if (!hasUniformPageLogicalHeight && !pushToNextPageWithMinimumLogicalHeight(remainingLogicalHeight, logicalOffset, childLogicalHeight))
-            return logicalOffset;
-        return logicalOffset + remainingLogicalHeight;
-    }
-    return logicalOffset;
-}
-
-bool RenderBlock::pushToNextPageWithMinimumLogicalHeight(LayoutUnit& adjustment, LayoutUnit logicalOffset, LayoutUnit minimumLogicalHeight) const
-{
-    bool checkRegion = false;
-    for (LayoutUnit pageLogicalHeight = pageLogicalHeightForOffset(logicalOffset + adjustment); pageLogicalHeight;
-        pageLogicalHeight = pageLogicalHeightForOffset(logicalOffset + adjustment)) {
-        if (minimumLogicalHeight <= pageLogicalHeight)
-            return true;
-        if (!hasNextPage(logicalOffset + adjustment))
-            return false;
-        adjustment += pageLogicalHeight;
-        checkRegion = true;
-    }
-    return !checkRegion;
-}
-
-void RenderBlock::setPageBreak(LayoutUnit offset, LayoutUnit spaceShortage)
-{
-    if (RenderFlowThread* flowThread = flowThreadContainingBlock())
-        flowThread->setPageBreak(this, offsetFromLogicalTopOfFirstPage() + offset, spaceShortage);
-}
-
-void RenderBlock::updateMinimumPageHeight(LayoutUnit offset, LayoutUnit minHeight)
-{
-    if (RenderFlowThread* flowThread = flowThreadContainingBlock())
-        flowThread->updateMinimumPageHeight(this, offsetFromLogicalTopOfFirstPage() + offset, minHeight);
-    else if (ColumnInfo* colInfo = view().layoutState()->m_columnInfo)
-        colInfo->updateMinimumColumnHeight(minHeight);
-}
-
-bool RenderBlock::lineWidthForPaginatedLineChanged(RootInlineBox* rootBox, LayoutUnit lineDelta, RenderFlowThread* flowThread) const
-{
-    if (!flowThread)
-        return false;
-
-    RenderRegion* currentRegion = regionAtBlockOffset(rootBox->lineTopWithLeading() + lineDelta);
-    // Just bail if the region didn't change.
-    if (rootBox->containingRegion() == currentRegion)
-        return false;
-    return rootBox->paginatedLineWidth() != availableLogicalWidthForContent(currentRegion);
 }
 
 LayoutUnit RenderBlock::offsetFromLogicalTopOfFirstPage() const
@@ -5365,12 +5226,12 @@ bool RenderBlock::hasMarginBeforeQuirk(const RenderBox& child) const
     // If the child has the same directionality as we do, then we can just return its
     // margin quirk.
     if (!child.isWritingModeRoot())
-        return child.isRenderBlock() ? toRenderBlock(child).hasMarginBeforeQuirk() : child.style()->hasMarginBeforeQuirk();
+        return child.isRenderBlock() ? toRenderBlock(child).hasMarginBeforeQuirk() : child.style().hasMarginBeforeQuirk();
     
     // The child has a different directionality. If the child is parallel, then it's just
     // flipped relative to us. We can use the opposite edge.
     if (child.isHorizontalWritingMode() == isHorizontalWritingMode())
-        return child.isRenderBlock() ? toRenderBlock(child).hasMarginAfterQuirk() : child.style()->hasMarginAfterQuirk();
+        return child.isRenderBlock() ? toRenderBlock(child).hasMarginAfterQuirk() : child.style().hasMarginAfterQuirk();
     
     // The child is perpendicular to us and box sides are never quirky in html.css, and we don't really care about
     // whether or not authors specified quirky ems, since they're an implementation detail.
@@ -5382,12 +5243,12 @@ bool RenderBlock::hasMarginAfterQuirk(const RenderBox& child) const
     // If the child has the same directionality as we do, then we can just return its
     // margin quirk.
     if (!child.isWritingModeRoot())
-        return child.isRenderBlock() ? toRenderBlock(child).hasMarginAfterQuirk() : child.style()->hasMarginAfterQuirk();
+        return child.isRenderBlock() ? toRenderBlock(child).hasMarginAfterQuirk() : child.style().hasMarginAfterQuirk();
     
     // The child has a different directionality. If the child is parallel, then it's just
     // flipped relative to us. We can use the opposite edge.
     if (child.isHorizontalWritingMode() == isHorizontalWritingMode())
-        return child.isRenderBlock() ? toRenderBlock(child).hasMarginBeforeQuirk() : child.style()->hasMarginBeforeQuirk();
+        return child.isRenderBlock() ? toRenderBlock(child).hasMarginBeforeQuirk() : child.style().hasMarginBeforeQuirk();
     
     // The child is perpendicular to us and box sides are never quirky in html.css, and we don't really care about
     // whether or not authors specified quirky ems, since they're an implementation detail.
@@ -5399,17 +5260,15 @@ const char* RenderBlock::renderName() const
     if (isBody())
         return "RenderBody"; // FIXME: Temporary hack until we know that the regression tests pass.
 
-    if (isRenderNamedFlowFragmentContainer())
-        return "RenderRegion";
     if (isFloating())
         return "RenderBlock (floating)";
     if (isOutOfFlowPositioned())
         return "RenderBlock (positioned)";
-    if (style() && isAnonymousColumnsBlock())
+    if (isAnonymousColumnsBlock())
         return "RenderBlock (anonymous multi-column)";
-    if (style() && isAnonymousColumnSpanBlock())
+    if (isAnonymousColumnSpanBlock())
         return "RenderBlock (anonymous multi-column span)";
-    if (style() && isAnonymousBlock())
+    if (isAnonymousBlock())
         return "RenderBlock (anonymous)";
     // FIXME: Temporary hack while the new generated content system is being implemented.
     if (isPseudoElement())
@@ -5420,7 +5279,7 @@ const char* RenderBlock::renderName() const
         return "RenderBlock (relative positioned)";
     if (isStickyPositioned())
         return "RenderBlock (sticky positioned)";
-    if (style() && isRunIn())
+    if (isRunIn())
         return "RenderBlock (run-in)";
     return "RenderBlock";
 }
@@ -5432,7 +5291,7 @@ static inline TextRun constructTextRunInternal(RenderObject* context, const Font
     bool directionalOverride = style.rtlOrdering() == VisualOrder;
 
     TextRun run(characters, length, 0, 0, expansion, textDirection, directionalOverride);
-    if (textRunNeedsRenderingContext(font)) {
+    if (font.isSVGFont()) {
         ASSERT(context); // FIXME: Thread a RenderObject& to this point so we don't have to dereference anything.
         run.setRenderingContext(SVGTextRunRenderingContext::create(*context));
     }
@@ -5452,7 +5311,7 @@ static inline TextRun constructTextRunInternal(RenderObject* context, const Font
             directionalOverride |= isOverride(style.unicodeBidi());
     }
     TextRun run(characters, length, 0, 0, expansion, textDirection, directionalOverride);
-    if (textRunNeedsRenderingContext(font)) {
+    if (font.isSVGFont()) {
         ASSERT(context); // FIXME: Thread a RenderObject& to this point so we don't have to dereference anything.
         run.setRenderingContext(SVGTextRunRenderingContext::create(*context));
     }
@@ -5511,37 +5370,33 @@ TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, c
 RenderBlock* RenderBlock::createAnonymousWithParentRendererAndDisplay(const RenderObject* parent, EDisplay display)
 {
     // FIXME: Do we need to convert all our inline displays to block-type in the anonymous logic ?
-    EDisplay newDisplay;
-    RenderBlock* newBox = 0;
-    if (display == FLEX || display == INLINE_FLEX) {
-        newBox = new RenderFlexibleBox(parent->document());
-        newDisplay = FLEX;
-    } else {
-        newBox = new RenderBlockFlow(parent->document());
-        newDisplay = BLOCK;
-    }
+    RenderBlock* newBox;
+    if (display == FLEX || display == INLINE_FLEX)
+        newBox = new RenderFlexibleBox(parent->document(), RenderStyle::createAnonymousStyleWithDisplay(&parent->style(), FLEX));
+    else
+        newBox = new RenderBlockFlow(parent->document(), RenderStyle::createAnonymousStyleWithDisplay(&parent->style(), BLOCK));
 
-    newBox->setStyle(RenderStyle::createAnonymousStyleWithDisplay(parent->style(), newDisplay));
+    newBox->initializeStyle();
     return newBox;
 }
 
 RenderBlock* RenderBlock::createAnonymousColumnsWithParentRenderer(const RenderObject* parent)
 {
-    auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), BLOCK);
-    newStyle.get().inheritColumnPropertiesFrom(parent->style());
+    auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(&parent->style(), BLOCK);
+    newStyle.get().inheritColumnPropertiesFrom(&parent->style());
 
-    RenderBlock* newBox = new RenderBlockFlow(parent->document());
-    newBox->setStyle(std::move(newStyle));
+    RenderBlock* newBox = new RenderBlockFlow(parent->document(), std::move(newStyle));
+    newBox->initializeStyle();
     return newBox;
 }
 
 RenderBlock* RenderBlock::createAnonymousColumnSpanWithParentRenderer(const RenderObject* parent)
 {
-    auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), BLOCK);
+    auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(&parent->style(), BLOCK);
     newStyle.get().setColumnSpan(ColumnSpanAll);
 
-    RenderBlock* newBox = new RenderBlockFlow(parent->document());
-    newBox->setStyle(std::move(newStyle));
+    RenderBlock* newBox = new RenderBlockFlow(parent->document(), std::move(newStyle));
+    newBox->initializeStyle();
     return newBox;
 }
 
@@ -5597,7 +5452,7 @@ int RenderBlock::immediateLineCount()
     // Copied and modified from RenderBlock::lineCount.
     // Only descend into list items.
     int count = 0;
-    if (style()->visibility() == VISIBLE) {
+    if (style().visibility() == VISIBLE) {
         if (childrenInline()) {
             for (RootInlineBox* box = firstRootBox(); box; box = box->nextRootBox())
                 count++;

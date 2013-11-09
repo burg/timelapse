@@ -38,7 +38,7 @@ public:
     virtual PassRef<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const = 0;
 
 protected:
-    explicit RenderTextControl(HTMLTextFormControlElement&);
+    RenderTextControl(HTMLTextFormControlElement&, PassRef<RenderStyle>);
 
     // This convenience function should not be made public because innerTextElement may outlive the render tree.
     TextControlInnerTextElement* innerTextElement() const;
@@ -59,7 +59,6 @@ protected:
     virtual float getAvgCharWidth(AtomicString family);
     virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const = 0;
     virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const = 0;
-    virtual RenderStyle* textBaseStyle() const = 0;
 
     virtual void updateFromElement() OVERRIDE;
     virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const OVERRIDE;
@@ -92,8 +91,8 @@ RENDER_OBJECT_TYPE_CASTS(RenderTextControl, isTextControl())
 // anymore.
 class RenderTextControlInnerContainer FINAL : public RenderFlexibleBox {
 public:
-    explicit RenderTextControlInnerContainer(Element& element)
-        : RenderFlexibleBox(element)
+    explicit RenderTextControlInnerContainer(Element& element, PassRef<RenderStyle> style)
+        : RenderFlexibleBox(element, std::move(style))
     { }
     virtual ~RenderTextControlInnerContainer() { }
 

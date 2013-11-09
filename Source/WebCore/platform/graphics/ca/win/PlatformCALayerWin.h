@@ -126,6 +126,8 @@ public:
     virtual float contentsScale() const OVERRIDE;
     virtual void setContentsScale(float) OVERRIDE;
 
+    virtual void setEdgeAntialiasingMask(unsigned) OVERRIDE { ASSERT_NOT_REACHED(); }
+
     virtual TiledBacking* tiledBacking() OVERRIDE { return nullptr; }
     
     virtual PlatformCALayer* rootLayer() const OVERRIDE;
@@ -137,6 +139,8 @@ public:
 #endif
 
     virtual PassRefPtr<PlatformCALayer> clone(PlatformCALayerClient* owner) const OVERRIDE;
+
+    virtual PassRefPtr<PlatformCALayer> createCompatibleLayer(PlatformCALayer::LayerType, PlatformCALayerClient*) const OVERRIDE;
 
 private:
     PlatformCALayerWin(LayerType, PlatformLayer*, PlatformCALayerClient* owner);

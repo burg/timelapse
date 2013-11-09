@@ -61,7 +61,7 @@ public:
         // an invisible marker exists.  The side effect of having an invisible marker is that the quirks mode behavior of shrinking lines with no
         // text children must not apply.  This change also means that gaps will exist between image bullet list items.  Even when the list bullet
         // is an image, the line is still considered to be immune from the quirk.
-        m_hasTextChildren = renderer.style()->display() == LIST_ITEM;
+        m_hasTextChildren = renderer.style().display() == LIST_ITEM;
         m_hasTextDescendants = m_hasTextChildren;
     }
 
@@ -73,7 +73,7 @@ public:
 #endif
 
     RenderBoxModelObject& renderer() const { return toRenderBoxModelObject(InlineBox::renderer()); }
-    const RenderStyle& lineStyle() const { return isFirstLine() ? *renderer().firstLineStyle() : *renderer().style(); }
+    const RenderStyle& lineStyle() const { return isFirstLine() ? renderer().firstLineStyle() : renderer().style(); }
 
     InlineFlowBox* prevLineBox() const { return m_prevLineBox; }
     InlineFlowBox* nextLineBox() const { return m_nextLineBox; }
@@ -99,7 +99,7 @@ public:
     }
 
     void addToLine(InlineBox* child);
-    virtual void deleteLine(RenderArena&) OVERRIDE FINAL;
+    virtual void deleteLine() OVERRIDE FINAL;
     virtual void extractLine() OVERRIDE FINAL;
     virtual void attachLine() OVERRIDE FINAL;
     virtual void adjustPosition(float dx, float dy) OVERRIDE;
@@ -131,13 +131,13 @@ public:
     {
         if (!includeLogicalLeftEdge())
             return 0;
-        return isHorizontal() ? boxModelObject()->marginLeft() : boxModelObject()->marginTop();
+        return isHorizontal() ? renderer().marginLeft() : renderer().marginTop();
     }
     LayoutUnit marginLogicalRight() const
     {
         if (!includeLogicalRightEdge())
             return 0;
-        return isHorizontal() ? boxModelObject()->marginRight() : boxModelObject()->marginBottom();
+        return isHorizontal() ? renderer().marginRight() : renderer().marginBottom();
     }
     int borderLogicalLeft() const
     {
@@ -155,13 +155,13 @@ public:
     {
         if (!includeLogicalLeftEdge())
             return 0;
-        return isHorizontal() ? boxModelObject()->paddingLeft() : boxModelObject()->paddingTop();
+        return isHorizontal() ? renderer().paddingLeft() : renderer().paddingTop();
     }
     int paddingLogicalRight() const
     {
         if (!includeLogicalRightEdge())
             return 0;
-        return isHorizontal() ? boxModelObject()->paddingRight() : boxModelObject()->paddingBottom();
+        return isHorizontal() ? renderer().paddingRight() : renderer().paddingBottom();
     }
 
     bool includeLogicalLeftEdge() const { return m_includeLogicalLeftEdge; }
@@ -293,6 +293,9 @@ public:
     }
 
 private:
+    virtual bool isInlineFlowBox() const OVERRIDE FINAL { return true; }
+    void boxModelObject() const WTF_DELETED_FUNCTION;
+
     void addBoxShadowVisualOverflow(LayoutRect& logicalVisualOverflow);
     void addBorderOutsetVisualOverflow(LayoutRect& logicalVisualOverflow);
     void addTextBoxVisualOverflow(InlineTextBox*, GlyphOverflowAndFallbackFontsMap&, LayoutRect& logicalVisualOverflow);
@@ -302,19 +305,17 @@ private:
 protected:
     OwnPtr<RenderOverflow> m_overflow;
 
-    virtual bool isInlineFlowBox() const OVERRIDE FINAL { return true; }
-
     InlineBox* m_firstChild;
     InlineBox* m_lastChild;
     
     InlineFlowBox* m_prevLineBox; // The previous box that also uses our RenderObject
     InlineFlowBox* m_nextLineBox; // The next box that also uses our RenderObject
 
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     // Maximum logicalTop among all children of an InlineFlowBox. Used to
     // calculate the offset for TextUnderlinePositionUnder.
     void computeMaxLogicalTop(float& maxLogicalTop) const;
-#endif // CSS3_TEXT
+#endif
 private:
     unsigned m_includeLogicalLeftEdge : 1;
     unsigned m_includeLogicalRightEdge : 1;
@@ -344,20 +345,7 @@ private:
 #endif
 };
 
-inline InlineFlowBox* toInlineFlowBox(InlineBox* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isInlineFlowBox());
-    return static_cast<InlineFlowBox*>(object);
-}
-
-inline const InlineFlowBox* toInlineFlowBox(const InlineBox* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isInlineFlowBox());
-    return static_cast<const InlineFlowBox*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toInlineFlowBox(const InlineFlowBox*);
+INLINE_BOX_OBJECT_TYPE_CASTS(InlineFlowBox, isInlineFlowBox())
 
 #ifdef NDEBUG
 inline void InlineFlowBox::checkConsistency() const

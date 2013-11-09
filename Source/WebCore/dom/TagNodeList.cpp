@@ -24,13 +24,11 @@
 #include "config.h"
 #include "TagNodeList.h"
 
-#include "Element.h"
 #include "NodeRareData.h"
-#include <wtf/Assertions.h>
 
 namespace WebCore {
 
-TagNodeList::TagNodeList(Node& rootNode, CollectionType type, const AtomicString& namespaceURI, const AtomicString& localName)
+TagNodeList::TagNodeList(ContainerNode& rootNode, Type type, const AtomicString& namespaceURI, const AtomicString& localName)
     : LiveNodeList(rootNode, type, DoNotInvalidateOnAttributeChanges)
     , m_namespaceURI(namespaceURI)
     , m_localName(localName)
@@ -41,7 +39,7 @@ TagNodeList::TagNodeList(Node& rootNode, CollectionType type, const AtomicString
 TagNodeList::~TagNodeList()
 {
     if (m_namespaceURI == starAtom)
-        ownerNode().nodeLists()->removeCacheWithAtomicName(this, type(), m_localName);
+        ownerNode().nodeLists()->removeCacheWithAtomicName(this, m_localName);
     else
         ownerNode().nodeLists()->removeCacheWithQualifiedName(this, m_namespaceURI, m_localName);
 }
@@ -55,7 +53,7 @@ bool TagNodeList::nodeMatches(Element* testNode) const
     return m_namespaceURI == starAtom || m_namespaceURI == testNode->namespaceURI();
 }
 
-HTMLTagNodeList::HTMLTagNodeList(Node& rootNode, const AtomicString& localName)
+HTMLTagNodeList::HTMLTagNodeList(ContainerNode& rootNode, const AtomicString& localName)
     : TagNodeList(rootNode, HTMLTagNodeListType, starAtom, localName)
     , m_loweredLocalName(localName.lower())
 {

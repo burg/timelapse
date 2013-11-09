@@ -44,7 +44,7 @@ class CustomFilterGlobalContext;
 
 class RenderView FINAL : public RenderBlockFlow {
 public:
-    explicit RenderView(Document&);
+    RenderView(Document&, PassRef<RenderStyle>);
     virtual ~RenderView();
 
     bool hitTest(const HitTestRequest&, HitTestResult&);
@@ -65,7 +65,7 @@ public:
     // The same as the FrameView's layoutHeight/layoutWidth but with null check guards.
     int viewHeight() const;
     int viewWidth() const;
-    int viewLogicalWidth() const { return style()->isHorizontalWritingMode() ? viewWidth() : viewHeight(); }
+    int viewLogicalWidth() const { return style().isHorizontalWritingMode() ? viewWidth() : viewHeight(); }
     int viewLogicalHeight() const;
 
     float zoomFactor() const;
@@ -230,6 +230,10 @@ public:
     bool hasSoftwareFilters() const { return m_hasSoftwareFilters; }
 #endif
 
+    uint64_t rendererCount() const { return m_rendererCount; }
+    void didCreateRenderer() { ++m_rendererCount; }
+    void didDestroyRenderer() { --m_rendererCount; }
+
 protected:
     virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const OVERRIDE;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const OVERRIDE;
@@ -249,7 +253,7 @@ private:
     {
         // We push LayoutState even if layoutState is disabled because it stores layoutDelta too.
         if (!doingFullRepaint() || m_layoutState->isPaginated() || renderer->hasColumns() || renderer->flowThreadContainingBlock()
-            || m_layoutState->lineGrid() || (renderer->style()->lineGrid() != RenderStyle::initialLineGrid() && renderer->isRenderBlockFlow())
+            || m_layoutState->lineGrid() || (renderer->style().lineGrid() != RenderStyle::initialLineGrid() && renderer->isRenderBlockFlow())
 #if ENABLE(CSS_SHAPES)
             || (renderer->isRenderBlock() && toRenderBlock(renderer)->shapeInsideInfo())
             || (m_layoutState->shapeInsideInfo() && renderer->isRenderBlock() && !toRenderBlock(renderer)->allowsShapeInsideInfoSharing())
@@ -296,6 +300,8 @@ private:
     RenderObject* m_selectionEnd;
     int m_selectionStartPos;
     int m_selectionEndPos;
+
+    uint64_t m_rendererCount;
 
     // FIXME: Only used by embedded WebViews inside AppKit NSViews.  Find a way to remove.
     struct LegacyPrinting {

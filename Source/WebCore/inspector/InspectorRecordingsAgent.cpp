@@ -40,8 +40,8 @@
 
 namespace WebCore {
 
-InspectorRecordingsAgent::InspectorRecordingsAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state)
-: InspectorBaseAgent<InspectorRecordingsAgent>("Recordings", instrumentingAgents, state)
+InspectorRecordingsAgent::InspectorRecordingsAgent(InstrumentingAgents* instrumentingAgents)
+: InspectorBaseAgent<InspectorRecordingsAgent>("Recordings", instrumentingAgents)
 , m_instrumentingAgents(instrumentingAgents)
 {
     m_instrumentingAgents->setInspectorRecordingsAgent(this);
@@ -49,9 +49,8 @@ InspectorRecordingsAgent::InspectorRecordingsAgent(InstrumentingAgents* instrume
 
 InspectorRecordingsAgent::~InspectorRecordingsAgent()
 {
-    m_instrumentingAgents->setInspectorRecordingsAgent(0);
-    m_instrumentingAgents = 0;
-    m_state = 0;
+    m_instrumentingAgents->setInspectorRecordingsAgent(nullptr);
+    m_instrumentingAgents = nullptr;
 }
 
 void InspectorRecordingsAgent::setFrontend(InspectorFrontend* frontend)
@@ -61,7 +60,7 @@ void InspectorRecordingsAgent::setFrontend(InspectorFrontend* frontend)
 
 void InspectorRecordingsAgent::clearFrontend()
 {
-    m_frontend = 0;
+    m_frontend = nullptr;
 }
 
 PassRefPtr<ReplayRecording> InspectorRecordingsAgent::findRecording(ErrorString* errorString, int uid)

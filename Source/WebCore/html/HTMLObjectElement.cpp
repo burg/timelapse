@@ -89,7 +89,7 @@ bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLPlugInImageElement::isPresentationAttribute(name);
 }
 
-void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet& style)
 {
     if (name == borderAttr)
         applyBorderAttributeToStyle(value, style);
@@ -294,9 +294,6 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
     if (!allowedToLoadFrameURL(url))
         return;
 
-    bool fallbackContent = hasFallbackContent();
-    renderEmbeddedObject()->setHasFallbackContent(fallbackContent);
-
     // FIXME: It's sadness that we have this special case here.
     //        See http://trac.webkit.org/changeset/25128 and
     //        plugins/netscape-plugin-setwindow-size.html
@@ -312,8 +309,8 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
         return;
 
     SubframeLoader& loader = document().frame()->loader().subframeLoader();
-    bool success = beforeLoadAllowedLoad && hasValidClassId() && loader.requestObject(this, url, getNameAttribute(), serviceType, paramNames, paramValues);
-    if (!success && fallbackContent)
+    bool success = beforeLoadAllowedLoad && hasValidClassId() && loader.requestObject(*this, url, getNameAttribute(), serviceType, paramNames, paramValues);
+    if (!success && hasFallbackContent())
         renderFallbackContent();
 }
 

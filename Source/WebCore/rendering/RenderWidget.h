@@ -70,23 +70,18 @@ public:
     void updateWidgetPosition();
     IntRect windowClipRect() const;
 
-    void notifyWidget(WidgetNotification);
-
 #if USE(ACCELERATED_COMPOSITING)
     bool requiresAcceleratedCompositing() const;
 #endif
 
     WeakPtr<RenderWidget> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
 
-    virtual void viewCleared() { }
-
 protected:
-    explicit RenderWidget(HTMLFrameOwnerElement&);
+    RenderWidget(HTMLFrameOwnerElement&, PassRef<RenderStyle>);
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE FINAL;
     virtual void layout() OVERRIDE;
     virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
-    virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const OVERRIDE;
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
     virtual void paintContents(PaintInfo&, const LayoutPoint&);
 #if USE(ACCELERATED_COMPOSITING)

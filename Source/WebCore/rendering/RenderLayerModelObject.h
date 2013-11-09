@@ -39,7 +39,7 @@ public:
     bool hasSelfPaintingLayer() const;
     RenderLayer* layer() const { return m_layer.get(); }
 
-    virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle) OVERRIDE;
+    virtual void styleWillChange(StyleDifference, const RenderStyle& newStyle) OVERRIDE;
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
     virtual void updateFromStyle() { }
 
@@ -50,8 +50,8 @@ public:
     virtual bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const { return false; }
 
 protected:
-    RenderLayerModelObject(Element&, unsigned baseTypeFlags);
-    RenderLayerModelObject(Document&, unsigned baseTypeFlags);
+    RenderLayerModelObject(Element&, PassRef<RenderStyle>, unsigned baseTypeFlags);
+    RenderLayerModelObject(Document&, PassRef<RenderStyle>, unsigned baseTypeFlags);
 
     void createLayer();
 

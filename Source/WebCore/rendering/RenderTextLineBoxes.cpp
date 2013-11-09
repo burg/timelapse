@@ -44,14 +44,14 @@ InlineTextBox* RenderTextLineBoxes::createAndAppendLineBox(RenderText& renderTex
 {
     auto textBox = renderText.createTextBox();
     if (!m_first) {
-        m_first = textBox;
-        m_last = textBox;
+        m_first = textBox.get();
+        m_last = textBox.get();
     } else {
-        m_last->setNextTextBox(textBox);
+        m_last->setNextTextBox(textBox.get());
         textBox->setPreviousTextBox(m_last);
-        m_last = textBox;
+        m_last = textBox.get();
     }
-    return textBox;
+    return textBox.release();
 }
 
 void RenderTextLineBoxes::extract(InlineTextBox& box)
@@ -116,15 +116,14 @@ void RenderTextLineBoxes::removeAllFromParent(RenderText& renderer)
         box->removeFromParent();
 }
 
-void RenderTextLineBoxes::deleteAll(RenderText& renderer)
+void RenderTextLineBoxes::deleteAll()
 {
     if (!m_first)
         return;
-    auto& arena = renderer.renderArena();
     InlineTextBox* next;
     for (auto current = m_first; current; current = next) {
         next = current->nextTextBox();
-        current->destroy(arena);
+        delete current;
     }
     m_first = nullptr;
     m_last = nullptr;
@@ -161,7 +160,7 @@ IntRect RenderTextLineBoxes::boundingBox(const RenderText& renderer) const
             logicalRightSide = current->logicalRight();
     }
     
-    bool isHorizontal = renderer.style()->isHorizontalWritingMode();
+    bool isHorizontal = renderer.style().isHorizontalWritingMode();
     
     float x = isHorizontal ? logicalLeftSide : m_first->x();
     float y = isHorizontal ? m_first->y() : logicalLeftSide;
@@ -188,7 +187,7 @@ LayoutRect RenderTextLineBoxes::visualOverflowBoundingBox(const RenderText& rend
     auto logicalHeight = m_last->logicalBottomVisualOverflow() - logicalTop;
     
     LayoutRect rect(logicalLeftSide, logicalTop, logicalWidth, logicalHeight);
-    if (!renderer.style()->isHorizontalWritingMode())
+    if (!renderer.style().isHorizontalWritingMode())
         rect = rect.transposedRect();
     return rect;
 }
@@ -325,7 +324,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
 
         const InlineBox* prevBox = box.prevLeafChildIgnoringLineBreak();
         if ((prevBox && prevBox->bidiLevel() == box.bidiLevel())
-            || box.renderer().containingBlock()->style()->direction() == box.direction()) // FIXME: left on 12CBA
+            || box.renderer().containingBlock()->style().direction() == box.direction()) // FIXME: left on 12CBA
             return createVisiblePositionForBox(box, box.caretLeftmostOffset(), shouldAffinityBeDownstream);
 
         if (prevBox && prevBox->bidiLevel() > box.bidiLevel()) {
@@ -355,7 +354,7 @@ static VisiblePosition createVisiblePositionAfterAdjustingOffsetForBiDi(const In
 
     const InlineBox* nextBox = box.nextLeafChildIgnoringLineBreak();
     if ((nextBox && nextBox->bidiLevel() == box.bidiLevel())
-        || box.renderer().containingBlock()->style()->direction() == box.direction())
+        || box.renderer().containingBlock()->style().direction() == box.direction())
         return createVisiblePositionForBox(box, box.caretRightmostOffset(), shouldAffinityBeDownstream);
 
     // offset is on the right edge
@@ -391,7 +390,7 @@ VisiblePosition RenderTextLineBoxes::positionForPoint(const RenderText& renderer
 
     LayoutUnit pointLineDirection = m_first->isHorizontal() ? point.x() : point.y();
     LayoutUnit pointBlockDirection = m_first->isHorizontal() ? point.y() : point.x();
-    bool blocksAreFlipped = renderer.style()->isFlippedBlocksWritingMode();
+    bool blocksAreFlipped = renderer.style().isFlippedBlocksWritingMode();
 
     InlineTextBox* lastBox = nullptr;
     for (auto box = m_first; box; box = box->nextTextBox()) {
@@ -545,7 +544,7 @@ Vector<FloatQuad> RenderTextLineBoxes::absoluteQuads(const RenderText& renderer,
         // FIXME: ellipsisRectForBox should switch to return FloatRect soon with the subpixellayout branch.
         IntRect ellipsisRect = (option == ClipToEllipsis) ? ellipsisRectForBox(*box, 0, renderer.textLength()) : IntRect();
         if (!ellipsisRect.isEmpty()) {
-            if (renderer.style()->isHorizontalWritingMode())
+            if (renderer.style().isHorizontalWritingMode())
                 boundaries.setWidth(ellipsisRect.maxX() - boundaries.x());
             else
                 boundaries.setHeight(ellipsisRect.maxY() - boundaries.y());

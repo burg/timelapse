@@ -31,10 +31,14 @@ class RenderElement : public RenderObject {
 public:
     virtual ~RenderElement();
 
-    static RenderElement* createFor(Element&, RenderStyle&);
+    static RenderElement* createFor(Element&, PassRef<RenderStyle>);
 
-    RenderStyle* style() const { return m_style.get(); }
-    RenderStyle* firstLineStyle() const;
+    bool hasInitializedStyle() const { return m_hasInitializedStyle; }
+
+    RenderStyle& style() const { return const_cast<RenderStyle&>(m_style.get()); }
+    RenderStyle& firstLineStyle() const;
+
+    void initializeStyle();
 
     virtual void setStyle(PassRef<RenderStyle>);
     // Called to update a style that is allowed to trigger animations.
@@ -104,7 +108,6 @@ public:
     // Updates only the local style ptr of the object. Does not update the state of the object,
     // and so only should be called when the style is known not to have changed (or from setStyle).
     void setStyleInternal(PassRef<RenderStyle> style) { m_style = std::move(style); }
-    void clearStyleInternal() { m_style = nullptr; }
 
 protected:
     enum BaseTypeFlags {
@@ -116,8 +119,8 @@ protected:
         RenderBlockFlowFlag = 1 << 5,
     };
 
-    RenderElement(Element&, unsigned baseTypeFlags);
-    RenderElement(Document&, unsigned baseTypeFlags);
+    RenderElement(Element&, PassRef<RenderStyle>, unsigned baseTypeFlags);
+    RenderElement(Document&, PassRef<RenderStyle>, unsigned baseTypeFlags);
 
     bool layerCreationAllowedForSubtree() const;
 
@@ -131,8 +134,8 @@ protected:
     void setLastChild(RenderObject* child) { m_lastChild = child; }
     void destroyLeftoverChildren();
 
-    virtual void styleWillChange(StyleDifference, const RenderStyle*);
-    virtual void styleDidChange(StyleDifference, const RenderStyle*);
+    virtual void styleWillChange(StyleDifference, const RenderStyle& newStyle);
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
     virtual void insertedIntoTree() OVERRIDE;
     virtual void willBeRemovedFromTree() OVERRIDE;
@@ -162,11 +165,12 @@ private:
 
     unsigned m_baseTypeFlags : 6;
     bool m_ancestorLineBoxDirty : 1;
+    bool m_hasInitializedStyle : 1;
 
     RenderObject* m_firstChild;
     RenderObject* m_lastChild;
 
-    RefPtr<RenderStyle> m_style;
+    Ref<RenderStyle> m_style;
 
     // FIXME: Get rid of this hack.
     // Store state between styleWillChange and styleDidChange
@@ -174,9 +178,11 @@ private:
     static bool s_noLongerAffectsParentBlock;
 };
 
-inline RenderStyle* RenderElement::firstLineStyle() const
+template <> inline bool isRendererOfType<const RenderElement>(const RenderObject& renderer) { return renderer.isRenderElement(); }
+
+inline RenderStyle& RenderElement::firstLineStyle() const
 {
-    return document().styleSheetCollection().usesFirstLineRules() ? cachedFirstLineStyle() : style();
+    return document().styleSheetCollection().usesFirstLineRules() ? *cachedFirstLineStyle() : style();
 }
 
 inline void RenderElement::setAncestorLineBoxDirty(bool f)
@@ -275,14 +281,14 @@ inline bool RenderObject::isRenderInline() const
     return isRenderElement() && toRenderElement(this)->isRenderInline();
 }
 
-inline RenderStyle* RenderObject::style() const
+inline RenderStyle& RenderObject::style() const
 {
     if (isText())
         return m_parent->style();
     return toRenderElement(this)->style();
 }
 
-inline RenderStyle* RenderObject::firstLineStyle() const
+inline RenderStyle& RenderObject::firstLineStyle() const
 {
     if (isText())
         return m_parent->firstLineStyle();

@@ -284,6 +284,18 @@ void InspectorInstrumentation::didChangeRegionOversetImpl(InstrumentingAgents* i
         cssAgent->didChangeRegionOverset(document, namedFlow);
 }
 
+void InspectorInstrumentation::didRegisterNamedFlowContentElementImpl(InstrumentingAgents* instrumentingAgents, Document* document, WebKitNamedFlow* namedFlow, Node* contentElement, Node* nextContentElement)
+{
+    if (InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent())
+        cssAgent->didRegisterNamedFlowContentElement(document, namedFlow, contentElement, nextContentElement);
+}
+
+void InspectorInstrumentation::didUnregisterNamedFlowContentElementImpl(InstrumentingAgents* instrumentingAgents, Document* document, WebKitNamedFlow* namedFlow, Node* contentElement)
+{
+    if (InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent())
+        cssAgent->didUnregisterNamedFlowContentElement(document, namedFlow, contentElement);
+}
+
 void InspectorInstrumentation::mouseDidMoveOverElementImpl(InstrumentingAgents* instrumentingAgents, const HitTestResult& result, unsigned modifierFlags)
 {
     if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
@@ -809,10 +821,10 @@ void InspectorInstrumentation::didFailXHRLoadingImpl(InstrumentingAgents* instru
         resourceAgent->didFailXHRLoading(client);
 }
 
-void InspectorInstrumentation::didFinishXHRLoadingImpl(InstrumentingAgents* instrumentingAgents, ThreadableLoaderClient* client, unsigned long identifier, const String& sourceString, const String& url, const String& sendURL, unsigned sendLineNumber)
+void InspectorInstrumentation::didFinishXHRLoadingImpl(InstrumentingAgents* instrumentingAgents, ThreadableLoaderClient* client, unsigned long identifier, const String& sourceString, const String& url, const String& sendURL, unsigned sendLineNumber, unsigned sendColumnNumber)
 {
     if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
-        consoleAgent->didFinishXHRLoading(identifier, url, sendURL, sendLineNumber);
+        consoleAgent->didFinishXHRLoading(identifier, url, sendURL, sendLineNumber, sendColumnNumber);
     if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
         resourceAgent->didFinishXHRLoading(client, identifier, sourceString);
 }
@@ -1041,10 +1053,10 @@ void InspectorInstrumentation::addMessageToConsoleImpl(InstrumentingAgents* inst
 #endif
 }
 
-void InspectorInstrumentation::addMessageToConsoleImpl(InstrumentingAgents* instrumentingAgents, MessageSource source, MessageType type, MessageLevel level, const String& message, const String& scriptId, unsigned lineNumber, unsigned columnNumber, JSC::ExecState* state, unsigned long requestIdentifier)
+void InspectorInstrumentation::addMessageToConsoleImpl(InstrumentingAgents* instrumentingAgents, MessageSource source, MessageType type, MessageLevel level, const String& message, const String& scriptID, unsigned lineNumber, unsigned columnNumber, JSC::ExecState* state, unsigned long requestIdentifier)
 {
     if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
-        consoleAgent->addMessageToConsole(source, type, level, message, scriptId, lineNumber, columnNumber, state, requestIdentifier);
+        consoleAgent->addMessageToConsole(source, type, level, message, scriptID, lineNumber, columnNumber, state, requestIdentifier);
 }
 
 void InspectorInstrumentation::consoleCountImpl(InstrumentingAgents* instrumentingAgents, JSC::ExecState* state, PassRefPtr<ScriptArguments> arguments)

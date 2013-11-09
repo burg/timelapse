@@ -202,6 +202,17 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         return outline;
     },
 
+    // Public
+
+    treeElementForRepresentedObject: function(representedObject)
+    {
+        // The main resource is used as the representedObject instead of Frame in our tree.
+        if (representedObject instanceof WebInspector.Frame)
+            representedObject = representedObject.mainResource;
+
+        return this.contentTreeOutline.getCachedTreeElement(representedObject);
+    },
+
     // Private
 
     _debuggerPauseResumeButtonClicked: function(event)
@@ -236,7 +247,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         this._debuggerPauseResumeButtonItem.enabled = true;
         this._debuggerPauseResumeButtonItem.toggled = true;
         this._debuggerStepOverButtonItem.enabled = true;
-        this._debuggerStepIntoButtonItem.enabled = true;        
+        this._debuggerStepIntoButtonItem.enabled = true;
     },
 
     _debuggerDidResume: function(event)

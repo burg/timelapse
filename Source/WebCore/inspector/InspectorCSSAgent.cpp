@@ -43,7 +43,6 @@
 #include "HTMLStyleElement.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorHistory.h"
-#include "InspectorState.h"
 #include "InspectorTypeBuilder.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
@@ -65,11 +64,6 @@
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringConcatenate.h>
-
-namespace CSSAgentState {
-static const char cssAgentEnabled[] = "cssAgentEnabled";
-static const char isSelectorProfiling[] = "isSelectorProfiling";
-}
 
 namespace WebCore {
 
@@ -621,8 +615,8 @@ CSSStyleRule* InspectorCSSAgent::asCSSStyleRule(CSSRule* rule)
     return static_cast<CSSStyleRule*>(rule);
 }
 
-InspectorCSSAgent::InspectorCSSAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InspectorDOMAgent* domAgent)
-    : InspectorBaseAgent<InspectorCSSAgent>("CSS", instrumentingAgents, state)
+InspectorCSSAgent::InspectorCSSAgent(InstrumentingAgents* instrumentingAgents, InspectorDOMAgent* domAgent)
+    : InspectorBaseAgent<InspectorCSSAgent>("CSS", instrumentingAgents)
     , m_frontend(0)
     , m_domAgent(domAgent)
     , m_lastStyleSheetId(1)
@@ -657,18 +651,6 @@ void InspectorCSSAgent::discardAgent()
     m_domAgent = 0;
 }
 
-void InspectorCSSAgent::restore()
-{
-    if (m_state->getBoolean(CSSAgentState::cssAgentEnabled)) {
-        ErrorString error;
-        enable(&error);
-    }
-    if (m_state->getBoolean(CSSAgentState::isSelectorProfiling)) {
-        String errorString;
-        startSelectorProfiler(&errorString);
-    }
-}
-
 void InspectorCSSAgent::reset()
 {
     m_idToInspectorStyleSheet.clear();
@@ -690,14 +672,12 @@ void InspectorCSSAgent::resetNonPersistentData()
 
 void InspectorCSSAgent::enable(ErrorString*)
 {
-    m_state->setBoolean(CSSAgentState::cssAgentEnabled, true);
     m_instrumentingAgents->setInspectorCSSAgent(this);
 }
 
 void InspectorCSSAgent::disable(ErrorString*)
 {
     m_instrumentingAgents->setInspectorCSSAgent(0);
-    m_state->setBoolean(CSSAgentState::cssAgentEnabled, false);
 }
 
 void InspectorCSSAgent::mediaQueryResultChanged()
@@ -773,6 +753,33 @@ void InspectorCSSAgent::regionOversetChanged(WebKitNamedFlow* namedFlow, int doc
     Ref<WebKitNamedFlow> protect(*namedFlow);
     
     m_frontend->regionOversetChanged(buildObjectForNamedFlow(&errorString, namedFlow, documentNodeId));
+}
+
+void InspectorCSSAgent::didRegisterNamedFlowContentElement(Document* document, WebKitNamedFlow* namedFlow, Node* contentElement, Node* nextContentElement)
+{
+    int documentNodeId = documentNodeWithRequestedFlowsId(document);
+    if (!documentNodeId)
+        return;
+
+    ErrorString errorString;
+    int contentElementNodeId = m_domAgent->pushNodeToFrontend(&errorString, documentNodeId, contentElement);
+    int nextContentElementNodeId = nextContentElement ? m_domAgent->pushNodeToFrontend(&errorString, documentNodeId, nextContentElement) : 0;
+    m_frontend->registeredNamedFlowContentElement(documentNodeId, namedFlow->name().string(), contentElementNodeId, nextContentElementNodeId);
+}
+
+void InspectorCSSAgent::didUnregisterNamedFlowContentElement(Document* document, WebKitNamedFlow* namedFlow, Node* contentElement)
+{
+    int documentNodeId = documentNodeWithRequestedFlowsId(document);
+    if (!documentNodeId)
+        return;
+
+    ErrorString errorString;
+    int contentElementNodeId = m_domAgent->pushNodeToFrontend(&errorString, documentNodeId, contentElement);
+    if (!contentElementNodeId) {
+        // We've already notified that the DOM node was removed from the DOM, so there's no need to send another event.
+        return;
+    }
+    m_frontend->unregisteredNamedFlowContentElement(documentNodeId, namedFlow->name().string(), contentElementNodeId);
 }
 
 bool InspectorCSSAgent::forcePseudoState(Element* element, CSSSelector::PseudoType pseudoType)
@@ -1077,7 +1084,6 @@ void InspectorCSSAgent::getNamedFlowCollection(ErrorString* errorString, int doc
 void InspectorCSSAgent::startSelectorProfiler(ErrorString*)
 {
     m_currentSelectorProfile = adoptPtr(new SelectorProfile());
-    m_state->setBoolean(CSSAgentState::isSelectorProfiling, true);
 }
 
 void InspectorCSSAgent::stopSelectorProfiler(ErrorString* errorString, RefPtr<TypeBuilder::CSS::SelectorProfile>& result)
@@ -1087,9 +1093,8 @@ void InspectorCSSAgent::stopSelectorProfiler(ErrorString* errorString, RefPtr<Ty
 
 PassRefPtr<TypeBuilder::CSS::SelectorProfile> InspectorCSSAgent::stopSelectorProfilerImpl(ErrorString*, bool needProfile)
 {
-    if (!m_state->getBoolean(CSSAgentState::isSelectorProfiling))
+    if (!m_currentSelectorProfile)
         return 0;
-    m_state->setBoolean(CSSAgentState::isSelectorProfiling, false);
     RefPtr<TypeBuilder::CSS::SelectorProfile> result;
     if (m_frontend && needProfile)
         result = m_currentSelectorProfile->toInspectorObject();

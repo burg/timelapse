@@ -1,3 +1,372 @@
+2013-11-06  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard should generate JSON in the background process
+        https://bugs.webkit.org/show_bug.cgi?id=123797
+
+        Reviewed by Alexey Proskuryakov.
+
+        * config.json: Add defaultBuildWaitInterval used by process-builds.php.
+        * init-database.sql: Add is_process column to builds table so that we can track of "unprocessed" builds.
+
+        * public/admin/process-builds.php: Added.
+        (process_latest_five_builds): Update flakiness states and generate JSONs for the latest five builds.
+        We go backwards in the time so that we don't end up infinite looping over a single build that fails.
+        (main): Call processed_builds with an exponential back off.
+
+        * public/api/report.php:
+        (store_results): No need to return build or builder ids.
+        (main): Don't update flakiness states or generate JSONs.
+
+        * public/include/test-results.php:
+        (add_build): Take the slave name; it doesn't make any sense to create a build without it and later
+        updating it in store_test_results.
+        (store_test_results): Once new test results are added, explicitly mark this build as unprocessed.
+
+2013-11-04  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Build fix. Update is_flaky when it's NULL.
+
+        * public/include/test-results.php:
+
+2013-11-04  Ryosuke Niwa  <rniwa@webkit.org>
+
+        JSON generation on new flakiness dashboard is still too slow
+        https://bugs.webkit.org/show_bug.cgi?id=123776
+
+        Reviewed by Mark Rowe.
+
+        * init-database.sql: Added a constraint that result is unique for each (build, test) pair.
+
+        * public/include/test-results.php:
+        (ResultsJSONGenerator::generate): Don't sort results by latest_revision_time since that's done
+        in the client side anyway.
+        (update_flakiness_for_build): Don't update is_flaky flag if it's already set to the right value.
+
+
+2013-11-04  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Build fixes. In particular, we were missing the code to generate JSONs in report.php :(
+
+        * public/api/report.php:
+        * public/include/test-results.php:
+
+2013-11-04  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Fix JSON generations on new flakiness dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=123723
+
+        Reviewed by Andreas Kling.
+
+        Add is_flaky column on results table so that this column can be used to find flaky tests on a given builder
+        efficiently without having to through results for all tests in PHP. This column is updated in report.php
+        when a new build is added. Because is_flaky depends on the preceding and succeeding results, we must update
+        is_flaky flag on results for builds immediately before and after the new build as well.
+
+        To see why, suppose we had two consecutive results [PASS] [PASS]. If we were to insert [FAIL] result between
+        the two, those two results may also turn into flaky results if they were surrounded by [FAIL]. Similarly,
+        if we had [PASS] [FAIL] and the second result was marked flaky, inserting new [FAIL] must unmark it.
+
+
+        * init-database.sql: Added is_flaky column to results table with an index. Also added an index on
+        build_revisions.time as many queries filter results by this quantity. Also set the work_mem to 50MB avoid
+        disk thrashing while sorting results in various queries.
+
+        * public/api/failing-tests.php: Handle builder ids as well as names. Call generate() with failure types.
+        No longer generates *-failing.json since it's a subset of *-wrongexpectations.json to save time.
+
+        * public/api/report.php: Rewritten. Calls update_flakiness_after_inserting_build to update is_flaky flags
+        on the newly added results.
+        (store_results): Added.
+        (main): Added.
+
+        * public/include/test-results.php:
+        (ResultsJSONWriter):
+        (ResultsJSONWriter::add_results_for_test): Renamed from add_results_for_test_if_matches.
+        (ResultsJSONGenerator::generate): Takes the failure type. Instead of generating JSONs for all failure types
+        at once, generate one JSON for the specified type. We generate the list of test ids based on the failure type
+        and query results based on that. This dramatically cuts down the time spent in PHP.
+        (ResultsJSONGenerator::latest_build): Added.
+        (ResultsJSONGenerator::write_jsons): Takes single writer now.
+        (update_flakiness_for_build): Added.
+        (update_flakiness_after_inserting_build): Added.
+
+        * public/index.html:
+        (TestResultsView._populateBuilderPane): Emulate *-failing.json upon *-wrongexpectations.json.
+        (TestResultsView.fetchFailingTestsForBuilder): Ditto.
+
+        * public/main.css: Minor style tweaks.
+        (.testResults): Extend the border that wraps the test results as needed.
+        (.tooltip): Don't wrap text inside tooltips.
+
+2013-10-26  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Make new bug link in flakiness dashboard configurable
+        https://bugs.webkit.org/show_bug.cgi?id=123386
+
+        Reviewed by Alexey Proskuryakov.
+
+        * config.json: Added Bugzilla as the default destination for new bugs.
+        * public/api/manifest.php: Include newBugLinks in the manifest.
+        * public/index.html:
+        (TestResultsView): Initialize _newBugLinks.
+        (TestResultsView.setNewBugLinks): Added.
+        (TestResultsView._populateTestPane):
+        (TestResultsView._createTestResultRow): Replaced the hard-coded Bugzilla URL by the code
+        to generate hyper-links based on _newBugLinks. Also added a nullity check while formatting
+        revision checks so that we don't blow up when some build doesn't contain all revision info.
+        (TestResultsView._populateBuilderPane):
+
+2013-10-26  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard should support substring matching
+        https://bugs.webkit.org/show_bug.cgi?id=123393
+
+        Reviewed by Alexey Proskuryakov.
+
+        Addressed the use cases by
+        1. Always showing the candidate even when there is exactly one test matching the current value.
+        2. Adding all tests that match the current value upon the user pressing enter key.
+
+        * public/index.html:
+        (fetchManifest): Add all tests that match the current value. Confirm whether the user really
+        want to add all the tests when there are more than 15 tests to add.
+        * public/js/autocompleter.js:
+        (Autocompleter.prototype.filterCandidates): Extracted from _updateCandidates.
+        (Autocompleter.prototype._updateCandidates): Show the candidate window even when there is
+        exactly one test that matches the criteria so that the user can select this test.
+
+2013-10-26  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard shouldn't treat tests with right expectations as failing
+        https://bugs.webkit.org/show_bug.cgi?id=123385
+
+        Reviewed by Alexey Proskuryakov.
+
+        We define failing tests to be tests with wrong expectations whose actual results are not PASS
+        since tests with TEXT, IMAGE, etc... failures do not turn the bots red as long as the expectation
+        of the same type is specified in TestExpectation files.
+
+        * public/include/test-results.php:
+        (FailingResultsJSONWriter): Inherit from WrongExpectationsResultsJSONWriter.
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Build fix. The query results weren't sorted by the latest commit time,
+        yielding wrong set of tests to be listed in the builder pane.
+
+        * public/include/test-results.php:
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Links in new flakiness dashboard could benefit from tooltips
+        https://bugs.webkit.org/show_bug.cgi?id=123381
+
+        Reviewed by Alexey Proskuryakov.
+
+        Add title content attribute on each hyperlink in the builder pane.
+
+        * public/index.html:
+        (TestResultsView._populateBuilderPane):
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Commit the right change.
+
+        * public/index.html:
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        The new flakiness dashboard should sort builder and test names
+        https://bugs.webkit.org/show_bug.cgi?id=123363
+
+        Reviewed by Simon Fraser.
+
+        Sort the forgotten builders in the menu.
+
+        * public/index.html:
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        The new flakiness dashboard should sort builder and test names
+        https://bugs.webkit.org/show_bug.cgi?id=123363
+
+        Reviewed by Simon Fraser.
+
+        Sort builders and tests by their name in each pane.
+
+        * public/index.html:
+        (TestResultsView._populateTestPane): Lexicologically sort builders by their name.
+        (TestResultsView._sortObjectsByName): Added.
+        (TestResultsView._populateBuilderPane): Lexicologically sort builders by their name.
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Merge revision columns in flakiness dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=123360
+
+        Reviewed by Simon Fraser.
+
+        Merge revision numbers into one cell separated by /, and clearly label them as "latest revisions".
+        Also add colors for missing & audio failures so that they won't be an empty cell.
+
+        * public/index.html:
+        (TestResultsView._createTestResultHeader): Create a single th for the list of repository names.
+        (TestResultsView._createTestResultRow): Use single td for all revision numbers.
+        * public/js/build.js:
+        (.this.formattedRevision): Don't prefix revision numbers with '@' when we're not in the tooltip.
+        * public/main.css:
+        (.resultsTable .AUDIO a): Added.
+        (.resultsTable .MISSING a): Added.
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        One more build fix. Put each latest revision information in an actual td.
+
+        * public/index.html:
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Yet another set of build fixes.
+
+        1. Manually strip / from revisions JSON if there is any.
+        2. Suppress warnings from ob_end_flush.
+        3. Allow "+" in actual and expected results as used in "TEXT+IMAGE".
+
+        * public/api/report.php:
+        * public/include/test-results.php:
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Another build fix. Move .htaccess to public.
+
+        * .htaccess: Removed.
+        * public/.htaccess: Copied from .htaccess.
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        It turns out that the current instruction only works on Mountain Lion.
+
+        Also fixed some typos.
+
+        * Install.md:
+
+2013-10-24  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Add an instruction on how to setup test-results app
+        https://bugs.webkit.org/show_bug.cgi?id=123321
+
+        Rubber-stamped by Stephanie Lewis.
+
+        Added Install.md and updated config.json accordingly.
+
+        Also moved init-database.sql out of public/include since it doesn't need to be accessible via httpd.
+
+        * Install.md: Added.
+        * config.json:
+        * init-database.sql: Moved from public/include/init-database.sql.
+
+2013-10-24  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Move everything except ChangeLog and config.json into public directory.
+        https://bugs.webkit.org/show_bug.cgi?id=123319
+
+        Rubber-stamped by Stephanie Lewis.
+
+        * admin: Removed.
+        * admin/admin.css: Removed.
+        * admin/builders.php: Removed.
+        * admin/index.php: Removed.
+        * admin/repositories.php: Removed.
+        * api: Removed.
+        * api/failing-tests.php: Removed.
+        * api/manifest.php: Removed.
+        * api/report.php: Removed.
+        * api/results.php: Removed.
+        * common.css: Removed.
+        * config.json: Copied from include/config.json.
+        * include: Removed.
+        * include/admin-footer.php: Removed.
+        * include/admin-header.php: Removed.
+        * include/config.json: Removed.
+        * include/db.php: Removed.
+        * include/init-database.sql: Removed.
+        * include/json-shared.php: Removed.
+        * include/test-results.php: Removed.
+        * index.html: Removed.
+        * js: Removed.
+        * js/autocompleter.js: Removed.
+        * js/build.js: Removed.
+        * js/dom.js: Removed.
+        * main.css: Removed.
+        * public: Added.
+        * public/admin: Copied from admin.
+        * public/api: Copied from api.
+        * public/common.css: Copied from common.css.
+        * public/include: Copied from include.
+        * public/include/config.json: Removed.
+        * public/include/db.php:
+        * public/index.html: Copied from index.html.
+        * public/js: Copied from js.
+        * public/main.css: Copied from main.css.
+
+2013-10-24  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Showing lists of flaky tests for a builder takes too long
+        https://bugs.webkit.org/show_bug.cgi?id=123311
+
+        Reviewed by Sam Weinig.
+
+        Generate JSONs for tests failing, flaky, or with wrong expectation at the time a builder reports results
+        instead when the frontend requests to those those results since it takes multiple seconds or minutes to
+        generate those JSON files.
+
+        * api/failing-tests.php: Moved and renamed to manually generate all JSON files for a given builder.
+        (main):
+
+        * api/report.php: Manually flush and end the request (to avoid blocking run-webkit-tests on the other side
+        for minutes), then generate JSONs for tests that are failing, are flaky, and have wrong expectations.
+
+        * api/results.php: Merge format_result_rows here since it's not used anywhere else.
+
+        * include/config.json: Added the path to the data directory into which JSON files are generated.
+
+        * include/db.php:
+        (configPath): Takes a relative path value from config.json, and resolves it.
+
+        * include/json-shared.php:
+        (echo_success): Extracted from exit_with_success.
+        (exit_with_success):
+
+        * include/test-results.php:
+        (add_builder): Extracted from add_build.
+        (add_build):
+        (ResultsJSONWriter): Extracted from api/failing-tests.php.
+        (ResultsJSONWriter.__construct):
+        (ResultsJSONWriter.start):
+        (ResultsJSONWriter.end):
+        (ResultsJSONWriter.add_results_for_test_if_matches):
+        (ResultsJSONWriter.pass_for_failure_type):
+        (FailingResultsJSONWriter): Extracted from index.html's TestResultsView._matchesFailureType.
+        (FailingResultsJSONWriter.__construct):
+        (FailingResultsJSONWriter.pass_for_failure_type):
+        (FlakyResultsJSONWriter): Ditto.
+        (FlakyResultsJSONWriter.__construct):
+        (FlakyResultsJSONWriter.pass_for_failure_type):
+        (WrongExpectationsResultsJSONWriter): Ditto.
+        (WrongExpectationsResultsJSONWriter.__construct):
+        (WrongExpectationsResultsJSONWriter.pass_for_failure_type):
+        (ResultsJSONGenerator): Ditto.
+        (ResultsJSONGenerator.__construct):
+        (ResultsJSONGenerator.generate):
+        (ResultsJSONGenerator.open_json_for_failure_type):
+        (ResultsJSONGenerator.write_jsons):
+
+        * index.html:
+        (TestResultsView):
+        (TestResultsView.setBuilders):
+        (TestResultsView._createResultCell): Add a hyperlink to results.html in the tooltip.
+        (TestResultsView.fetchFailingTestsForBuilder): Fetch the generated JSON files.
+
 2013-10-23  Ryosuke Niwa  <rniwa@webkit.org>
 
         Reverted erroneously committed changes from the previous commit.

@@ -70,25 +70,24 @@ IntShapeInterval MarginIntervalGenerator::intervalAt(int y) const
 {
     unsigned xInterceptsIndex = abs(y - m_y);
     int dx = (xInterceptsIndex >= m_xIntercepts.size()) ? 0 : m_xIntercepts[xInterceptsIndex];
-    return IntShapeInterval(std::max(0, m_x1 - dx), m_x2 + dx);
+    return IntShapeInterval(m_x1 - dx, m_x2 + dx);
 }
 
 void RasterShapeIntervals::appendInterval(int y, int x1, int x2)
 {
-    ASSERT(y >= 0 && y < size() && x1 >= 0 && x2 > x1 && (m_intervalLists[y].isEmpty() || x1 > m_intervalLists[y].last().x2()));
-
+    ASSERT(x2 > x1 && (intervalsAt(y).isEmpty() || x1 > intervalsAt(y).last().x2()));
     m_bounds.unite(IntRect(x1, y, x2 - x1, 1));
-    m_intervalLists[y].append(IntShapeInterval(x1, x2));
+    intervalsAt(y).append(IntShapeInterval(x1, x2));
 }
 
 void RasterShapeIntervals::uniteMarginInterval(int y, const IntShapeInterval& interval)
 {
-    ASSERT(m_intervalLists[y].size() <= 1); // Each m_intervalLists entry has 0 or one interval.
+    ASSERT(intervalsAt(y).size() <= 1); // Each m_intervalLists entry has 0 or one interval.
 
-    if (m_intervalLists[y].isEmpty())
-        m_intervalLists[y].append(interval);
+    if (intervalsAt(y).isEmpty())
+        intervalsAt(y).append(interval);
     else {
-        IntShapeInterval& resultInterval = m_intervalLists[y][0];
+        IntShapeInterval& resultInterval = intervalsAt(y)[0];
         resultInterval.set(std::min(resultInterval.x1(), interval.x1()), std::max(resultInterval.x2(), interval.x2()));
     }
 
@@ -205,10 +204,8 @@ void RasterShapeIntervals::getExcludedIntervals(int y1, int y2, IntShapeInterval
     if (y2 < bounds().y() || y1 >= bounds().maxY())
         return;
 
-    for (int y = y1; y < y2;  y++) {
-        if (intervalsAt(y).isEmpty())
-            return;
-    }
+    y1 = std::max(y1, bounds().y());
+    y2 = std::min(y2, bounds().maxY());
 
     result = intervalsAt(y1);
     for (int y = y1 + 1; y < y2;  y++) {
@@ -220,22 +217,25 @@ void RasterShapeIntervals::getExcludedIntervals(int y1, int y2, IntShapeInterval
 
 // Currently limited to computing the margin boundary for shape-outside for floats, see https://bugs.webkit.org/show_bug.cgi?id=116348.
 
-PassOwnPtr<RasterShapeIntervals> RasterShapeIntervals::computeShapeMarginIntervals(unsigned margin) const
+PassOwnPtr<RasterShapeIntervals> RasterShapeIntervals::computeShapeMarginIntervals(unsigned shapeMargin) const
 {
-    OwnPtr<RasterShapeIntervals> result = adoptPtr(new RasterShapeIntervals(size() + margin));
-    MarginIntervalGenerator marginIntervalGenerator(margin);
+    OwnPtr<RasterShapeIntervals> result = adoptPtr(new RasterShapeIntervals(size(), shapeMargin));
+    MarginIntervalGenerator marginIntervalGenerator(shapeMargin);
 
-    for (int y = bounds().y(); y < bounds().maxY(); ++y) {
+    int minY = bounds().y();
+    int maxY = bounds().maxY();
+
+    for (int y = minY; y < maxY; ++y) {
         const IntShapeInterval& intervalAtY = limitIntervalAt(y);
         if (intervalAtY.isEmpty())
             continue;
 
         marginIntervalGenerator.set(y, intervalAtY);
-        int marginY0 = std::max(0, clampToPositiveInteger(y - margin));
-        int marginY1 = std::min(result->size() - 1, clampToPositiveInteger(y + margin));
+        int marginY0 = y - clampToInteger(shapeMargin);
+        int marginY1 = y + clampToInteger(shapeMargin);
 
         for (int marginY = y - 1; marginY >= marginY0; --marginY) {
-            if (limitIntervalAt(marginY).contains(intervalAtY))
+            if (marginY > minY && limitIntervalAt(marginY).contains(intervalAtY))
                 break;
             result->uniteMarginInterval(marginY, marginIntervalGenerator.intervalAt(marginY));
         }
@@ -243,7 +243,7 @@ PassOwnPtr<RasterShapeIntervals> RasterShapeIntervals::computeShapeMarginInterva
         result->uniteMarginInterval(y, marginIntervalGenerator.intervalAt(y));
 
         for (int marginY = y + 1; marginY <= marginY1; ++marginY) {
-            if (marginY < size() && limitIntervalAt(marginY).contains(intervalAtY))
+            if (marginY < maxY && limitIntervalAt(marginY).contains(intervalAtY))
                 break;
             result->uniteMarginInterval(marginY, marginIntervalGenerator.intervalAt(marginY));
         }

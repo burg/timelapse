@@ -467,8 +467,9 @@ static
 thick
 thin
 underline
-#if defined(ENABLE_CSS3_TEXT) && ENABLE_CSS3_TEXT
+#if defined(ENABLE_CSS3_TEXT_DECORATION) && ENABLE_CSS3_TEXT_DECORATION
 wavy
+ink
 #endif
 -webkit-nowrap
 
@@ -869,6 +870,10 @@ no-limit
 // none
 manual
 // auto
+
+#if defined(ENABLE_LETTERPRESS) && ENABLE_LETTERPRESS
+-webkit-letterpress
+#endif
 
 #if defined(ENABLE_ACCELERATED_OVERFLOW_SCROLLING) && ENABLE_ACCELERATED_OVERFLOW_SCROLLING
 // -webkit-overflow-scrolling

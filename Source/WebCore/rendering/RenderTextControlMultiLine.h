@@ -30,7 +30,7 @@ class HTMLTextAreaElement;
 
 class RenderTextControlMultiLine FINAL : public RenderTextControl {
 public:
-    explicit RenderTextControlMultiLine(HTMLTextAreaElement&);
+    RenderTextControlMultiLine(HTMLTextAreaElement&, PassRef<RenderStyle>);
     virtual ~RenderTextControlMultiLine();
 
     HTMLTextAreaElement& textAreaElement() const;
@@ -47,7 +47,6 @@ private:
     virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const OVERRIDE;
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
 
-    virtual RenderStyle* textBaseStyle() const;
     virtual PassRef<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const;
     virtual RenderObject* layoutSpecialExcludedChild(bool relayoutChildren);
 };

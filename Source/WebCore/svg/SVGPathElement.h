@@ -118,7 +118,7 @@ private:
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 
-    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
 
     virtual Node::InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
     virtual void removedFrom(ContainerNode&) OVERRIDE;
@@ -126,7 +126,7 @@ private:
     void invalidateMPathDependencies();
 
 private:
-    OwnPtr<SVGPathByteStream> m_pathByteStream;
+    std::unique_ptr<SVGPathByteStream> m_pathByteStream;
     mutable SVGSynchronizableAnimatedProperty<SVGPathSegList> m_pathSegList;
     bool m_isAnimValObserved;
 };

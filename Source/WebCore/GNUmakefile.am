@@ -329,10 +329,7 @@ dom_binding_idls += \
   DerivedSources/WebCore/InternalSettingsGenerated.idl
 
 # All Web Inspector generated files are created with this one call to CodeGeneratorInspector.py
-DerivedSources/WebCore/InspectorProtocolVersion.h : $(WebCore)/inspector/Inspector.json $(WebCore)/inspector/generate-inspector-protocol-version
-	$(AM_V_GEN)$(PYTHON) $(WebCore)/inspector/generate-inspector-protocol-version -o $(GENSOURCES_WEBCORE)/InspectorProtocolVersion.h $(WebCore)/inspector/Inspector.json
-
-DerivedSources/WebCore/InspectorBackendDispatcher.cpp: $(WebCore)/inspector/Inspector.json $(WebCore)/inspector/CodeGeneratorInspector.py
+DerivedSources/WebCore/InspectorBackendDispatcher.cpp: $(WebCore)/inspector/Inspector.json $(WebCore)/inspector/CodeGeneratorInspector.py $(WebCore)/inspector/CodeGeneratorInspectorStrings.py
 	$(AM_V_GEN)$(PYTHON) $(WebCore)/inspector/CodeGeneratorInspector.py $< --output_h_dir $(GENSOURCES_WEBCORE) --output_cpp_dir $(GENSOURCES_WEBCORE) --output_js_dir $(GENSOURCES_WEBCORE)
 DerivedSources/WebCore/InspectorTypeBuilder.h: DerivedSources/WebCore/InspectorTypeBuilder.cpp
 DerivedSources/WebCore/InspectorTypeBuilder.cpp: DerivedSources/WebCore/InspectorFrontend.h
@@ -382,6 +379,7 @@ IDL_PATH := \
     $(WebCore)/Modules/webdatabase \
     $(WebCore)/Modules/websockets \
     $(WebCore)/bindings/js \
+    $(WebCore)/crypto \
     $(WebCore)/css \
     $(WebCore)/dom \
     $(WebCore)/fileapi \
@@ -613,6 +611,7 @@ EXTRA_DIST += \
 	$(wildcard $(srcdir)/Source/WebCore/Modules/webaudio/*.idl) \
 	$(wildcard $(srcdir)/Source/WebCore/Modules/webdatabase/*.idl) \
 	$(wildcard $(srcdir)/Source/WebCore/Modules/websockets/*.idl) \
+	$(wildcard $(srcdir)/Source/WebCore/crypto/*.idl) \
 	$(wildcard $(srcdir)/Source/WebCore/css/*.idl) \
 	$(wildcard $(srcdir)/Source/WebCore/dom/*.idl) \
 	$(wildcard $(srcdir)/Source/WebCore/fileapi/*.idl) \
@@ -655,7 +654,6 @@ EXTRA_DIST += \
 	Source/WebCore/css/CSSValueKeywords.in \
 	Source/WebCore/dom/DOMExceptions.in \
 	Source/WebCore/css/fullscreen.css \
-	Source/WebCore/css/fullscreenQuickTime.css \
 	Source/WebCore/css/html.css \
 	Source/WebCore/css/make-css-file-arrays.pl \
 	Source/WebCore/css/makegrammar.pl \
@@ -687,9 +685,7 @@ EXTRA_DIST += \
 	Source/WebCore/inspector/InjectedScriptCanvasModuleSource.js \
 	Source/WebCore/inspector/InjectedScriptSource.js \
 	Source/WebCore/inspector/Inspector.json \
-	Source/WebCore/inspector/Inspector-1.0.json \
 	Source/WebCore/inspector/InspectorOverlayPage.html \
-	Source/WebCore/inspector/generate-inspector-protocol-version \
 	Source/WebCore/inspector/xxd.pl \
 	Source/WebCore/LICENSE-APPLE \
 	Source/WebCore/LICENSE-LGPL-2 \

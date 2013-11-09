@@ -43,7 +43,7 @@ namespace WebCore {
 
 class MediaSource : public MediaSourceBase, public ScriptWrappable {
 public:
-    static PassRefPtr<MediaSource> create(ScriptExecutionContext*);
+    static PassRefPtr<MediaSource> create(ScriptExecutionContext&);
     virtual ~MediaSource();
 
     // MediaSource.idl methods
@@ -59,8 +59,12 @@ public:
     using RefCounted<MediaSourceBase>::ref;
     using RefCounted<MediaSourceBase>::deref;
 
+    void sourceBufferDidChangeAcitveState(SourceBuffer*, bool);
+
+    void monitorSourceBuffers();
+
 private:
-    explicit MediaSource(ScriptExecutionContext*);
+    explicit MediaSource(ScriptExecutionContext&);
 
     // MediaSourceBase interface
     virtual void onReadyStateChange(const AtomicString&, const AtomicString&) OVERRIDE;

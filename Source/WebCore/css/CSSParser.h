@@ -166,6 +166,8 @@ public:
     bool cssGridLayoutEnabled() const;
     PassRefPtr<CSSValue> parseGridPosition();
     bool parseGridItemPositionShorthand(CSSPropertyID, bool important);
+    bool parseGridAreaShorthand(bool important);
+    bool parseSingleGridAreaLonghand(RefPtr<CSSValue>&);
     bool parseGridTrackList(CSSPropertyID, bool important);
     PassRefPtr<CSSPrimitiveValue> parseGridTrackSize();
     PassRefPtr<CSSPrimitiveValue> parseGridBreadth(CSSParserValue*);
@@ -281,7 +283,8 @@ public:
 
     void addTextDecorationProperty(CSSPropertyID, PassRefPtr<CSSValue>, bool important);
     bool parseTextDecoration(CSSPropertyID propId, bool important);
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
+    bool parseTextDecorationSkip(bool important);
     bool parseTextUnderlinePosition(bool important);
 #endif
 

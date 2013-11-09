@@ -74,20 +74,20 @@ void JIT_OPERATION operationStackCheck(ExecState* exec, CodeBlock* codeBlock)
 {
     // We pass in our own code block, because the callframe hasn't been populated.
     VM* vm = codeBlock->vm();
-    CallFrame* callerFrame = exec->callerFrame();
-    NativeCallFrameTracer tracer(vm, callerFrame->removeHostCallFrameFlag());
+    CallFrame* callerFrame = exec->callerFrameSkippingVMEntrySentinel();
+    NativeCallFrameTracer tracer(vm, callerFrame);
 
     JSStack& stack = vm->interpreter->stack();
 
-    if (UNLIKELY(!stack.grow(&exec->registers()[-codeBlock->m_numCalleeRegisters])))
+    if (UNLIKELY(!stack.grow(&exec->registers()[virtualRegisterForLocal(codeBlock->m_numCalleeRegisters).offset()])))
         vm->throwException(callerFrame, createStackOverflowError(callerFrame));
 }
 
 int32_t JIT_OPERATION operationCallArityCheck(ExecState* exec)
 {
     VM* vm = &exec->vm();
-    CallFrame* callerFrame = exec->callerFrame();
-    NativeCallFrameTracer tracer(vm, callerFrame->removeHostCallFrameFlag());
+    CallFrame* callerFrame = exec->callerFrameSkippingVMEntrySentinel();
+    NativeCallFrameTracer tracer(vm, callerFrame);
 
     JSStack& stack = vm->interpreter->stack();
 
@@ -101,8 +101,8 @@ int32_t JIT_OPERATION operationCallArityCheck(ExecState* exec)
 int32_t JIT_OPERATION operationConstructArityCheck(ExecState* exec)
 {
     VM* vm = &exec->vm();
-    CallFrame* callerFrame = exec->callerFrame();
-    NativeCallFrameTracer tracer(vm, callerFrame->removeHostCallFrameFlag());
+    CallFrame* callerFrame = exec->callerFrameSkippingVMEntrySentinel();
+    NativeCallFrameTracer tracer(vm, callerFrame);
 
     JSStack& stack = vm->interpreter->stack();
 
@@ -1105,7 +1105,7 @@ char* JIT_OPERATION operationOptimize(ExecState* exec, int32_t bytecodeIndex)
                     "Triggering reoptimization of ", *codeBlock,
                     "(", *codeBlock->replacement(), ") (in loop).\n");
             }
-            codeBlock->reoptimize();
+            codeBlock->replacement()->jettison(CountReoptimization);
             return 0;
         }
     } else {
@@ -1190,7 +1190,7 @@ char* JIT_OPERATION operationOptimize(ExecState* exec, int32_t bytecodeIndex)
                 "Triggering reoptimization of ", *codeBlock, " -> ",
                 *codeBlock->replacement(), " (after OSR fail).\n");
         }
-        codeBlock->reoptimize();
+        optimizedCodeBlock->jettison(CountReoptimization);
         return 0;
     }
 
@@ -1696,7 +1696,7 @@ void JIT_OPERATION operationVMHandleException(ExecState* exec)
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
 
-    ASSERT(!exec->hasHostCallFrameFlag());
+    ASSERT(!exec->isVMEntrySentinel());
     genericUnwind(vm, exec, vm->exception());
 }
 
@@ -1717,8 +1717,8 @@ asm (
 ".globl " SYMBOL_STRING(getHostCallReturnValue) "\n"
 HIDE_SYMBOL(getHostCallReturnValue) "\n"
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
-    "mov 40(%r13), %r13\n"
-    "mov %r13, %rdi\n"
+    "mov 0(%rbp), %rbp\n" // CallerFrameAndPC::callerFrame
+    "mov %rbp, %rdi\n"
     "jmp " LOCAL_REFERENCE(getHostCallReturnValueWithExecState) "\n"
 );
 
@@ -1728,8 +1728,8 @@ asm (
 ".globl " SYMBOL_STRING(getHostCallReturnValue) "\n"
 HIDE_SYMBOL(getHostCallReturnValue) "\n"
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
-    "mov 40(%edi), %edi\n"
-    "mov %edi, 4(%esp)\n"
+    "mov 0(%ebp), %ebp\n" // CallerFrameAndPC::callerFrame
+    "mov %ebp, 4(%esp)\n"
     "jmp " LOCAL_REFERENCE(getHostCallReturnValueWithExecState) "\n"
 );
 
@@ -1742,8 +1742,8 @@ HIDE_SYMBOL(getHostCallReturnValue) "\n"
 ".thumb" "\n"
 ".thumb_func " THUMB_FUNC_PARAM(getHostCallReturnValue) "\n"
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
-    "ldr r5, [r5, #40]" "\n"
-    "mov r0, r5" "\n"
+    "ldr r7, [r7, #0]" "\n" // CallerFrameAndPC::callerFrame
+    "mov r0, r7" "\n"
     "b " LOCAL_REFERENCE(getHostCallReturnValueWithExecState) "\n"
 );
 
@@ -1754,8 +1754,8 @@ asm (
 HIDE_SYMBOL(getHostCallReturnValue) "\n"
 INLINE_ARM_FUNCTION(getHostCallReturnValue)
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
-    "ldr r5, [r5, #40]" "\n"
-    "mov r0, r5" "\n"
+    "ldr r11, [r11, #0]" "\n" // CallerFrameAndPC::callerFrame
+    "mov r0, r11" "\n"
     "b " LOCAL_REFERENCE(getHostCallReturnValueWithExecState) "\n"
 );
 
@@ -1766,7 +1766,7 @@ asm (
 ".globl " SYMBOL_STRING(getHostCallReturnValue) "\n"
 HIDE_SYMBOL(getHostCallReturnValue) "\n"
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
-    "ldur x25, [x25, #-40]" "\n"
+    "ldur x25, [x25, #-32]" "\n"
      "mov x0, x25" "\n"
      "b " LOCAL_REFERENCE(getHostCallReturnValueWithExecState) "\n"
 );
@@ -1778,8 +1778,8 @@ asm (
 HIDE_SYMBOL(getHostCallReturnValue) "\n"
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
     LOAD_FUNCTION_TO_T9(getHostCallReturnValueWithExecState)
-    "lw $s0, 40($s0)" "\n"
-    "move $a0, $s0" "\n"
+    "lw $fp, 0($fp)" "\n" // CallerFrameAndPC::callerFrame
+    "move $a0, $fp" "\n"
     "b " LOCAL_REFERENCE(getHostCallReturnValueWithExecState) "\n"
 );
 
@@ -1789,8 +1789,7 @@ asm (
 ".globl " SYMBOL_STRING(getHostCallReturnValue) "\n"
 HIDE_SYMBOL(getHostCallReturnValue) "\n"
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
-    "add #40, r14" "\n"
-    "mov.l @r14, r14" "\n"
+    "mov.l @r14, r14" "\n" // CallerFrameAndPC::callerFrame
     "mov r14, r4" "\n"
     "mov.l 2f, " SH4_SCRATCH_REGISTER "\n"
     "braf " SH4_SCRATCH_REGISTER "\n"
@@ -1803,11 +1802,9 @@ SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
 extern "C" {
     __declspec(naked) EncodedJSValue HOST_CALL_RETURN_VALUE_OPTION getHostCallReturnValue()
     {
-        __asm {
-            mov edi, [edi + 40];
-            mov [esp + 4], edi;
-            jmp getHostCallReturnValueWithExecState
-        }
+        __asm mov ebp, [ebp + 0]; // CallerFrameAndPC::callerFrame
+        __asm mov [esp + 4], ebp;
+        __asm jmp getHostCallReturnValueWithExecState
     }
 }
 #endif

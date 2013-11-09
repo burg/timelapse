@@ -66,7 +66,6 @@ namespace WebCore {
 
 class AudioSourceProvider;
 class Document;
-class GStreamerGWorld;
 #if ENABLE(MEDIA_SOURCE)
 class HTMLMediaSource;
 #endif
@@ -83,7 +82,6 @@ struct PlatformMedia {
         QTMovieType,
         QTMovieGWorldType,
         QTMovieVisualContextType,
-        GStreamerGWorldType,
         ChromiumMediaPlayerType,
         QtMediaPlayerType,
         AVFoundationMediaPlayerType,
@@ -94,12 +92,30 @@ struct PlatformMedia {
         QTMovie* qtMovie;
         QTMovieGWorld* qtMovieGWorld;
         QTMovieVisualContext* qtMovieVisualContext;
-        GStreamerGWorld* gstreamerGWorld;
         MediaPlayerPrivateInterface* chromiumMediaPlayer;
         MediaPlayerPrivateInterface* qtMediaPlayer;
         AVPlayer* avfMediaPlayer;
         AVCFPlayer* avcfMediaPlayer;
     } media;
+};
+
+struct MediaEngineSupportParameters {
+    String type;
+    String codecs;
+    URL url;
+#if ENABLE(ENCRYPTED_MEDIA)
+    String keySystem;
+#endif
+#if ENABLE(MEDIA_SOURCE)
+    bool isMediaSource;
+#endif
+
+    MediaEngineSupportParameters()
+#if ENABLE(MEDIA_SOURCE)
+        : isMediaSource(false)
+#endif
+    {
+    }
 };
 
 extern const PlatformMedia NoPlatformMedia;
@@ -253,7 +269,7 @@ public:
 
     // Media engine support.
     enum SupportsType { IsNotSupported, IsSupported, MayBeSupported };
-    static MediaPlayer::SupportsType supportsType(const ContentType&, const String& keySystem, const URL&, const MediaPlayerSupportsTypeClient*);
+    static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&, const MediaPlayerSupportsTypeClient*);
     static void getSupportedTypes(HashSet<String>&);
     static bool isAvailable();
     static void getSitesInMediaCache(Vector<String>&);
@@ -282,7 +298,7 @@ public:
 
     bool load(const URL&, const ContentType&, const String& keySystem);
 #if ENABLE(MEDIA_SOURCE)
-    bool load(const URL&, PassRefPtr<HTMLMediaSource>);
+    bool load(const URL&, const ContentType&, PassRefPtr<HTMLMediaSource>);
 #endif
     void cancelLoad();
 
@@ -524,18 +540,6 @@ private:
 #endif
 };
 
-struct MediaEngineSupportParameters {
-    String type;
-    String codecs;
-    URL url;
-#if ENABLE(ENCRYPTED_MEDIA)
-    String keySystem;
-#endif
-#if ENABLE(MEDIA_SOURCE)
-    bool isMediaSource;
-#endif
-};
-
 typedef PassOwnPtr<MediaPlayerPrivateInterface> (*CreateMediaEnginePlayer)(MediaPlayer*);
 typedef void (*MediaEngineSupportedTypes)(HashSet<String>& types);
 typedef MediaPlayer::SupportsType (*MediaEngineSupportsType)(const MediaEngineSupportParameters& parameters);
@@ -545,6 +549,12 @@ typedef void (*MediaEngineClearMediaCacheForSite)(const String&);
 
 typedef void (*MediaEngineRegistrar)(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType,
     MediaEngineGetSitesInMediaCache, MediaEngineClearMediaCache, MediaEngineClearMediaCacheForSite);
+typedef void (*MediaEngineRegister)(MediaEngineRegistrar);
+
+class MediaPlayerFactorySupport {
+public:
+    static void callRegisterMediaEngine(MediaEngineRegister);
+};
 
 }
 

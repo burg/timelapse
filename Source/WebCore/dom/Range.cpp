@@ -28,13 +28,10 @@
 #include "ClientRect.h"
 #include "ClientRectList.h"
 #include "DocumentFragment.h"
-#include "ExceptionCode.h"
-#include "FloatQuad.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
-#include "Node.h"
 #include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "Page.h"
@@ -43,7 +40,6 @@
 #include "RenderBoxModelObject.h"
 #include "RenderText.h"
 #include "ScopedEventQueue.h"
-#include "Text.h"
 #include "TextIterator.h"
 #include "VisiblePosition.h"
 #include "VisibleUnits.h"
@@ -51,7 +47,6 @@
 #include "markup.h"
 #include <stdio.h>
 #include <wtf/RefCountedLeakCounter.h>
-#include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -1046,14 +1041,13 @@ void Range::insertNode(PassRefPtr<Node> prpNewNode, ExceptionCode& ec)
         if (collapsed)
             lastChild = (newNodeType == Node::DOCUMENT_FRAGMENT_NODE) ? newNode->lastChild() : newNode;
 
-        int startOffset = m_start.offset();
         container = m_start.container();
-        container->insertBefore(newNode.release(), container->childNode(startOffset), ec);
+        container->insertBefore(newNode.release(), container->childNode(m_start.offset()), ec);
         if (ec)
             return;
 
         if (collapsed && numNewChildren)
-            m_end.set(m_start.container(), startOffset + numNewChildren, lastChild.get());
+            m_end.set(m_start.container(), m_start.offset() + numNewChildren, lastChild.get());
     }
 }
 
@@ -1555,6 +1549,8 @@ Node* Range::firstNode() const
         return 0;
     if (m_start.container()->offsetInCharacters())
         return m_start.container();
+    if (isRendererReplacedElement(m_start.container()->renderer()))
+        return m_start.container();
     if (Node* child = m_start.container()->childNode(m_start.offset()))
         return child;
     if (!m_start.offset())
@@ -1931,7 +1927,7 @@ void Range::getBorderAndTextQuads(Vector<FloatQuad>& quads) const
             if (RenderBoxModelObject* renderBoxModelObject = toElement(node)->renderBoxModelObject()) {
                 Vector<FloatQuad> elementQuads;
                 renderBoxModelObject->absoluteQuads(elementQuads);
-                ownerDocument().adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(elementQuads, *renderBoxModelObject->style());
+                ownerDocument().adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(elementQuads, renderBoxModelObject->style());
 
                 quads.appendVector(elementQuads);
             }
@@ -1942,7 +1938,7 @@ void Range::getBorderAndTextQuads(Vector<FloatQuad>& quads) const
                 int endOffset = (node == endContainer) ? m_end.offset() : INT_MAX;
                 
                 auto textQuads = renderText.absoluteQuadsForRange(startOffset, endOffset);
-                ownerDocument().adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(textQuads, *renderText.style());
+                ownerDocument().adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(textQuads, renderText.style());
 
                 quads.appendVector(textQuads);
             }

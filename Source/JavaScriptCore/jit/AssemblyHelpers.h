@@ -46,7 +46,7 @@ public:
     AssemblyHelpers(VM* vm, CodeBlock* codeBlock)
         : m_vm(vm)
         , m_codeBlock(codeBlock)
-        , m_baselineCodeBlock(codeBlock ? codeBlock->baselineVersion() : 0)
+        , m_baselineCodeBlock(codeBlock ? codeBlock->baselineAlternative() : 0)
     {
         if (m_codeBlock) {
             ASSERT(m_baselineCodeBlock);
@@ -133,16 +133,34 @@ public:
     }
     void emitPutToCallFrameHeader(GPRReg from, JSStack::CallFrameHeaderEntry entry)
     {
-#if USE(JSVALUE64)
-        store64(from, Address(GPRInfo::callFrameRegister, entry * sizeof(Register)));
-#else
-        store32(from, Address(GPRInfo::callFrameRegister, entry * sizeof(Register)));
-#endif
+        storePtr(from, Address(GPRInfo::callFrameRegister, entry * sizeof(Register)));
     }
 
     void emitPutImmediateToCallFrameHeader(void* value, JSStack::CallFrameHeaderEntry entry)
     {
         storePtr(TrustedImmPtr(value), Address(GPRInfo::callFrameRegister, entry * sizeof(Register)));
+    }
+
+    void emitGetCallerFrameFromCallFrameHeaderPtr(RegisterID to)
+    {
+        loadPtr(Address(GPRInfo::callFrameRegister, CallFrame::callerFrameOffset()), to);
+    }
+    void emitPutCallerFrameToCallFrameHeader(RegisterID from)
+    {
+        storePtr(from, Address(GPRInfo::callFrameRegister, CallFrame::callerFrameOffset()));
+    }
+
+    void emitGetReturnPCFromCallFrameHeaderPtr(RegisterID to)
+    {
+        loadPtr(Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()), to);
+    }
+    void emitPutReturnPCToCallFrameHeader(RegisterID from)
+    {
+        storePtr(from, Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()));
+    }
+    void emitPutReturnPCToCallFrameHeader(TrustedImmPtr from)
+    {
+        storePtr(from, Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()));
     }
 
     Jump branchIfNotCell(GPRReg reg)
@@ -154,6 +172,15 @@ public:
 #endif
     }
     
+    static Address addressForByteOffset(ptrdiff_t byteOffset)
+    {
+        return Address(GPRInfo::callFrameRegister, byteOffset);
+    }
+    static Address addressFor(VirtualRegister virtualRegister, GPRReg baseReg)
+    {
+        ASSERT(virtualRegister.isValid());
+        return Address(baseReg, virtualRegister.offset() * sizeof(Register));
+    }
     static Address addressFor(VirtualRegister virtualRegister)
     {
         ASSERT(virtualRegister.isValid());

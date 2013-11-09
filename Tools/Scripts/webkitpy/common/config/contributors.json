@@ -1592,14 +1592,6 @@
             "bulach@chromium.org"
          ]
       },
-      "Mark Lam" : {
-         "emails" : [
-            "mark.lam@apple.com"
-         ],
-         "nicks" : [
-            "mlam"
-         ]
-      },
       "Mark Pilgrim" : {
          "emails" : [
             "pilgrim@chromium.org"
@@ -1628,6 +1620,14 @@
          ],
          "nicks" : [
             "falken"
+         ]
+      },
+      "Matt Hanson" : {
+         "emails" : [
+            "matthew_hanson@apple.com"
+         ],
+         "nicks" : [
+            "matthanson"
          ]
       },
       "Matt Lilek" : {
@@ -2093,6 +2093,15 @@
          ],
          "nicks" : [
             "skyostil"
+         ]
+      },
+      "Samuel White" : {
+         "emails" : [
+            "samuel_white@apple.com"
+         ],
+         "expertise" : "Accessibility",
+         "nicks" : [
+            "samuel_white"
          ]
       },
       "Satish Sampath" : {
@@ -2798,8 +2807,8 @@
       },
       "James Craig" : {
          "emails" : [
-            "james@cookiecrook.com",
-            "jcraig@apple.com"
+            "jcraig@apple.com",
+            "james@cookiecrook.com"
          ],
          "nicks" : [
             "jcraig"
@@ -3619,6 +3628,14 @@
             "ggaren"
          ]
       },
+      "Mark Lam" : {
+         "emails" : [
+            "mark.lam@apple.com"
+         ],
+         "nicks" : [
+            "mlam"
+         ]
+      },
       "George Staikos" : {
          "emails" : [
             "staikos@kde.org",
@@ -3984,6 +4001,14 @@
          "expertise" : "CSS Regions, CSS Exclusions",
          "nicks" : [
             "mihnea"
+         ]
+      },
+      "Nadav Rotem" : {
+         "emails" : [
+            "nrotem@apple.com"
+         ],
+         "nicks" : [
+            "nadav"
          ]
       },
       "Nate Chapin" : {

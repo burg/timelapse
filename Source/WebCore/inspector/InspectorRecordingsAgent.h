@@ -45,7 +45,6 @@ namespace WebCore {
 
 class InspectorController;
 class InspectorFrontend;
-class InspectorCompositeState;
 class ReplayRecording;
 
 typedef String ErrorString;
@@ -55,9 +54,9 @@ typedef String ErrorString;
     , public InspectorBackendDispatcher::RecordingsCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorRecordingsAgent);
 public:
-    static PassOwnPtr<InspectorRecordingsAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state)
+    static PassOwnPtr<InspectorRecordingsAgent> create(InstrumentingAgents* instrumentingAgents)
     {
-        return adoptPtr(new InspectorRecordingsAgent(instrumentingAgents, state));
+        return adoptPtr(new InspectorRecordingsAgent(instrumentingAgents));
     }
 
     ~InspectorRecordingsAgent();
@@ -77,7 +76,7 @@ public:
     virtual void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&) OVERRIDE;
 
 private:
-    InspectorRecordingsAgent(InstrumentingAgents*, InspectorCompositeState*);
+    InspectorRecordingsAgent(InstrumentingAgents*);
 
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Recordings* m_frontend;

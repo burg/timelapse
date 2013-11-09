@@ -304,7 +304,7 @@ public:
     void lazyAttach(ShouldSetAttached = SetAttached);
     void lazyReattach(ShouldSetAttached = SetAttached);
 
-    virtual RenderElement* createRenderer(RenderStyle&);
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>);
     virtual bool rendererIsNeeded(const RenderStyle&);
     void didAffectSelector(AffectedSelectorMask);
 
@@ -452,12 +452,6 @@ public:
 
     DOMStringMap* dataset();
 
-#if ENABLE(MATHML)
-    virtual bool isMathMLElement() const { return false; }
-#else
-    static bool isMathMLElement() { return false; }
-#endif
-
 #if ENABLE(VIDEO)
     virtual bool isMediaElement() const { return false; }
 #endif
@@ -485,9 +479,9 @@ public:
     // to event listeners, and prevents DOMActivate events from being sent at all.
     virtual bool isDisabledFormControl() const { return false; }
 
+    virtual bool childShouldCreateRenderer(const Node*) const OVERRIDE;
 
 #if ENABLE(SVG)
-    virtual bool childShouldCreateRenderer(const Node*) const OVERRIDE;
     bool hasPendingResources() const;
     void setHasPendingResources();
     void clearHasPendingResources();

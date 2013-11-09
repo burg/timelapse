@@ -26,6 +26,9 @@
 #ifndef CryptoKey_h
 #define CryptoKey_h
 
+#include "CryptoAlgorithmIdentifier.h"
+#include "CryptoKeyType.h"
+#include "CryptoKeyUsage.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -36,14 +39,32 @@ namespace WebCore {
 
 class CryptoAlgorithmDescriptionBuilder;
 
+ENUM_CLASS(CryptoKeyClass) {
+    HMAC,
+    AES
+};
+
 class CryptoKey : public RefCounted<CryptoKey> {
 public:
+    CryptoKey(CryptoAlgorithmIdentifier, CryptoKeyType, bool extractable, CryptoKeyUsage);
     virtual ~CryptoKey();
 
-    virtual String type() const = 0;
-    virtual bool extractable() const = 0;
+    virtual CryptoKeyClass keyClass() const = 0;
+
+    String type() const;
+    bool extractable() const { return m_extractable; }
     virtual void buildAlgorithmDescription(CryptoAlgorithmDescriptionBuilder&) const;
-    virtual Vector<String> usage() const = 0;
+    Vector<String> usages() const;
+
+    bool allows(CryptoKeyUsage usage) const { return usage == (m_usages & usage); }
+
+    static Vector<char> randomData(size_t);
+
+private:
+    CryptoAlgorithmIdentifier m_algorithm;
+    CryptoKeyType m_type;
+    bool m_extractable;
+    CryptoKeyUsage m_usages;
 };
 
 } // namespace WebCore

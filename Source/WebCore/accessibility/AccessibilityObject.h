@@ -100,7 +100,8 @@ enum AccessibilityRole {
     ApplicationLogRole,
     ApplicationMarqueeRole,
     ApplicationStatusRole,
-    ApplicationTimerRole, 
+    ApplicationTimerRole,
+    AudioRole,
     BrowserRole,
     BusyIndicatorRole,
     ButtonRole,
@@ -202,7 +203,8 @@ enum AccessibilityRole {
     ToolbarRole,
     UnknownRole,
     UserInterfaceTooltipRole,
-    ValueIndicatorRole,            
+    ValueIndicatorRole,
+    VideoRole,
     WebAreaRole,
     WebCoreLinkRole,
     WindowRole,
@@ -605,6 +607,7 @@ public:
 
     // A programmatic way to set a name on an AccessibleObject.
     virtual void setAccessibleName(const AtomicString&) { }
+    virtual bool hasAttributesRequiredForInclusion() const;
 
     // Accessibility Text - (To be deprecated).
     virtual String accessibilityDescription() const { return String(); }

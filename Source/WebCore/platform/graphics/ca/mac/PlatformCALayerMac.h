@@ -133,16 +133,18 @@ public:
     virtual float contentsScale() const OVERRIDE;
     virtual void setContentsScale(float) OVERRIDE;
 
-    virtual TiledBacking* tiledBacking() OVERRIDE;
+    virtual void setEdgeAntialiasingMask(unsigned) OVERRIDE;
 
-    virtual void synchronouslyDisplayTilesInRect(const FloatRect&) OVERRIDE;
+    virtual TiledBacking* tiledBacking() OVERRIDE;
 
     virtual PassRefPtr<PlatformCALayer> clone(PlatformCALayerClient* owner) const OVERRIDE;
 
+    virtual PassRefPtr<PlatformCALayer> createCompatibleLayer(PlatformCALayer::LayerType, PlatformCALayerClient*) const OVERRIDE;
+
+    virtual void enumerateRectsBeingDrawn(CGContextRef, void (^block)(CGRect)) OVERRIDE;
+
 private:
     PlatformCALayerMac(LayerType, PlatformLayer*, PlatformCALayerClient* owner);
-
-    virtual AVPlayerLayer *playerLayer() const OVERRIDE;
 
     RetainPtr<NSObject> m_delegate;
     OwnPtr<PlatformCALayerList> m_customSublayers;

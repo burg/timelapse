@@ -124,8 +124,8 @@ static inline void notifyObserverEnteredObject(Observer* observer, RenderObject*
     if (!observer || !object || !object->isRenderInline())
         return;
 
-    RenderStyle* style = object->style();
-    EUnicodeBidi unicodeBidi = style->unicodeBidi();
+    const RenderStyle& style = object->style();
+    EUnicodeBidi unicodeBidi = style.unicodeBidi();
     if (unicodeBidi == UBNormal) {
         // http://dev.w3.org/csswg/css3-writing-modes/#unicode-bidi
         // "The element does not open an additional level of embedding with respect to the bidirectional algorithm."
@@ -142,7 +142,7 @@ static inline void notifyObserverEnteredObject(Observer* observer, RenderObject*
     }
 
     if (!observer->inIsolate())
-        observer->embed(embedCharFromDirection(style->direction(), unicodeBidi), FromStyleOrDOM);
+        observer->embed(embedCharFromDirection(style.direction(), unicodeBidi), FromStyleOrDOM);
 }
 
 template <class Observer>
@@ -151,7 +151,7 @@ static inline void notifyObserverWillExitObject(Observer* observer, RenderObject
     if (!observer || !object || !object->isRenderInline())
         return;
 
-    EUnicodeBidi unicodeBidi = object->style()->unicodeBidi();
+    EUnicodeBidi unicodeBidi = object->style().unicodeBidi();
     if (unicodeBidi == UBNormal)
         return; // Nothing to do for unicode-bidi: normal
     if (isIsolated(unicodeBidi)) {
@@ -399,7 +399,7 @@ ALWAYS_INLINE UCharDirection InlineIterator::direction() const
         return u_charDirection(character);
 
     if (m_obj && m_obj->isListMarker())
-        return m_obj->style()->isLeftToRightDirection() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
+        return m_obj->style().isLeftToRightDirection() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
 
     return U_OTHER_NEUTRAL;
 }
@@ -413,7 +413,7 @@ inline void InlineBidiResolver::increment()
 static inline bool isIsolatedInline(RenderObject* object)
 {
     ASSERT(object);
-    return object->isRenderInline() && isIsolated(object->style()->unicodeBidi());
+    return object->isRenderInline() && isIsolated(object->style().unicodeBidi());
 }
 
 static inline RenderObject* containingIsolate(RenderObject* object, RenderObject* root)
@@ -448,10 +448,9 @@ static inline unsigned numberOfIsolateAncestors(const InlineIterator& iter)
 
 // FIXME: This belongs on InlineBidiResolver, except it's a template specialization
 // of BidiResolver which knows nothing about RenderObjects.
-static inline void addPlaceholderRunForIsolatedInline(InlineBidiResolver& resolver, RenderObject* obj, unsigned pos)
+static inline void addPlaceholderRunForIsolatedInline(InlineBidiResolver& resolver, RenderObject& obj, unsigned pos)
 {
-    ASSERT(obj);
-    BidiRun* isolatedRun = new (obj->renderArena()) BidiRun(pos, 0, obj, resolver.context(), resolver.dir());
+    BidiRun* isolatedRun = new BidiRun(pos, 0, obj, resolver.context(), resolver.dir());
     resolver.runs().addRun(isolatedRun);
     // FIXME: isolatedRuns() could be a hash of object->run and then we could cheaply
     // ASSERT here that we didn't create multiple objects for the same inline.
@@ -480,12 +479,12 @@ public:
     void embed(UCharDirection, BidiEmbeddingSource) { }
     void commitExplicitEmbedding() { }
 
-    void addFakeRunIfNecessary(RenderObject* obj, unsigned pos, InlineBidiResolver& resolver)
+    void addFakeRunIfNecessary(RenderObject& obj, unsigned pos, InlineBidiResolver& resolver)
     {
         // We only need to add a fake run for a given isolated span once during each call to createBidiRunsForLine.
         // We'll be called for every span inside the isolated span so we just ignore subsequent calls.
         // We also avoid creating a fake run until we hit a child that warrants one, e.g. we skip floats.
-        if (m_haveAddedFakeRunForRootIsolate || RenderBlock::shouldSkipCreatingRunsForObject(obj))
+        if (m_haveAddedFakeRunForRootIsolate || RenderBlock::shouldSkipCreatingRunsForObject(&obj))
             return;
         m_haveAddedFakeRunForRootIsolate = true;
         // obj and pos together denote a single position in the inline, from which the parsing of the isolate will start.
@@ -496,7 +495,7 @@ public:
         // For now, if we enter an isolate between midpoints, we increment our current midpoint or else
         // we'll leave the isolate and ignore the content that follows.
         MidpointState<InlineIterator>& midpointState = resolver.midpointState();
-        if (midpointState.betweenMidpoints && midpointState.midpoints[midpointState.currentMidpoint].object() == obj) {
+        if (midpointState.betweenMidpoints && midpointState.midpoints[midpointState.currentMidpoint].object() == &obj) {
             midpointState.betweenMidpoints = false;
             ++midpointState.currentMidpoint;
         }
@@ -519,7 +518,7 @@ inline void InlineBidiResolver::appendRun()
         RenderObject* obj = m_sor.m_obj;
         while (obj && obj != m_eor.m_obj && obj != endOfLine.m_obj) {
             if (isolateTracker.inIsolate())
-                isolateTracker.addFakeRunIfNecessary(obj, start, *this);
+                isolateTracker.addFakeRunIfNecessary(*obj, start, *this);
             else
                 RenderBlockFlow::appendRunsForObject(m_runs, start, obj->length(), obj, *this);
             // FIXME: start/obj should be an InlineIterator instead of two separate variables.
@@ -535,7 +534,7 @@ inline void InlineBidiResolver::appendRun()
             // It's OK to add runs for zero-length RenderObjects, just don't make the run larger than it should be
             int end = obj->length() ? pos + 1 : 0;
             if (isolateTracker.inIsolate())
-                isolateTracker.addFakeRunIfNecessary(obj, start, *this);
+                isolateTracker.addFakeRunIfNecessary(*obj, start, *this);
             else
                 RenderBlockFlow::appendRunsForObject(m_runs, start, end, obj, *this);
         }

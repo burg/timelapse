@@ -482,10 +482,6 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case ArithMod: {
         JSValue left = forNode(node->child1()).value();
         JSValue right = forNode(node->child2()).value();
-        if (node->op() == ArithMod && right && right.isNumber() && right.asNumber() == 1) {
-            setConstant(node, JSValue(0));
-            break;
-        }
         if (left && right && left.isNumber() && right.isNumber()) {
             double a = left.asNumber();
             double b = right.asNumber();
@@ -547,7 +543,27 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case ArithSqrt: {
         JSValue child = forNode(node->child1()).value();
         if (child && child.isNumber()) {
-            setConstant(node, JSValue(sqrt(child.asNumber())));
+            setConstant(node, jsNumber(sqrt(child.asNumber())));
+            break;
+        }
+        forNode(node).setType(SpecDouble);
+        break;
+    }
+        
+    case ArithSin: {
+        JSValue child = forNode(node->child1()).value();
+        if (child && child.isNumber()) {
+            setConstant(node, jsNumber(sin(child.asNumber())));
+            break;
+        }
+        forNode(node).setType(SpecDouble);
+        break;
+    }
+    
+    case ArithCos: {
+        JSValue child = forNode(node->child1()).value();
+        if (child && child.isNumber()) {
+            setConstant(node, jsNumber(cos(child.asNumber())));
             break;
         }
         forNode(node).setType(SpecDouble);
@@ -1266,6 +1282,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                     filter(node->child1(), status.structureSet());
                     
                     m_state.setFoundConstants(true);
+                    m_state.setHaveStructures(true);
                     break;
                 }
             }
@@ -1463,6 +1480,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             if (status.isSimpleReplace()) {
                 filter(node->child1(), structure);
                 m_state.setFoundConstants(true);
+                m_state.setHaveStructures(true);
                 break;
             }
             if (status.isSimpleTransition()) {
@@ -1535,13 +1553,16 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         node->setCanExit(true);
         m_state.setIsValid(false);
         break;
+        
+    case InvalidationPoint:
+        node->setCanExit(true);
+        break;
             
     case CheckWatchdogTimer:
         node->setCanExit(true);
         break;
             
     case Phantom:
-    case InlineStart:
     case CountExecution:
     case CheckTierUpInLoop:
     case CheckTierUpAtReturn:

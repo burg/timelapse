@@ -183,9 +183,6 @@ set(WebCore_IDL_FILES
     Modules/mediasource/MediaSource.idl
     Modules/mediasource/SourceBuffer.idl
     Modules/mediasource/SourceBufferList.idl
-    Modules/mediasource/WebKitMediaSource.idl
-    Modules/mediasource/WebKitSourceBuffer.idl
-    Modules/mediasource/WebKitSourceBufferList.idl
 
     Modules/mediastream/AllAudioCapabilities.idl
     Modules/mediastream/AllVideoCapabilities.idl
@@ -764,9 +761,10 @@ set(WebCore_SOURCES
     Modules/indexeddb/DOMWindowIndexedDatabase.cpp
     Modules/indexeddb/IDBAny.cpp
     Modules/indexeddb/IDBCursor.cpp
+    Modules/indexeddb/IDBCursorBackend.cpp
     Modules/indexeddb/IDBCursorWithValue.cpp
     Modules/indexeddb/IDBDatabase.cpp
-    Modules/indexeddb/IDBDatabaseBackendImpl.cpp
+    Modules/indexeddb/IDBDatabaseBackend.cpp
     Modules/indexeddb/IDBDatabaseCallbacksImpl.cpp
     Modules/indexeddb/IDBDatabaseException.cpp
     Modules/indexeddb/IDBEventDispatcher.cpp
@@ -782,16 +780,18 @@ set(WebCore_SOURCES
     Modules/indexeddb/IDBPendingTransactionMonitor.cpp
     Modules/indexeddb/IDBRequest.cpp
     Modules/indexeddb/IDBTransaction.cpp
+    Modules/indexeddb/IDBTransactionBackend.cpp
+    Modules/indexeddb/IDBTransactionBackendOperations.cpp
     Modules/indexeddb/IDBTransactionCoordinator.cpp
     Modules/indexeddb/IDBVersionChangeEvent.cpp
     Modules/indexeddb/PageGroupIndexedDatabase.cpp
     Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.cpp
+
+    Modules/indexeddb/leveldb/IDBBackingStoreCursorLevelDB.cpp
     Modules/indexeddb/leveldb/IDBBackingStoreLevelDB.cpp
-    Modules/indexeddb/leveldb/IDBCursorBackendLevelDB.cpp
+    Modules/indexeddb/leveldb/IDBBackingStoreTransactionLevelDB.cpp
     Modules/indexeddb/leveldb/IDBFactoryBackendLevelDB.cpp
     Modules/indexeddb/leveldb/IDBLevelDBCoding.cpp
-    Modules/indexeddb/leveldb/IDBTransactionBackendLevelDB.cpp
-    Modules/indexeddb/leveldb/IDBTransactionBackendLevelDBOperations.cpp
 
     Modules/mediasource/MediaSource.cpp
     Modules/mediasource/MediaSourceRegistry.cpp
@@ -969,7 +969,6 @@ set(WebCore_SOURCES
     accessibility/AccessibilityTableRow.cpp
 
     bindings/generic/ActiveDOMCallback.cpp
-    bindings/generic/BindingSecurity.cpp
     bindings/generic/RuntimeEnabledFeatures.cpp
 
     css/BasicShapeFunctions.cpp
@@ -1571,7 +1570,6 @@ set(WebCore_SOURCES
     inspector/InspectorProfilerAgent.cpp
     inspector/InspectorResourceAgent.cpp
     inspector/InspectorRuntimeAgent.cpp
-    inspector/InspectorState.cpp
     inspector/InspectorStyleSheet.cpp
     inspector/InspectorStyleTextEditor.cpp
     inspector/InspectorTimelineAgent.cpp
@@ -1757,7 +1755,6 @@ set(WebCore_SOURCES
     page/scrolling/coordinatedgraphics/ScrollingStateNodeCoordinatedGraphics.cpp
     page/scrolling/coordinatedgraphics/ScrollingStateScrollingNodeCoordinatedGraphics.cpp
 
-    platform/Arena.cpp
     platform/CalculationValue.cpp
     platform/Clock.cpp
     platform/ClockGeneric.cpp
@@ -1987,8 +1984,10 @@ set(WebCore_SOURCES
     platform/leveldb/LevelDBWriteBatch.cpp
 
     platform/mediastream/MediaStreamCenter.cpp
-    platform/mediastream/MediaStreamDescriptor.cpp
+    platform/mediastream/MediaStreamPrivate.cpp
+    platform/mediastream/MediaStreamTrackPrivate.cpp
     platform/mediastream/MediaStreamSource.cpp
+    platform/mediastream/MediaStreamSourceStates.cpp
     platform/mediastream/RTCIceCandidateDescriptor.cpp
     platform/mediastream/RTCPeerConnectionHandler.cpp
     platform/mediastream/RTCSessionDescriptionDescriptor.cpp
@@ -2081,13 +2080,14 @@ set(WebCore_SOURCES
     rendering/HitTestingTransformState.cpp
     rendering/ImageQualityController.cpp
     rendering/InlineBox.cpp
+    rendering/InlineElementBox.cpp
     rendering/InlineFlowBox.cpp
     rendering/InlineTextBox.cpp
     rendering/LayoutRepainter.cpp
     rendering/LayoutState.cpp
     rendering/LineWidth.cpp
+    rendering/OrderIterator.cpp
     rendering/PointerEventsHitRules.cpp
-    rendering/RenderArena.cpp
     rendering/RenderBlock.cpp
     rendering/RenderBlockFlow.cpp
     rendering/RenderBlockLineLayout.cpp
@@ -2179,6 +2179,7 @@ set(WebCore_SOURCES
     rendering/SimpleLineLayoutFunctions.cpp
     rendering/TextAutosizer.cpp
     rendering/TextPaintStyle.cpp
+    rendering/TextPainter.cpp
     rendering/break_lines.cpp
 
     rendering/mathml/RenderMathMLBlock.cpp
@@ -2813,16 +2814,27 @@ endif ()
 
 if (WTF_USE_3D_GRAPHICS)
     list(APPEND WebCore_INCLUDE_DIRECTORIES
-        ${OPENGL_INCLUDE_DIR}
         "${THIRDPARTY_DIR}/ANGLE/src"
         "${THIRDPARTY_DIR}/ANGLE/include"
         "${THIRDPARTY_DIR}/ANGLE/include/KHR"
         "${THIRDPARTY_DIR}/ANGLE/include/GLSLANG"
         "${WEBCORE_DIR}/platform/graphics/gpu"
     )
-    list(APPEND WebCore_LIBRARIES
-        ${OPENGL_gl_LIBRARY}
-    )
+    if (OPENGL_FOUND)
+        list(APPEND WebCore_INCLUDE_DIRECTORIES
+            ${OPENGL_INCLUDE_DIR}
+        )
+        list(APPEND WebCore_LIBRARIES
+            ${OPENGL_gl_LIBRARY}
+        )
+    elseif (OPENGLES2_FOUND)
+        list(APPEND WebCore_INCLUDE_DIRECTORIES
+            ${OPENGLES2_INCLUDE_DIR}
+        )
+        list(APPEND WebCore_LIBRARIES
+            ${OPENGLES2_LIBRARIES}
+        )
+    endif ()
 
     list(APPEND ANGLESupport_SOURCES
         ${DERIVED_SOURCES_WEBCORE_DIR}/glslang.cpp
@@ -2977,17 +2989,9 @@ add_custom_command(
 
 # All Web Inspector generated files are created with this one call to CodeGeneratorInspector.pm
 add_custom_command(
-    OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorProtocolVersion.h
-    MAIN_DEPENDENCY inspector/Inspector.json
-    DEPENDS ${WEBCORE_DIR}/inspector/generate-inspector-protocol-version ${WEBCORE_DIR}/inspector/Inspector.json
-    COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/inspector/generate-inspector-protocol-version -o ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorProtocolVersion.h ${WEBCORE_DIR}/inspector/Inspector.json
-    VERBATIM)
-list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorProtocolVersion.h)
-
-add_custom_command(
     OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatcher.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatcher.h ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.h ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.h
     MAIN_DEPENDENCY inspector/Inspector.json
-    DEPENDS ${WEBCORE_DIR}/inspector/CodeGeneratorInspector.py
+    DEPENDS ${WEBCORE_DIR}/inspector/CodeGeneratorInspector.py ${WEBCORE_DIR}/inspector/CodeGeneratorInspectorStrings.py
     COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/inspector/CodeGeneratorInspector.py ${WEBCORE_DIR}/inspector/Inspector.json --output_h_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --output_cpp_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --output_js_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --write_always
     VERBATIM)
 list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatcher.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.cpp)

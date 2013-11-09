@@ -35,8 +35,8 @@ using namespace std;
 
 namespace WebCore {
 
-RenderMultiColumnBlock::RenderMultiColumnBlock(Element& element)
-    : RenderBlockFlow(element)
+RenderMultiColumnBlock::RenderMultiColumnBlock(Element& element, PassRef<RenderStyle> style)
+    : RenderBlockFlow(element, std::move(style))
     , m_flowThread(0)
     , m_columnCount(1)
     , m_columnWidth(0)
@@ -49,7 +49,7 @@ void RenderMultiColumnBlock::styleDidChange(StyleDifference diff, const RenderSt
 {
     RenderBlockFlow::styleDidChange(diff, oldStyle);
     for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox())
-        child->setStyle(RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK));
+        child->setStyle(RenderStyle::createAnonymousStyleWithDisplay(&style(), BLOCK));
 }
 
 void RenderMultiColumnBlock::computeColumnCountAndWidth()
@@ -59,17 +59,17 @@ void RenderMultiColumnBlock::computeColumnCountAndWidth()
     m_columnCount = 1;
     m_columnWidth = contentLogicalWidth();
     
-    ASSERT(!style()->hasAutoColumnCount() || !style()->hasAutoColumnWidth());
+    ASSERT(!style().hasAutoColumnCount() || !style().hasAutoColumnWidth());
 
     LayoutUnit availWidth = m_columnWidth;
     LayoutUnit colGap = columnGap();
-    LayoutUnit colWidth = max<LayoutUnit>(1, LayoutUnit(style()->columnWidth()));
-    int colCount = max<int>(1, style()->columnCount());
+    LayoutUnit colWidth = max<LayoutUnit>(1, LayoutUnit(style().columnWidth()));
+    int colCount = max<int>(1, style().columnCount());
 
-    if (style()->hasAutoColumnWidth() && !style()->hasAutoColumnCount()) {
+    if (style().hasAutoColumnWidth() && !style().hasAutoColumnCount()) {
         m_columnCount = colCount;
         m_columnWidth = max<LayoutUnit>(0, (availWidth - ((m_columnCount - 1) * colGap)) / m_columnCount);
-    } else if (!style()->hasAutoColumnWidth() && style()->hasAutoColumnCount()) {
+    } else if (!style().hasAutoColumnWidth() && style().hasAutoColumnCount()) {
         m_columnCount = max<LayoutUnit>(1, (availWidth + colGap) / (colWidth + colGap));
         m_columnWidth = ((availWidth + colGap) / m_columnCount) - colGap;
     } else {
@@ -139,8 +139,8 @@ bool RenderMultiColumnBlock::relayoutForPagination(bool, LayoutUnit, LayoutState
 void RenderMultiColumnBlock::addChild(RenderObject* newChild, RenderObject* beforeChild)
 {
     if (!m_flowThread) {
-        m_flowThread = new RenderMultiColumnFlowThread(document());
-        m_flowThread->setStyle(RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK));
+        m_flowThread = new RenderMultiColumnFlowThread(document(), RenderStyle::createAnonymousStyleWithDisplay(&style(), BLOCK));
+        m_flowThread->initializeStyle();
         RenderBlockFlow::addChild(m_flowThread);
     }
     m_flowThread->addChild(newChild, beforeChild);

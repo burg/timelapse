@@ -29,7 +29,6 @@
 #ifndef VM_h
 #define VM_h
 
-#include "CachedTranscendentalFunction.h"
 #include "DateInstanceCache.h"
 #include "ExecutableAllocator.h"
 #include "Heap.h"
@@ -330,6 +329,10 @@ namespace JSC {
             return jitStubs->ctiStub(this, generator);
         }
         NativeExecutable* getHostFunction(NativeFunction, Intrinsic);
+
+        typedef EncodedJSValue(*CallJavaScriptJITFunction)(void *, ExecState*);
+
+        CallJavaScriptJITFunction callJavaScriptJITFunction;
 #endif
 #if ENABLE(FTL_JIT)
         std::unique_ptr<FTL::Thunks> ftlThunks;
@@ -418,8 +421,6 @@ namespace JSC {
 #endif
 
         ThreadIdentifier exclusiveThread;
-
-        CachedTranscendentalFunction<std::sin> cachedSin;
 
         JS_EXPORT_PRIVATE void resetDateCache();
 

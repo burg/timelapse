@@ -39,10 +39,10 @@ private:
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet&) OVERRIDE;
 
     virtual bool rendererIsNeeded(const RenderStyle&);
-    virtual RenderElement* createRenderer(RenderStyle&);
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
 
     virtual void didRecalcStyle(Style::Change) OVERRIDE;
 };

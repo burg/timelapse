@@ -33,7 +33,6 @@
 #include "config.h"
 #include "CanvasRenderingContext2D.h"
 
-#include "AffineTransform.h"
 #include "CSSFontSelector.h"
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
@@ -41,14 +40,11 @@
 #include "CanvasGradient.h"
 #include "CanvasPattern.h"
 #include "DOMPath.h"
-#include "ExceptionCode.h"
 #include "ExceptionCodePlaceholder.h"
 #include "FloatQuad.h"
 #include "FontCache.h"
 #include "GraphicsContext.h"
-#include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
-#include "HTMLMediaElement.h"
 #include "HTMLVideoElement.h"
 #include "ImageData.h"
 #include "RenderElement.h"
@@ -63,11 +59,8 @@
 #include "RenderLayer.h"
 #endif
 
-#include <runtime/Uint8ClampedArray.h>
-
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/MathExtras.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/text/StringBuilder.h>
 
 #if USE(CG)
@@ -81,15 +74,6 @@ using namespace HTMLNames;
 static const int defaultFontSize = 10;
 static const char* const defaultFontFamily = "sans-serif";
 static const char* const defaultFont = "10px sans-serif";
-
-static bool isOriginClean(CachedImage* cachedImage, SecurityOrigin* securityOrigin)
-{
-    if (!cachedImage->image()->hasSingleSecurityOrigin())
-        return false;
-    if (cachedImage->passesAccessControlCheck(securityOrigin))
-        return true;
-    return !securityOrigin->taintsCanvas(cachedImage->response().url());
-}
 
 class CanvasStrokeStyleApplier : public StrokeStyleApplier {
 public:
@@ -1700,7 +1684,7 @@ PassRefPtr<CanvasPattern> CanvasRenderingContext2D::createPattern(HTMLImageEleme
     if (!cachedImage || !image->cachedImage()->imageForRenderer(image->renderer()))
         return CanvasPattern::create(Image::nullImage(), repeatX, repeatY, true);
 
-    bool originClean = isOriginClean(cachedImage, canvas()->securityOrigin());
+    bool originClean = cachedImage->isOriginClean(canvas()->securityOrigin());
     return CanvasPattern::create(cachedImage->imageForRenderer(image->renderer()), repeatX, repeatY, originClean);
 }
 
