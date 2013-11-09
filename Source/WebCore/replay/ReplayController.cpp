@@ -169,7 +169,6 @@ bool ReplayController::endCapturing()
     RefPtr<ReplayRecording> recording = m_loadedRecording;
     unloadRecording(true);
     m_cacheController->enableCache();
-    changeProxyMode(ReplayProxy::Open);
 
     // Now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
@@ -198,12 +197,10 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
 
     LOG(DeterministicReplay, "%-20s About to begin replay to mark %d.\n", "ReplayController", index);
 
-    // Only undone by recording, or cancelling playback.
-    changeProxyMode(ReplayProxy::Replaying);
-
     bool isBackwardsMovement = replaying() && dispatcher().currentMark().index() > index;
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished || isBackwardsMovement) {
-        resetReplayState();
+        cancelPlayback();
+        changeProxyMode(ReplayProxy::Replaying);
         m_activeIterator = m_loadedRecording->createReplayIterator(m_page, this);
     }
 
@@ -221,11 +218,9 @@ void ReplayController::replayToCompletion(ReplayMode mode)
 
     LOG(DeterministicReplay, "%-20s About to begin replay to completion.\n", "ReplayController");
 
-    // Only undone by recording, or cancelling playback.
-    changeProxyMode(ReplayProxy::Replaying);
-
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished) {
-        resetReplayState();
+        cancelPlayback();
+        changeProxyMode(ReplayProxy::Replaying);
         m_activeIterator = m_loadedRecording->createReplayIterator(m_page, this);
     }
 
@@ -240,9 +235,9 @@ void ReplayController::cancelPlayback()
 {
     switch (m_status) {
         case CannotReplay:
-        case PlaybackUninitialized:
             ASSERT_NOT_REACHED();
-            break;
+        case PlaybackUninitialized:
+            break; // There's nothing to cancel.
 
         // From here, we intentionally fall through the cases. Depending on the current state, we
         // need to perform some or all of the following transitions to cancel gracefully:
@@ -263,7 +258,6 @@ void ReplayController::cancelPlayback()
             changeProxyMode(ReplayProxy::Open);
             InspectorInstrumentation::playbackCancelled(&m_page);
     }
-
 }
 
 void ReplayController::willDispatchEvent(const Event& event, Frame* frame, const PositionMark&)
@@ -429,7 +423,8 @@ bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, b
 
 void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 {
-    m_page.replayProxy().setMode(mode);
+    if (m_page.replayProxy().mode() != mode)
+        m_page.replayProxy().setMode(mode);
 }
 
 bool ReplayController::capturing() const
