@@ -32,13 +32,11 @@
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 
-#include "ScriptState.h"
 #include "SourceID.h"
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-class ScriptProbe;
 class ScriptValue;
 
 class ScriptDebugListener {
@@ -67,12 +65,10 @@ public:
 
     virtual ~ScriptDebugListener() { }
 
-
     virtual void didParseSource(SourceID, const Script&) = 0;
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage) = 0;
     virtual void didPause(JSC::ExecState*, const ScriptValue& callFrames, const ScriptValue& exception) = 0;
     virtual void didContinue() = 0;
-    //virtual void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&) = 0;
 };
 
 } // namespace WebCore

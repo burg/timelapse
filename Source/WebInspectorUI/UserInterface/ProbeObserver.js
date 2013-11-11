@@ -37,30 +37,5 @@ WebInspector.ProbeObserver.prototype = {
     probeSampleReceived: function(sample)
     {
         WebInspector.probeManager.addProbeSample(sample);
-    },
-
-    probeAdded: function(probe)
-    {
-        WebInspector.probeManager.probeAdded(probe);
-    },
-
-    probeRemoved: function(probe)
-    {
-        WebInspector.probeManager.probeRemoved(probe);
-    },
-
-    probeEnabled: function(probeId)
-    {
-        WebInspector.probeManager.probeEnabled(probeId);
-    },
-
-    probeDisabled: function(probeId)
-    {
-        WebInspector.probeManager.probeDisabled(probeId);
-    },
-
-    probeResolved: function(probeId, scriptId)
-    {
-        WebInspector.probeManager.probeResolved(probeId, scriptId);
     }
 };

@@ -2588,32 +2588,14 @@
         "description": "Controls script probe instrumentation.",
         "types": [
             {
-                "id": "ScriptProbeId",
-                "type": "integer",
-                "description": "Unique data probe identifier."
-            },
-            {
                 "id": "ScriptProbeSampleId",
                 "type": "integer",
                 "description": "Unique data probe sample identifier."
             },
             {
-                "id": "ScriptProbe",
-                "type": "object",
-                "properties": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
-                    { "name": "url", "type": "string", "optional": true, "description": "Script URL, if any." },
-                    { "name": "lineNumber", "type": "integer", "description": "Line number where the probe is located (0-based)." },
-                    { "name": "columnNumber", "type": "integer", "description": "Column number where the probe is located (0-based)." },
-                    { "name": "expression", "type": "string", "description": "Expression evaluated by the probe." },
-                    { "name": "isEnabled", "type": "boolean", "description": "Whether the probe is enabled." }
-                ]
-            },
-            {
                 "id": "ScriptProbeSample",
                 "type": "object",
                 "properties": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
                     { "name": "sampleId", "$ref": "ScriptProbeSampleId", "description": "Sample unique id." },
                     { "name": "batchId", "type": "integer", "description": "Sample batch number." },
                     { "name": "timestamp", "type": "number", "description": "Sample timestamp." },
@@ -2627,58 +2609,6 @@
             },
             {
                 "name": "disable"
-            },
-            {
-                "name": "setProbesActive",
-                "parameters": [
-                    { "name": "active", "type": "boolean", "description": "New value for probes active state." }
-                ],
-                "description": "Activates / deactivates all probes on the page."
-            },
-
-            {
-                "name": "getAvailableProbes",
-                "returns": [
-                    { "name": "probes", "type": "array", "items": { "$ref": "ScriptProbe" } }
-                ],
-                "description": "Array of all probes registered with the backend probe agent."
-            },
-            {
-                "name": "getProbeSamples",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ],
-                "returns": [
-                    { "name": "samples", "type": "array", "items": { "$ref": "ScriptProbeSample" }, "description": "All samples for the requested probe, if it exists." }
-                ]
-            },
-            {
-                "name": "enableProbe",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ]
-            },
-            {
-                "name": "disableProbe",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ]
-            },
-            {
-                "name": "removeProbe",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ]
-            },
-            {
-                "name": "createScriptProbe",
-                "parameters": [
-                    { "name": "url", "type": "string", "description": "Script URL." },
-                    { "name": "lineNumber", "type": "integer", "description": "Script line number." },
-                    { "name": "columnNumber", "type": "integer", "description": "Script column number." },
-                    { "name": "expression", "type": "string", "description": "Expression to sample." }
-                ],
-                "description": "Create a new script probe at the specified file, line, column which samples the provided expression."
             }
         ],
 
@@ -2689,42 +2619,6 @@
                     { "name": "sample", "$ref": "ScriptProbeSample", "description": "Generated script probe sample." }
                 ],
                 "description": "Fires when a new probe sample is collected or re-requested."
-            },
-            {
-                "name": "probeAdded",
-                "parameters": [
-                    { "name": "probe", "$ref": "ScriptProbe", "description": "Information for newly-created probe." }
-                ],
-                "description": "A new probe was added."
-            },
-            {
-                "name": "probeRemoved",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the removed probe." }
-                ],
-                "description": "A probe was deleted."
-            },
-            {
-                "name": "probeEnabled",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." }
-                ],
-                "description": "A probe was enabled."
-            },
-            {
-                "name": "probeDisabled",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." }
-                ],
-                "description": "A probe was disabled."
-            },
-            {
-                "name": "probeResolved",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." },
-                    { "name": "scriptId", "$ref": "Debugger.ScriptId", "description": "Script id." }
-                ],
-                "description": "A probe was resolved within a parsed source file."
             }
         ]
     },

@@ -5323,7 +5323,6 @@
 		C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA71517178087001A8BB4 /* FunctorInputIterator.h */; };
 		C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */; };
 		C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */; };
-		C49826F7172E16630050DD62 /* ScriptProbe.h in Headers */ = {isa = PBXBuildFile; fileRef = C49826F6172E16630050DD62 /* ScriptProbe.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */; };
 		C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */; };
 		C4A898B017E3BC0400C74A2C /* StopLoadingFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */; };
@@ -12452,7 +12451,6 @@
 		C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorRecordingsAgent.h; sourceTree = "<group>"; };
 		C493493517A431C90054AC75 /* ResourceHandleClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceHandleClient.cpp; sourceTree = "<group>"; };
 		C493493717A432350054AC75 /* PageConsole.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PageConsole.cpp; sourceTree = "<group>"; };
-		C49826F6172E16630050DD62 /* ScriptProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScriptProbe.h; sourceTree = "<group>"; };
 		C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EventLoopInputDispatcher.cpp; path = replay/EventLoopInputDispatcher.cpp; sourceTree = "<group>"; };
 		C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EventLoopInputDispatcher.h; path = replay/EventLoopInputDispatcher.h; sourceTree = "<group>"; };
 		C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StopLoadingFrame.cpp; path = navigation/StopLoadingFrame.cpp; sourceTree = "<group>"; };
@@ -14690,7 +14688,6 @@
 				416E75BD0EDF8FD700360E1D /* ScriptCallStack.cpp */,
 				416E75BC0EDF8FD700360E1D /* ScriptCallStack.h */,
 				7AFD4FF3113277B60035B883 /* ScriptDebugListener.h */,
-				C49826F6172E16630050DD62 /* ScriptProbe.h */,
 				9FA37EEF1172FD4100C4CD55 /* ScriptProfile.idl */,
 				9FA37EF01172FD4100C4CD55 /* ScriptProfileNode.idl */,
 				7553CFE7108F473F00EA281E /* TimelineRecordFactory.cpp */,
@@ -22299,7 +22296,6 @@
 				FEDBFF16182B7A8D0017FA64 /* BreakpointID.h in Headers */,
 				FE115FAB167988CD00249134 /* AbstractDatabaseServer.h in Headers */,
 				9A528E8417D7F52F00AA9518 /* FloatingObjects.h in Headers */,
-				C49826F7172E16630050DD62 /* ScriptProbe.h in Headers */,
 				FE4AADEE16D2C37400026FFC /* AbstractSQLStatement.h in Headers */,
 				6E84E9E117668BF100815B68 /* RasterShape.h in Headers */,
 				FE4AADEF16D2C37400026FFC /* AbstractSQLStatementBackend.h in Headers */,

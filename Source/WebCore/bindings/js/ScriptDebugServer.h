@@ -54,53 +54,14 @@ namespace WebCore {
 
 class ScriptDebugListener;
 class ScriptObject;
-class ScriptProbe;
 class ScriptValue;
 
 class ScriptDebugServer : public JSC::Debugger {
     WTF_MAKE_NONCOPYABLE(ScriptDebugServer); WTF_MAKE_FAST_ALLOCATED;
 public:
-/*
-<<<<<<< HEAD
-    typedef intptr_t ScriptId;
-
-    String setBreakpoint(const String& sourceID, const ScriptBreakpoint&, int* actualLineNumber, int* actualColumnNumber);
-    void removeBreakpoint(const String& breakpointId);
-    void clearBreakpoints();
-    void setBreakpointsActivated(bool activated);
-    void activateBreakpoints() { setBreakpointsActivated(true); }
-    void deactivateBreakpoints() { setBreakpointsActivated(false); }
-
-    enum PauseOnExceptionsState {
-        DontPauseOnExceptions,
-        PauseOnAllExceptions,
-        PauseOnUncaughtExceptions
-    };
-    PauseOnExceptionsState pauseOnExceptionsState() const { return m_pauseOnExceptionsState; }
-    void setPauseOnExceptionsState(PauseOnExceptionsState);
-
-    void setProbesActivated(bool activated);
-    void addProbeForScriptId(ScriptId, PassRefPtr<ScriptProbe>);
-    void removeProbeForScriptId(ScriptId, PassRefPtr<ScriptProbe>);
-    void clearProbesForScriptId(ScriptId);
-    void setPauseTrigger(uint probeId, uint counter)
-    {
-        m_triggerPauseData.probeId = probeId;
-        m_triggerPauseData.counter = counter;
-    }
-
-    void setPauseOnNextStatement(bool pause);
-    void breakProgram();
-    void continueProgram();
-    void stepIntoStatement();
-    void stepOverStatement();
-    void stepOutOfFunction();
-=======
-*/
     BreakpointID setBreakpoint(SourceID, const ScriptBreakpoint&, unsigned* actualLineNumber, unsigned* actualColumnNumber);
     void removeBreakpoint(BreakpointID);
     void clearBreakpoints();
-// >>>>>>> upstream/master
 
     bool canSetScriptSource();
     bool setScriptSource(const String& sourceID, const String& newContent, bool preview, String* error, ScriptValue* newCallFrames, ScriptObject* result);
@@ -145,13 +106,6 @@ protected:
 
     virtual bool isContentScript(JSC::ExecState*);
 
-/*
-<<<<<<< HEAD
-    bool hasBreakpoint(intptr_t sourceID, const TextPosition&, ScriptBreakpoint* hitBreakpoint) const;
-    bool hasActiveProbes(intptr_t sourceID, const TextPosition&) const;
-=======
->>>>>>> upstream/master
-*/
     bool evaluateBreakpointAction(const ScriptBreakpointAction&) const;
 
     void dispatchFunctionToListeners(JavaScriptExecutionCallback, JSC::JSGlobalObject*);
@@ -160,7 +114,6 @@ protected:
     void dispatchDidContinue(ScriptDebugListener*);
     void dispatchDidParseSource(const ListenerSet& listeners, JSC::SourceProvider*, bool isContentScript);
     void dispatchFailedToParseSource(const ListenerSet& listeners, JSC::SourceProvider*, int errorLine, const String& errorMessage);
-    void dispatchCaptureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
 
     virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg) OVERRIDE;
 
@@ -170,72 +123,16 @@ private:
     typedef Vector<ScriptBreakpointAction> BreakpointActions;
     typedef HashMap<BreakpointID, BreakpointActions> BreakpointIDToActionsMap;
 
-/*
-<<<<<<< HEAD
-    virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg) OVERRIDE;
-    virtual void callEvent(JSC::CallFrame*) OVERRIDE;
-    virtual void atStatement(JSC::CallFrame*) OVERRIDE;
-    virtual void returnEvent(JSC::CallFrame*) OVERRIDE;
-    virtual void exception(JSC::CallFrame*, JSC::JSValue exceptionValue, bool hasHandler) OVERRIDE;
-    virtual void willExecuteProgram(JSC::CallFrame*) OVERRIDE;
-    virtual void didExecuteProgram(JSC::CallFrame*) OVERRIDE;
-    virtual void didReachBreakpoint(JSC::CallFrame*) OVERRIDE;
-
-private:
-    typedef HashSet<RefPtr<ScriptProbe>> ProbeSet;
-    void captureProbeSamplesIfNeeded(JSC::CallFrame*);
-    bool findProbesForPosition(ScriptId scriptId, const TextPosition&, ProbeSet& result) const;
-
-    void clearPauseTrigger()
-    {
-        m_triggerPauseData.probeId = 0;
-        m_triggerPauseData.counter = 0;
-    }
-
-protected:
-    typedef Vector<ScriptBreakpoint> BreakpointsInLine;
-    typedef HashMap<int, BreakpointsInLine, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>> LineToBreakpointsMap;
-    typedef HashMap<intptr_t, LineToBreakpointsMap> SourceIdToBreakpointsMap;
-=======
-*/
     virtual bool needPauseHandling(JSC::JSGlobalObject*) OVERRIDE;
     virtual void handleBreakpointHit(const JSC::Breakpoint&) OVERRIDE;
     virtual void handleExceptionInBreakpointCondition(JSC::ExecState*, JSC::JSValue exception) const OVERRIDE;
     virtual void handlePause(JSC::Debugger::ReasonForPause, JSC::JSGlobalObject*) OVERRIDE;
     virtual void notifyDoneProcessingDebuggerEvents() OVERRIDE;
-// >>>>>>> upstream/master
 
     bool m_callingListeners;
     bool m_runningNestedMessageLoop;
-/*
-<<<<<<< HEAD
-    bool m_doneProcessingDebuggerEvents;
-    bool m_breakpointsActivated;
-    bool m_probesActivated;
-    JSC::CallFrame* m_pauseOnCallFrame;
-    JSC::CallFrame* m_currentCallFrame;
-    RefPtr<JSC::DebuggerCallFrame> m_currentDebuggerCallFrame;
-    SourceIdToBreakpointsMap m_sourceIdToBreakpoints;
-=======
-*/
     BreakpointIDToActionsMap m_breakpointIDToActions;
-// >>>>>>> upstream/master
     Timer<ScriptDebugServer> m_recompileTimer;
-
-/*
-    friend class DebuggerCallFrameScope;
-    typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
-    typedef HashMap<TextPosition, ProbeSet> PositionToScriptProbeSet;
-    typedef HashMap<ScriptId, PositionToScriptProbeSet> ScriptIdToPositionsMap;
-
-    ScriptIdToPositionsMap m_probeRegistry;
-    ProbeMap m_probesById;
-    int m_nextBatchId;
-    struct {
-        unsigned probeId;
-        unsigned counter;
-    } m_triggerPauseData;
-*/
 };
 
 } // namespace WebCore

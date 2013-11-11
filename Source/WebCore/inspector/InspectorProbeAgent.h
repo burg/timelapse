@@ -36,31 +36,20 @@
 
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
-#include "ScriptDebugListener.h"
-#include "ScriptState.h"
-#include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
-#include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
 class Frame;
 class InjectedScriptManager;
 class InspectorController;
-class InspectorCompositeState;
 class InspectorProbeAgent;
 class InstrumentingAgents;
 class Page;
-class ScriptProbe;
 
 typedef String ErrorString;
-
-class ScriptArguments;
-class ScriptValue;
 
 class InspectorProbeAgent : public InspectorBaseAgent<InspectorProbeAgent>, public InspectorBackendDispatcher::ProbeCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorProbeAgent);
@@ -81,47 +70,17 @@ public:
     // ProbeCommandHandler API
     virtual void enable(ErrorString*);
     virtual void disable(ErrorString*);
-    virtual void setProbesActive(ErrorString*, bool active);
-
-    virtual void getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& result);
-    virtual void getProbeSamples(ErrorString*, int probeId, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample> >& result);
-    virtual void removeProbe(ErrorString*, int probeId);
-    virtual void enableProbe(ErrorString*, int probeId);
-    virtual void disableProbe(ErrorString*, int probeId);
-    // Line and column numbers start counting from 0.
-    virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
-
-    // ScriptDebugListener API
-    /*
-    virtual void didParseSource(SourceID, const Script&);
-    virtual void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
-    */
 
 private:
     InspectorProbeAgent(InstrumentingAgents*, Page*, InjectedScriptManager*);
-    String objectGroupForProbeId(int probeId) const;
     void enable();
     void disable();
-
-/*
-    typedef intptr_t ScriptId;
-    typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
-    typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
-    typedef HashMap<String, ScriptId> UrlToScriptIdMap;
-
-    int m_nextProbeId;
-    int m_nextSampleId;
-*/
 
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Probe* m_frontend;
     Page* m_inspectedPage;
     InjectedScriptManager* m_injectedScriptManager;
 
-/*
-    ProbeMap m_probeMap;
-    UrlToScriptIdMap m_urlToScriptIdMap;
-*/
     bool m_enabled;
 };
 

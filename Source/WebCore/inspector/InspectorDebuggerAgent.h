@@ -145,7 +145,6 @@ protected:
     virtual void disable();
     virtual void didPause(JSC::ExecState*, const ScriptValue& callFrames, const ScriptValue& exception);
     virtual void didContinue();
-    // virtual void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int /* batchId */, const ScriptValue&) {}
     void reset();
 
 private:
