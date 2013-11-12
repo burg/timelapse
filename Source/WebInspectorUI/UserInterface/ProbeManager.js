@@ -32,6 +32,8 @@ WebInspector.ProbeManager = function()
 
     this._placeholderObjectsByURL = {};
 
+    this._nextProbeId = 0;
+
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._unresolveAllProbes, this);
 }
 
@@ -54,6 +56,11 @@ WebInspector.ProbeManager.prototype = {
     get probeGroups()
     {
         return this._probeGroups;
+    },
+
+    getNextProbeId: function()
+    {
+        return ++this._nextProbeId;
     },
 
     enableProbe: function(probe)

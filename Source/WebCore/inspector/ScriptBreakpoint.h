@@ -43,13 +43,15 @@ typedef enum {
 } ScriptBreakpointActionType;
 
 struct ScriptBreakpointAction {
-    ScriptBreakpointAction(ScriptBreakpointActionType type, const String& data)
+    ScriptBreakpointAction(ScriptBreakpointActionType type, int identifier, const String& data)
         : type(type)
+        , identifier(identifier)
         , data(data)
     {
     }
 
     ScriptBreakpointActionType type;
+    int identifier;
     String data;
 };
 

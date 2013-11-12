@@ -34,14 +34,19 @@ WebInspector.BreakpointAction = function(breakpoint, typeOrInfo, data)
 
     if (typeof typeOrInfo === "string") {
         this._type = typeOrInfo;
+        this._id = -1;
         this._data = data || null;
     } else if (typeof typeOrInfo === "object") {
         this._type = typeOrInfo.type;
+        this._id = typeOrInfo.id || -1;
         this._data = typeOrInfo.data || null;
     } else
         console.error("Unexpected type passed to WebInspector.BreakpointAction");
 
     console.assert(typeof this._type === "string");
+
+    if (this._type === WebInspector.BreakpointAction.Type.Probe && this.id === -1)
+        this._id = WebInspector.probeManager.getNextProbeId();
 };
 
 WebInspector.BreakpointAction.Type = {
@@ -66,6 +71,11 @@ WebInspector.BreakpointAction.prototype = {
         return this._type;
     },
 
+    get id()
+    {
+        return this._id || -1;
+    },
+
     get data()
     {
         return this._data;
@@ -86,6 +96,8 @@ WebInspector.BreakpointAction.prototype = {
         var obj = {type: this._type};
         if (this._data)
             obj.data = this._data;
+        if (this._id)
+            obj.id = this._id;
         return obj;
     }
 };

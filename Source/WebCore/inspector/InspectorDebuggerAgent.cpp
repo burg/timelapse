@@ -249,10 +249,13 @@ static bool breakpointActionsFromProtocol(ErrorString* errorString, RefPtr<Inspe
             return false;
         }
 
+        int identifier;
+        object->getNumber("id", &identifier);
+
         String data;
         object->getString("data", &data);
 
-        result->append(ScriptBreakpointAction(type, data));
+        result->append(ScriptBreakpointAction(type, identifier, data));
     }
 
     return true;
