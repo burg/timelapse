@@ -405,12 +405,6 @@ InspectorBackend.registerCommand("LayerTree.disable", [], []);
 InspectorBackend.registerCommand("LayerTree.layersForNode", [{"name": "nodeId", "type": "number", "optional": false}], ["layers"]);
 InspectorBackend.registerCommand("LayerTree.reasonsForCompositingLayer", [{"name": "layerId", "type": "string", "optional": false}], ["compositingReasons"]);
 
-// Probe.
-InspectorBackend.registerProbeDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Probe");
-InspectorBackend.registerEvent("Probe.probeSampleReceived", ["sample"]);
-InspectorBackend.registerCommand("Probe.enable", [], []);
-InspectorBackend.registerCommand("Probe.disable", [], []);
-
 // Recordings.
 InspectorBackend.registerRecordingsDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Recordings");
 InspectorBackend.registerEvent("Recordings.recordingAdded", ["uid"]);

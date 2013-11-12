@@ -135,15 +135,9 @@ WebInspector.DebuggerSidebarPanel = function()
     this._replayProbesRow = new WebInspector.DetailsSectionTreeOutlineRow(this._replayProbesContentTreeOutline, WebInspector.UIString("No Probes"));
     this._replayProbesRow.showEmptyMessage();
 
-    this._probesToggleElement = document.createElement("img");
-    this._probesToggleElement.className = WebInspector.DebuggerSidebarPanel.ProbeToggleStyleClassName;
-    if (WebInspector.probeManager.probesEnabled)
-        this._probesToggleElement.classList.add(WebInspector.DebuggerSidebarPanel.ProbeToggleEnabledStyleClassName);
-    this._probesToggleElement.addEventListener("click", this._probesToggleButtonClicked.bind(this));
-
     this._liveProbesGroup = new WebInspector.DetailsSectionGroup([this._liveProbesRow]);
     this._replayProbesGroup = new WebInspector.DetailsSectionGroup([this._replayProbesRow]);
-    this._probesSection = new WebInspector.DetailsSection("probes", WebInspector.UIString("Probes"), [this._liveProbesGroup], this._probesToggleElement);
+    this._probesSection = new WebInspector.DetailsSection("probes", WebInspector.UIString("Probes"), [this._liveProbesGroup]);
     this.contentElement.appendChild(this._probesSection.element);
 
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisplayLocationDidChange, this._breakpointDisplayLocationDidChange, this);
@@ -265,11 +259,6 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     {
         this._debuggerBreakpointsButtonItem.activated = !this._debuggerBreakpointsButtonItem.activated;
         WebInspector.debuggerManager.breakpointsEnabled = this._debuggerBreakpointsButtonItem.activated;
-    },
-
-    _probesToggleButtonClicked: function(event)
-    {
-        WebInspector.probeManager.probesEnabled = this._probesToggleElement.classList.toggle(WebInspector.DebuggerSidebarPanel.ProbeToggleEnabledStyleClassName);
     },
 
     _addBreakpoint: function(breakpoint, sourceCode)

@@ -61,7 +61,6 @@
 #include "InspectorMemoryAgent.h"
 #include "InspectorOverlay.h"
 #include "InspectorPageAgent.h"
-#include "InspectorProbeAgent.h"
 #include "InspectorProfilerAgent.h"
 #include "InspectorResourceAgent.h"
 #include "InspectorTimelineAgent.h"
@@ -145,8 +144,6 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     OwnPtr<InspectorDebuggerAgent> debuggerAgentPtr(PageDebuggerAgent::create(m_instrumentingAgents.get(), pageAgent, m_injectedScriptManager.get(), m_overlay.get()));
     m_debuggerAgent = debuggerAgentPtr.get();
     m_agents.append(debuggerAgentPtr.release());
-
-    m_agents.append(InspectorProbeAgent::create(m_instrumentingAgents.get(), page, m_injectedScriptManager.get()));
 
     OwnPtr<InspectorDOMDebuggerAgent> domDebuggerAgentPtr(InspectorDOMDebuggerAgent::create(m_instrumentingAgents.get(), m_domAgent, m_debuggerAgent, m_inspectorAgent));
     m_domDebuggerAgent = domDebuggerAgentPtr.get();

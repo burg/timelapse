@@ -5237,8 +5237,6 @@
 		C3CF17A515B0063F00276D39 /* IdTargetObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A115B0063F00276D39 /* IdTargetObserver.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C3CF17A615B0063F00276D39 /* IdTargetObserverRegistry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */; };
 		C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */; };
-		C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */; };
 		C41A8BEE180DB95000E06C0F /* EventSenderClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41A8BEC180DB95000E06C0F /* EventSenderClient.cpp */; };
 		C41A8BEF180DB95000E06C0F /* EventSenderClient.h in Headers */ = {isa = PBXBuildFile; fileRef = C41A8BED180DB95000E06C0F /* EventSenderClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C41A8BF0180DC19A00E06C0F /* EventSender.h in Headers */ = {isa = PBXBuildFile; fileRef = CE5CB1B314EDAB6F00BB2795 /* EventSender.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -12364,8 +12362,6 @@
 		C3CF17A115B0063F00276D39 /* IdTargetObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserver.h; sourceTree = "<group>"; };
 		C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IdTargetObserverRegistry.cpp; sourceTree = "<group>"; };
 		C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserverRegistry.h; sourceTree = "<group>"; };
-		C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorProbeAgent.cpp; sourceTree = "<group>"; };
-		C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorProbeAgent.h; sourceTree = "<group>"; };
 		C41A8BEC180DB95000E06C0F /* EventSenderClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventSenderClient.cpp; sourceTree = "<group>"; };
 		C41A8BED180DB95000E06C0F /* EventSenderClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventSenderClient.h; sourceTree = "<group>"; };
 		C41A8BF1180DC40200E06C0F /* EventSender.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventSender.cpp; sourceTree = "<group>"; };
@@ -14646,8 +14642,6 @@
 				A518225517E2A0D400A9BA1D /* InspectorOverlayPage.js */,
 				4F6FDD621341DEDD001F8EE3 /* InspectorPageAgent.cpp */,
 				4F6FDD631341DEDD001F8EE3 /* InspectorPageAgent.h */,
-				C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */,
-				C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */,
 				9F0D6B2C121BFEBA006C0288 /* InspectorProfilerAgent.cpp */,
 				9F0D6B2D121BFEBA006C0288 /* InspectorProfilerAgent.h */,
 				C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */,
@@ -25569,7 +25563,6 @@
 				C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */,
 				C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */,
 				C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */,
-				C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */,
 				C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */,
 				C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */,
 				C4F4CA44175AC86B00F71FE1 /* DecoderContext.h in Headers */,
@@ -28708,7 +28701,6 @@
 				C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */,
 				C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */,
 				C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */,
-				C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */,
 				C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */,
 				C4F4CA4B175AF4DC00F71FE1 /* TimerCreated.cpp in Sources */,
 				C4F4CA4E175AF8D200F71FE1 /* JSONEncoderContext.cpp in Sources */,

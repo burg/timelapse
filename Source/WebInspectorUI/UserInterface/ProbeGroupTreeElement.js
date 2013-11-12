@@ -46,8 +46,6 @@ WebInspector.ProbeGroupTreeElement = function(probeGroup, className, title)
 
     this._setupData();
 
-    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._updateStatus);
-
     this._statusImageElement = document.createElement("img");
     this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageElementStyleClassName);
     this._statusImageElement.addEventListener("mousedown", this._statusImageElementMouseDown.bind(this));
@@ -189,11 +187,6 @@ WebInspector.ProbeGroupTreeElement.prototype = {
             this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
         else
             this._statusImageElement.classList.remove(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
-
-        if (WebInspector.probeManager.probesEnabled)
-            this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageActiveStyleClassName);
-        else
-            this._statusImageElement.classList.remove(WebInspector.ProbeGroupTreeElement.StatusImageActiveStyleClassName);
     },
 
     _statusImageElementMouseDown: function(event)

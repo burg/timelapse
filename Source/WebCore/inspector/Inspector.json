@@ -2583,46 +2583,6 @@
         ]
     },
     {
-        "domain": "Probe",
-        "hidden": true,
-        "description": "Controls script probe instrumentation.",
-        "types": [
-            {
-                "id": "ScriptProbeSampleId",
-                "type": "integer",
-                "description": "Unique data probe sample identifier."
-            },
-            {
-                "id": "ScriptProbeSample",
-                "type": "object",
-                "properties": [
-                    { "name": "sampleId", "$ref": "ScriptProbeSampleId", "description": "Sample unique id." },
-                    { "name": "batchId", "type": "integer", "description": "Sample batch number." },
-                    { "name": "timestamp", "type": "number", "description": "Sample timestamp." },
-                    { "name": "payload", "$ref": "Runtime.RemoteObject", "description": "Contents of the sample." }
-                ]
-            }
-        ],
-        "commands": [
-            {
-                "name": "enable"
-            },
-            {
-                "name": "disable"
-            }
-        ],
-
-        "events": [
-            {
-                "name": "probeSampleReceived",
-                "parameters": [
-                    { "name": "sample", "$ref": "ScriptProbeSample", "description": "Generated script probe sample." }
-                ],
-                "description": "Fires when a new probe sample is collected or re-requested."
-            }
-        ]
-    },
-    {
         "domain": "Recordings",
         "hidden": true,
         "description": "Responsible for maintaining a list of available recordings, and transferring recording data between frontend and backend.",

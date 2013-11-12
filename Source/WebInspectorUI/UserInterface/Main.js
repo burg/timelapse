@@ -70,7 +70,6 @@ WebInspector.loaded = function()
         InspectorBackend.registerRuntimeDispatcher(new WebInspector.RuntimeObserver);
     InspectorBackend.registerReplayDispatcher(new WebInspector.ReplayObserver);
     InspectorBackend.registerRecordingsDispatcher(new WebInspector.RecordingsObserver);
-    InspectorBackend.registerProbeDispatcher(new WebInspector.ProbeObserver);
 
     // Enable agents.
     InspectorAgent.enable();
