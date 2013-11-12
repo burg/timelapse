@@ -112,13 +112,10 @@ bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& b
     case ScriptBreakpointActionTypeSound:
         systemBeep();
         break;
-    }
-    case ScriptBreakpointActionTypeProbe: {
-        DOMWindow& window = asJSDOMWindow(debuggerCallFrame->dynamicGlobalObject())->impl();
-
+    case ScriptBreakpointActionTypeProbe:
+        // TODO: implement.
         break;
     }
-
     return true;
 }
 

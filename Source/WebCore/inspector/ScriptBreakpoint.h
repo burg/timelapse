@@ -38,7 +38,8 @@ namespace WebCore {
 typedef enum {
     ScriptBreakpointActionTypeLog,
     ScriptBreakpointActionTypeEvaluate,
-    ScriptBreakpointActionTypeSound
+    ScriptBreakpointActionTypeSound,
+    ScriptBreakpointActionTypeProbe
 } ScriptBreakpointActionType;
 
 struct ScriptBreakpointAction {

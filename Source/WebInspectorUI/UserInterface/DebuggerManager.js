@@ -485,6 +485,8 @@ WebInspector.DebuggerManager.prototype = {
             return DebuggerAgent.BreakpointActionType.Evaluate;
         case WebInspector.BreakpointAction.Type.Sound:
             return DebuggerAgent.BreakpointActionType.Sound;
+        case WebInspector.BreakpointAction.Type.Probe:
+            return DebuggerAgent.BreakpointActionType.Probe;
         default:
             console.assert(false);
             return DebuggerAgent.BreakpointActionType.Log;

@@ -83,7 +83,7 @@ void InspectorDebuggerAgent::enable()
 
     if (m_listener)
         m_listener->debuggerWasEnabled();
-    
+
     m_enabled = true;
 }
 
@@ -209,6 +209,10 @@ static bool breakpointActionTypeForString(const String& typeString, ScriptBreakp
     }
     if (typeString == TypeBuilder::getEnumConstantValue(TypeBuilder::Debugger::BreakpointAction::Type::Sound)) {
         *output = ScriptBreakpointActionTypeSound;
+        return true;
+    }
+    if (typeString == TypeBuilder::getEnumConstantValue(TypeBuilder::Debugger::BreakpointAction::Type::Probe)) {
+        *output = ScriptBreakpointActionTypeProbe;
         return true;
     }
 

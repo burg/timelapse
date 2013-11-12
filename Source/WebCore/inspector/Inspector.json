@@ -2936,7 +2936,7 @@
                 "id": "BreakpointAction",
                 "type": "object",
                 "properties": [
-                    { "name": "type", "type": "string", "enum": ["log", "evaluate", "sound"], "description": "Different kinds of breakpoint actions." },
+                    { "name": "type", "type": "string", "enum": ["log", "evaluate", "sound", "probe"], "description": "Different kinds of breakpoint actions." },
                     { "name": "data", "type": "string", "optional": true, "description": "Data associated with this breakpoint type (e.g. for type \"eval\" this is the JavaScript string to evalulate)." }
                 ],
                 "description": "Action to perform when a breakpoint is triggered."
