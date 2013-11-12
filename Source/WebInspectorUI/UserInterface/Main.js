@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
@@ -177,8 +178,6 @@ WebInspector.loaded = function()
 
 WebInspector.contentLoaded = function()
 {
-    console.log("contentLoaded", this);
-
     // Check for a nightly build by looking for a plus in the version number and a small number of stylesheets (indicating combined resources).
     var versionMatch = / AppleWebKit\/([^ ]+)/.exec(navigator.userAgent);
     if (versionMatch && versionMatch[1].indexOf("+") !== -1 && document.styleSheets.length < 10)

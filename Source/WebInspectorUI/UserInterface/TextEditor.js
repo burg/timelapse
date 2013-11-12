@@ -78,6 +78,7 @@ WebInspector.TextEditor.ProbeHighlightedStyleClassName = "probe-highlighted";
 WebInspector.TextEditor.SearchResultStyleClassName = "search-result";
 WebInspector.TextEditor.HasBreakpointStyleClassName = "has-breakpoint";
 WebInspector.TextEditor.BreakpointResolvedStyleClassName = "breakpoint-resolved";
+WebInspector.TextEditor.BreakpointAutoContinueStyleClassName = "breakpoint-auto-continue";
 WebInspector.TextEditor.BreakpointDisabledStyleClassName = "breakpoint-disabled";
 WebInspector.TextEditor.MultipleBreakpointsStyleClassName = "multiple-breakpoints";
 WebInspector.TextEditor.HasProbeGroupStyleClassName = "has-probe-group";
@@ -871,11 +872,14 @@ WebInspector.TextEditor.prototype = {
 
         var allDisabled = true;
         var allResolved = true;
+        var allAutoContinue = true;
         var multiple = Object.keys(columnBreakpoints).length > 1;
         for (var columnNumber in columnBreakpoints) {
             var breakpointInfo = columnBreakpoints[columnNumber];
-            if (!breakpointInfo.disabled)
+            if (breakpointInfo.mode !== WebInspector.Breakpoint.Mode.Disabled)
                 allDisabled = false;
+            if (breakpointInfo.mode !== WebInspector.Breakpoint.Mode.AutoContinue)
+                allAutoContinue = false;
             if (!breakpointInfo.resolved)
                 allResolved = false;
         }
@@ -899,6 +903,11 @@ WebInspector.TextEditor.prototype = {
                 this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointDisabledStyleClassName);
             else
                 this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointDisabledStyleClassName);
+
+            if (allAutoContinue)
+                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointAutoContinueStyleClassName);
+            else
+                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointAutoContinueStyleClassName);
 
             if (multiple)
                 this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleBreakpointsStyleClassName);
@@ -940,6 +949,7 @@ WebInspector.TextEditor.prototype = {
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.HasBreakpointStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointResolvedStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointDisabledStyleClassName);
+            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointAutoContinueStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleBreakpointsStyleClassName);
         }
 

@@ -43,7 +43,7 @@ WebInspector.SourceCodeTextEditor = function(sourceCode)
     this.element.classList.add(WebInspector.SourceCodeTextEditor.StyleClassName);
 
     if (this._supportsDebugging) {
-        WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisabledStateDidChange, this._updateBreakpointStatus, this);
+        WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.ModeDidChange, this._updateBreakpointStatus, this);
         WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.ResolvedStateDidChange, this._updateBreakpointStatus, this);
         WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.LocationDidChange, this._updateBreakpointLocation, this);
 
@@ -116,7 +116,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
     close: function()
     {
         if (this._supportsDebugging) {
-            WebInspector.Breakpoint.removeEventListener(WebInspector.Breakpoint.Event.DisabledStateDidChange, this._updateBreakpointStatus, this);
+            WebInspector.Breakpoint.removeEventListener(WebInspector.Breakpoint.Event.ModeDidChange, this._updateBreakpointStatus, this);
             WebInspector.Breakpoint.removeEventListener(WebInspector.Breakpoint.Event.ResolvedStateDidChange, this._updateBreakpointStatus, this);
             WebInspector.Breakpoint.removeEventListener(WebInspector.Breakpoint.Event.LocationDidChange, this._updateBreakpointLocation, this);
 
@@ -799,7 +799,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
 
     _breakpointInfoForBreakpoint: function(breakpoint)
     {
-        return {resolved: breakpoint.resolved, disabled: breakpoint.disabled};
+        return {resolved: breakpoint.resolved, mode: breakpoint.mode};
     },
 
     _probeGroupInfoForProbeGroup: function(probeGroup)
@@ -920,7 +920,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
         function toggleBreakpoints()
         {
             for (var i = 0; i < breakpoints.length; ++i)
-                breakpoints[i].disabled = shouldDisable;
+                breakpoints[i].mode = shouldDisable ? WebInspector.Breakpoint.Mode.Disabled : WebInspector.Breakpoint.Mode.Enabled;
         }
 
         if (shouldDisable)
@@ -1013,7 +1013,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
         if (!breakpoint)
             return;
 
-        breakpoint.disabled = disabled;
+        breakpoint.mode = breakpoint.nextMode;
     },
 
     textEditorUpdatedFormatting: function(textEditor)
