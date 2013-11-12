@@ -23,56 +23,51 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupDataGrid = function(probeGroup)
+WebInspector.ProbeSetDataGrid = function(probeSet)
 {
-    console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Wrong object passed as probe group: ", probeGroup);
-    this._probeGroup = probeGroup;
+    console.assert(probeSet instanceof WebInspector.ProbeSetObject, "Wrong object passed as probe set: ", probeSet);
+    this._probeSet = probeSet;
 
     var columns = {};
-    for (var i = 0; i < this._probeGroup.probes.length; ++i) {
-        var probe = this._probeGroup.probes[i];
-        var columnIdentifier = probe.probeId;
-        columns[columnIdentifier] = { title: probe.expression };
-    }
+    this._probeSet.probes.forEach(function(probe) {
+        var probeTitle = probe.expression || WebInspector.UIString("(uninitialized)");
+        columns[probe.id] = { title: probeTitle };
+    });
     WebInspector.DataGrid.call(this, columns);
 
     this._frameNodes = {};
     this._nodesSinceLastNavigation = [];
 
-    this._groupListeners = new WebInspector.EventListenerGroup(this, "Static probe group data grid listeners");
-    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
-    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
-    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.SamplesCleared, this._setupData);
-    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.Selected, this._pausedAtProbeGroup);
-    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.Unselected, this._executionResumed);
-    this._groupListeners.install();
-
-    this.element.addEventListener("dblclick", this._gridClicked.bind(this));
+    this._listeners = new WebInspector.EventListenerGroup(this, "Static probe set data grid listeners");
+    this._listeners.register(probeSet, WebInspector.ProbeSetObject.Event.ProbeAdded, this._setupProbe);
+    this._listeners.register(probeSet, WebInspector.ProbeSetObject.Event.ProbeRemoved, this._teardownProbe);
+    this._listeners.register(probeSet, WebInspector.ProbeSetObject.Event.SamplesCleared, this._setupData);
+    this._listeners.register(probeSet, WebInspector.ProbeSetObject.Event.Selected, this._pausedAtProbeSet);
+    this._listeners.register(probeSet, WebInspector.ProbeSetObject.Event.Unselected, this._executionResumed);
+    this._listeners.register(WebInspector.ProbeObject, WebInspector.ProbeObject.Event.ExpressionChanged, this._probeExpressionChanged)
+    this._listeners.register(this.element, "dblclick", this._gridClicked);
+    this._listeners.install();
 
     this._setupData();
 }
 
-WebInspector.ProbeGroupDataGrid.DataUpdatedStyleClassName = "data-updated";
-WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName = "future-value";
-WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName = "past-value";
-WebInspector.ProbeGroupDataGrid.HighlightedFrameStyleClassName = "highlighted";
+WebInspector.ProbeSetDataGrid.DataUpdatedStyleClassName = "data-updated";
+WebInspector.ProbeSetDataGrid.FutureFrameStyleClassName = "future-value";
+WebInspector.ProbeSetDataGrid.PastFrameStyleClassName = "past-value";
+WebInspector.ProbeSetDataGrid.HighlightedFrameStyleClassName = "highlighted";
 
-WebInspector.ProbeGroupDataGrid.DataUpdatedAnimationDuration = 300; // milliseconds
+WebInspector.ProbeSetDataGrid.DataUpdatedAnimationDuration = 300; // milliseconds
 
-WebInspector.ProbeGroupDataGrid.prototype = {
-    constructor: WebInspector.ProbeGroupDataGrid,
+WebInspector.ProbeSetDataGrid.prototype = {
+    constructor: WebInspector.ProbeSetDataGrid,
     __proto__: WebInspector.DataGrid.prototype,
 
     // Public
 
     closed: function()
     {
-        var probes = this._probeGroup.probes;
-        for (var i = 0; i < probes.length; ++i)
-            this._teardownProbe(probes[i]);
-
-        this._groupListeners.uninstall(true);
-        this.element.removeEventListener("dblclick", this._gridClicked.bind(this));
+        this._probeSet.probes.forEach(this._teardownProbe.bind(this));
+        this._listeners.uninstall(true);
     },
 
     addColumn: function(columnIdentifier, column, index)
@@ -179,12 +174,9 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         this._dataTableColumnGroup.span = this._columnCount;
     },
 
-    removeColumn: function(columnIdentifier, willReplace)
+    removeColumn: function(column, willReplace)
     {
-        var column = this.columns[columnIdentifier];
-        if (!column)
-            return;
-
+        console.assert(column.identifier in this.columns);
         var columnIndex = column.ordinal;
 
         var headerElement = this._headerTableColumnGroup.children[columnIndex];
@@ -205,7 +197,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             element.parentElement.removeChild(element);
         }
 
-        delete this.columns[columnIdentifier];
+        delete this.columns[column.identifier];
         this._columnsArray.splice(columnIndex, 1);
 
         --this._columnCount;
@@ -218,57 +210,35 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         }
     },
 
-    changeColumn: function(oldIdentifier, newIdentifier, newColumn)
-    {
-        var oldColumn = this.columns[oldIdentifier];
-        if (!oldColumn)
-            return;
-
-        var index = oldColumn.ordinal;
-
-        this.removeColumn(oldIdentifier, true);
-        this.addColumn(newIdentifier, newColumn, index);
-
-        var frames = this._data.frames;
-        for (var i = 0; i < this._data.frames.length; ++i)
-            this._updateNodeForFrame(frames[i]);
-    },
-
     // Private
 
     _setupProbe: function(event)
     {
         var probe = event.data;
-        this.addColumn(probe.probeId, { title: probe.expression });
+        this.addColumn(probe.id, {title: probe.expression});
 
-        var frames = this._data.frames;
-        for (var i = 0; i < frames.length; ++i)
-            this._updateNodeForFrame(frames[i]);
+        this._data.frames.map(this._updateNodeForFrame.bind(this));
     },
 
     _teardownProbe: function(event)
     {
         var probe = event.data;
-        this.removeColumn(probe.probeId);
+        this.removeColumn(this.columns[probe.id]);
 
-        var frames = this._data.frames;
-        for (var i = 0; i < frames.length; ++i)
-            this._updateNodeForFrame(frames[i]);
+        this._data.frames.map(this._updateNodeForFrame.bind(this));
     },
 
     _setupData: function()
     {
-        this._data = this._probeGroup.dataTable;
-        var frames = this._data.frames;
-        for (var i = 0; i < frames.length; ++i)
-            this._updateNodeForFrame(frames[i]);
+        this._data = this._probeSet.dataTable;
+        this._data.frames.map(this._updateNodeForFrame.bind(this));
 
         this._dataListeners = new WebInspector.EventListenerGroup(this, "Data table event listeners");
-        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.FrameInserted, this._dataFrameInserted);
-        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.FrameReplaced, this._dataFrameReplaced);
-        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorInserted, this._dataSeparatorInserted);
-        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorReplaced, this._dataSeparatorReplaced);
-        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.WillRemove, this._teardownData);
+        this._dataListeners.register(this._data, WebInspector.ProbeSetDataTable.Event.FrameInserted, this._dataFrameInserted);
+        this._dataListeners.register(this._data, WebInspector.ProbeSetDataTable.Event.FrameReplaced, this._dataFrameReplaced);
+        this._dataListeners.register(this._data, WebInspector.ProbeSetDataTable.Event.SeparatorInserted, this._dataSeparatorInserted);
+        this._dataListeners.register(this._data, WebInspector.ProbeSetDataTable.Event.SeparatorReplaced, this._dataSeparatorReplaced);
+        this._dataListeners.register(this._data, WebInspector.ProbeSetDataTable.Event.WillRemove, this._teardownData);
 
         if (WebInspector.replayManager.canReplay || WebInspector.replayManager.isReplaying)
             this._dataListeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._replayCursorChanged);
@@ -287,13 +257,13 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 
     _updateNodeForFrame: function(frame)
     {
-        console.assert(frame instanceof WebInspector.ProbeGroupDataFrame, "Tried to update probe group data grid with non-frame: ", frame);
+        console.assert(frame instanceof WebInspector.ProbeSetDataFrame, "Tried to update probe group data grid with non-frame: ", frame);
         var node = null;
         if (this._frameNodes[frame.key]) {
             node = this._frameNodes[frame.key];
-            node.updateCellsFromFrame(frame, this._probeGroup);
+            node.updateCellsFromFrame(frame, this._probeSet);
         } else {
-            node = new WebInspector.ProbeGroupDataGridNode(frame, this._probeGroup);
+            node = new WebInspector.ProbeSetDataGridNode(frame, this._probeSet);
             this._frameNodes[frame.key] = node;
             node.dataGrid = this;
             node.createCells();
@@ -312,23 +282,23 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         }
         console.assert(node);
 
-        node.element.classList.add(WebInspector.ProbeGroupDataGrid.DataUpdatedStyleClassName);
+        node.element.classList.add(WebInspector.ProbeSetDataGrid.DataUpdatedStyleClassName);
         window.setTimeout(function() {
-            node.element.classList.remove(WebInspector.ProbeGroupDataGrid.DataUpdatedStyleClassName);
-        }, WebInspector.ProbeGroupDataGrid.DataUpdatedAnimationDuration);
+            node.element.classList.remove(WebInspector.ProbeSetDataGrid.DataUpdatedStyleClassName);
+        }, WebInspector.ProbeSetDataGrid.DataUpdatedAnimationDuration);
 
-        node.element.classList.remove(WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName);
+        node.element.classList.remove(WebInspector.ProbeSetDataGrid.FutureFrameStyleClassName);
         this._nodesSinceLastNavigation.push(node);
     },
 
     _updateNodeForSeparator: function(frame)
     {
         console.assert(this._frameNodes.hasOwnProperty(frame.key), "Tried to add separator for unknown data frame: ", frame);
-        this._frameNodes[frame.key].updateCellsForSeparator(frame, this._probeGroup);
+        this._frameNodes[frame.key].updateCellsForSeparator(frame, this._probeSet);
 
         for (var i = 0; i < this._nodesSinceLastNavigation.length; ++i) {
             var node = this._nodesSinceLastNavigation[i];
-            node.element.classList.add(WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName);
+            node.element.classList.add(WebInspector.ProbeSetDataGrid.PastFrameStyleClassName);
         }
 
         this._nodesSinceLastNavigation = [];
@@ -371,8 +341,8 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         this._nodesSinceLastNavigation = [];
         for (var key in this._frameNodes) {
             var elem = this._frameNodes[key].element;
-            elem.classList.add(WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName);
-            elem.classList.remove(WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName);
+            elem.classList.add(WebInspector.ProbeSetDataGrid.FutureFrameStyleClassName);
+            elem.classList.remove(WebInspector.ProbeSetDataGrid.PastFrameStyleClassName);
         }
     },
 
@@ -384,14 +354,14 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         WebInspector.replayManager.replayToMarkIndexSoon(event.target.gridNode.frame.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Normal);
     },
 
-    _pausedAtProbeGroup: function(event)
+    _pausedAtProbeSet: function(event)
     {
         var lastIndex = this._data.frames.indexOf(this._lastUpdatedFrame);
         var currentFrame = this._data.frames[lastIndex];
         if (!currentFrame || !this._frameNodes[currentFrame.key])
             return;
         node = this._frameNodes[currentFrame.key];
-        node.element.classList.add(WebInspector.ProbeGroupDataGrid.HighlightedFrameStyleClassName);
+        node.element.classList.add(WebInspector.ProbeSetDataGrid.HighlightedFrameStyleClassName);
 
     },
 
@@ -399,7 +369,25 @@ WebInspector.ProbeGroupDataGrid.prototype = {
     {
         for (var key in this._frameNodes) {
             var elem = this._frameNodes[key].element;
-            elem.classList.remove(WebInspector.ProbeGroupDataGrid.HighlightedFrameStyleClassName);
+            elem.classList.remove(WebInspector.ProbeSetDataGrid.HighlightedFrameStyleClassName);
         }
+    },
+
+    _probeExpressionChanged: function(event)
+    {
+        var probe = event.target;
+        if (probe.breakpoint !== this._probeSet.breakpoint)
+            return;
+
+        var oldColumn = this.columns[probe.id];
+        if (!oldColumn)
+            return;
+
+        this.removeColumn(oldColumn, true);
+        var index = oldColumn.ordinal;
+        var newColumn = {title: event.data.newValue};
+        this.addColumn(probe.id, newColumn, index);
+
+        this._data.frames.map(this._updateNodeForFrame.bind(this));
     }
 }

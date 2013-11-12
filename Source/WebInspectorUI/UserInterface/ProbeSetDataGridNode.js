@@ -23,35 +23,35 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupDataGridNode = function(frame, probeGroup)
+WebInspector.ProbeSetDataGridNode = function(frame, probeSet)
 {
-	console.assert(frame instanceof WebInspector.ProbeGroupDataFrame, "Wrong object passed as probe group data frame: ", frame);
-	console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Wrong object passed as probe group: ", probeGroup);
+    console.assert(frame instanceof WebInspector.ProbeSetDataFrame, "Wrong object passed as probe group data frame: ", frame);
+    console.assert(probeSet instanceof WebInspector.ProbeSetObject, "Wrong object passed as probe group: ", probeSet);
 
-    WebInspector.DataGridNode.call(this, this._cellDataFromFrame(frame, probeGroup));
+    WebInspector.DataGridNode.call(this, this._cellDataFromFrame(frame, probeSet));
     this.frame = frame;
     this._element = document.createElement("tr");
     this._element._dataGridNode = this;
     this._element.classList.add("revealed");
 };
 
-WebInspector.ProbeGroupDataGridNode.SeparatorStyleClassName = "separator";
-WebInspector.ProbeGroupDataGridNode.UnknownValueStyleClassName = "unknown-value";
+WebInspector.ProbeSetDataGridNode.SeparatorStyleClassName = "separator";
+WebInspector.ProbeSetDataGridNode.UnknownValueStyleClassName = "unknown-value";
 
-WebInspector.ProbeGroupDataGridNode.prototype = {
-    constructor: WebInspector.ProbeGroupDataGridNode,
+WebInspector.ProbeSetDataGridNode.prototype = {
+    constructor: WebInspector.ProbeSetDataGridNode,
     __proto__: WebInspector.DataGridNode.prototype,
 
     // Public
 
     get element()
     {
-		return this._element;
+        return this._element;
     },
 
     createCell: function(columnIdentifier)
     {
-		var cell = document.createElement("td");
+        var cell = document.createElement("td");
         cell.className = columnIdentifier + "-column";
 
         var alignment = this.dataGrid.aligned[columnIdentifier];
@@ -78,48 +78,48 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 
     },
 
-    updateCellsFromFrame: function(frame, probeGroup)
+    updateCellsFromFrame: function(frame, probeSet)
     {
-		var probes = probeGroup.probes;
-    	this.data = this._cellDataFromFrame(frame, probeGroup);
-    	// Go back and add unknown value styles to empty cells.
-    	// Cells are recreated each time, so don't bother removing styles.
-    	for (var i = 0; i < probes.length; ++i)
-    		if (frame[probes[i].probeId] == WebInspector.ProbeGroupDataFrame.MissingValue)
-    			this._element.children[i].classList.add(WebInspector.ProbeGroupDataGridNode.UnknownValueStyleClassName);
+        var probes = probeSet.probes;
+        this.data = this._cellDataFromFrame(frame, probeSet);
+        // Go back and add unknown value styles to empty cells.
+        // Cells are recreated each time, so don't bother removing styles.
+        for (var i = 0; i < probes.length; ++i)
+            if (frame[probes[i].id] == WebInspector.ProbeSetDataFrame.MissingValue)
+                this._element.children[i].classList.add(WebInspector.ProbeSetDataGridNode.UnknownValueStyleClassName);
     },
 
-    updateCellsForSeparator: function(frame, probeGroup)
+    updateCellsForSeparator: function(frame, probeSet)
     {
-        this._element.classList.add(WebInspector.ProbeGroupDataGridNode.SeparatorStyleClassName);
+        this._element.classList.add(WebInspector.ProbeSetDataGridNode.SeparatorStyleClassName);
     },
 
     // Private
 
-    _cellDataFromFrame: function(frame, probeGroup)
+    _cellDataFromFrame: function(frame, probeSet)
     {
-		var probes = probeGroup.probes;
-		var cellData = {};
-		for (var i = 0; i < probes.length; ++i) {
-			var probeId = probes[i].probeId;
-			var sample = frame[probeId];
-			if (!sample || !sample.object) {
-				cellData[probeId] = sample;
-				continue;
-			}
+        var probes = probeSet.probes;
+        var cellData = {};
+        for (var i = 0; i < probes.length; ++i) {
+            var probeId = probes[i].id;
+            var sample = frame[probeId];
+            if (!sample || !sample.object) {
+                cellData[probeId] = sample;
+                continue;
+            }
 
-			switch (sample.object.type) {
-			case "array":
-	            console.log("TODO: display probe with type=(array): ", sample.object);
-	            cellData[probeId] = "[Array]";
-	            break;
-	        case "object":
-				cellData[probeId] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeGroupObject.SampleObjectTitle).element;
-				break;
-			default:
-				cellData[probeId] = sample.object.value;
-			}
-		}
-		return cellData;
+            switch (sample.object.type) {
+            case "array":
+                console.log("TODO: display probe with type=(array): ", sample.object);
+                cellData[probeId] = "[Array]";
+                break;
+            case "object":
+                cellData[probeId] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeSetObject.SampleObjectTitle).element;
+                break;
+            default:
+                cellData[probeId] = sample.object.value;
+            }
+        }
+        return cellData;
     },
 };

@@ -23,59 +23,59 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupDetailsSection = function(probeGroup)
+WebInspector.ProbeSetDetailsSection = function(probeSet)
 {
-    console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Tried to create details section for non-probe group", probeGroup);
+    console.assert(probeSet instanceof WebInspector.ProbeSetObject, "Tried to create details section for non-probe group", probeSet);
 
     this._listeners = new WebInspector.EventListenerGroup(this, "Static per-probe group section event listeners.");
-    this._probeGroup = probeGroup;
+    this._probeSet = probeSet;
 
     var dummyTitle = "";
 
     var optionsElement = document.createElement("div");
-    optionsElement.classList.add(WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName);
-    var titleElement = this._probeGroupPositionTextOrLink();
-    titleElement.classList.add(WebInspector.ProbeGroupDetailsSection.DontFloatLinkStyleClassName);
+    optionsElement.classList.add(WebInspector.ProbeSetDetailsSection.SectionOptionsStyleClassName);
+    var titleElement = this._probeSetPositionTextOrLink();
+    titleElement.classList.add(WebInspector.ProbeSetDetailsSection.DontFloatLinkStyleClassName);
     optionsElement.appendChild(titleElement);
 
     var removeProbeButton = optionsElement.createChild("img");
-    removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName);
-    removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
+    removeProbeButton.classList.add(WebInspector.ProbeSetDetailsSection.ProbeRemoveStyleClassName);
+    removeProbeButton.classList.add(WebInspector.ProbeSetDetailsSection.ProbeButtonEnabledStyleClassName);
     this._listeners.register(removeProbeButton, "click", this._removeButtonClicked);
 
     var clearSamplesButton = optionsElement.createChild("img");
-    clearSamplesButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeClearSamplesStyleClassName);
-    clearSamplesButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
+    clearSamplesButton.classList.add(WebInspector.ProbeSetDetailsSection.ProbeClearSamplesStyleClassName);
+    clearSamplesButton.classList.add(WebInspector.ProbeSetDetailsSection.ProbeButtonEnabledStyleClassName);
     this._listeners.register(clearSamplesButton, "click", this._clearSamplesButtonClicked);
 
     var addProbeButton = optionsElement.createChild("img");
-    addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
+    addProbeButton.classList.add(WebInspector.ProbeSetDetailsSection.AddProbeValueStyleClassName);
     this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked);
 
-    this._dataGrid = new WebInspector.ProbeGroupDataGrid(probeGroup);
+    this._dataGrid = new WebInspector.ProbeSetDataGrid(probeSet);
     this._dataGrid.element.classList.add("inline");
     var singletonRow = new WebInspector.DetailsSectionRow;
     singletonRow.element.appendChild(this._dataGrid.element);
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);
 
     WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
-    this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
+    this.element.classList.add(WebInspector.ProbeSetDetailsSection.StyleClassName);
 
     this._listeners.install();
 };
 
-WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
-WebInspector.ProbeGroupDetailsSection.DontFloatLinkStyleClassName = "dont-float";
-WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
-WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
-WebInspector.ProbeGroupDetailsSection.ProbeClearSamplesStyleClassName = "probe-clear-samples";
-WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
-WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
-WebInspector.ProbeGroupDetailsSection.StyleClassName = "probe-group";
+WebInspector.ProbeSetDetailsSection.AddProbeValueStyleClassName = "probe-add";
+WebInspector.ProbeSetDetailsSection.DontFloatLinkStyleClassName = "dont-float";
+WebInspector.ProbeSetDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
+WebInspector.ProbeSetDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
+WebInspector.ProbeSetDetailsSection.ProbeClearSamplesStyleClassName = "probe-clear-samples";
+WebInspector.ProbeSetDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
+WebInspector.ProbeSetDetailsSection.SectionOptionsStyleClassName = "options";
+WebInspector.ProbeSetDetailsSection.StyleClassName = "probe-set";
 
-WebInspector.ProbeGroupDetailsSection.prototype = {
+WebInspector.ProbeSetDetailsSection.prototype = {
     __proto__: WebInspector.DetailsSection.prototype,
-    constructor: WebInspector.ProbeGroupDetailsSection,
+    constructor: WebInspector.ProbeSetDetailsSection,
 
     // Public
 
@@ -87,17 +87,10 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     // Private
 
-    _probeGroupPositionTextOrLink: function()
+    _probeSetPositionTextOrLink: function()
     {
-        var shortUrl = parseURL(this._probeGroup.url).lastPathComponent || WebInspector.UIString("(unknown)");
-        var title = WebInspector.UIString("%s:%d").format(shortUrl, this._probeGroup.position.lineNumber + 1);
-        if (!this._probeGroup.resolved) {
-            var unlinkedLabel = document.createElement("span");
-            unlinkedLabel.appendChild(document.createTextNode(title));
-            return unlinkedLabel;
-        }
-        var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
-        return WebInspector.createSourceCodeLocationLink(sourceCodeLocation);
+        var breakpoint = this._probeSet.breakpoint;
+        return WebInspector.createSourceCodeLocationLink(breakpoint.sourceCodeLocation);
     },
 
     _addProbeButtonClicked: function(event)
@@ -107,13 +100,13 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
             if (event.keyCode !== 13)
                 return;
             var expression = event.target.value;
-            ProbeAgent.createScriptProbe(this._probeGroup.url, this._probeGroup.position.lineNumber, this._probeGroup.position.columnNumber, expression);
+            this._probeSet.createProbe(expression);
             visiblePopover.dismiss();
         }
 
         var popover = new WebInspector.Popover;
         var content = document.createElement("div");
-        content.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
+        content.classList.add(WebInspector.ProbeSetDetailsSection.ProbePopoverElementStyleClassName);
         content.createChild("div").textContent = WebInspector.UIString("Add Another Value?");
         var textBox = content.createChild("input");
         textBox.addEventListener("keypress", createProbeFromEnteredExpression.bind(this, popover));
@@ -128,11 +121,11 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     _removeButtonClicked: function(event)
     {
-        this._probeGroup.clear();
+        this._probeSet.clear();
     },
 
     _clearSamplesButtonClicked: function(event)
     {
-        this._probeGroup.clearSamples();
+        this._probeSet.clearSamples();
     }
 };

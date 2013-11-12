@@ -31,25 +31,21 @@ WebInspector.ProbeSampleObject = function(sampleId, batchId, timestamp, payload)
     this.object = WebInspector.RemoteObject.fromPayload(payload);
 };
 
-WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expression)
+WebInspector.ProbeObject = function(probeId, breakpoint, expression)
 {
     WebInspector.Object.call(this);
     this._probeId = probeId;
-    this._url = url;
-    // Line and column numbers are raw, unresolved, and 0-based. For a resolved source
-    // location which matches any user-facing formatting, use ProbeObject.sourceCodeLocation.
-    this._position = new WebInspector.SourceCodePosition(lineNumber, columnNumber);
+    this._breakpoint = breakpoint;
     this._expression = expression;
-    this._enabled = false;
     this._samples = [];
-
-    this.resolved = false;
 };
 
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeObject);
 
 WebInspector.ProbeObject.Event = {
+    ExpressionChanged: "probe-object-expression-changed",
     SampleAdded: "probe-object-sample-added",
+    SamplesCleared: "probe-object-samples-cleared"
 };
 
 WebInspector.ProbeObject.prototype = {
@@ -58,38 +54,14 @@ WebInspector.ProbeObject.prototype = {
 
     // Public
 
-    get probeId()
+    get id()
     {
         return this._probeId;
     },
 
-    get url()
+    get breakpoint()
     {
-        return this._url;
-    },
-
-    get position()
-    {
-        return this._position;
-    },
-
-    set sourceCode(value)
-    {
-        console.assert(value instanceof WebInspector.SourceCode, "Tried to set invalid source code ", value, " for probe: ", this);
-        this._sourceCode = value;
-    },
-
-    get sourceCode()
-    {
-        return this._sourceCode;
-    },
-
-    get sourceCodeLocation()
-    {
-        if (!this.resolved || !this._sourceCode)
-            return null;
-
-        return this._sourceCode.createSourceCodeLocation(this.position.lineNumber, this.position.columnNumber);
+        return this._breakpoint;
     },
 
     get expression()
@@ -97,20 +69,26 @@ WebInspector.ProbeObject.prototype = {
         return this._expression;
     },
 
+    set expression(value)
+    {
+        if (this._expression === value)
+            return;
+
+        var data = {oldValue: this._expression, newValue: value};
+        this._expression = value;
+        this.clearSamples();
+        this.dispatchEventToListeners(WebInspector.ProbeObject.Event.ExpressionChanged, data);
+    },
+
     get samples()
     {
         return this._samples.slice();
     },
 
-    // Whether or not this probe will cause the debugger to pause.
-    get enabled()
+    clearSamples: function()
     {
-        return this._enabled;
-    },
-
-    get groupKey()
-    {
-        return [this.url, this.position.lineNumber, this.position.columnNumber].join(":");
+        this._samples = [];
+        this.dispatchEventToListeners(WebInspector.ProbeObject.Event.SamplesCleared);
     },
 
     // Protected (Called by ProbeManager)
@@ -120,15 +98,5 @@ WebInspector.ProbeObject.prototype = {
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Wrong object type passed as probe sample.");
         this._samples.push(sample);
         this.dispatchEventToListeners(WebInspector.ProbeObject.Event.SampleAdded, sample);
-    },
-
-    set enabled(value)
-    {
-        this._enabled = value;
-    },
-
-    set samples(value)
-    {
-        this._samples = value || [];
-    },
+    }
 };

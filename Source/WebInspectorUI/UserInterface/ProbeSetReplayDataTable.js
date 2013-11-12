@@ -23,18 +23,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupReplayDataTable = function(probeGroup)
+WebInspector.ProbeSetReplayDataTable = function(probeSet)
 {
-	WebInspector.ProbeGroupDataTable.call(this, probeGroup);
+	WebInspector.ProbeSetDataTable.call(this, probeSet);
 
-	this._previousMarkIndex = WebInspector.ProbeGroupDataTable.SentinelValue;
-	this._hitCount = WebInspector.ProbeGroupDataTable.SentinelValue;
+	this._previousMarkIndex = WebInspector.ProbeSetDataTable.SentinelValue;
+	this._hitCount = WebInspector.ProbeSetDataTable.SentinelValue;
 	this._previousFrame = null;
 };
 
-WebInspector.ProbeGroupReplayDataTable.prototype = {
-	constructor: WebInspector.ProbeGroupReplayDataTable,
-	__proto__: WebInspector.ProbeGroupDataTable.prototype,
+WebInspector.ProbeSetReplayDataTable.prototype = {
+	constructor: WebInspector.ProbeSetReplayDataTable,
+	__proto__: WebInspector.ProbeSetDataTable.prototype,
 
 	// Protected
 
@@ -45,18 +45,18 @@ WebInspector.ProbeGroupReplayDataTable.prototype = {
 			this._hitCount = 0;
 
 		this._hitCount++;
-		return new WebInspector.ProbeGroupReplayDataFrame(markIndex, this._hitCount);
+		return new WebInspector.ProbeSetReplayDataFrame(markIndex, this._hitCount);
 	},
 
 	addFrame: function(frame)
 	{
-		var insertionIndex = insertionIndexForObjectInListSortedByFunction(frame, this._frames, WebInspector.ProbeGroupReplayDataFrame.compare);
+		var insertionIndex = insertionIndexForObjectInListSortedByFunction(frame, this._frames, WebInspector.ProbeSetReplayDataFrame.compare);
 		if (this._frames.hasOwnProperty(insertionIndex)) {
 			this._frames.splice(insertionIndex, 1, frame);
-			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameReplaced, frame);
+			this.dispatchEventToListeners(WebInspector.ProbeSetDataTable.Event.FrameReplaced, frame);
 		} else {
 			this._frames.splice(insertionIndex, 0, frame);
-			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameInserted, frame);
+			this.dispatchEventToListeners(WebInspector.ProbeSetDataTable.Event.FrameInserted, frame);
 		}
 
 		// Save the previous frame so the separator can be placed there.
@@ -70,10 +70,10 @@ WebInspector.ProbeGroupReplayDataTable.prototype = {
 			return;
 
 		if (this._previousFrame.isSeparator)
-			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorReplaced, this._previousFrame);
+			this.dispatchEventToListeners(WebInspector.ProbeSetDataTable.Event.SeparatorReplaced, this._previousFrame);
 		else {
 			this._previousFrame.isSeparator = true;
-			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorInserted, this._previousFrame);
+			this.dispatchEventToListeners(WebInspector.ProbeSetDataTable.Event.SeparatorInserted, this._previousFrame);
 		}
 	}
 };

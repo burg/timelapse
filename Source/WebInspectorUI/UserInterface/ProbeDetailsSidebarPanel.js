@@ -27,11 +27,14 @@ WebInspector.ProbeDetailsSidebarPanel = function()
 {
 	WebInspector.DetailsSidebarPanel.call(this, "probe", WebInspector.UIString("Probe"), WebInspector.UIString("Probe"), "Images/NavigationItemProbes.pdf", "6");
 
-    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._probeGroupAdded, this);
-    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupRemoved, this._probeGroupRemoved, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeSetAdded, this._probeSetAdded, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeSetRemoved, this._probeSetRemoved, this);
 
-    this._probeGroupSectionsByKey = {};
-    this._probeGroupSections = [];
+    this._probeSetSections = new Map;
+    this._currentProbeSet = null;
+
+    // Initialize sidebars for probe sets that already exist.
+    WebInspector.probeManager.probeSets.map(this._probeSetAdded.bind(this));
 };
 
 WebInspector.ProbeDetailsSidebarPanel.OffsetSectionsStyleClassName  = "offset-sections";
@@ -42,22 +45,22 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
 
     // Public
 
-    get currentProbeGroup()
+    get currentProbeSet()
     {
-        return this._currentProbeGroup;
+        return this._currentProbeSet;
     },
 
-    set currentProbeGroup(probeGroup)
+    set currentProbeSet(probeSet)
     {
-        if (this._currentProbeGroup) {
-            oldProbeGroupSection = this._probeGroupSectionsByKey[this._currentProbeGroup.groupKey];
-            if (oldProbeGroupSection)
-                oldProbeGroupSection.element.remove();
+        if (this._currentProbeSet) {
+            oldSection = this._probeSetSections.get(this._currentProbeSet);
+            if (oldSection)
+                oldSection.element.remove();
         }
 
-        this._currentProbeGroup = probeGroup;
-        this._currentProbeGroupSection = this._probeGroupSectionsByKey[probeGroup.groupKey];
-        this.element.appendChild(this._currentProbeGroupSection.element);
+        this._currentProbeSet = probeSet;
+        var shownSection = this._probeSetSections.get(probeSet);
+        this.element.appendChild(shownSection.element);
     },
 
     inspect: function(objects)
@@ -66,42 +69,43 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         if (!(objects instanceof Array))
             objects = [objects];
 
-        var probeGroupToInspect = null;
+        var probeSetToInspect = null;
 
-        // Iterate over the objects to find a WebInspector.ProbeGroupObject to inspect.
+        // Iterate over the objects to find a WebInspector.ProbeSetObject to inspect.
         for (var i = 0; i < objects.length; ++i) {
-            if (!(objects[i] instanceof WebInspector.ProbeGroupObject))
+            if (!(objects[i] instanceof WebInspector.ProbeSetObject))
                 continue;
-            probeGroupToInspect = objects[i];
+            probeSetToInspect = objects[i];
             break;
         }
 
-        this.probeGroup = probeGroupToInspect;
-
-        return !!this.probeGroup;
+        this.currentProbeSet = probeSetToInspect;
+        return !!this.currentProbeSet;
     },
 
     // Private
 
-    _probeGroupAdded: function(event)
+    _probeSetAdded: function(probeSetOrEvent)
     {
-        var probeGroup = event.data;
-        console.assert(!(probeGroup.groupKey in this._probeGroupSectionsByKey), "New probe group ", probeGroup, " already has its own sidebar.");
+        var probeSet;
+        if (probeSetOrEvent instanceof WebInspector.ProbeSetObject)
+            probeSet = probeSetOrEvent;
+        else
+            probeSet = probeSetOrEvent.data;
+        console.assert(!this._probeSetSections.has(probeSet), "New probe group ", probeSet, " already has its own sidebar.");
 
-        var probeSection = new WebInspector.ProbeGroupDetailsSection(probeGroup);
-        this._probeGroupSectionsByKey[probeGroup.groupKey] = probeSection;
-        this._probeGroupSections.push(probeSection);
+        var newSection = new WebInspector.ProbeSetDetailsSection(probeSet);
+        this._probeSetSections.set(probeSet, newSection);
     },
 
 
-    _probeGroupRemoved: function(event)
+    _probeSetRemoved: function(event)
     {
-        var probeGroup = event.data;
-        console.assert(probeGroup.groupKey in this._probeGroupSectionsByKey, "Removed probe group ", probeGroup, " doesn't have a sidebar.");
+        var probeSet = event.data;
+        console.assert(this._probeSetSections.has(probeSet), "Removed probe group ", probeSet, " doesn't have a sidebar.");
 
-        var probeGroupSection = this._probeGroupSectionsByKey[probeGroup.groupKey];
-        delete this._probeGroupSectionsByKey[probeGroup.groupKey];
-        this._probeGroupSections.splice(this._probeGroupSections.indexOf(probeGroupSection), 1);
-        probeGroupSection.closed();
+        var removedSection = this._probeSetSections.get(probeSet);
+        this._probeSetSections.delete(probeSet);
+        removedSection.closed();
     }
 };
