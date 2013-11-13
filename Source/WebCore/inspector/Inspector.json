@@ -2984,6 +2984,17 @@
                     { "name": "object", "$ref": "Runtime.RemoteObject", "description": "Object representing the scope. For <code>global</code> and <code>with</code> scopes it represents the actual object; for the rest of the scopes, it is artificial transient object enumerating scope variables as its properties." }
                 ],
                 "description": "Scope description."
+            },
+            {
+                "id": "ProbeSample",
+                "type": "object",
+                "properties": [
+                    { "name": "probeId", "type": "integer", "description": "Unique identifier for probe that created the sample." },
+                    { "name": "sampleId", "type": "integer", "description": "Unique identifier for this sample." },
+                    { "name": "batchId", "type": "integer", "description": "A batch identifier which is the same for all samples taken at the same breakpoint hit." },
+                    { "name": "timestamp", "type": "number", "description": "Timestamp of when the sample was taken." },
+                    { "name": "payload", "$ref": "Runtime.RemoteObject", "description": "Contents of the sample." }
+                ]
             }
         ],
         "commands": [
@@ -3239,6 +3250,13 @@
             {
                 "name": "resumed",
                 "description": "Fired when the virtual machine resumed execution."
+            },
+            {
+                "name": "didSampleProbe",
+                "parameters": [
+                    { "name": "sample", "$ref": "ProbeSample", "description": "A collected probe sample." }
+                ],
+               "description": "Fires when a new probe sample is collected or re-requested."
             }
         ]
     },

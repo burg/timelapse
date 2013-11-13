@@ -283,6 +283,7 @@ InspectorBackend.registerEvent("Debugger.scriptFailedToParse", ["url", "scriptSo
 InspectorBackend.registerEvent("Debugger.breakpointResolved", ["breakpointId", "location"]);
 InspectorBackend.registerEvent("Debugger.paused", ["callFrames", "reason", "data"]);
 InspectorBackend.registerEvent("Debugger.resumed", []);
+InspectorBackend.registerEvent("Debugger.didSampleProbe", ["sample"]);
 InspectorBackend.registerCommand("Debugger.causesRecompilation", [], ["result"]);
 InspectorBackend.registerCommand("Debugger.supportsSeparateScriptCompilationAndExecution", [], ["result"]);
 InspectorBackend.registerCommand("Debugger.enable", [], []);

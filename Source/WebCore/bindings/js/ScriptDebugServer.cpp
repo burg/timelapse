@@ -58,6 +58,7 @@ namespace WebCore {
 ScriptDebugServer::ScriptDebugServer(bool isInWorkerThread)
     : Debugger(isInWorkerThread)
     , m_doneProcessingDebuggerEvents(true)
+    , m_hitCount(0)
     , m_callingListeners(false)
     , m_runningNestedMessageLoop(false)
     , m_recompileTimer(this, &ScriptDebugServer::recompileAllJSFunctions) { }
@@ -92,7 +93,7 @@ void ScriptDebugServer::removeBreakpoint(BreakpointID id)
     Debugger::removeBreakpoint(id);
 }
 
-bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& breakpointAction) const
+bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& breakpointAction)
 {
     DebuggerCallFrame* debuggerCallFrame = currentDebuggerCallFrame();
     switch (breakpointAction.type) {
@@ -113,7 +114,13 @@ bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& b
         systemBeep();
         break;
     case ScriptBreakpointActionTypeProbe:
-        // TODO: implement.
+        JSValue exception;
+        JSValue result = debuggerCallFrame->evaluate(breakpointAction.data, exception);
+        if (exception)
+            reportException(debuggerCallFrame->exec(), exception);
+        JSC::ExecState* state = debuggerCallFrame->scope()->globalObject()->globalExec();
+        ScriptValue wrappedResult = ScriptValue(state->vm(), result);
+        dispatchDidSampleProbe(state, breakpointAction.identifier, wrappedResult);
         break;
     }
     return true;
@@ -160,6 +167,24 @@ void ScriptDebugServer::dispatchDidPause(ScriptDebugListener* listener)
             jsCallFrame = jsUndefined();
     }
     listener->didPause(state, ScriptValue(state->vm(), jsCallFrame), ScriptValue());
+}
+
+void ScriptDebugServer::dispatchDidSampleProbe(ExecState* exec, int probeIdentifier, const ScriptValue& sample)
+{
+    if (m_callingListeners)
+        return;
+
+    ListenerSet* listeners = getListenersForGlobalObject(exec->lexicalGlobalObject());
+    if (!listeners)
+        return;
+    ASSERT(!listeners->isEmpty());
+
+    TemporaryChange<bool> change(m_callingListeners, true);
+
+    Vector<ScriptDebugListener*> copy;
+    copyToVector(*listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->didSampleProbe(exec, probeIdentifier, m_hitCount, sample);
 }
 
 void ScriptDebugServer::dispatchDidContinue(ScriptDebugListener* listener)
@@ -269,6 +294,7 @@ bool ScriptDebugServer::needPauseHandling(JSGlobalObject* globalObject)
 
 void ScriptDebugServer::handleBreakpointHit(const JSC::Breakpoint& breakpoint)
 {
+    m_hitCount++;
     BreakpointIDToActionsMap::iterator it = m_breakpointIDToActions.find(breakpoint.id);
     if (it != m_breakpointIDToActions.end()) {
         BreakpointActions& actions = it->value;

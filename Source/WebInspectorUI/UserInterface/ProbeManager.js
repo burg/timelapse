@@ -99,13 +99,15 @@ WebInspector.ProbeManager.prototype = {
         return this._placeholderObjectsByURL[url];
     },
 
-    // Protected (called by WebInspector.ProbeObserver)
+    // Protected (called by WebInspector.DebuggerObserver)
 
     addProbeSample: function(sample)
     {
         console.assert(sample.probeId in this._probes, "Unknown probe id specified for sample: ", sample);
         var probe = this._probes[sample.probeId];
-        probe.addSample(new WebInspector.ProbeSampleObject(sample.sampleId, sample.batchId, sample.timestamp, sample.payload));
+
+        // TODO: reimplement
+        return;
     },
 
     probeAdded: function(probe)

@@ -54,6 +54,12 @@ namespace WebCore {
 
 const char* InspectorDebuggerAgent::backtraceObjectGroup = "backtrace";
 
+static String objectGroupForProbeId(int probeId)
+{
+    DEFINE_STATIC_LOCAL(const AtomicString, objectGroup, ("script-probe-group-", AtomicString::ConstructFromLiteral));
+    return makeString(objectGroup, String::number(probeId));
+}
+
 InspectorDebuggerAgent::InspectorDebuggerAgent(InstrumentingAgents* instrumentingAgents, InjectedScriptManager* injectedScriptManager)
     : InspectorBaseAgent<InspectorDebuggerAgent>("Debugger", instrumentingAgents)
     , m_injectedScriptManager(injectedScriptManager)
@@ -63,6 +69,7 @@ InspectorDebuggerAgent::InspectorDebuggerAgent(InstrumentingAgents* instrumentin
     , m_enabled(false)
     , m_javaScriptPauseScheduled(false)
     , m_listener(nullptr)
+    , m_nextProbeSampleId(1)
 {
     // FIXME: make breakReason optional so that there was no need to init it with "other".
     clearBreakDetails();
@@ -91,6 +98,15 @@ void InspectorDebuggerAgent::disable()
 {
     m_javaScriptBreakpoints.clear();
     m_instrumentingAgents->setInspectorDebuggerAgent(nullptr);
+
+    // TODO: clear any created probe samples.
+    /*
+    PageScriptDebugServer::shared().removeListener(this, m_inspectedPage);
+    ScriptState* state = mainWorldExecState(&m_inspectedPage->mainFrame());
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
+        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
+    */
 
     stopListeningScriptDebugServer();
     scriptDebugServer().clearBreakpoints();
@@ -160,6 +176,17 @@ void InspectorDebuggerAgent::setBreakpointsActive(ErrorString*, bool active)
 bool InspectorDebuggerAgent::isPaused()
 {
     return scriptDebugServer().isPaused();
+}
+
+void InspectorDebuggerAgent::clearResources()
+{
+    // TODO: free any created probe samples.
+    /*
+    ScriptState* state = mainWorldExecState(&m_inspectedPage->mainFrame());
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
+        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
+    */
 }
 
 bool InspectorDebuggerAgent::runningNestedMessageLoop()
@@ -756,6 +783,25 @@ void InspectorDebuggerAgent::didPause(JSC::ExecState* scriptState, const ScriptV
     }
     if (m_listener)
         m_listener->didPause();
+}
+
+void InspectorDebuggerAgent::didSampleProbe(JSC::ExecState* scriptState, int probeIdentifier, int hitCount, const ScriptValue& sample)
+{
+    int sampleId = m_nextProbeSampleId++;
+
+    // TODO: (Issue #316): Implement some sort of storage for probe samples.
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(scriptState);
+    RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(sample, objectGroupForProbeId(probeIdentifier));
+    RefPtr<TypeBuilder::Debugger::ProbeSample> result = TypeBuilder::Debugger::ProbeSample::create()
+
+                                                            .setProbeId(probeIdentifier)
+                                                            .setSampleId(sampleId)
+                                                            .setBatchId(hitCount)
+                                                            .setTimestamp(WTF::currentTimeMS())
+                                                            .setPayload(payload.release());
+
+    if (m_frontend)
+        m_frontend->didSampleProbe(result.release());
 }
 
 void InspectorDebuggerAgent::didContinue()

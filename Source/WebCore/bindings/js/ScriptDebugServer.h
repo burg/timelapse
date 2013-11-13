@@ -106,11 +106,12 @@ protected:
 
     virtual bool isContentScript(JSC::ExecState*);
 
-    bool evaluateBreakpointAction(const ScriptBreakpointAction&) const;
+    bool evaluateBreakpointAction(const ScriptBreakpointAction&);
 
     void dispatchFunctionToListeners(JavaScriptExecutionCallback, JSC::JSGlobalObject*);
     void dispatchFunctionToListeners(const ListenerSet& listeners, JavaScriptExecutionCallback callback);
     void dispatchDidPause(ScriptDebugListener*);
+    void dispatchDidSampleProbe(JSC::ExecState*, int probeIdentifier, const ScriptValue& probe);
     void dispatchDidContinue(ScriptDebugListener*);
     void dispatchDidParseSource(const ListenerSet& listeners, JSC::SourceProvider*, bool isContentScript);
     void dispatchFailedToParseSource(const ListenerSet& listeners, JSC::SourceProvider*, int errorLine, const String& errorMessage);
@@ -129,6 +130,7 @@ private:
     virtual void handlePause(JSC::Debugger::ReasonForPause, JSC::JSGlobalObject*) OVERRIDE;
     virtual void notifyDoneProcessingDebuggerEvents() OVERRIDE;
 
+    int m_hitCount;
     bool m_callingListeners;
     bool m_runningNestedMessageLoop;
     BreakpointIDToActionsMap m_breakpointIDToActions;

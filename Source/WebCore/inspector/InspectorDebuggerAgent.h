@@ -75,6 +75,8 @@ public:
     virtual void setFrontend(InspectorFrontend*);
     virtual void clearFrontend();
 
+    void clearResources();
+
     bool isPaused();
     bool runningNestedMessageLoop();
     void addMessageToConsole(MessageSource, MessageType);
@@ -126,7 +128,7 @@ public:
         virtual void stepInto() = 0;
         virtual void didPause() = 0;
     };
-    
+
     void setListener(Listener* listener) { m_listener = listener; }
 
     virtual ScriptDebugServer& scriptDebugServer() = 0;
@@ -154,6 +156,7 @@ private:
 
     virtual void didParseSource(SourceID, const Script&) OVERRIDE FINAL;
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage) OVERRIDE FINAL;
+    virtual void didSampleProbe(JSC::ExecState*, int probeIdentifier, int hitCount, const ScriptValue& sample) OVERRIDE FINAL;
 
     void setPauseOnExceptionsImpl(ErrorString*, int);
 
@@ -181,6 +184,7 @@ private:
     bool m_enabled;
     bool m_javaScriptPauseScheduled;
     Listener* m_listener;
+    int m_nextProbeSampleId;
 };
 
 } // namespace WebCore

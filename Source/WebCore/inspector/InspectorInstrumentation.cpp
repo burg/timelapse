@@ -916,6 +916,8 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
         if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
             resourceAgent->mainFrameNavigated(loader);
 #if ENABLE(JAVASCRIPT_DEBUGGER)
+        if (InspectorDebuggerAgent* debuggerAgent = instrumentingAgents->inspectorDebuggerAgent())
+            debuggerAgent->clearResources();
         if (InspectorProfilerAgent* profilerAgent = instrumentingAgents->inspectorProfilerAgent())
             profilerAgent->resetState();
         if (InspectorHeapProfilerAgent* heapProfilerAgent = instrumentingAgents->inspectorHeapProfilerAgent())
