@@ -66,7 +66,7 @@ InspectorBackend.registerCommand("Page.setTouchEmulationEnabled", [{"name": "ena
 InspectorBackend.registerCommand("Page.setEmulatedMedia", [{"name": "media", "type": "string", "optional": false}], []);
 InspectorBackend.registerCommand("Page.getCompositingBordersVisible", [], ["result"]);
 InspectorBackend.registerCommand("Page.setCompositingBordersVisible", [{"name": "visible", "type": "boolean", "optional": false}], []);
-InspectorBackend.registerCommand("Page.captureScreenshot", [], ["data"]);
+InspectorBackend.registerCommand("Page.captureScreenshot", [{"name": "x", "type": "number"}, {"name": "y", "type": "number"}, {"name": "width", "type": "number"}, {"name": "height", "type": "number"}, {"name": "usePageCoordinates", "type": "boolean", "optional": true}], ["data"]);
 InspectorBackend.registerCommand("Page.handleJavaScriptDialog", [{"name": "accept", "type": "boolean", "optional": false}, {"name": "promptText", "type": "string", "optional": true}], []);
 InspectorBackend.registerCommand("Page.archive", [], ["data"]);
 

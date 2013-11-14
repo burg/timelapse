@@ -61,6 +61,8 @@ private:
     virtual void highlight() OVERRIDE;
     virtual void hideHighlight() OVERRIDE;
 
+    virtual bool captureScreenshot(int x, int y, int width, int height, bool usePageCoordinates, String* outData);
+
     virtual bool sendMessageToFrontend(const String&) OVERRIDE;
 
     virtual bool supportsFrameInstrumentation();

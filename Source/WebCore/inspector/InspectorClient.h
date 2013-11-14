@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef InspectorClient_h
@@ -87,7 +87,10 @@ public:
     virtual void getAllocatedObjects(HashSet<const void*>&) { }
     virtual void dumpUncountedAllocatedObjects(const HashMap<const void*, size_t>&) { }
 
-    virtual bool captureScreenshot(String*) { return false; }
+    virtual bool captureScreenshot(int /*x*/, int /*y*/, int /*width*/, int /*height*/, bool /*usePageCoordinates*/, String* /*outData*/)
+    {
+        return false;
+    }
 
     virtual bool handleJavaScriptDialog(bool, const String*) { return false; }
 

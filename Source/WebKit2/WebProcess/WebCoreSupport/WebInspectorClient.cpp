@@ -31,6 +31,8 @@
 #include "WebInspector.h"
 #include "WebPage.h"
 #include <WebCore/InspectorController.h>
+#include <WebCore/Frame.h>
+#include <WebCore/FrameSnapshot.h>
 #include <WebCore/Page.h>
 
 using namespace WebCore;
@@ -84,6 +86,22 @@ void WebInspectorClient::hideHighlight()
 {
     if (m_highlightOverlay)
         m_page->uninstallPageOverlay(m_highlightOverlay, true);
+}
+
+bool WebInspectorClient::captureScreenshot(int x, int y, int width, int height, bool usePageCoordinates, String* outData)
+{
+    WebCore::Frame* frame = m_page->mainFrame();
+    if (!frame)
+        return false;
+
+    DEFINE_STATIC_LOCAL(String, pngMimeType, (ASCIILiteral("image/png")));
+    IntRect imageRect = IntRect(x, y, width, height);
+    std::unique_ptr<FrameSnapshot> snapshot = FrameSnapshot::createFromRect(*frame, imageRect, true, !usePageCoordinates);
+    if (!snapshot)
+        return false;
+
+    *outData = snapshot->toDataURL(pngMimeType);
+    return true;
 }
 
 bool WebInspectorClient::sendMessageToFrontend(const String& message)

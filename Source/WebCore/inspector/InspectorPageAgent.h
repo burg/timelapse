@@ -130,7 +130,7 @@ public:
     virtual void setEmulatedMedia(ErrorString*, const String&);
     virtual void getCompositingBordersVisible(ErrorString*, bool* out_param);
     virtual void setCompositingBordersVisible(ErrorString*, bool);
-    virtual void captureScreenshot(ErrorString*, String* data);
+    virtual void captureScreenshot(ErrorString*, int x, int y, int width, int height, const bool* usePageCoordinates, String* outData);
     virtual void handleJavaScriptDialog(ErrorString*, bool accept, const String* promptText);
     virtual void archive(ErrorString*, String* data);
 

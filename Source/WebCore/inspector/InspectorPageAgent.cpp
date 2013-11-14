@@ -1321,9 +1321,9 @@ void InspectorPageAgent::setCompositingBordersVisible(ErrorString*, bool visible
     m_page->settings().setShowRepaintCounter(visible);
 }
 
-void InspectorPageAgent::captureScreenshot(ErrorString* errorString, String* data)
+void InspectorPageAgent::captureScreenshot(ErrorString* errorString, int x, int y, int width, int height, const bool* usePageCoordinates, String* outData)
 {
-    if (!m_client->captureScreenshot(data))
+    if (!m_client->captureScreenshot(x, y, width, height, *usePageCoordinates, outData))
         *errorString = "Could not capture screenshot";
 }
 

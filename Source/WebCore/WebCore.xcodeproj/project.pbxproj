@@ -5291,8 +5291,6 @@
 		C481093E1705313100AB4BAA /* InterpretedKeyCommands.h in Headers */ = {isa = PBXBuildFile; fileRef = C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C48D64FF18342AEB00F664CC /* FrameSnapshot.h in Headers */ = {isa = PBXBuildFile; fileRef = C48D64FE18342AEB00F664CC /* FrameSnapshot.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C48D650118342DEB00F664CC /* FrameSnapshot.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48D650018342DEB00F664CC /* FrameSnapshot.cpp */; };
-		C48D65051834589600F664CC /* FrameCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = C48D65041834589600F664CC /* FrameCamera.h */; };
-		C48D6507183458AD00F664CC /* FrameCameraMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C48D6506183458AD00F664CC /* FrameCameraMac.mm */; };
 		C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */; };
 		C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA712171776FA001A8BB4 /* EventLoopInput.h */; };
 		C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA71517178087001A8BB4 /* FunctorInputIterator.h */; };
@@ -12340,8 +12338,6 @@
 		C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InterpretedKeyCommands.h; sourceTree = "<group>"; };
 		C48D64FE18342AEB00F664CC /* FrameSnapshot.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FrameSnapshot.h; sourceTree = "<group>"; };
 		C48D650018342DEB00F664CC /* FrameSnapshot.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameSnapshot.cpp; sourceTree = "<group>"; };
-		C48D65041834589600F664CC /* FrameCamera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FrameCamera.h; path = replay/FrameCamera.h; sourceTree = "<group>"; };
-		C48D6506183458AD00F664CC /* FrameCameraMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FrameCameraMac.mm; sourceTree = "<group>"; };
 		C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventLoopInput.cpp; sourceTree = "<group>"; };
 		C48EA712171776FA001A8BB4 /* EventLoopInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventLoopInput.h; sourceTree = "<group>"; };
 		C48EA71517178087001A8BB4 /* FunctorInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FunctorInputIterator.h; path = replay/FunctorInputIterator.h; sourceTree = "<group>"; };
@@ -20194,7 +20190,6 @@
 				C41D35541712064800E40FB7 /* CaptureInputIterator.h */,
 				C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */,
 				C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */,
-				C48D65041834589600F664CC /* FrameCamera.h */,
 				C48EA71517178087001A8BB4 /* FunctorInputIterator.h */,
 				C4B991FC17122B750029CA63 /* InputStorage.cpp */,
 				C41D354C1711F57A00E40FB7 /* InputStorage.h */,
@@ -20325,7 +20320,6 @@
 			isa = PBXGroup;
 			children = (
 				C48108C717052FF100AB4BAA /* CacheControllerMac.mm */,
-				C48D6506183458AD00F664CC /* FrameCameraMac.mm */,
 			);
 			name = mac;
 			path = replay/mac;
@@ -24718,7 +24712,6 @@
 				08F859D51463F9CD0067D933 /* SVGImageCache.h in Headers */,
 				AAC08CEF15F933D600F1E188 /* SVGImageChromeClient.h in Headers */,
 				B2227A2D0D00BF220071B782 /* SVGImageElement.h in Headers */,
-				C48D65051834589600F664CC /* FrameCamera.h in Headers */,
 				08F859D51463F9CD0067D934 /* SVGImageForContainer.h in Headers */,
 				B28C6A2A0D00C44800334AA4 /* SVGImageLoader.h in Headers */,
 				0854B01F1255E4E600B9CDD0 /* SVGInlineFlowBox.h in Headers */,
@@ -26177,7 +26170,6 @@
 				6E67D2A61280E8A4008758F7 /* Extensions3DOpenGL.cpp in Sources */,
 				44DAB5B115A623580097C1E4 /* Extensions3DOpenGLCommon.cpp in Sources */,
 				7728694E14F8882500F484DC /* EXTTextureFilterAnisotropic.cpp in Sources */,
-				C48D6507183458AD00F664CC /* FrameCameraMac.mm in Sources */,
 				97C740141603F7A10011FF2D /* FeatureObserver.cpp in Sources */,
 				A75E8B880E1DE2D6007F2481 /* FEBlend.cpp in Sources */,
 				A75E8B8A0E1DE2D6007F2481 /* FEColorMatrix.cpp in Sources */,

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -43,6 +43,7 @@
 #import "WebUIDelegate.h"
 #import "WebViewInternal.h"
 #import <algorithm>
+#import <WebCore/FrameSnapshot.h>
 #import <WebCore/InspectorController.h>
 #import <WebCore/InspectorFrontendClient.h>
 #import <WebCore/MainFrame.h>
@@ -54,6 +55,7 @@
 #import <WebKitSystemInterface.h>
 #import <wtf/PassOwnPtr.h>
 #import <wtf/text/Base64.h>
+#import <wtf/text/StringConcatenate.h>
 
 SOFT_LINK_STAGED_FRAMEWORK(WebInspectorUI, PrivateFrameworks, A)
 
@@ -180,6 +182,22 @@ void WebInspectorClient::hideHighlight()
     [m_highlighter.get() hideHighlight];
 }
 
+bool WebInspectorClient::captureScreenshot(int x, int y, int width, int height, bool usePageCoordinates, String* outData)
+{
+    WebCore::Frame* frame = core([m_webView mainFrame]);
+    if (!frame)
+        return false;
+
+    DEFINE_STATIC_LOCAL(String, pngMimeType, (ASCIILiteral("image/png")));
+    IntRect imageRect = IntRect(x, y, width, height);
+    std::unique_ptr<FrameSnapshot> snapshot = FrameSnapshot::createFromRect(*frame, imageRect, true, !usePageCoordinates);
+    if (!snapshot)
+        return false;
+
+    *outData = snapshot->toDataURL(pngMimeType);
+    return true;
+}
+
 void WebInspectorClient::releaseFrontend()
 {
     m_frontendClient = 0;
@@ -209,7 +227,7 @@ void WebInspectorFrontendClient::frontendLoaded()
     InspectorFrontendClientLocal::frontendLoaded();
 
     WebFrame *frame = [m_inspectedWebView mainFrame];
-    
+
     WebFrameLoadDelegateImplementationCache* implementations = WebViewGetFrameLoadDelegateImplementations(m_inspectedWebView);
     if (implementations->didClearInspectorWindowObjectForFrameFunc)
         CallFrameLoadDelegate(implementations->didClearInspectorWindowObjectForFrameFunc, m_inspectedWebView,
@@ -295,14 +313,14 @@ void WebInspectorFrontendClient::updateWindowTitle() const
 void WebInspectorFrontendClient::save(const String& suggestedURL, const String& content, bool base64Encoded, bool forceSaveDialog)
 {
     ASSERT(!suggestedURL.isEmpty());
-    
+
     NSURL *platformURL = m_suggestedToActualURLMap.get(suggestedURL).get();
     if (!platformURL) {
         platformURL = [NSURL URLWithString:suggestedURL];
         // The user must confirm new filenames before we can save to them.
         forceSaveDialog = true;
     }
-    
+
     ASSERT(platformURL);
     if (!platformURL)
         return;
@@ -313,7 +331,7 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
 
     auto saveToURL = ^(NSURL *actualURL) {
         ASSERT(actualURL);
-        
+
         m_suggestedToActualURLMap.set(suggestedURLCopy, actualURL);
 
         if (base64Encoded) {
@@ -332,7 +350,7 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
         saveToURL(platformURL);
         return;
     }
-    
+
     NSSavePanel *panel = [NSSavePanel savePanel];
     panel.nameFieldStringValue = platformURL.lastPathComponent;
     panel.directoryURL = [platformURL URLByDeletingLastPathComponent];
@@ -348,7 +366,7 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
 void WebInspectorFrontendClient::append(const String& suggestedURL, const String& content)
 {
     ASSERT(!suggestedURL.isEmpty());
-    
+
     RetainPtr<NSURL> actualURL = m_suggestedToActualURLMap.get(suggestedURL);
     // do not append unless the user has already confirmed this filename in save().
     if (!actualURL)
@@ -558,7 +576,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     }
 
     _visible = YES;
-    
+
     _shouldAttach = _inspectorClient->inspectorStartsAttached() && _frontendClient->canAttachWindow() && !_inspectorClient->inspectorAttachDisabled();
 
     if (_shouldAttach) {
