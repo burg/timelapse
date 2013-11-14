@@ -29,7 +29,6 @@
 #define Frame_h
 
 #include "AdjustViewSizeOrNot.h"
-#include "DragImage.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "IntRect.h"
@@ -58,11 +57,13 @@ namespace WebCore {
     class Editor;
     class Element;
     class EventHandler;
+    class FloatSize;
     class FrameDestructionObserver;
     class FrameSelection;
     class FrameView;
     class HTMLFrameOwnerElement;
     class HTMLTableCellElement;
+    class ImageBuffer;
     class IntRect;
     class MainFrame;
     class Node;
@@ -127,14 +128,14 @@ namespace WebCore {
         FrameTree& tree() const;
         AnimationController& animation() const;
         ScriptController& script();
-        
+
         RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
         RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
 
     // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
         void injectUserScripts(UserScriptInjectionTime);
-        
+
         String layerTreeAsText(LayerTreeFlags = 0) const;
         String trackedRepaintRectsAsText() const;
 
@@ -176,9 +177,6 @@ namespace WebCore {
         static void clearTimers(FrameView*, Document*);
 
         String displayStringModifiedByEncoding(const String&) const;
-
-        DragImageRef nodeImage(Node*);
-        DragImageRef dragImageForSelection();
 
         VisiblePosition visiblePositionForPoint(const IntPoint& framePoint);
         Document* documentAtPoint(const IntPoint& windowPoint);

@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -36,9 +36,9 @@
 #import "DOMNodeInternal.h"
 #import "DOMPrivate.h"
 #import "DOMRangeInternal.h"
+#import "DragImage.h"
 #import "Font.h"
 #import "Frame.h"
-#import "FrameSnapshottingMac.h"
 #import "HTMLElement.h"
 #import "HTMLNames.h"
 #import "HTMLParserIdioms.h"
@@ -153,7 +153,7 @@ static Class lookupElementClass(const QualifiedName& tag)
     // Do a special lookup to ignore element prefixes
     if (tag.hasPrefix())
         return elementClassMap->get(QualifiedName(nullAtom, tag.localName(), tag.namespaceURI()).impl());
-    
+
     return elementClassMap->get(tag.impl());
 }
 
@@ -289,7 +289,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     WebCore::Frame* frame = node->document().frame();
     if (!frame)
         return nil;
-    return frame->nodeImage(node).get();
+    return [createDragImageForNode(*frame, node) autorelease];
 }
 
 - (NSArray *)textRects
@@ -335,7 +335,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     if (!frame)
         return nil;
 
-    return WebCore::rangeImage(frame, range, forceBlackText);
+    return [createDragImageForRange(*frame, range, forceBlackText) autorelease];
 }
 
 - (NSArray *)textRects
@@ -468,10 +468,10 @@ DOMNodeFilter *kit(WebCore::NodeFilter* impl)
 {
     if (!impl)
         return nil;
-    
+
     if (DOMNodeFilter *wrapper = getDOMWrapper(impl))
         return [[wrapper retain] autorelease];
-    
+
     DOMNodeFilter *wrapper = [[DOMNodeFilter alloc] _init];
     wrapper->_internal = reinterpret_cast<DOMObjectInternal*>(impl);
     impl->ref();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -28,7 +28,7 @@
 
 #import "CachedImage.h"
 #import "Element.h"
-#import "FrameSnapshottingMac.h"
+#import "DragImage.h"
 
 namespace WebCore {
 
@@ -40,17 +40,17 @@ DragImageRef Clipboard::createDragImage(IntPoint& location) const
     NSImage *result = nil;
     if (m_dragImageElement) {
         if (Frame* frame = m_dragImageElement->document().frame()) {
-            NSRect imageRect;
-            NSRect elementRect;
-            result = snapshotDragImage(frame, m_dragImageElement.get(), &imageRect, &elementRect);
+            IntRect imageRect;
+            IntRect elementRect;
+            result = [createDragImageForImage(*frame, m_dragImageElement.get(), imageRect, elementRect) autorelease];
             // Client specifies point relative to element, not the whole image, which may include child
             // layers spread out all over the place.
-            location.setX(elementRect.origin.x - imageRect.origin.x + m_dragLocation.x());
-            location.setY(imageRect.size.height - (elementRect.origin.y - imageRect.origin.y + m_dragLocation.y()));
+            location.setX(elementRect.x() - imageRect.x() + m_dragLocation.x());
+            location.setY(imageRect.height() - (elementRect.y() - imageRect.y() + m_dragLocation.y()));
         }
     } else if (m_dragImage) {
         result = m_dragImage->image()->getNSImage();
-        
+
         location = m_dragLocation;
         location.setY([result size].height - location.y());
     }

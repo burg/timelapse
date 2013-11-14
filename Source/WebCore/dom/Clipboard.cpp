@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -85,7 +85,7 @@ Clipboard::~Clipboard()
         m_dragImageLoader->stopLoading(m_dragImage);
 #endif
 }
-    
+
 void Clipboard::setAccessPolicy(ClipboardAccessPolicy policy)
 {
     // Once the clipboard goes numb, it can never go back.
@@ -277,7 +277,7 @@ DragImageRef Clipboard::createDragImage(IntPoint& location) const
 
     if (m_dragImageElement) {
         if (Frame* frame = m_dragImageElement->document().frame())
-            return frame->nodeImage(m_dragImageElement.get());
+            return frame->createDragImageFromNode(*frame, m_dragImageElement.get());
     }
 
     return 0; // We do not have enough information to create a drag image, use the default icon.
