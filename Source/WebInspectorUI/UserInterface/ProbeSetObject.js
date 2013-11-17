@@ -87,9 +87,7 @@ WebInspector.ProbeSetObject.prototype = {
 
     clear: function()
     {
-        this._probes.forEach(function(probe) {
-            WebInspector.probeManager.removeProbe(probe);
-        });
+        this._breakpoint.probeActions.forEach(this._breakpoint.removeAction.bind(this._breakpoint));
     },
 
     clearSamples: function()

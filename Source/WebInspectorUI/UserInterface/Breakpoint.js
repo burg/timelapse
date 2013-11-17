@@ -200,7 +200,7 @@ WebInspector.Breakpoint.prototype = {
 
     get probeActions()
     {
-        return this._serializableActions().filter(function(action) {
+        return this.actions.filter(function(action) {
             return action.type === WebInspector.BreakpointAction.Type.Probe;
         });
     },
