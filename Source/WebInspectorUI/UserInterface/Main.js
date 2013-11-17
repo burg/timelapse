@@ -1052,7 +1052,7 @@ WebInspector._contentBrowserRepresentedObjectsDidChange = function(event)
     // changes are recorded in _lastSelectedDetailsSidebarPanelSetting.
     this._ignoreDetailsSidebarPanelSelectedEvent = true;
 
-    for (var i = 0; i < this._detailsSidebarPanelSelected.length; ++i) {
+    for (var i = 0; i < this.detailsSidebarPanels.length; ++i) {
         var sidebarPanel = this.detailsSidebarPanels[i];
         if (sidebarPanel.inspect(currentRepresentedObjects)) {
             var currentSidebarPanelIndex = currentSidebarPanels.indexOf(sidebarPanel);
