@@ -62,11 +62,17 @@ WebInspector.DebuggerManager = function()
 
     this._updateBreakOnExceptionsState();
 
-    var savedBreakpoints = this._breakpointsSetting.value;
-    for (var i = 0; i < savedBreakpoints.length; ++i) {
-        var breakpoint = new WebInspector.Breakpoint(savedBreakpoints[i]);
-        this.addBreakpoint(breakpoint, true);
+    function restoreBreakpoints() {
+        var savedBreakpoints = this._breakpointsSetting.value;
+        for (var i = 0; i < savedBreakpoints.length; ++i) {
+            var breakpoint = new WebInspector.Breakpoint(savedBreakpoints[i]);
+            this.addBreakpoint(breakpoint);
+        }
     }
+
+    // Ensure that all managers learn about restored breakpoints,
+    // regardless of their initialization order.
+    setTimeout(restoreBreakpoints.bind(this), 0);
 };
 
 WebInspector.DebuggerManager.Event = {
