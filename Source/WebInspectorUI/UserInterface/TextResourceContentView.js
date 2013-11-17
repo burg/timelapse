@@ -69,19 +69,16 @@ WebInspector.TextResourceContentView.prototype = {
 
     get supplementalRepresentedObjects()
     {
-        for (var groupKey in WebInspector.probeManager.probeSets) {
-            if (!WebInspector.probeDetailsSidebarPanel.currentProbeSet)
-                break;
-            if (WebInspector.probeManager.probeSets[groupKey].probes[0].sourceCode.url === this._resource.url)
-                return [WebInspector.probeManager.probeSets[groupKey]]
-        }
-
-        if (isNaN(this._textEditor.executionLineNumber))
-            return [];
+        var objects = WebInspector.probeManager.probeSets.filter(function(probeSet) {
+            return this._resource.url === probeSet.breakpoint.url;
+        }.bind(this));
 
         // If the SourceCodeTextEditor has an executionLineNumber, we can assume
         // it is always the active call frame.
-        return [WebInspector.debuggerManager.activeCallFrame];
+        if (!isNaN(this._textEditor.executionLineNumber))
+            objects.push(WebInspector.debuggerManager.activeCallFrame);
+
+        return objects;
     },
 
     revealPosition: function(position, textRangeToSelect, forceUnformatted)

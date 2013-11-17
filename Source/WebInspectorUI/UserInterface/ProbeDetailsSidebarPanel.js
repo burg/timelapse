@@ -59,6 +59,9 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         }
 
         this._currentProbeSet = probeSet;
+        if (!probeSet)
+            return;
+
         var shownSection = this._probeSetSections.get(probeSet);
         this.element.appendChild(shownSection.element);
     },
@@ -69,18 +72,15 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         if (!(objects instanceof Array))
             objects = [objects];
 
-        var probeSetToInspect = null;
-
         // Iterate over the objects to find a WebInspector.ProbeSetObject to inspect.
         for (var i = 0; i < objects.length; ++i) {
             if (!(objects[i] instanceof WebInspector.ProbeSetObject))
                 continue;
-            probeSetToInspect = objects[i];
-            break;
+            this.currentProbeSet = objects[i];
+            return true;
         }
 
-        this.currentProbeSet = probeSetToInspect;
-        return !!this.currentProbeSet;
+        return false;
     },
 
     // Private
