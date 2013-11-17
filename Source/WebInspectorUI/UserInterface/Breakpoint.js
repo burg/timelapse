@@ -310,6 +310,12 @@ WebInspector.Breakpoint.prototype = {
         this.dispatchEventToListeners(WebInspector.Breakpoint.Event.ActionsDidChange);
     },
 
+    clearActions: function(action)
+    {
+        this._actions = [];
+        this.dispatchEventToListeners(WebInspector.Breakpoint.Event.ActionsDidChange);
+    },
+
     // Protected (Called by BreakpointAction)
 
     breakpointActionDidChange: function(action)

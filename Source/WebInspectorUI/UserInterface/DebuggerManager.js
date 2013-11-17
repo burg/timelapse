@@ -284,6 +284,10 @@ WebInspector.DebuggerManager.prototype = {
             }
         }
 
+        // First disable it, so removing probe actions doesn't re-add the breakpoint.
+        breakpoint.mode = WebInspector.Breakpoint.Mode.Disabled;
+        breakpoint.clearActions();
+
         this.dispatchEventToListeners(WebInspector.DebuggerManager.Event.BreakpointRemoved, {breakpoint: breakpoint});
     },
 
