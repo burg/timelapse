@@ -23,15 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeSetDataGridNode = function(frame, probeSet)
+WebInspector.ProbeSetDataGridNode = function(dataGrid)
 {
-    console.assert(frame instanceof WebInspector.ProbeSetDataFrame, "Wrong object passed as probe group data frame: ", frame);
-    console.assert(probeSet instanceof WebInspector.ProbeSetObject, "Wrong object passed as probe group: ", probeSet);
+    this.dataGrid = dataGrid;
+    this._data = {};
 
-    WebInspector.DataGridNode.call(this, this._cellDataFromFrame(frame, probeSet));
-    this.frame = frame;
+    WebInspector.DataGridNode.call(this, this.data);
     this._element = document.createElement("tr");
-    this._element._dataGridNode = this;
+    this._element.dataGridNode = this;
     this._element.classList.add("revealed");
 };
 
@@ -49,77 +48,59 @@ WebInspector.ProbeSetDataGridNode.prototype = {
         return this._element;
     },
 
-    createCell: function(columnIdentifier)
+    get data()
     {
-        var cell = document.createElement("td");
-        cell.className = columnIdentifier + "-column";
+        return this._data;
+    },
 
-        var alignment = this.dataGrid.aligned[columnIdentifier];
-        if (alignment)
-            cell.classList.add(alignment);
+    set frame(value)
+    {
+        console.assert(value instanceof WebInspector.ProbeSetDataFrame, "Wrong object passed as probe set data frame: ", value);
+        this._frame = value;
 
-        var group = this.dataGrid.groups[columnIdentifier];
-        if (group)
-            cell.classList.add("column-group-" + group);
+        // Recalculate data from the new frame.
+        var data = {};
+        this.dataGrid.probeSet.probes.forEach(function(probe) {
+            var sample = this.frame[probe.id];
+            if (!sample || !sample.object)
+                data[probe.id] = WebInspector.ProbeSetDataFrame.MissingValue;
+            else
+                data[probe.id] = sample.object;
+        }.bind(this));
+        this._data = data;
+    },
 
-        var div = document.createElement("div");
-        div.gridNode = this;
-        var content = this.createCellContent(columnIdentifier, cell);
-        div.appendChild(content instanceof Node ? content : document.createTextNode(content));
-        cell.appendChild(div);
+    get frame()
+    {
+        return this._frame;
+    },
 
-        if (columnIdentifier === this.dataGrid.disclosureColumnIdentifier) {
-            cell.classList.add("disclosure");
-            if (this.leftPadding)
-                cell.style.setProperty("padding-left", this.leftPadding + "px");
+    createCellContent: function(columnIdentifier, cell)
+    {
+        var sample = this.data[columnIdentifier];
+        if (sample === WebInspector.ProbeSetDataFrame.MissingValue) {
+            cell.classList.add(WebInspector.ProbeSetDataGridNode.UnknownValueStyleClassName);
+            return sample;
         }
 
-        return cell;
+        if (sample instanceof WebInspector.RemoteObject) {
+            switch (sample.type) {
+            case "object":
+                return new WebInspector.ObjectPropertiesSection(sample, WebInspector.ProbeSetObject.SampleObjectTitle).element;
+            case "array":
+                return "[Array]";
+            }
+        }
 
+        return sample;
     },
 
     updateCellsFromFrame: function(frame, probeSet)
     {
-        var probes = probeSet.probes;
-        this.data = this._cellDataFromFrame(frame, probeSet);
-        // Go back and add unknown value styles to empty cells.
-        // Cells are recreated each time, so don't bother removing styles.
-        for (var i = 0; i < probes.length; ++i)
-            if (frame[probes[i].id] == WebInspector.ProbeSetDataFrame.MissingValue)
-                this._element.children[i].classList.add(WebInspector.ProbeSetDataGridNode.UnknownValueStyleClassName);
     },
 
     updateCellsForSeparator: function(frame, probeSet)
     {
         this._element.classList.add(WebInspector.ProbeSetDataGridNode.SeparatorStyleClassName);
-    },
-
-    // Private
-
-    _cellDataFromFrame: function(frame, probeSet)
-    {
-        var probes = probeSet.probes;
-        var cellData = {};
-        for (var i = 0; i < probes.length; ++i) {
-            var probeId = probes[i].id;
-            var sample = frame[probeId];
-            if (!sample || !sample.object) {
-                cellData[probeId] = sample;
-                continue;
-            }
-
-            switch (sample.object.type) {
-            case "array":
-                console.log("TODO: display probe with type=(array): ", sample.object);
-                cellData[probeId] = "[Array]";
-                break;
-            case "object":
-                cellData[probeId] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeSetObject.SampleObjectTitle).element;
-                break;
-            default:
-                cellData[probeId] = sample.object.value;
-            }
-        }
-        return cellData;
-    },
+    }
 };

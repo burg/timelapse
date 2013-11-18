@@ -26,10 +26,10 @@
 WebInspector.ProbeSetDataGrid = function(probeSet)
 {
     console.assert(probeSet instanceof WebInspector.ProbeSetObject, "Wrong object passed as probe set: ", probeSet);
-    this._probeSet = probeSet;
+    this.probeSet = probeSet;
 
     var columns = {};
-    this._probeSet.probes.forEach(function(probe) {
+    this.probeSet.probes.forEach(function(probe) {
         var probeTitle = probe.expression || WebInspector.UIString("(uninitialized)");
         columns[probe.id] = { title: probeTitle };
     });
@@ -66,7 +66,7 @@ WebInspector.ProbeSetDataGrid.prototype = {
 
     closed: function()
     {
-        this._probeSet.probes.forEach(this._teardownProbe.bind(this));
+        this.probeSet.probes.forEach(this._teardownProbe.bind(this));
         this._listeners.uninstall(true);
     },
 
@@ -75,31 +75,31 @@ WebInspector.ProbeSetDataGrid.prototype = {
         if (column.disclosure)
             this.disclosureColumnIdentifier = columnIdentifier;
 
-        var col = document.createElement("col");
+        var headerColumnGroup = document.createElement("col");
         if (column.width)
-            col.style.width = column.width;
-        column.element = col;
+            headerColumnGroup.style.width = column.width;
+        column.element = headerColumnGroup;
 
-        var cell = document.createElement("th");
-        cell.className = columnIdentifier + "-column";
-        cell.columnIdentifier = columnIdentifier;
-        this._headerTableHeaders[columnIdentifier] = cell;
+        var headerColumnCell = document.createElement("th");
+        headerColumnCell.className = columnIdentifier + "-column";
+        headerColumnCell.columnIdentifier = columnIdentifier;
+        this._headerTableHeaders[columnIdentifier] = headerColumnCell;
 
-        var div = document.createElement("div");
+        var columnLabelElement = document.createElement("div");
         if (column.titleDOMFragment)
-            div.appendChild(column.titleDOMFragment);
+            columnLabelElement.appendChild(column.titleDOMFragment);
         else
-            div.textContent = column.title;
-        cell.appendChild(div);
+            columnLabelElement.textContent = column.title;
+        headerColumnCell.appendChild(columnLabelElement);
 
         if (column.sort) {
-            cell.classList.add("sort-" + column.sort);
-            this._sortColumnCell = cell;
+            headerColumnCell.classList.add("sort-" + column.sort);
+            this._sortColumnCell = headerColumnCell;
         }
 
         if (column.sortable) {
-            cell.addEventListener("click", this._clickInHeaderCell.bind(this), false);
-            cell.classList.add("sortable");
+            headerColumnCell.addEventListener("click", this._clickInHeaderCell.bind(this), false);
+            headerColumnCell.classList.add("sortable");
         }
 
         if (column.aligned)
@@ -107,7 +107,7 @@ WebInspector.ProbeSetDataGrid.prototype = {
 
         if (column.group) {
             this.groups[columnIdentifier] = column.group;
-            cell.classList.add("column-group-" + column.group);
+            headerColumnCell.classList.add("column-group-" + column.group);
         }
 
         if (column.collapsesGroup) {
@@ -115,7 +115,7 @@ WebInspector.ProbeSetDataGrid.prototype = {
 
             var divider = document.createElement("div");
             divider.className = "divider";
-            cell.appendChild(divider);
+            headerColumnCell.appendChild(divider);
 
             var collapseDiv = document.createElement("div");
             collapseDiv.className = "collapser-button";
@@ -123,25 +123,25 @@ WebInspector.ProbeSetDataGrid.prototype = {
             collapseDiv.addEventListener("mouseover", this._mouseoverColumnCollapser.bind(this));
             collapseDiv.addEventListener("mouseout", this._mouseoutColumnCollapser.bind(this));
             collapseDiv.addEventListener("click", this._clickInColumnCollapser.bind(this));
-            cell.appendChild(collapseDiv);
+            headerColumnCell.appendChild(collapseDiv);
 
-            cell.collapsesGroup = column.collapsesGroup;
-            cell.classList.add("collapser");
+            headerColumnCell.collapsesGroup = column.collapsesGroup;
+            headerColumnCell.classList.add("collapser");
         }
 
         ++this._columnCount;
         if (!index) {
-            this._headerTableBody.firstChild.appendChild(cell); // headerRow
-            this._headerTableColumnGroup.appendChild(col);
+            this._headerTableBody.firstChild.appendChild(headerColumnCell); // headerRow
+            this._headerTableColumnGroup.appendChild(headerColumnGroup);
 
             var td = document.createElement("td");
             td.className = columnIdentifier + "-column";
             var group = column.group;
             if (group)
                 td.classList.add("column-group-" + group);
-            this._dataTableBody.lastChild.appendChild(td); // fillerRow
+            //this._dataTableBody.lastChild.appendChild(td); // fillerRow
 
-            this._dataTableColumnGroup.appendChild(col.cloneNode(true));
+            this._dataTableColumnGroup.appendChild(headerColumnGroup.cloneNode(true));
 
             this.columns[columnIdentifier] = column;
             this.columns[columnIdentifier].ordinal = this._columnsArray.length;
@@ -150,17 +150,17 @@ WebInspector.ProbeSetDataGrid.prototype = {
 
                this._columnsArray.lastValue.bodyElement = this._dataTableColumnGroup.lastChild;
         } else {
-            this._headerTableBody.firstChild.insertBefore(cell, this._headerTableBody.firstChild.children[index]); // headerRow
-            this._headerTableColumnGroup.insertBefore(col, this._headerTableColumnGroup.children[index]);
+            this._headerTableBody.firstChild.insertBefore(headerColumnCell, this._headerTableBody.firstChild.children[index]); // headerRow
+            this._headerTableColumnGroup.insertBefore(headerColumnGroup, this._headerTableColumnGroup.children[index]);
 
             var td = document.createElement("td");
             td.className = columnIdentifier + "-column";
             var group = column.group;
             if (group)
                 td.classList.add("column-group-" + group);
-            this._dataTableBody.lastChild.insertBefore(td, this._dataTableBody.lastChild.children[index]); // fillerRow
+            //this._dataTableBody.lastChild.insertBefore(td, this._dataTableBody.lastChild.children[index]); // fillerRow
 
-            this._dataTableColumnGroup.insertBefore(col.cloneNode(true), this._dataTableColumnGroup.children[index]);
+            this._dataTableColumnGroup.insertBefore(headerColumnGroup.cloneNode(true), this._dataTableColumnGroup.children[index]);
 
             this.columns[columnIdentifier] = column;
             this.columns[columnIdentifier].ordinal = index;
@@ -177,26 +177,8 @@ WebInspector.ProbeSetDataGrid.prototype = {
     removeColumn: function(column, willReplace)
     {
         console.assert(column.identifier in this.columns);
-        var columnIndex = column.ordinal;
 
-        var headerElement = this._headerTableColumnGroup.children[columnIndex];
-        headerElement.parentElement.removeChild(headerElement);
-
-        var headerCells = this._headerTableBody.children;
-        for (var i = 0; i < headerCells.length; ++i) {
-            var element = headerCells[i].children[columnIndex];
-            element.parentElement.removeChild(element);
-        }
-
-        var dataElement = this._dataTableColumnGroup.children[columnIndex];
-        dataElement.parentElement.removeChild(dataElement);
-
-        var dataCells = this._dataTableBody.children;
-        for (var i = 0; i < dataCells.length; ++i) {
-            var element = dataCells[i].children[columnIndex];
-            element.parentElement.removeChild(element);
-        }
-
+        // Update the data grid's column model.
         delete this.columns[column.identifier];
         this._columnsArray.splice(columnIndex, 1);
 
@@ -208,6 +190,23 @@ WebInspector.ProbeSetDataGrid.prototype = {
             for (var i = columnIndex; i < this._columnsArray.length; ++i)
                 --this._columnsArray[i].ordinal;
         }
+
+        // Update the view (sometimes manually) to match the model.
+        var columnIndex = column.ordinal;
+        var headerColumnGroupElement = this._headerTableColumnGroup.children[columnIndex];
+        headerColumnGroupElement.remove();
+
+        var headerRows = this._headerTableBody.children;
+        for (var i = 0; i < headerRows.length; ++i) {
+            var headerElement = headerRows[i].children[columnIndex];
+            headerElement.remove();
+        }
+
+        var dataColumnGroupElement = this._dataTableColumnGroup.children[columnIndex];
+        dataColumnGroupElement.remove();
+
+        this.children.forEach(function(node) { node.refresh(); });
+
     },
 
     // Private
@@ -217,7 +216,7 @@ WebInspector.ProbeSetDataGrid.prototype = {
         var probe = event.data;
         this.addColumn(probe.id, {title: probe.expression});
 
-        this._data.frames.map(this._updateNodeForFrame.bind(this));
+        this._data.frames.forEach(this._updateNodeForFrame.bind(this));
     },
 
     _teardownProbe: function(event)
@@ -225,13 +224,13 @@ WebInspector.ProbeSetDataGrid.prototype = {
         var probe = event.data;
         this.removeColumn(this.columns[probe.id]);
 
-        this._data.frames.map(this._updateNodeForFrame.bind(this));
+        this._data.frames.forEach(this._updateNodeForFrame.bind(this));
     },
 
     _setupData: function()
     {
-        this._data = this._probeSet.dataTable;
-        this._data.frames.map(this._updateNodeForFrame.bind(this));
+        this._data = this.probeSet.dataTable;
+        this._data.frames.forEach(this._updateNodeForFrame.bind(this));
 
         this._dataListeners = new WebInspector.EventListenerGroup(this, "Data table event listeners");
         this._dataListeners.register(this._data, WebInspector.ProbeSetDataTable.Event.FrameInserted, this._dataFrameInserted);
@@ -261,11 +260,12 @@ WebInspector.ProbeSetDataGrid.prototype = {
         var node = null;
         if (this._frameNodes[frame.key]) {
             node = this._frameNodes[frame.key];
-            node.updateCellsFromFrame(frame, this._probeSet);
+            node.frame = frame;
+            node.refresh();
         } else {
-            node = new WebInspector.ProbeSetDataGridNode(frame, this._probeSet);
+            node = new WebInspector.ProbeSetDataGridNode(this);
+            node.frame = frame;
             this._frameNodes[frame.key] = node;
-            node.dataGrid = this;
             node.createCells();
 
             var sortFunction = function(a, b) {
@@ -294,7 +294,7 @@ WebInspector.ProbeSetDataGrid.prototype = {
     _updateNodeForSeparator: function(frame)
     {
         console.assert(this._frameNodes.hasOwnProperty(frame.key), "Tried to add separator for unknown data frame: ", frame);
-        this._frameNodes[frame.key].updateCellsForSeparator(frame, this._probeSet);
+        this._frameNodes[frame.key].updateCellsForSeparator(frame, this.probeSet);
 
         for (var i = 0; i < this._nodesSinceLastNavigation.length; ++i) {
             var node = this._nodesSinceLastNavigation[i];
@@ -376,7 +376,7 @@ WebInspector.ProbeSetDataGrid.prototype = {
     _probeExpressionChanged: function(event)
     {
         var probe = event.target;
-        if (probe.breakpoint !== this._probeSet.breakpoint)
+        if (probe.breakpoint !== this.probeSet.breakpoint)
             return;
 
         var oldColumn = this.columns[probe.id];
@@ -388,6 +388,6 @@ WebInspector.ProbeSetDataGrid.prototype = {
         var newColumn = {title: event.data.newValue};
         this.addColumn(probe.id, newColumn, index);
 
-        this._data.frames.map(this._updateNodeForFrame.bind(this));
+        this._data.frames.forEach(this._updateNodeForFrame.bind(this));
     }
 }

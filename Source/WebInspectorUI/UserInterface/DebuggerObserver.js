@@ -65,7 +65,7 @@ WebInspector.DebuggerObserver.prototype = {
 
     didSampleProbe: function(sample)
     {
-        WebInspector.probeManager.addProbeSample(sample);
+        WebInspector.probeManager.didSampleProbe(sample);
     }
 };
 
