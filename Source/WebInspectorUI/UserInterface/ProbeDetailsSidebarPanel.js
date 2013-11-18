@@ -31,7 +31,7 @@ WebInspector.ProbeDetailsSidebarPanel = function()
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeSetRemoved, this._probeSetRemoved, this);
 
     this._probeSetSections = new Map;
-    this._currentProbeSet = null;
+    this._inspectedProbeSets = [];
 
     // Initialize sidebars for probe sets that already exist.
     WebInspector.probeManager.probeSets.map(this._probeSetAdded.bind(this));
@@ -45,25 +45,24 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
 
     // Public
 
-    get currentProbeSet()
+    get inspectedProbeSets()
     {
-        return this._currentProbeSet;
+        return this._inspectedProbeSets.slice();
     },
 
-    set currentProbeSet(probeSet)
+    set inspectedProbeSets(newProbeSets)
     {
-        if (this._currentProbeSet) {
-            oldSection = this._probeSetSections.get(this._currentProbeSet);
-            if (oldSection)
-                oldSection.element.remove();
-        }
+        this._inspectedProbeSets.forEach(function(probeSet) {
+            var removedSection = this._probeSetSections.get(probeSet);
+            this.element.removeChild(removedSection.element);
+        }.bind(this));
 
-        this._currentProbeSet = probeSet;
-        if (!probeSet)
-            return;
+        this._inspectedProbeSets = newProbeSets;
 
-        var shownSection = this._probeSetSections.get(probeSet);
-        this.element.appendChild(shownSection.element);
+        newProbeSets.forEach(function(probeSet) {
+            var shownSection = this._probeSetSections.get(probeSet);
+            this.element.appendChild(shownSection.element);
+        }.bind(this));
     },
 
     inspect: function(objects)
@@ -72,15 +71,12 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         if (!(objects instanceof Array))
             objects = [objects];
 
-        // Iterate over the objects to find a WebInspector.ProbeSetObject to inspect.
-        for (var i = 0; i < objects.length; ++i) {
-            if (!(objects[i] instanceof WebInspector.ProbeSetObject))
-                continue;
-            this.currentProbeSet = objects[i];
-            return true;
-        }
+        // Iterate over the objects to find ProbeSets to inspect.
+        this.inspectedProbeSets = objects.filter(function(object) {
+            return object instanceof WebInspector.ProbeSetObject;
+        });
 
-        return false;
+        return !!this._inspectedProbeSets.length;
     },
 
     // Private
@@ -104,6 +100,13 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         var probeSet = event.data;
         console.assert(this._probeSetSections.has(probeSet), "Removed probe group ", probeSet, " doesn't have a sidebar.");
 
+        // First remove probe set from inspected list, then from mapping.
+        var inspectedProbeSets = this.inspectedProbeSets;
+        var index = inspectedProbeSets.indexOf(probeSet);
+        if (index !== -1) {
+            inspectedProbeSets.splice(index, 1);
+            this.inspectedProbeSets = inspectedProbeSets;
+        }
         var removedSection = this._probeSetSections.get(probeSet);
         this._probeSetSections.delete(probeSet);
         removedSection.closed();

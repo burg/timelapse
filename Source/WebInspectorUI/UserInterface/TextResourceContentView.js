@@ -37,6 +37,11 @@ WebInspector.TextResourceContentView = function(resource)
     this._textEditor.addEventListener(WebInspector.SourceCodeTextEditor.Event.ContentWillPopulate, this._contentWillPopulate, this);
     this._textEditor.addEventListener(WebInspector.SourceCodeTextEditor.Event.ContentDidPopulate, this._contentDidPopulate, this);
 
+    if (resource instanceof WebInspector.Script) {
+        WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.ProbeSetAdded, this._probeSetsChanged, this);
+        WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.ProbeSetRemoved, this._probeSetsChanged, this);
+    }
+
     var toolTip = WebInspector.UIString("Pretty print");
     var activatedToolTip = WebInspector.UIString("Original formatting");
     this._prettyPrintButtonNavigationItem = new WebInspector.ActivateButtonNavigationItem("pretty-print", toolTip, activatedToolTip, "Images/NavigationItemCurleyBraces.svg", 16, 16);
@@ -227,6 +232,14 @@ WebInspector.TextResourceContentView.prototype = {
     _numberOfSearchResultsDidChange: function(event)
     {
         this.dispatchEventToListeners(WebInspector.ContentView.Event.NumberOfSearchResultsDidChange);
+    },
+
+    _probeSetsChanged: function(event)
+    {
+        // Possibly show or hide the probes sidebar whenever an action is changed.
+        var breakpoint = event.data.breakpoint;
+        if (breakpoint.sourceCodeLocation.sourceCode === this.resource)
+            this.dispatchEventToListeners(WebInspector.ContentView.Event.SupplementalRepresentedObjectsDidChange);
     }
 };
 
