@@ -992,7 +992,7 @@ WebInspector.TextEditor.prototype = {
                 var lineInfo = { lineNumber: lineNumber, columnNumber: 0 };
                 var expression = event.target.value;
 
-                tryCreateBreakpoint.call(this);
+                var didCreateBreakpoint = tryCreateBreakpoint.call(this);
                 // We can't directly get the associated breakpoint, so look up from manager.
                 var breakpointCandidates = WebInspector.debuggerManager.breakpointsForSourceCode(this.sourceCode);
                 var foundBreakpoint = null;
@@ -1004,6 +1004,10 @@ WebInspector.TextEditor.prototype = {
                         break;
                     }
                 }
+
+                // If we created the breakpoint just for the probe, default to auto-continue.
+                if (didCreateBreakpoint)
+                    foundBreakpoint.mode = WebInspector.Breakpoint.Mode.AutoContinue;
 
                 var newAction = foundBreakpoint.createAction(WebInspector.BreakpointAction.Type.Probe);
                 newAction.data = expression;
