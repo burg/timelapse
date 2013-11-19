@@ -36,7 +36,7 @@ class SVGSVGElement;
 
 class RenderSVGRoot FINAL : public RenderReplaced {
 public:
-    explicit RenderSVGRoot(SVGSVGElement&);
+    RenderSVGRoot(SVGSVGElement&, PassRef<RenderStyle>);
     virtual ~RenderSVGRoot();
 
     SVGSVGElement& svgSVGElement() const;
@@ -122,6 +122,7 @@ private:
     bool m_hasSVGShadow : 1;
 };
 
+template<> inline bool isRendererOfType<const RenderSVGRoot>(const RenderObject& renderer) { return renderer.isSVGRoot(); }
 RENDER_OBJECT_TYPE_CASTS(RenderSVGRoot, isSVGRoot())
 
 } // namespace WebCore

@@ -72,6 +72,10 @@ JSValue JSMediaSourceStates::facingMode(ExecState* exec) const
     if (!impl().hasVideoSource())
         return jsUndefined();
 
+    const AtomicString& mode = impl().facingMode();
+    if (mode.isEmpty())
+        return jsUndefined();
+    
     return jsStringWithCache(exec, impl().facingMode());
 }
 

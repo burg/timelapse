@@ -41,16 +41,16 @@ public:
     int colSpan() const;
     int rowSpan() const;
 
+    virtual bool childShouldCreateRenderer(const Node*) const OVERRIDE;
+
 protected:
     MathMLElement(const QualifiedName& tagName, Document&);
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
 private:    
-    virtual bool isMathMLElement() const { return true; }
-
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet&) OVERRIDE;
 };
 
 void isMathMLElement(const MathMLElement&); // Catch unnecessary runtime check of type known at compile time.

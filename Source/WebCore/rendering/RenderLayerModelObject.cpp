@@ -37,13 +37,13 @@ bool RenderLayerModelObject::s_hadLayer = false;
 bool RenderLayerModelObject::s_hadTransform = false;
 bool RenderLayerModelObject::s_layerWasSelfPainting = false;
 
-RenderLayerModelObject::RenderLayerModelObject(Element& element, unsigned baseTypeFlags)
-    : RenderElement(element, baseTypeFlags | RenderLayerModelObjectFlag)
+RenderLayerModelObject::RenderLayerModelObject(Element& element, PassRef<RenderStyle> style, unsigned baseTypeFlags)
+    : RenderElement(element, std::move(style), baseTypeFlags | RenderLayerModelObjectFlag)
 {
 }
 
-RenderLayerModelObject::RenderLayerModelObject(Document& document, unsigned baseTypeFlags)
-    : RenderElement(document, baseTypeFlags | RenderLayerModelObjectFlag)
+RenderLayerModelObject::RenderLayerModelObject(Document& document, PassRef<RenderStyle> style, unsigned baseTypeFlags)
+    : RenderElement(document, std::move(style), baseTypeFlags | RenderLayerModelObjectFlag)
 {
 }
 
@@ -77,7 +77,7 @@ bool RenderLayerModelObject::hasSelfPaintingLayer() const
 void RenderLayerModelObject::willBeDestroyed()
 {
     if (isPositioned()) {
-        if (style()->hasViewportConstrainedPosition())
+        if (style().hasViewportConstrainedPosition())
             view().frameView().removeViewportConstrainedObject(this);
     }
 
@@ -85,7 +85,7 @@ void RenderLayerModelObject::willBeDestroyed()
     RenderElement::willBeDestroyed();
 }
 
-void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
+void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
     s_wasFloating = isFloating();
     s_hadLayer = hasLayer();
@@ -95,16 +95,16 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
 
     // If our z-index changes value or our visibility changes,
     // we need to dirty our stacking context's z-order list.
-    RenderStyle* oldStyle = style();
-    if (oldStyle && newStyle) {
+    const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
+    if (oldStyle) {
         if (parent()) {
             // Do a repaint with the old style first, e.g., for example if we go from
             // having an outline to not having an outline.
             if (diff == StyleDifferenceRepaintLayer) {
                 layer()->repaintIncludingDescendants();
-                if (!(oldStyle->clip() == newStyle->clip()))
+                if (!(oldStyle->clip() == newStyle.clip()))
                     layer()->clearClipRectsIncludingDescendants();
-            } else if (diff == StyleDifferenceRepaint || newStyle->outlineSize() < oldStyle->outlineSize())
+            } else if (diff == StyleDifferenceRepaint || newStyle.outlineSize() < oldStyle->outlineSize())
                 repaint();
         }
 
@@ -112,19 +112,19 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
             // When a layout hint happens, we go ahead and do a repaint of the layer, since the layer could
             // end up being destroyed.
             if (hasLayer()) {
-                if (oldStyle->position() != newStyle->position()
-                    || oldStyle->zIndex() != newStyle->zIndex()
-                    || oldStyle->hasAutoZIndex() != newStyle->hasAutoZIndex()
-                    || !(oldStyle->clip() == newStyle->clip())
-                    || oldStyle->hasClip() != newStyle->hasClip()
-                    || oldStyle->opacity() != newStyle->opacity()
-                    || oldStyle->transform() != newStyle->transform()
+                if (oldStyle->position() != newStyle.position()
+                    || oldStyle->zIndex() != newStyle.zIndex()
+                    || oldStyle->hasAutoZIndex() != newStyle.hasAutoZIndex()
+                    || !(oldStyle->clip() == newStyle.clip())
+                    || oldStyle->hasClip() != newStyle.hasClip()
+                    || oldStyle->opacity() != newStyle.opacity()
+                    || oldStyle->transform() != newStyle.transform()
 #if ENABLE(CSS_FILTERS)
-                    || oldStyle->filter() != newStyle->filter()
+                    || oldStyle->filter() != newStyle.filter()
 #endif
                     )
                 layer()->repaintIncludingDescendants();
-            } else if (newStyle->hasTransform() || newStyle->opacity() < 1 || newStyle->hasFilter()) {
+            } else if (newStyle.hasTransform() || newStyle.opacity() < 1 || newStyle.hasFilter()) {
                 // If we don't have a layer yet, but we are going to get one because of transform or opacity,
                 //  then we need to repaint the old position of the object.
                 repaint();
@@ -168,7 +168,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             setChildNeedsLayout();
     }
 
-    bool newStyleIsViewportConstained = style()->hasViewportConstrainedPosition();
+    bool newStyleIsViewportConstained = style().hasViewportConstrainedPosition();
     bool oldStyleIsViewportConstrained = oldStyle && oldStyle->hasViewportConstrainedPosition();
     if (newStyleIsViewportConstained != oldStyleIsViewportConstrained) {
         if (newStyleIsViewportConstained && layer())

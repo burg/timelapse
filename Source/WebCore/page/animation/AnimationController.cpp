@@ -376,12 +376,12 @@ PassRefPtr<RenderStyle> AnimationControllerPrivate::getAnimatedStyleForRenderer(
 
     const CompositeAnimation* rendererAnimations = m_compositeAnimations.get(renderer);
     if (!rendererAnimations)
-        return renderer->style();
-
+        return &renderer->style();
+    
     RefPtr<RenderStyle> animatingStyle = rendererAnimations->getAnimatedStyle();
     if (!animatingStyle)
-        animatingStyle = renderer->style();
-
+        animatingStyle = &renderer->style();
+    
     return animatingStyle.release();
 }
 
@@ -503,7 +503,7 @@ PassRef<RenderStyle> AnimationController::updateAnimations(RenderElement& render
     if (renderer.document().inPageCache())
         return newStyle;
 
-    RenderStyle* oldStyle = renderer.style();
+    RenderStyle* oldStyle = renderer.hasInitializedStyle() ? &renderer.style() : nullptr;
 
     if ((!oldStyle || (!oldStyle->animations() && !oldStyle->transitions())) && (!newStyle.get().animations() && !newStyle.get().transitions()))
         return newStyle;

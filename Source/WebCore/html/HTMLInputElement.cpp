@@ -37,22 +37,18 @@
 #include "Editor.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
-#include "FeatureObserver.h"
 #include "FileInputType.h"
 #include "FileList.h"
 #include "FormController.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
-#include "HTMLCollection.h"
 #include "HTMLDataListElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLImageLoader.h"
-#include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "IdTargetObserver.h"
-#include "InputType.h"
 #include "InsertionPoint.h"
 #include "KeyboardEvent.h"
 #include "Language.h"
@@ -64,7 +60,6 @@
 #include "RuntimeEnabledFeatures.h"
 #include "ScopedEventQueue.h"
 #include "SearchInputType.h"
-#include "ShadowRoot.h"
 #include "StyleResolver.h"
 #include <wtf/MathExtras.h>
 #include <wtf/Ref.h>
@@ -454,7 +449,7 @@ void HTMLInputElement::setType(const String& type)
 
 void HTMLInputElement::updateType()
 {
-    OwnPtr<InputType> newType = InputType::create(*this, fastGetAttribute(typeAttr));
+    auto newType = InputType::create(*this, fastGetAttribute(typeAttr));
     bool hadType = m_hasType;
     m_hasType = true;
     if (m_inputType->formControlType() == newType->formControlType())
@@ -479,7 +474,7 @@ void HTMLInputElement::updateType()
     if (wasAttached)
         Style::detachRenderTree(*this);
 
-    m_inputType = newType.release();
+    m_inputType = std::move(newType);
     m_inputType->createShadowSubtree();
 
 #if ENABLE(TOUCH_EVENTS)
@@ -598,7 +593,7 @@ bool HTMLInputElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLTextFormControlElement::isPresentationAttribute(name);
 }
 
-void HTMLInputElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLInputElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet& style)
 {
     if (name == vspaceAttr) {
         addHTMLLengthToStyle(style, CSSPropertyMarginTop, value);
@@ -789,9 +784,9 @@ bool HTMLInputElement::rendererIsNeeded(const RenderStyle& style)
     return m_inputType->rendererIsNeeded() && HTMLTextFormControlElement::rendererIsNeeded(style);
 }
 
-RenderElement* HTMLInputElement::createRenderer(RenderStyle& style)
+RenderElement* HTMLInputElement::createRenderer(PassRef<RenderStyle> style)
 {
-    return m_inputType->createRenderer(style);
+    return m_inputType->createRenderer(std::move(style));
 }
 
 void HTMLInputElement::willAttachRenderers()
@@ -885,7 +880,7 @@ void HTMLInputElement::setChecked(bool nowChecked, TextFieldEventBehavior eventB
 
     if (CheckedRadioButtons* buttons = checkedRadioButtons())
             buttons->updateCheckedState(this);
-    if (renderer() && renderer()->style()->hasAppearance())
+    if (renderer() && renderer()->style().hasAppearance())
         renderer()->theme()->stateChanged(renderer(), CheckedState);
     setNeedsValidityCheck();
 
@@ -919,7 +914,7 @@ void HTMLInputElement::setIndeterminate(bool newValue)
 
     didAffectSelector(AffectedSelectorIndeterminate);
 
-    if (renderer() && renderer()->style()->hasAppearance())
+    if (renderer() && renderer()->style().hasAppearance())
         renderer()->theme()->stateChanged(renderer(), CheckedState);
 }
 

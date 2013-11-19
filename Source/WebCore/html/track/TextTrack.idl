@@ -31,9 +31,10 @@
     SkipVTableValidation,
     OperationsNotDeletable
 ] interface TextTrack {
-    readonly attribute DOMString kind;
+    readonly attribute DOMString id;
+    [CustomSetter] attribute DOMString kind;
     readonly attribute DOMString label;
-    readonly attribute DOMString language;
+    [CustomSetter] attribute DOMString language;
 
     attribute DOMString mode;
 

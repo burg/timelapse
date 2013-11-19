@@ -42,12 +42,14 @@ WebInspector.BreakpointAction = function(breakpoint, typeOrInfo, data)
         console.error("Unexpected type passed to WebInspector.BreakpointAction");
 
     console.assert(typeof this._type === "string");
+    this._id = this._nextId();
 };
 
 WebInspector.BreakpointAction.Type = {
     Log: "log",
     Evaluate: "evaluate",
-    Sound: "sound"
+    Sound: "sound",
+    Probe: "probe"
 }
 
 WebInspector.BreakpointAction.prototype = {
@@ -65,6 +67,11 @@ WebInspector.BreakpointAction.prototype = {
         return this._type;
     },
 
+    get id()
+    {
+        return this._id || -1;
+    },
+
     get data()
     {
         return this._data;
@@ -76,7 +83,6 @@ WebInspector.BreakpointAction.prototype = {
             return;
 
         this._data = data;
-
         this._breakpoint.breakpointActionDidChange(this);
     },
 
@@ -85,7 +91,19 @@ WebInspector.BreakpointAction.prototype = {
         var obj = {type: this._type};
         if (this._data)
             obj.data = this._data;
+        if (this._id)
+            obj.id = this._id;
         return obj;
+    },
+
+    // Private
+
+    _nextId: function()
+    {
+        if (this._type !== WebInspector.BreakpointAction.Type.Probe)
+            return -1;
+
+        return WebInspector.probeManager.getNextProbeId();
     }
 };
 

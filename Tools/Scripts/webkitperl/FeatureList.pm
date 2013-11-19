@@ -52,6 +52,7 @@ my (
     $cspNextSupport,
     $css3ConditionalRulesSupport,
     $css3TextSupport,
+    $css3TextDecorationSupport,
     $css3TextLineBreakSupport,
     $css4ImagesSupport,
     $cssBoxDecorationBreakSupport,
@@ -201,6 +202,9 @@ my @features = (
     { option => "css3-text", desc => "Toggle CSS3 Text support",
       define => "ENABLE_CSS3_TEXT", default => (isEfl() || isGtk()), value => \$css3TextSupport },
 
+    { option => "css3-text-decoration", desc => "Toggle CSS3 Text Decoration support",
+      define => "ENABLE_CSS3_TEXT_DECORATION", default => 1, value => \$css3TextDecorationSupport },
+
     { option => "css3-text-line-break", desc => "Toggle CSS3 Text Line Break support",
       define => "ENABLE_CSS3_TEXT_LINE_BREAK", default => 0, value => \$css3TextLineBreakSupport },
 
@@ -208,7 +212,7 @@ my @features = (
       define => "ENABLE_CSS_BOX_DECORATION_BREAK", default => 1, value => \$cssBoxDecorationBreakSupport },
 
     { option => "css-image-orientation", desc => "Toggle CSS image-orientation support",
-      define => "ENABLE_CSS_IMAGE_ORIENTATION", default => 0, value => \$cssImageOrientationSupport },
+      define => "ENABLE_CSS_IMAGE_ORIENTATION", default => (isEfl() || isGtk()), value => \$cssImageOrientationSupport },
 
     { option => "css-image-resolution", desc => "Toggle CSS image-resolution support",
       define => "ENABLE_CSS_IMAGE_RESOLUTION", default => (isBlackBerry() || isGtk()), value => \$cssImageResolutionSupport },
@@ -343,7 +347,7 @@ my @features = (
       define => "ENABLE_MEDIA_STATISTICS", default => 0, value => \$mediaStatisticsSupport },
 
     { option => "media-stream", desc => "Toggle Media Stream support",
-      define => "ENABLE_MEDIA_STREAM", default => isBlackBerry(), value => \$mediaStreamSupport },
+      define => "ENABLE_MEDIA_STREAM", default => (isBlackBerry() || isGtk()), value => \$mediaStreamSupport },
 
     { option => "meter-element", desc => "Toggle Meter Element support",
       define => "ENABLE_METER_ELEMENT", default => !isAppleWinWebKit(), value => \$meterElementSupport },

@@ -29,7 +29,6 @@
 #include "HTMLCanvasElement.h"
 
 #include "Attribute.h"
-#include "CanvasContextAttributes.h"
 #include "CanvasGradient.h"
 #include "CanvasPattern.h"
 #include "CanvasRenderingContext2D.h"
@@ -39,7 +38,6 @@
 #include "Frame.h"
 #include "GraphicsContext.h"
 #include "HTMLNames.h"
-#include "ImageBuffer.h"
 #include "ImageData.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"
@@ -95,9 +93,8 @@ PassRefPtr<HTMLCanvasElement> HTMLCanvasElement::create(const QualifiedName& tag
 
 HTMLCanvasElement::~HTMLCanvasElement()
 {
-    HashSet<CanvasObserver*>::iterator end = m_observers.end();
-    for (HashSet<CanvasObserver*>::iterator it = m_observers.begin(); it != end; ++it)
-        (*it)->canvasDestroyed(this);
+    for (auto it = m_observers.begin(), end = m_observers.end(); it != end; ++it)
+        (*it)->canvasDestroyed(*this);
 
     m_context.clear(); // Ensure this goes away before the ImageBuffer.
 }
@@ -109,16 +106,16 @@ void HTMLCanvasElement::parseAttribute(const QualifiedName& name, const AtomicSt
     HTMLElement::parseAttribute(name, value);
 }
 
-RenderElement* HTMLCanvasElement::createRenderer(RenderStyle& style)
+RenderElement* HTMLCanvasElement::createRenderer(PassRef<RenderStyle> style)
 {
     Frame* frame = document().frame();
     if (frame && frame->script().canExecuteScripts(NotAboutToExecuteScript)) {
         m_rendererIsCanvas = true;
-        return new RenderHTMLCanvas(*this);
+        return new RenderHTMLCanvas(*this, std::move(style));
     }
 
     m_rendererIsCanvas = false;
-    return HTMLElement::createRenderer(style);
+    return HTMLElement::createRenderer(std::move(style));
 }
 
 void HTMLCanvasElement::willAttachRenderers()
@@ -141,14 +138,14 @@ bool HTMLCanvasElement::canStartSelection() const
     return false;
 }
 
-void HTMLCanvasElement::addObserver(CanvasObserver* observer)
+void HTMLCanvasElement::addObserver(CanvasObserver& observer)
 {
-    m_observers.add(observer);
+    m_observers.add(&observer);
 }
 
-void HTMLCanvasElement::removeObserver(CanvasObserver* observer)
+void HTMLCanvasElement::removeObserver(CanvasObserver& observer)
 {
-    m_observers.remove(observer);
+    m_observers.remove(&observer);
 }
 
 void HTMLCanvasElement::setHeight(int value)
@@ -287,9 +284,8 @@ void HTMLCanvasElement::didDraw(const FloatRect& rect)
 
 void HTMLCanvasElement::notifyObserversCanvasChanged(const FloatRect& rect)
 {
-    HashSet<CanvasObserver*>::iterator end = m_observers.end();
-    for (HashSet<CanvasObserver*>::iterator it = m_observers.begin(); it != end; ++it)
-        (*it)->canvasChanged(this, rect);
+    for (auto it = m_observers.begin(), end = m_observers.end(); it != end; ++it)
+        (*it)->canvasChanged(*this, rect);
 }
 
 void HTMLCanvasElement::reset()
@@ -354,9 +350,8 @@ void HTMLCanvasElement::reset()
         }
     }
 
-    HashSet<CanvasObserver*>::iterator end = m_observers.end();
-    for (HashSet<CanvasObserver*>::iterator it = m_observers.begin(); it != end; ++it)
-        (*it)->canvasResized(this);
+    for (auto it = m_observers.begin(), end = m_observers.end(); it != end; ++it)
+        (*it)->canvasResized(*this);
 }
 
 float HTMLCanvasElement::targetDeviceScaleFactor() const
@@ -407,7 +402,7 @@ void HTMLCanvasElement::paint(GraphicsContext* context, const LayoutRect& r, boo
             if (m_presentedImage) {
                 ImageOrientationDescription orientationDescription;
 #if ENABLE(CSS_IMAGE_ORIENTATION)
-                orientationDescription.setImageOrientationEnum(renderer()->style()->imageOrientation());
+                orientationDescription.setImageOrientationEnum(renderer()->style().imageOrientation());
 #endif 
                 context->drawImage(m_presentedImage.get(), ColorSpaceDeviceRGB, pixelSnappedIntRect(r), CompositeSourceOver, orientationDescription, useLowQualityScale);
             } else

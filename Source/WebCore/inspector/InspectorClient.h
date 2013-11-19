@@ -27,7 +27,6 @@
 #ifndef InspectorClient_h
 #define InspectorClient_h
 
-#include "InspectorStateClient.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -39,7 +38,7 @@ class InspectorFrontendChannel;
 class Frame;
 class Page;
 
-class InspectorClient : public InspectorStateClient {
+class InspectorClient {
 public:
     virtual ~InspectorClient() { }
 
@@ -83,6 +82,8 @@ public:
     virtual void setContinuousPaintingEnabled(bool) { }
 
     virtual bool supportsFrameInstrumentation() { return false; }
+
+    virtual void didSetSearchingForNode(bool) { }
 
     virtual void getAllocatedObjects(HashSet<const void*>&) { }
     virtual void dumpUncountedAllocatedObjects(const HashMap<const void*, size_t>&) { }

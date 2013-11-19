@@ -445,7 +445,7 @@ AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMSc
             // We also need to adjust for the zoom level factored into CSS coordinates (bug #96361).
             if (renderer->isSVGRoot()) {
                 location = toRenderSVGRoot(renderer)->localToBorderBoxTransform().mapPoint(location);
-                zoomFactor = 1 / renderer->style()->effectiveZoom();
+                zoomFactor = 1 / renderer->style().effectiveZoom();
             }
 
             // Translate in our CSS parent coordinate space
@@ -480,12 +480,12 @@ bool SVGSVGElement::rendererIsNeeded(const RenderStyle& style)
     return StyledElement::rendererIsNeeded(style);
 }
 
-RenderElement* SVGSVGElement::createRenderer(RenderStyle&)
+RenderElement* SVGSVGElement::createRenderer(PassRef<RenderStyle> style)
 {
     if (isOutermostSVGSVGElement())
-        return new RenderSVGRoot(*this);
+        return new RenderSVGRoot(*this, std::move(style));
 
-    return new RenderSVGViewportContainer(*this);
+    return new RenderSVGViewportContainer(*this, std::move(style));
 }
 
 Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode& rootParent)
@@ -583,7 +583,7 @@ FloatSize SVGSVGElement::currentViewportSize() const
 
     if (renderer()->isSVGRoot()) {
         LayoutRect contentBoxRect = toRenderSVGRoot(renderer())->contentBoxRect();
-        return FloatSize(contentBoxRect.width() / renderer()->style()->effectiveZoom(), contentBoxRect.height() / renderer()->style()->effectiveZoom());
+        return FloatSize(contentBoxRect.width() / renderer()->style().effectiveZoom(), contentBoxRect.height() / renderer()->style().effectiveZoom());
     }
 
     FloatRect viewportRect = toRenderSVGViewportContainer(renderer())->viewport();
@@ -649,7 +649,7 @@ Length SVGSVGElement::intrinsicWidth(ConsiderCSSMode mode) const
     }
 
     ASSERT(renderer());
-    return renderer()->style()->width();
+    return renderer()->style().width();
 }
 
 Length SVGSVGElement::intrinsicHeight(ConsiderCSSMode mode) const
@@ -663,7 +663,7 @@ Length SVGSVGElement::intrinsicHeight(ConsiderCSSMode mode) const
     }
 
     ASSERT(renderer());
-    return renderer()->style()->height();
+    return renderer()->style().height();
 }
 
 AffineTransform SVGSVGElement::viewBoxToViewTransform(float viewWidth, float viewHeight) const

@@ -190,6 +190,8 @@ inline const char* roleToString(AtkRole role)
         return "AXComboBox";
     case ATK_ROLE_DOCUMENT_FRAME:
         return "AXWebArea";
+    case ATK_ROLE_EMBEDDED:
+        return "AXEmbedded";
     case ATK_ROLE_ENTRY:
         return "AXTextField";
     case ATK_ROLE_FOOTER:
@@ -367,6 +369,56 @@ String attributesOfElement(AccessibilityUIElement* element)
     return builder.toString();
 }
 
+static JSStringRef createStringWithAttributes(const Vector<AccessibilityUIElement>& elements)
+{
+    StringBuilder builder;
+
+    for (Vector<AccessibilityUIElement>::const_iterator it = elements.begin(); it != elements.end(); ++it) {
+        builder.append(attributesOfElement(const_cast<AccessibilityUIElement*>(it)));
+        builder.append("\n------------\n");
+    }
+
+    return JSStringCreateWithUTF8CString(builder.toString().utf8().data());
+}
+
+static Vector<AccessibilityUIElement> getRowHeaders(AtkTable* accessible)
+{
+    Vector<AccessibilityUIElement> rowHeaders;
+
+    int rowsCount = atk_table_get_n_rows(accessible);
+    for (int row = 0; row < rowsCount; ++row)
+        rowHeaders.append(AccessibilityUIElement(atk_table_get_row_header(accessible, row)));
+
+    return rowHeaders;
+}
+
+static Vector<AccessibilityUIElement> getColumnHeaders(AtkTable* accessible)
+{
+    Vector<AccessibilityUIElement> columnHeaders;
+
+    int columnsCount = atk_table_get_n_columns(accessible);
+    for (int column = 0; column < columnsCount; ++column)
+        columnHeaders.append(AccessibilityUIElement(atk_table_get_column_header(accessible, column)));
+
+    return columnHeaders;
+}
+
+static Vector<AccessibilityUIElement> getVisibleCells(AccessibilityUIElement* element)
+{
+    Vector<AccessibilityUIElement> visibleCells;
+
+    AtkTable* accessible = ATK_TABLE(element->platformUIElement());
+    int rowsCount = atk_table_get_n_rows(accessible);
+    int columnsCount = atk_table_get_n_columns(accessible);
+
+    for (int row = 0; row < rowsCount; ++row) {
+        for (int column = 0; column < columnsCount; ++column)
+            visibleCells.append(element->cellForColumnAndRow(column, row));
+    }
+
+    return visibleCells;
+}
+
 } // namespace
 
 JSStringRef indexRangeInTable(PlatformUIElement element, bool isRowRange)
@@ -511,7 +563,8 @@ AccessibilityUIElement AccessibilityUIElement::elementAtPoint(int x, int y)
     if (!ATK_IS_COMPONENT(m_element))
         return 0;
 
-    return AccessibilityUIElement(atk_component_ref_accessible_at_point(ATK_COMPONENT(m_element), x, y, ATK_XY_WINDOW));
+    GRefPtr<AtkObject> objectAtPoint = adoptGRef(atk_component_ref_accessible_at_point(ATK_COMPONENT(m_element), x, y, ATK_XY_WINDOW));
+    return AccessibilityUIElement(objectAtPoint ? objectAtPoint.get() : m_element);
 }
 
 AccessibilityUIElement AccessibilityUIElement::linkedUIElementAtIndex(unsigned index)
@@ -601,13 +654,7 @@ JSStringRef AccessibilityUIElement::attributesOfChildren()
     Vector<AccessibilityUIElement> children;
     getChildren(children);
 
-    StringBuilder builder;
-    for (Vector<AccessibilityUIElement>::iterator it = children.begin(); it != children.end(); ++it) {
-        builder.append(attributesOfElement(it));
-        builder.append("\n------------\n");
-    }
-
-    return JSStringCreateWithUTF8CString(builder.toString().utf8().data());
+    return createStringWithAttributes(children);
 }
 
 JSStringRef AccessibilityUIElement::parameterizedAttributeNames()
@@ -743,14 +790,30 @@ double AccessibilityUIElement::height()
 
 double AccessibilityUIElement::clickPointX()
 {
-    // Note: This is not something we have in ATK.
-    return 0;
+    if (!ATK_IS_COMPONENT(m_element))
+        return 0;
+
+    int x, y;
+    atk_component_get_position(ATK_COMPONENT(m_element), &x, &y, ATK_XY_WINDOW);
+
+    int width, height;
+    atk_component_get_size(ATK_COMPONENT(m_element), &width, &height);
+
+    return x + width / 2.0;
 }
 
 double AccessibilityUIElement::clickPointY()
 {
-    // Note: This is not something we have in ATK.
-    return 0;
+    if (!ATK_IS_COMPONENT(m_element))
+        return 0;
+
+    int x, y;
+    atk_component_get_position(ATK_COMPONENT(m_element), &x, &y, ATK_XY_WINDOW);
+
+    int width, height;
+    atk_component_get_size(ATK_COMPONENT(m_element), &width, &height);
+
+    return y + height / 2.0;
 }
 
 JSStringRef AccessibilityUIElement::orientation() const
@@ -841,8 +904,11 @@ int AccessibilityUIElement::insertionPointLineNumber()
 
 bool AccessibilityUIElement::isPressActionSupported()
 {
-    // FIXME: implement
-    return false;
+    if (!ATK_IS_ACTION(m_element))
+        return false;
+
+    const gchar* actionName = atk_action_get_name(ATK_ACTION(m_element), 0);
+    return equalIgnoringCase(actionName, String("press")) || equalIgnoringCase(actionName, String("jump"));
 }
 
 bool AccessibilityUIElement::isIncrementActionSupported()
@@ -918,14 +984,20 @@ bool AccessibilityUIElement::isChecked() const
 
 JSStringRef AccessibilityUIElement::attributesOfColumnHeaders()
 {
-    // FIXME: implement
-    return JSStringCreateWithCharacters(0, 0);
+    if (!ATK_IS_TABLE(m_element))
+        return JSStringCreateWithCharacters(0, 0);
+
+    Vector<AccessibilityUIElement> columnHeaders = getColumnHeaders(ATK_TABLE(m_element));
+    return createStringWithAttributes(columnHeaders);
 }
 
 JSStringRef AccessibilityUIElement::attributesOfRowHeaders()
 {
-    // FIXME: implement
-    return JSStringCreateWithCharacters(0, 0);
+    if (!ATK_IS_TABLE(m_element))
+        return JSStringCreateWithCharacters(0, 0);
+
+    Vector<AccessibilityUIElement> rowHeaders = getRowHeaders(ATK_TABLE(m_element));
+    return createStringWithAttributes(rowHeaders);
 }
 
 JSStringRef AccessibilityUIElement::attributesOfColumns()
@@ -942,8 +1014,11 @@ JSStringRef AccessibilityUIElement::attributesOfRows()
 
 JSStringRef AccessibilityUIElement::attributesOfVisibleCells()
 {
-    // FIXME: implement
-    return JSStringCreateWithCharacters(0, 0);
+    if (!ATK_IS_TABLE(m_element))
+        return JSStringCreateWithCharacters(0, 0);
+
+    Vector<AccessibilityUIElement> visibleCells = getVisibleCells(this);
+    return createStringWithAttributes(visibleCells);
 }
 
 JSStringRef AccessibilityUIElement::attributesOfHeader()
@@ -970,10 +1045,22 @@ JSStringRef AccessibilityUIElement::columnIndexRange()
     return indexRangeInTable(m_element, false);
 }
 
-int AccessibilityUIElement::lineForIndex(int)
+int AccessibilityUIElement::lineForIndex(int index)
 {
-    // FIXME: implement
-    return 0;
+    if (!ATK_IS_TEXT(m_element))
+        return -1;
+
+    if (index < 0 || index > atk_text_get_character_count(ATK_TEXT(m_element)))
+        return -1;
+
+    GOwnPtr<gchar> text(atk_text_get_text(ATK_TEXT(m_element), 0, index));
+    int lineNo = 0;
+    for (gchar* offset = text.get(); *offset; ++offset) {
+        if (*offset == '\n')
+            ++lineNo;
+    }
+
+    return lineNo;
 }
 
 JSStringRef AccessibilityUIElement::boundsForRange(unsigned location, unsigned length)
@@ -1019,13 +1106,22 @@ AccessibilityUIElement AccessibilityUIElement::cellForColumnAndRow(unsigned colu
 
 JSStringRef AccessibilityUIElement::selectedTextRange()
 {
-    // FIXME: implement
-    return JSStringCreateWithCharacters(0, 0);
+    if (!ATK_IS_TEXT(m_element))
+        return JSStringCreateWithCharacters(0, 0);
+
+    gint start, end;
+    g_free(atk_text_get_selection(ATK_TEXT(m_element), 0, &start, &end));
+
+    GOwnPtr<gchar> selection(g_strdup_printf("{%d, %d}", start, end - start));
+    return JSStringCreateWithUTF8CString(selection.get());
 }
 
 void AccessibilityUIElement::setSelectedTextRange(unsigned location, unsigned length)
 {
-    // FIXME: implement
+    if (!ATK_IS_TEXT(m_element))
+        return;
+
+    atk_text_set_selection(ATK_TEXT(m_element), 0, location, location + length);
 }
 
 JSStringRef AccessibilityUIElement::stringAttributeValue(JSStringRef attribute)

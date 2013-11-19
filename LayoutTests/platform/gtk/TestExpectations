@@ -42,9 +42,20 @@
 #////////////////////////////////////////////////////////////////////////////////////////
 
 # Tests need new generated expected results
-webkit.org/b/121828 fast/repaint/japanese-rl-selection-repaint-in-regions.html [ Missing ]
-webkit.org/b/121828 fast/repaint/region-painting-invalidation.html [ Missing ]
-webkit.org/b/121828 fast/repaint/region-painting-via-layout.html [ Missing ]
+webkit.org/b/122963 fast/regions/auto-size/autoheight-regions-mark.html [ Missing ]
+webkit.org/b/122963 fast/regions/flows-dependency-dynamic-remove.html [ Missing ]
+webkit.org/b/122963 fast/regions/flows-dependency-same-flow.html [ Missing ]
+webkit.org/b/122963 fast/regions/multiple-directionality-changes-in-variable-width-regions.html [ Missing ]
+webkit.org/b/122963 fast/regions/region-dynamic-after-before.html [ Missing ]
+webkit.org/b/122963 fast/regions/region-generated-content-before-after.html [ Missing ]
+webkit.org/b/122963 fast/regions/text-region-split-small-pagination.html [ Missing ]
+webkit.org/b/122963 fast/regions/top-overflow-out-of-second-region.html [ Missing ]
+
+webkit.org/b/122963 fast/repaint/japanese-rl-selection-repaint-in-regions.html [ Missing ]
+webkit.org/b/122963 fast/repaint/line-flow-with-floats-in-regions.html [ Missing ]
+webkit.org/b/122963 fast/repaint/overflow-flipped-writing-mode-block-in-regions.html [ Missing ]
+webkit.org/b/122963 fast/repaint/region-painting-invalidation.html [ Missing ]
+webkit.org/b/122963 fast/repaint/region-painting-via-layout.html [ Missing ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # Expected failures
@@ -85,8 +96,6 @@ fast/dom/Window/slow-unload-handler-only-frame-is-stopped.html [ WontFix Timeout
 # the right platform or re-written in a more platform-agnostic way.
 webkit.org/b/98348 accessibility/internal-link-anchors2.html [ WontFix Missing ]
 webkit.org/b/98348 accessibility/radio-button-group-members.html [ WontFix Missing ]
-webkit.org/b/98348 accessibility/table-attributes.html [ WontFix Missing ]
-webkit.org/b/98348 accessibility/table-sections.html [ WontFix Missing ]
 
 # Feature disabled, see: https://bugs.webkit.org/show_bug.cgi?id=85425
 webkit.org/b/98925 fast/viewport/viewport-legacy-handheldfriendly.html [ Skip ]
@@ -444,6 +453,9 @@ webkit.org/b/107194 http/tests/security/no-indexeddb-from-sandbox.html [ Skip ]
 
 # Needs to update the gtk databaseQuotaExceeded() test function to handle quota expansion requests.
 storage/websql/open-database-expand-quota.html [ Failure ]
+
+# crypto.subtle is not yet enabled
+crypto/subtle [ Skip ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Expected failures
@@ -863,18 +875,13 @@ webkit.org/b/73766 css3/unicode-bidi-isolate-aharon-failing.html [ ImageOnlyFail
 webkit.org/b/79757 fast/selectors/selection-window-inactive.html [ ImageOnlyFailure ]
 
 webkit.org/b/121684 accessibility/aria-describedby-on-input.html [ Failure ]
-webkit.org/b/98355 accessibility/aria-link-supports-press.html [ Failure ]
 webkit.org/b/98357 accessibility/aria-readonly.html [ Failure ]
 webkit.org/b/98359 accessibility/aria-text-role.html [ Failure ]
-webkit.org/b/98361 accessibility/button-press-action.html [ Failure ]
 webkit.org/b/98363 accessibility/canvas-fallback-content-2.html [ Failure ]
 webkit.org/b/98371 accessibility/loading-iframe-updates-axtree.html [ Failure ]
 webkit.org/b/98372 accessibility/onclick-handlers.html [ Failure ]
 webkit.org/b/98375 accessibility/secure-textfield-title-ui.html [ Failure ]
-webkit.org/b/101185 accessibility/svg-remote-element.html [ Failure ]
 webkit.org/b/98377 accessibility/textarea-insertion-point-line-number.html [ Failure ]
-webkit.org/b/98378 accessibility/textarea-line-for-index.html [ Failure ]
-webkit.org/b/98379 accessibility/textarea-selected-text-range.html [ Failure ]
 webkit.org/b/98380 accessibility/th-as-title-ui.html [ Failure ]
 webkit.org/b/98382 accessibility/visible-elements.html [ Failure ]
 
@@ -1080,8 +1087,6 @@ webkit.org/b/60206 http/tests/navigation/response204.html [ Failure ]
 
 webkit.org/b/61630 fast/events/dropzone-005.html [ Failure ]
 
-webkit.org/b/67713 accessibility/textbox-role-reports-selection.html [ Failure ]
-
 webkit.org/b/68278 http/tests/history/back-with-fragment-change.php [ Failure ]
 
 webkit.org/b/68512 accessibility/aria-hidden-updates-alldescendants.html [ Failure ]
@@ -1216,8 +1221,6 @@ webkit.org/b/98613 css3/masking/clip-path-reference.html [ ImageOnlyFailure ]
 
 webkit.org/b/98950 transitions/blendmode-transitions.html [ Failure ]
 
-webkit.org/b/99825 accessibility/title-ui-element-correctness.html [ Failure ]
-
 webkit.org/b/98718 svg/animations/animate-css-xml-attributeType.html [ Failure ]
 
 webkit.org/b/100424 editing/selection/user-select-all-selection.html [ Failure ]
@@ -1316,12 +1319,8 @@ webkit.org/b/113127 media/track/track-prefer-captions.html [ Timeout ]
 webkit.org/b/113772 http/tests/w3c/webperf/submission/Google/resource-timing/html/test_resource_iframe_self_navigation.html [ Failure ]
 webkit.org/b/113772 http/tests/w3c/webperf/submission/Google/resource-timing/html/test_resource_cached.html [ Failure ]
 
-webkit.org/b/114251 accessibility/svg-group-element-with-title.html [ Failure ]
-
 webkit.org/b/114259 platform/gtk/accessibility/aria-slider-required-attributes.html [ Failure ]
 webkit.org/b/114259 platform/gtk/accessibility/combo-box-collapsed-selection-changed.html [ Failure ]
-
-webkit.org/b/118577 platform/gtk/accessibility/replaced-objects-in-anonymous-blocks.html [ Failure ]
 
 webkit.org/b/114612 editing/style/block-style-005.html [ Failure ]
 
@@ -1402,8 +1401,6 @@ webkit.org/b/120596 css3/background/background-repeat-space-padding.html [ Image
 webkit.org/b/120596 css3/masking/mask-repeat-space-border.html [ ImageOnlyFailure ]
 webkit.org/b/120596 css3/masking/mask-repeat-space-content.html [ ImageOnlyFailure ]
 webkit.org/b/120596 css3/masking/mask-repeat-space-padding.html [ ImageOnlyFailure ]
-
-webkit.org/b/84045 accessibility/image-map1.html [ Failure ]
 
 webkit.org/b/120836 fast/regions/text-region-split-vertical-rl.html [ Failure ]
 

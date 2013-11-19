@@ -31,7 +31,7 @@ class CounterNode;
 
 class RenderCounter FINAL : public RenderText {
 public:
-    explicit RenderCounter(Document&, const CounterContent&);
+    RenderCounter(Document&, const CounterContent&);
     virtual ~RenderCounter();
 
     static void destroyCounterNodes(RenderObject*);
@@ -62,6 +62,7 @@ private:
     friend class CounterNode;
 };
 
+template<> inline bool isRendererOfType<const RenderCounter>(const RenderObject& renderer) { return renderer.isCounter(); }
 RENDER_OBJECT_TYPE_CASTS(RenderCounter, isCounter())
 
 } // namespace WebCore

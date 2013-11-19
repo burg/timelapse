@@ -36,7 +36,7 @@ WebInspector.BreakpointTreeElement = function(breakpoint, className, title)
 
     if (!title)
         this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.LocationDidChange, this._breakpointLocationDidChange, this);
-    this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisabledStateDidChange, this._updateStatus, this);
+    this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.ModeDidChange, this._updateStatus, this);
     this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.ResolvedStateDidChange, this._updateStatus, this);
 
     this._statusImageElement = document.createElement("img");
@@ -56,6 +56,7 @@ WebInspector.BreakpointTreeElement.GenericLineIconStyleClassName = "breakpoint-g
 WebInspector.BreakpointTreeElement.StyleClassName = "breakpoint";
 WebInspector.BreakpointTreeElement.StatusImageElementStyleClassName = "status-image";
 WebInspector.BreakpointTreeElement.StatusImageResolvedStyleClassName = "resolved";
+WebInspector.BreakpointTreeElement.StatusImageAutoContinueStyleClassName = "auto-continue";
 WebInspector.BreakpointTreeElement.StatusImageDisabledStyleClassName = "disabled";
 WebInspector.BreakpointTreeElement.FormattedLocationStyleClassName = "formatted-location";
 
@@ -80,13 +81,13 @@ WebInspector.BreakpointTreeElement.prototype = {
 
     onenter: function()
     {
-        this._breakpoint.disabled = !this._breakpoint.disabled;
+        this._breakpoint.mode = this._breakpoint.nextMode;
         return true;
     },
 
     onspace: function()
     {
-        this._breakpoint.disabled = !this._breakpoint.disabled;
+        this._breakpoint.mode = this._breakpoint.nextMode;
         return true;
     },
 
@@ -124,10 +125,15 @@ WebInspector.BreakpointTreeElement.prototype = {
 
     _updateStatus: function()
     {
-        if (this._breakpoint.disabled)
+        if (this._breakpoint.mode === WebInspector.Breakpoint.Mode.Disabled)
             this._statusImageElement.classList.add(WebInspector.BreakpointTreeElement.StatusImageDisabledStyleClassName);
         else
             this._statusImageElement.classList.remove(WebInspector.BreakpointTreeElement.StatusImageDisabledStyleClassName);
+
+        if (this._breakpoint.mode === WebInspector.Breakpoint.Mode.AutoContinue)
+            this._statusImageElement.classList.add(WebInspector.BreakpointTreeElement.StatusImageAutoContinueStyleClassName);
+        else
+            this._statusImageElement.classList.remove(WebInspector.BreakpointTreeElement.StatusImageAutoContinueStyleClassName);
 
         if (this._breakpoint.resolved)
             this._statusImageElement.classList.add(WebInspector.BreakpointTreeElement.StatusImageResolvedStyleClassName);
@@ -142,7 +148,7 @@ WebInspector.BreakpointTreeElement.prototype = {
         // The Breakpoint has a new display SourceCode. The sidebar will remove us. Stop listening to the breakpoint.
         if (event.data.oldDisplaySourceCode === this._breakpoint.displaySourceCode) {
             this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.LocationDidChange, this._breakpointLocationDidChange, this);
-            this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisabledStateDidChange, this._updateStatus, this);
+            this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.ModeDidChange, this._updateStatus, this);
             this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.ResolvedStateDidChange, this._updateStatus, this);
             return;
         }
@@ -158,7 +164,7 @@ WebInspector.BreakpointTreeElement.prototype = {
 
     _statusImageElementClicked: function(event)
     {
-        this._breakpoint.disabled = !this._breakpoint.disabled;
+        this._breakpoint.mode = this._breakpoint.nextMode;
     }
 };
 

@@ -79,17 +79,16 @@ WebInspector.ScriptContentView.prototype = {
 
     get supplementalRepresentedObjects()
     {
-        for (var groupKey in WebInspector.probeManager.probeGroups) {
-            if (WebInspector.probeManager.probeGroups[groupKey].sourceCode === this._script)
-                return [WebInspector.probeManager.probeGroups[groupKey]]
-        }
-
-        if (isNaN(this._textEditor.executionLineNumber))
-            return [];
+        var objects = WebInspector.probeManager.probeSets.filter(function(probeSet) {
+            return this._script === probeSet.breakpoint.sourceCodeLocation.sourceCode;
+        });
 
         // If the SourceCodeTextEditor has an executionLineNumber, we can assume
         // it is always the active call frame.
-        return [WebInspector.debuggerManager.activeCallFrame];
+        if (!isNaN(this._textEditor.executionLineNumber))
+            objects.push(WebInspector.debuggerManager.activeCallFrame);
+
+        return objects;
     },
 
     revealPosition: function(position, textRangeToSelect, forceUnformatted)

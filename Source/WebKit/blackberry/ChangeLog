@@ -1,3 +1,36 @@
+2013-11-07  Thiago de Barros Lacerda  <thiago.lacerda@openbossa.org>
+
+        Changing MediaStreamDescriptor to MediaStreamPrivate
+        https://bugs.webkit.org/show_bug.cgi?id=123935
+
+        Reviewed by Eric Carlson.
+
+        * WebCoreSupport/UserMediaClientImpl.cpp:
+        (WebCore::toMediaStreamPrivate):
+        (WebCore::WebUserMediaRequestClientImpl::requestSucceeded):
+
+2013-11-01  Thiago de Barros Lacerda  <thiago.lacerda@openbossa.org>
+
+        Removing MediaStreamTrackVector and MediaStreamSourceVector typedefs
+        https://bugs.webkit.org/show_bug.cgi?id=123648
+
+        Reviewed by Eric Carlson.
+
+        * WebCoreSupport/UserMediaClientImpl.cpp:
+        (WebCore::toMediaStreamDescriptor):
+        (WebCore::UserMediaClientImpl::requestUserMedia):
+        * WebCoreSupport/UserMediaClientImpl.h:
+
+2013-10-31  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Remove InspectorState
+        https://bugs.webkit.org/show_bug.cgi?id=123547
+
+        Reviewed by Timothy Hatcher.
+
+        * WebCoreSupport/InspectorClientBlackBerry.cpp:
+        * WebCoreSupport/InspectorClientBlackBerry.h:
+
 2013-10-17  Jacky Jiang  <zhajiang@blackberry.com>
 
         [BlackBerry] Improve the viewport of some websites like mobilesyrup.com/2013/08/25/moto-x-review/

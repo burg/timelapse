@@ -71,7 +71,6 @@ class NodeRareData;
 class QualifiedName;
 class RadioNodeList;
 class RegisteredEventListener;
-class RenderArena;
 class RenderBox;
 class RenderBoxModelObject;
 class RenderObject;
@@ -224,6 +223,7 @@ public:
     bool isTextNode() const { return getFlag(IsTextFlag); }
     bool isHTMLElement() const { return getFlag(IsHTMLFlag); }
     bool isSVGElement() const { return getFlag(IsSVGFlag); }
+    bool isMathMLElement() const { return getFlag(IsMathMLFlag); }
 
     bool isPseudoElement() const { return pseudoId() != NOPSEUDO; }
     bool isBeforePseudoElement() const { return pseudoId() == BEFORE; }
@@ -495,15 +495,9 @@ public:
     void showTreeForThisAcrossFrame() const;
 #endif
 
-    void invalidateNodeListCachesInAncestors(const QualifiedName* attrName = 0, Element* attributeOwnerElement = 0);
+    void invalidateNodeListAndCollectionCachesInAncestors(const QualifiedName* attrName = 0, Element* attributeOwnerElement = 0);
     NodeListsNodeData* nodeLists();
     void clearNodeLists();
-
-    PassRefPtr<NodeList> getElementsByTagName(const AtomicString&);
-    PassRefPtr<NodeList> getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName);
-    PassRefPtr<NodeList> getElementsByName(const String& elementName);
-    PassRefPtr<NodeList> getElementsByClassName(const String& classNames);
-    PassRefPtr<RadioNodeList> radioNodeList(const AtomicString&);
 
     virtual bool willRespondToMouseMoveEvents();
     virtual bool willRespondToMouseClickEvents();
@@ -596,6 +590,7 @@ private:
         HasEventTargetDataFlag = 1 << 21,
         NeedsNodeRenderingTraversalSlowPathFlag = 1 << 22,
         IsInShadowTreeFlag = 1 << 23,
+        IsMathMLFlag = 1 << 24,
 
         DefaultNodeFlags = IsParsingChildrenFinishedFlag
     };
@@ -622,6 +617,7 @@ protected:
         CreateDocument = CreateContainer | InDocumentFlag,
         CreateInsertionPoint = CreateHTMLElement | NeedsNodeRenderingTraversalSlowPathFlag,
         CreateEditingText = CreateText | IsEditingTextFlag,
+        CreateMathMLElement = CreateStyledElement | IsMathMLFlag,
     };
     Node(Document*, ConstructionType);
 

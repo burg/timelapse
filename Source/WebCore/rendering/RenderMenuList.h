@@ -43,7 +43,7 @@ class RenderText;
 class RenderMenuList FINAL : public RenderFlexibleBox, private PopupMenuClient {
 
 public:
-    explicit RenderMenuList(HTMLSelectElement&);
+    RenderMenuList(HTMLSelectElement&, PassRef<RenderStyle>);
     virtual ~RenderMenuList();
 
     HTMLSelectElement& selectElement() const;
@@ -149,6 +149,7 @@ private:
     bool m_popupIsVisible;
 };
 
+template<> inline bool isRendererOfType<const RenderMenuList>(const RenderObject& renderer) { return renderer.isMenuList(); }
 RENDER_OBJECT_TYPE_CASTS(RenderMenuList, isMenuList())
 
 }

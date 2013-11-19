@@ -27,6 +27,7 @@
 #include "SimpleLineLayout.h"
 
 #include "FontCache.h"
+#include "Frame.h"
 #include "GraphicsContext.h"
 #include "HitTestLocation.h"
 #include "HitTestRequest.h"
@@ -38,6 +39,7 @@
 #include "RenderStyle.h"
 #include "RenderText.h"
 #include "RenderView.h"
+#include "Settings.h"
 #include "SimpleLineLayoutResolver.h"
 #include "Text.h"
 #include "TextPaintStyle.h"
@@ -47,13 +49,49 @@
 namespace WebCore {
 namespace SimpleLineLayout {
 
-static inline bool isWhitespace(UChar character)
+template <typename CharacterType>
+static bool canUseForText(const CharacterType* text, unsigned length, const SimpleFontData& fontData)
 {
-    return character == ' ' || character == '\t' || character == '\n';
+    for (unsigned i = 0; i < length; ++i) {
+        UChar character = text[i];
+        if (character == ' ')
+            continue;
+
+        // These would be easy to support.
+        if (character == noBreakSpace)
+            return false;
+        if (character == softHyphen)
+            return false;
+
+        UCharDirection direction = u_charDirection(character);
+        if (direction == U_RIGHT_TO_LEFT || direction == U_RIGHT_TO_LEFT_ARABIC
+            || direction == U_RIGHT_TO_LEFT_EMBEDDING || direction == U_RIGHT_TO_LEFT_OVERRIDE
+            || direction == U_LEFT_TO_RIGHT_EMBEDDING || direction == U_LEFT_TO_RIGHT_OVERRIDE
+            || direction == U_POP_DIRECTIONAL_FORMAT || direction == U_BOUNDARY_NEUTRAL)
+            return false;
+
+        if (!fontData.glyphForCharacter(character))
+            return false;
+    }
+    return true;
+}
+
+static bool canUseForText(const RenderText& textRenderer, const SimpleFontData& fontData)
+{
+    if (textRenderer.is8Bit())
+        return canUseForText(textRenderer.characters8(), textRenderer.textLength(), fontData);
+    return canUseForText(textRenderer.characters16(), textRenderer.textLength(), fontData);
 }
 
 bool canUseFor(const RenderBlockFlow& flow)
 {
+#if !PLATFORM(MAC) && !PLATFORM(GTK) && !PLATFORM(EFL)
+    // FIXME: Non-mac platforms are hitting ASSERT(run.charactersLength() >= run.length())
+    // https://bugs.webkit.org/show_bug.cgi?id=123338
+    return false;
+#endif
+    if (!flow.frame().settings().simpleLineLayoutEnabled())
+        return false;
     if (!flow.firstChild())
         return false;
     // This currently covers <blockflow>#text</blockflow> case.
@@ -73,6 +111,8 @@ bool canUseFor(const RenderBlockFlow& flow)
         return false;
     if (flow.isRubyText() || flow.isRubyBase())
         return false;
+    if (flow.parent()->isDeprecatedFlexibleBox())
+        return false;
     // These tests only works during layout. Outside layout this function may give false positives.
     if (flow.view().layoutState()) {
 #if ENABLE(CSS_SHAPES)
@@ -82,9 +122,10 @@ bool canUseFor(const RenderBlockFlow& flow)
         if (flow.view().layoutState()->m_columnInfo)
             return false;
     }
-    const RenderStyle& style = *flow.style();
-    // It shoudn't be hard to support other alignments.
-    if (style.textAlign() != LEFT && style.textAlign() != WEBKIT_LEFT && style.textAlign() != TASTART)
+    const RenderStyle& style = flow.style();
+    if (style.textDecorationsInEffect() != TextDecorationNone)
+        return false;
+    if (style.textAlign() == JUSTIFY)
         return false;
     // Non-visible overflow should be pretty easy to support.
     if (style.overflowX() != OVISIBLE || style.overflowY() != OVISIBLE)
@@ -122,7 +163,7 @@ bool canUseFor(const RenderBlockFlow& flow)
     if (style.resolvedShapeInside())
         return true;
 #endif
-    if (style.textOverflow() || (flow.isAnonymousBlock() && flow.parent()->style()->textOverflow()))
+    if (style.textOverflow() || (flow.isAnonymousBlock() && flow.parent()->style().textOverflow()))
         return false;
     if (style.hasPseudoStyle(FIRST_LINE) || style.hasPseudoStyle(FIRST_LETTER))
         return false;
@@ -135,135 +176,197 @@ bool canUseFor(const RenderBlockFlow& flow)
     if (style.borderFit() == BorderFitLines)
         return false;
     const RenderText& textRenderer = toRenderText(*flow.firstChild());
-    if (textRenderer.isCombineText() || textRenderer.isCounter() || textRenderer.isQuote() || textRenderer.isSVGInlineText() || textRenderer.isTextFragment())
+    if (textRenderer.isCombineText() || textRenderer.isCounter() || textRenderer.isQuote() || textRenderer.isTextFragment()
+#if ENABLE(SVG)
+        || textRenderer.isSVGInlineText()
+#endif
+        )
         return false;
     if (style.font().codePath(TextRun(textRenderer.text())) != Font::Simple)
         return false;
-    if (!textRenderer.knownToHaveNoOverflowAndNoFallbackFonts())
+    if (style.font().isSVGFont())
         return false;
 
-    unsigned length = textRenderer.textLength();
-    unsigned consecutiveSpaceCount = 0;
-    for (unsigned i = 0; i < length; ++i) {
-        // This rejects anything with more than one consecutive whitespace, except at the beginning or end.
-        // This is because we don't currently do subruns within lines. Fixing this would improve coverage significantly.
-        UChar character = textRenderer.characterAt(i);
-        if (isWhitespace(character))
-            ++consecutiveSpaceCount;
-        else {
-            if (consecutiveSpaceCount != i && consecutiveSpaceCount > 1)
-                return false;
-            consecutiveSpaceCount = 0;
-        }
-        // These would be easy to support.
-        if (character == noBreakSpace)
-            return false;
-        if (character == softHyphen)
-            return false;
+    // We assume that all lines have metrics based purely on the primary font.
+    auto& primaryFontData = *style.font().primaryFont();
+    if (primaryFontData.isLoading())
+        return false;
+    if (!canUseForText(textRenderer, primaryFontData))
+        return false;
 
-        static const UChar lowestRTLCharacter = 0x590;
-        if (character >= lowestRTLCharacter) {
-            UCharDirection direction = u_charDirection(character);
-            if (direction == U_RIGHT_TO_LEFT || direction == U_RIGHT_TO_LEFT_ARABIC
-                || direction == U_RIGHT_TO_LEFT_EMBEDDING || direction == U_RIGHT_TO_LEFT_OVERRIDE
-                || direction == U_LEFT_TO_RIGHT_EMBEDDING || direction == U_LEFT_TO_RIGHT_OVERRIDE)
-                return false;
-        }
-    }
     return true;
 }
 
-static inline unsigned skipWhitespaces(const RenderText& textRenderer, unsigned offset, unsigned length)
+static inline bool isWhitespace(UChar character)
 {
-    for (; offset < length; ++offset) {
-        if (!isWhitespace(textRenderer.characterAt(offset)))
-            break;
-    }
-    return offset;
+    return character == ' ' || character == '\t' || character == '\n';
 }
 
-static float textWidth(const RenderText& text, unsigned from, unsigned length, float xPosition, const RenderStyle& style)
+template <typename CharacterType>
+static inline unsigned skipWhitespaces(const CharacterType* text, unsigned offset, unsigned length)
 {
-    if (style.font().isFixedPitch() || (!from && length == text.textLength()))
-        return text.width(from, length, style.font(), xPosition, nullptr, nullptr);
+    for (; offset < length; ++offset) {
+        if (!isWhitespace(text[offset]))
+            return offset;
+    }
+    return length;
+}
+
+template <typename CharacterType>
+static float textWidth(const RenderText& renderText, const CharacterType* text, unsigned textLength, unsigned from, unsigned to, float xPosition, const RenderStyle& style)
+{
+    if (style.font().isFixedPitch() || (!from && to == textLength))
+        return renderText.width(from, to - from, style.font(), xPosition, nullptr, nullptr);
     // FIXME: Add templated UChar/LChar paths.
-    TextRun run = text.is8Bit() ? TextRun(text.characters8() + from, length) : TextRun(text.characters16() + from, length);
-    run.setCharactersLength(text.textLength() - from);
+    TextRun run(text + from, to - from);
+    run.setXPos(xPosition);
+    run.setCharactersLength(textLength - from);
     ASSERT(run.charactersLength() >= run.length());
 
-    run.setXPos(xPosition);
     return style.font().width(run);
 }
 
-std::unique_ptr<Lines> createLines(RenderBlockFlow& flow)
+static float computeLineLeft(ETextAlign textAlign, float remainingWidth)
 {
-    auto lines = std::make_unique<Lines>();
+    switch (textAlign) {
+    case LEFT:
+    case WEBKIT_LEFT:
+    case TASTART:
+        return 0;
+    case RIGHT:
+    case WEBKIT_RIGHT:
+    case TAEND:
+        return std::max<float>(remainingWidth, 0);
+    case CENTER:
+    case WEBKIT_CENTER:
+        return std::max<float>(remainingWidth / 2, 0);
+    case JUSTIFY:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+static void adjustRunOffsets(Vector<Run, 4>& lineRuns, ETextAlign textAlign, float lineWidth, float availableWidth)
+{
+    float lineLeft = computeLineLeft(textAlign, availableWidth - lineWidth);
+    for (unsigned i = 0; i < lineRuns.size(); ++i) {
+        lineRuns[i].left = floor(lineLeft + lineRuns[i].left);
+        lineRuns[i].right = ceil(lineLeft + lineRuns[i].right);
+    }
+}
+
+template <typename CharacterType>
+void createTextRuns(Layout::RunVector& runs, unsigned& lineCount, RenderBlockFlow& flow, RenderText& textRenderer)
+{
+    const RenderStyle& style = flow.style();
+
+    ETextAlign textAlign = style.textAlign();
+    float wordTrailingSpaceWidth = style.font().width(TextRun(&space, 1));
+
+    const CharacterType* text = textRenderer.text()->getCharacters<CharacterType>();
+    const unsigned textLength = textRenderer.textLength();
+
+    LazyLineBreakIterator lineBreakIterator(textRenderer.text(), style.locale());
+
+    unsigned lineEnd = 0;
+    while (lineEnd < textLength) {
+        lineEnd = skipWhitespaces(text, lineEnd, textLength);
+        unsigned lineStart = lineEnd;
+        unsigned wordEnd = lineEnd;
+        LineWidth lineWidth(flow, false, DoNotIndentText);
+
+        Vector<Run, 4> lineRuns;
+        lineRuns.uncheckedAppend(Run(lineStart, 0));
+
+        while (wordEnd < textLength) {
+            ASSERT(!isWhitespace(text[wordEnd]));
+
+            bool wordIsPrecededByWhitespace = wordEnd > lineStart && isWhitespace(text[wordEnd - 1]);
+            unsigned wordStart = wordIsPrecededByWhitespace ? wordEnd - 1 : wordEnd;
+
+            wordEnd = nextBreakablePosition<CharacterType, false>(lineBreakIterator, text, textLength, wordEnd + 1);
+
+            bool measureWithEndSpace = wordEnd < textLength && text[wordEnd] == ' ';
+            unsigned wordMeasureEnd = measureWithEndSpace ? wordEnd + 1 : wordEnd;
+
+            float wordWidth = textWidth(textRenderer, text, textLength, wordStart, wordMeasureEnd, lineWidth.committedWidth(), style);
+
+            if (measureWithEndSpace)
+                wordWidth -= wordTrailingSpaceWidth;
+
+            lineWidth.addUncommittedWidth(wordWidth);
+
+            // Move to the next line if the current one is full and we have something on it.
+            if (!lineWidth.fitsOnLine() && lineWidth.committedWidth())
+                break;
+
+            if (wordStart > lineEnd) {
+                // There were more than one consecutive whitespace.
+                ASSERT(wordIsPrecededByWhitespace);
+                // Include space to the end of the previous run.
+                lineRuns.last().textLength++;
+                lineRuns.last().right += wordTrailingSpaceWidth;
+                // Start a new run on the same line.
+                lineRuns.append(Run(wordStart + 1, lineRuns.last().right));
+            }
+
+            lineWidth.commit();
+
+            lineRuns.last().right = lineWidth.committedWidth();
+            lineRuns.last().textLength = wordEnd - lineRuns.last().textOffset;
+
+            lineEnd = wordEnd;
+            wordEnd = skipWhitespaces(text, wordEnd, textLength);
+
+            if (!lineWidth.fitsOnLine()) {
+                // The first run on the line overflows.
+                ASSERT(lineRuns.size() == 1);
+                break;
+            }
+        }
+        if (lineStart == lineEnd)
+            continue;
+
+        adjustRunOffsets(lineRuns, textAlign, lineWidth.committedWidth(), lineWidth.availableWidth());
+
+        for (unsigned i = 0; i < lineRuns.size(); ++i)
+            runs.append(lineRuns[i]);
+
+        runs.last().isEndOfLine = true;
+        ++lineCount;
+    }
+}
+
+std::unique_ptr<Layout> create(RenderBlockFlow& flow)
+{
+    Layout::RunVector runs;
+    unsigned lineCount = 0;
 
     RenderText& textRenderer = toRenderText(*flow.firstChild());
     ASSERT(!textRenderer.firstTextBox());
 
-    const RenderStyle& style = *flow.style();
-    const unsigned textLength = textRenderer.textLength();
-
-    float wordTrailingSpaceWidth = style.font().width(TextRun(&space, 1));
-
-    LazyLineBreakIterator lineBreakIterator(textRenderer.text(), style.locale());
-    int nextBreakable = -1;
-
-    unsigned lineEndOffset = 0;
-    while (lineEndOffset < textLength) {
-        lineEndOffset = skipWhitespaces(textRenderer, lineEndOffset, textLength);
-        unsigned lineStartOffset = lineEndOffset;
-        unsigned runEndOffset = lineEndOffset;
-        LineWidth lineWidth(flow, false, DoNotIndentText);
-        while (runEndOffset < textLength) {
-            ASSERT(!isWhitespace(textRenderer.characterAt(runEndOffset)));
-
-            bool previousWasSpaceBetweenRuns = runEndOffset > lineStartOffset && isWhitespace(textRenderer.characterAt(runEndOffset - 1));
-            unsigned runStartOffset = previousWasSpaceBetweenRuns ? runEndOffset - 1 : runEndOffset;
-
-            ++runEndOffset;
-            while (runEndOffset < textLength) {
-                if (runEndOffset > lineStartOffset && isBreakable(lineBreakIterator, runEndOffset, nextBreakable, false))
-                    break;
-                ++runEndOffset;
-            }
-
-            unsigned runLength = runEndOffset - runStartOffset;
-            bool includeEndSpace = runEndOffset < textLength && textRenderer.characterAt(runEndOffset) == ' ';
-            float wordWidth;
-            if (includeEndSpace)
-                wordWidth = textWidth(textRenderer, runStartOffset, runLength + 1, lineWidth.committedWidth(), style) - wordTrailingSpaceWidth;
-            else
-                wordWidth = textWidth(textRenderer, runStartOffset, runLength, lineWidth.committedWidth(), style);
-
-            lineWidth.addUncommittedWidth(wordWidth);
-            if (!lineWidth.fitsOnLine()) {
-                if (!lineWidth.committedWidth()) {
-                    lineWidth.commit();
-                    lineEndOffset = runEndOffset;
-                }
-                break;
-            }
-            lineWidth.commit();
-            lineEndOffset = runEndOffset;
-            runEndOffset = skipWhitespaces(textRenderer, runEndOffset, textLength);
-        }
-        if (lineStartOffset == lineEndOffset)
-            continue;
-
-        Line line;
-        line.textOffset = lineStartOffset;
-        line.textLength = lineEndOffset - lineStartOffset;
-        line.width = lineWidth.committedWidth();
-
-        lines->append(line);
-    }
+    if (textRenderer.is8Bit())
+        createTextRuns<LChar>(runs, lineCount, flow, textRenderer);
+    else
+        createTextRuns<UChar>(runs, lineCount, flow, textRenderer);
 
     textRenderer.clearNeedsLayout();
 
-    lines->shrinkToFit();
-    return lines;
+    return Layout::create(runs, lineCount);
+}
+
+std::unique_ptr<Layout> Layout::create(const RunVector& runVector, unsigned lineCount)
+{
+    void* slot = WTF::fastMalloc(sizeof(Layout) + sizeof(Run) * runVector.size());
+    return std::unique_ptr<Layout>(new (NotNull, slot) Layout(runVector, lineCount));
+}
+
+Layout::Layout(const RunVector& runVector, unsigned lineCount)
+    : m_lineCount(lineCount)
+    , m_runCount(runVector.size())
+{
+    memcpy(m_runs, runVector.data(), m_runCount * sizeof(Run));
 }
 
 }

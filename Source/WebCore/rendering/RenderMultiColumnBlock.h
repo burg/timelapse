@@ -35,7 +35,7 @@ class RenderMultiColumnFlowThread;
 
 class RenderMultiColumnBlock FINAL : public RenderBlockFlow {
 public:
-    explicit RenderMultiColumnBlock(Element&);
+    RenderMultiColumnBlock(Element&, PassRef<RenderStyle>);
     Element& element() const { return toElement(nodeForNonAnonymous()); }
 
     LayoutUnit columnHeightAvailable() const { return m_columnHeightAvailable; }
@@ -45,7 +45,7 @@ public:
 
     RenderMultiColumnFlowThread* flowThread() const { return m_flowThread; }
 
-    bool requiresBalancing() const { return !m_columnHeightAvailable || style()->columnFill() == ColumnFillBalance; }
+    bool requiresBalancing() const { return !m_columnHeightAvailable || style().columnFill() == ColumnFillBalance; }
 
 private:
     virtual bool isRenderMultiColumnBlock() const { return true; }

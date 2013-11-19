@@ -37,12 +37,22 @@ namespace WebCore {
 class Element;
 class RenderStyle;
 
+// RenderNamedFlowFragment represents a region that is responsible for the fragmentation of
+// the RenderNamedFlowThread content.
+//
+// A RenderNamedFlowFragment object is created as an anonymous child for a RenderBlockFlow object
+// that has a valid -webkit-flow-from property.
+//
+// This allows a non-replaced block to behave like a region if needed, following the CSSRegions specification:
+// http://dev.w3.org/csswg/css-regions/#the-flow-from-property.
+// list-item, table-caption, table-cell can become regions in addition to block | inline-block.
+
 class RenderNamedFlowFragment FINAL : public RenderRegion {
 public:
-    explicit RenderNamedFlowFragment(Document&);
+    RenderNamedFlowFragment(Document&, PassRef<RenderStyle>);
     virtual ~RenderNamedFlowFragment();
 
-    void setStyleForNamedFlowFragment(const RenderStyle*);
+    static PassRef<RenderStyle> createStyle(const RenderStyle& parentStyle);
 
     virtual bool isRenderNamedFlowFragment() const OVERRIDE FINAL { return true; }
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;

@@ -51,7 +51,6 @@
 #include "TextEvent.h"
 #include "TextIterator.h"
 #include "WheelEvent.h"
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -177,7 +176,7 @@ void TextFieldInputType::forwardEvent(Event* event)
         if (event->type() == eventNames().blurEvent) {
             if (RenderTextControlInnerBlock* innerTextRenderer = innerTextElement()->renderer()) {
                 if (RenderLayer* innerLayer = innerTextRenderer->layer()) {
-                    IntSize scrollOffset(!renderTextControl->style()->isLeftToRightDirection() ? innerLayer->scrollWidth() : 0, 0);
+                    IntSize scrollOffset(!renderTextControl->style().isLeftToRightDirection() ? innerLayer->scrollWidth() : 0, 0);
                     innerLayer->scrollToOffset(scrollOffset, RenderLayer::ScrollOffsetClamped);
                 }
             }
@@ -201,9 +200,9 @@ bool TextFieldInputType::shouldSubmitImplicitly(Event* event)
     return (event->type() == eventNames().textInputEvent && event->eventInterface() == TextEventInterfaceType && static_cast<TextEvent*>(event)->data() == "\n") || InputType::shouldSubmitImplicitly(event);
 }
 
-RenderElement* TextFieldInputType::createRenderer(RenderStyle&) const
+RenderElement* TextFieldInputType::createRenderer(PassRef<RenderStyle> style) const
 {
-    return new RenderTextControlSingleLine(element());
+    return new RenderTextControlSingleLine(element(), std::move(style));
 }
 
 bool TextFieldInputType::needsContainer() const

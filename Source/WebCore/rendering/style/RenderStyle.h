@@ -575,13 +575,16 @@ public:
     TextDecoration textDecorationsInEffect() const { return static_cast<TextDecoration>(inherited_flags._text_decorations); }
     TextDecoration textDecoration() const { return static_cast<TextDecoration>(visual->textDecoration); }
 #if ENABLE(CSS3_TEXT)
-    TextDecorationStyle textDecorationStyle() const { return static_cast<TextDecorationStyle>(rareNonInheritedData->m_textDecorationStyle); }
     TextAlignLast textAlignLast() const { return static_cast<TextAlignLast>(rareInheritedData->m_textAlignLast); }
     TextJustify textJustify() const { return static_cast<TextJustify>(rareInheritedData->m_textJustify); }
+#endif // CSS3_TEXT
+#if ENABLE(CSS3_TEXT_DECORATION)
+    TextDecorationStyle textDecorationStyle() const { return static_cast<TextDecorationStyle>(rareNonInheritedData->m_textDecorationStyle); }
+    TextDecorationSkip textDecorationSkip() const { return static_cast<TextDecorationSkip>(rareInheritedData->m_textDecorationSkip); }
     TextUnderlinePosition textUnderlinePosition() const { return static_cast<TextUnderlinePosition>(rareInheritedData->m_textUnderlinePosition); }
 #else
     TextDecorationStyle textDecorationStyle() const { return TextDecorationStyleSolid; }
-#endif // CSS3_TEXT
+#endif
     int wordSpacing() const;
     int letterSpacing() const;
 
@@ -1160,11 +1163,14 @@ public:
     void setTextDecorationsInEffect(TextDecoration v) { inherited_flags._text_decorations = v; }
     void setTextDecoration(TextDecoration v) { SET_VAR(visual, textDecoration, v); }
 #if ENABLE(CSS3_TEXT)
-    void setTextDecorationStyle(TextDecorationStyle v) { SET_VAR(rareNonInheritedData, m_textDecorationStyle, v); }
     void setTextAlignLast(TextAlignLast v) { SET_VAR(rareInheritedData, m_textAlignLast, v); }
     void setTextJustify(TextJustify v) { SET_VAR(rareInheritedData, m_textJustify, v); }
-    void setTextUnderlinePosition(TextUnderlinePosition v) { SET_VAR(rareInheritedData, m_textUnderlinePosition, v); }
 #endif // CSS3_TEXT
+#if ENABLE(CSS3_TEXT_DECORATION)
+    void setTextDecorationStyle(TextDecorationStyle v) { SET_VAR(rareNonInheritedData, m_textDecorationStyle, v); }
+    void setTextDecorationSkip(TextDecorationSkip skip) { SET_VAR(rareInheritedData, m_textDecorationSkip, skip); }
+    void setTextUnderlinePosition(TextUnderlinePosition v) { SET_VAR(rareInheritedData, m_textUnderlinePosition, v); }
+#endif
     void setDirection(TextDirection v) { inherited_flags._direction = v; }
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     void setSpecifiedLineHeight(Length v);
@@ -1382,9 +1388,9 @@ public:
     void setTransformOriginZ(float f) { SET_VAR(rareNonInheritedData.access()->m_transform, m_z, f); }
     void setSpeak(ESpeak s) { SET_VAR(rareInheritedData, speak, s); }
     void setTextCombine(TextCombine v) { SET_VAR(rareNonInheritedData, m_textCombine, v); }
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     void setTextDecorationColor(const Color& c) { SET_VAR(rareNonInheritedData, m_textDecorationColor, c); }
-#endif // CSS3_TEXT
+#endif // CSS3_TEXT_DECORATION
     void setTextEmphasisColor(const Color& c) { SET_VAR(rareInheritedData, textEmphasisColor, c); }
     void setTextEmphasisFill(TextEmphasisFill fill) { SET_VAR(rareInheritedData, textEmphasisFill, fill); }
     void setTextEmphasisMark(TextEmphasisMark mark) { SET_VAR(rareInheritedData, textEmphasisMark, mark); }
@@ -1463,43 +1469,43 @@ public:
     void setTextSecurity(ETextSecurity aTextSecurity) { SET_VAR(rareInheritedData, textSecurity, aTextSecurity); }
 
 #if ENABLE(SVG)
-    const SVGRenderStyle* svgStyle() const { return m_svgStyle.get(); }
-    SVGRenderStyle* accessSVGStyle() { return m_svgStyle.access(); }
+    const SVGRenderStyle& svgStyle() const { return *m_svgStyle; }
+    SVGRenderStyle& accessSVGStyle() { return *m_svgStyle.access(); }
 
-    const SVGPaint::SVGPaintType& fillPaintType() const { return svgStyle()->fillPaintType(); }
-    Color fillPaintColor() const { return svgStyle()->fillPaintColor(); }
-    void setFillPaintColor(const Color& c) { accessSVGStyle()->setFillPaint(SVGPaint::SVG_PAINTTYPE_RGBCOLOR, c, ""); }
-    float fillOpacity() const { return svgStyle()->fillOpacity(); }
-    void setFillOpacity(float f) { accessSVGStyle()->setFillOpacity(f); }
+    const SVGPaint::SVGPaintType& fillPaintType() const { return svgStyle().fillPaintType(); }
+    Color fillPaintColor() const { return svgStyle().fillPaintColor(); }
+    void setFillPaintColor(const Color& c) { accessSVGStyle().setFillPaint(SVGPaint::SVG_PAINTTYPE_RGBCOLOR, c, ""); }
+    float fillOpacity() const { return svgStyle().fillOpacity(); }
+    void setFillOpacity(float f) { accessSVGStyle().setFillOpacity(f); }
 
-    const SVGPaint::SVGPaintType& strokePaintType() const { return svgStyle()->strokePaintType(); }
-    Color strokePaintColor() const { return svgStyle()->strokePaintColor(); }
-    void setStrokePaintColor(const Color& c) { accessSVGStyle()->setStrokePaint(SVGPaint::SVG_PAINTTYPE_RGBCOLOR, c, ""); }
-    float strokeOpacity() const { return svgStyle()->strokeOpacity(); }
-    void setStrokeOpacity(float f) { accessSVGStyle()->setStrokeOpacity(f); }
-    SVGLength strokeWidth() const { return svgStyle()->strokeWidth(); }
-    void setStrokeWidth(SVGLength w) { accessSVGStyle()->setStrokeWidth(w); }
-    Vector<SVGLength> strokeDashArray() const { return svgStyle()->strokeDashArray(); }
-    void setStrokeDashArray(Vector<SVGLength> array) { accessSVGStyle()->setStrokeDashArray(array); }
-    SVGLength strokeDashOffset() const { return svgStyle()->strokeDashOffset(); }
-    void setStrokeDashOffset(SVGLength d) { accessSVGStyle()->setStrokeDashOffset(d); }
-    float strokeMiterLimit() const { return svgStyle()->strokeMiterLimit(); }
-    void setStrokeMiterLimit(float f) { accessSVGStyle()->setStrokeMiterLimit(f); }
+    const SVGPaint::SVGPaintType& strokePaintType() const { return svgStyle().strokePaintType(); }
+    Color strokePaintColor() const { return svgStyle().strokePaintColor(); }
+    void setStrokePaintColor(const Color& c) { accessSVGStyle().setStrokePaint(SVGPaint::SVG_PAINTTYPE_RGBCOLOR, c, ""); }
+    float strokeOpacity() const { return svgStyle().strokeOpacity(); }
+    void setStrokeOpacity(float f) { accessSVGStyle().setStrokeOpacity(f); }
+    SVGLength strokeWidth() const { return svgStyle().strokeWidth(); }
+    void setStrokeWidth(SVGLength w) { accessSVGStyle().setStrokeWidth(w); }
+    Vector<SVGLength> strokeDashArray() const { return svgStyle().strokeDashArray(); }
+    void setStrokeDashArray(Vector<SVGLength> array) { accessSVGStyle().setStrokeDashArray(array); }
+    SVGLength strokeDashOffset() const { return svgStyle().strokeDashOffset(); }
+    void setStrokeDashOffset(SVGLength d) { accessSVGStyle().setStrokeDashOffset(d); }
+    float strokeMiterLimit() const { return svgStyle().strokeMiterLimit(); }
+    void setStrokeMiterLimit(float f) { accessSVGStyle().setStrokeMiterLimit(f); }
 
-    float floodOpacity() const { return svgStyle()->floodOpacity(); }
-    void setFloodOpacity(float f) { accessSVGStyle()->setFloodOpacity(f); }
+    float floodOpacity() const { return svgStyle().floodOpacity(); }
+    void setFloodOpacity(float f) { accessSVGStyle().setFloodOpacity(f); }
 
-    float stopOpacity() const { return svgStyle()->stopOpacity(); }
-    void setStopOpacity(float f) { accessSVGStyle()->setStopOpacity(f); }
+    float stopOpacity() const { return svgStyle().stopOpacity(); }
+    void setStopOpacity(float f) { accessSVGStyle().setStopOpacity(f); }
 
-    void setStopColor(const Color& c) { accessSVGStyle()->setStopColor(c); }
-    void setFloodColor(const Color& c) { accessSVGStyle()->setFloodColor(c); }
-    void setLightingColor(const Color& c) { accessSVGStyle()->setLightingColor(c); }
+    void setStopColor(const Color& c) { accessSVGStyle().setStopColor(c); }
+    void setFloodColor(const Color& c) { accessSVGStyle().setFloodColor(c); }
+    void setLightingColor(const Color& c) { accessSVGStyle().setLightingColor(c); }
 
-    SVGLength baselineShiftValue() const { return svgStyle()->baselineShiftValue(); }
-    void setBaselineShiftValue(SVGLength s) { accessSVGStyle()->setBaselineShiftValue(s); }
-    SVGLength kerning() const { return svgStyle()->kerning(); }
-    void setKerning(SVGLength k) { accessSVGStyle()->setKerning(k); }
+    SVGLength baselineShiftValue() const { return svgStyle().baselineShiftValue(); }
+    void setBaselineShiftValue(SVGLength s) { accessSVGStyle().setBaselineShiftValue(s); }
+    SVGLength kerning() const { return svgStyle().kerning(); }
+    void setKerning(SVGLength k) { accessSVGStyle().setKerning(k); }
 #endif
 
 #if ENABLE(CSS_SHAPES)
@@ -1682,11 +1688,14 @@ public:
     static ETextAlign initialTextAlign() { return TASTART; }
     static TextDecoration initialTextDecoration() { return TextDecorationNone; }
 #if ENABLE(CSS3_TEXT)
-    static TextDecorationStyle initialTextDecorationStyle() { return TextDecorationStyleSolid; }
     static TextAlignLast initialTextAlignLast() { return TextAlignLastAuto; }
     static TextJustify initialTextJustify() { return TextJustifyAuto; }
-    static TextUnderlinePosition initialTextUnderlinePosition() { return TextUnderlinePositionAuto; }
 #endif // CSS3_TEXT
+#if ENABLE(CSS3_TEXT_DECORATION)
+    static TextDecorationStyle initialTextDecorationStyle() { return TextDecorationStyleSolid; }
+    static TextDecorationSkip initialTextDecorationSkip() { return TextDecorationSkipNone; }
+    static TextUnderlinePosition initialTextUnderlinePosition() { return TextUnderlinePositionAuto; }
+#endif
     static float initialZoom() { return 1.0f; }
     static int initialOutlineOffset() { return 0; }
     static float initialOpacity() { return 1.0f; }
@@ -1784,6 +1793,9 @@ public:
     static NamedGridAreaMap initialNamedGridArea() { return NamedGridAreaMap(); }
     static size_t initialNamedGridAreaCount() { return 0; }
 
+    static NamedGridLinesMap initialNamedGridColumnLines() { return NamedGridLinesMap(); }
+    static NamedGridLinesMap initialNamedGridRowLines() { return NamedGridLinesMap(); }
+
     // 'auto' is the default.
     static GridPosition initialGridPosition() { return GridPosition(); }
 
@@ -1842,9 +1854,9 @@ private:
     void setVisitedLinkBorderTopColor(const Color& v) { SET_VAR(rareNonInheritedData, m_visitedLinkBorderTopColor, v); }
     void setVisitedLinkOutlineColor(const Color& v) { SET_VAR(rareNonInheritedData, m_visitedLinkOutlineColor, v); }
     void setVisitedLinkColumnRuleColor(const Color& v) { SET_VAR(rareNonInheritedData.access()->m_multiCol, m_visitedLinkColumnRuleColor, v); }
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     void setVisitedLinkTextDecorationColor(const Color& v) { SET_VAR(rareNonInheritedData, m_visitedLinkTextDecorationColor, v); }
-#endif // CSS3_TEXT
+#endif // CSS3_TEXT_DECORATION
     void setVisitedLinkTextEmphasisColor(const Color& v) { SET_VAR(rareInheritedData, visitedLinkTextEmphasisColor, v); }
     void setVisitedLinkTextFillColor(const Color& v) { SET_VAR(rareInheritedData, visitedLinkTextFillColor, v); }
     void setVisitedLinkTextStrokeColor(const Color& v) { SET_VAR(rareInheritedData, visitedLinkTextStrokeColor, v); }
@@ -1895,10 +1907,10 @@ private:
     Color visitedLinkBorderTopColor() const { return rareNonInheritedData->m_visitedLinkBorderTopColor; }
     Color visitedLinkOutlineColor() const { return rareNonInheritedData->m_visitedLinkOutlineColor; }
     Color visitedLinkColumnRuleColor() const { return rareNonInheritedData->m_multiCol->m_visitedLinkColumnRuleColor; }
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     Color textDecorationColor() const { return rareNonInheritedData->m_textDecorationColor; }
     Color visitedLinkTextDecorationColor() const { return rareNonInheritedData->m_visitedLinkTextDecorationColor; }
-#endif // CSS3_TEXT
+#endif
     Color visitedLinkTextEmphasisColor() const { return rareInheritedData->visitedLinkTextEmphasisColor; }
     Color visitedLinkTextFillColor() const { return rareInheritedData->visitedLinkTextFillColor; }
     Color visitedLinkTextStrokeColor() const { return rareInheritedData->visitedLinkTextStrokeColor; }
@@ -1906,9 +1918,9 @@ private:
     Color colorIncludingFallback(int colorProperty, bool visitedLink) const;
 
 #if ENABLE(SVG)
-    Color stopColor() const { return svgStyle()->stopColor(); }
-    Color floodColor() const { return svgStyle()->floodColor(); }
-    Color lightingColor() const { return svgStyle()->lightingColor(); }
+    Color stopColor() const { return svgStyle().stopColor(); }
+    Color floodColor() const { return svgStyle().floodColor(); }
+    Color lightingColor() const { return svgStyle().lightingColor(); }
 #endif
 
     void appendContent(std::unique_ptr<ContentData>);
@@ -1966,6 +1978,25 @@ inline bool RenderStyle::setTextOrientation(TextOrientation textOrientation)
 
     rareInheritedData.access()->m_textOrientation = textOrientation;
     return true;
+}
+
+inline bool RenderStyle::hasAnyPublicPseudoStyles() const
+{
+    return PUBLIC_PSEUDOID_MASK & noninherited_flags._pseudoBits;
+}
+
+inline bool RenderStyle::hasPseudoStyle(PseudoId pseudo) const
+{
+    ASSERT(pseudo > NOPSEUDO);
+    ASSERT(pseudo < FIRST_INTERNAL_PSEUDOID);
+    return (1 << (pseudo - 1)) & noninherited_flags._pseudoBits;
+}
+
+inline void RenderStyle::setHasPseudoStyle(PseudoId pseudo)
+{
+    ASSERT(pseudo > NOPSEUDO);
+    ASSERT(pseudo < FIRST_INTERNAL_PSEUDOID);
+    noninherited_flags._pseudoBits |= 1 << (pseudo - 1);
 }
 
 } // namespace WebCore

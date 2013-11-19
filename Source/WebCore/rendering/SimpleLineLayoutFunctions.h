@@ -42,19 +42,19 @@ struct PaintInfo;
 
 namespace SimpleLineLayout {
 
-LayoutUnit computeFlowHeight(const RenderBlockFlow&, const Lines&);
-LayoutUnit computeFlowFirstLineBaseline(const RenderBlockFlow&, const Lines&);
-LayoutUnit computeFlowLastLineBaseline(const RenderBlockFlow&, const Lines&);
+LayoutUnit computeFlowHeight(const RenderBlockFlow&, const Layout&);
+LayoutUnit computeFlowFirstLineBaseline(const RenderBlockFlow&, const Layout&);
+LayoutUnit computeFlowLastLineBaseline(const RenderBlockFlow&, const Layout&);
 
-void paintFlow(const RenderBlockFlow&, const Lines&, PaintInfo&, const LayoutPoint& paintOffset);
-bool hitTestFlow(const RenderBlockFlow&, const Lines&, const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction);
-void collectFlowOverflow(RenderBlockFlow&, const Lines&);
+void paintFlow(const RenderBlockFlow&, const Layout&, PaintInfo&, const LayoutPoint& paintOffset);
+bool hitTestFlow(const RenderBlockFlow&, const Layout&, const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction);
+void collectFlowOverflow(RenderBlockFlow&, const Layout&);
 
-bool isTextRendered(const RenderText&, const Lines&);
-bool containsTextCaretOffset(const RenderText&, const Lines&, unsigned);
-unsigned findTextCaretMinimumOffset(const RenderText&, const Lines&);
-unsigned findTextCaretMaximumOffset(const RenderText&, const Lines&);
-IntRect computeTextBoundingBox(const RenderText&, const Lines&);
+bool isTextRendered(const RenderText&, const Layout&);
+bool containsTextCaretOffset(const RenderText&, const Layout&, unsigned);
+unsigned findTextCaretMinimumOffset(const RenderText&, const Layout&);
+unsigned findTextCaretMaximumOffset(const RenderText&, const Layout&);
+IntRect computeTextBoundingBox(const RenderText&, const Layout&);
 
 LayoutUnit lineHeightFromFlow(const RenderBlockFlow&);
 LayoutUnit baselineFromFlow(const RenderBlockFlow&);
@@ -63,54 +63,54 @@ LayoutUnit baselineFromFlow(const RenderBlockFlow&);
 
 namespace SimpleLineLayout {
 
-inline LayoutUnit computeFlowHeight(const RenderBlockFlow& flow, const Lines& lines)
+inline LayoutUnit computeFlowHeight(const RenderBlockFlow& flow, const Layout& layout)
 {
-    return lineHeightFromFlow(flow) * lines.size();
+    return lineHeightFromFlow(flow) * layout.lineCount();
 }
 
-inline LayoutUnit computeFlowFirstLineBaseline(const RenderBlockFlow& flow, const Lines& lines)
+inline LayoutUnit computeFlowFirstLineBaseline(const RenderBlockFlow& flow, const Layout& layout)
 {
-    ASSERT_UNUSED(lines, !lines.isEmpty());
+    ASSERT_UNUSED(layout, layout.runCount());
     return flow.borderAndPaddingBefore() + baselineFromFlow(flow);
 }
 
-inline LayoutUnit computeFlowLastLineBaseline(const RenderBlockFlow& flow, const Lines& lines)
+inline LayoutUnit computeFlowLastLineBaseline(const RenderBlockFlow& flow, const Layout& layout)
 {
-    ASSERT(!lines.isEmpty());
-    return flow.borderAndPaddingBefore() + lineHeightFromFlow(flow) * (lines.size() - 1) + baselineFromFlow(flow);
+    ASSERT(layout.runCount());
+    return flow.borderAndPaddingBefore() + lineHeightFromFlow(flow) * (layout.runCount() - 1) + baselineFromFlow(flow);
 }
 
-inline unsigned findTextCaretMinimumOffset(const RenderText&, const Lines& lines)
+inline unsigned findTextCaretMinimumOffset(const RenderText&, const Layout& layout)
 {
-    if (lines.isEmpty())
+    if (!layout.runCount())
         return 0;
-    return lines[0].textOffset;
+    return layout.runAt(0).textOffset;
 }
 
-inline unsigned findTextCaretMaximumOffset(const RenderText& renderer, const Lines& lines)
+inline unsigned findTextCaretMaximumOffset(const RenderText& renderer, const Layout& layout)
 {
-    if (lines.isEmpty())
+    if (!layout.runCount())
         return renderer.textLength();
-    auto& last = lines[lines.size() - 1];
+    auto& last = layout.runAt(layout.runCount() - 1);
     return last.textOffset + last.textLength;
 }
 
-inline bool containsTextCaretOffset(const RenderText&, const Lines& lines, unsigned offset)
+inline bool containsTextCaretOffset(const RenderText&, const Layout& layout, unsigned offset)
 {
-    for (unsigned i = 0; i < lines.size(); ++i) {
-        auto& line = lines[i];
-        if (offset < line.textOffset)
+    for (unsigned i = 0; i < layout.runCount(); ++i) {
+        auto& run = layout.runAt(i);
+        if (offset < run.textOffset)
             return false;
-        if (offset <= line.textOffset + line.textLength)
+        if (offset <= run.textOffset + run.textLength)
             return true;
     }
     return false;
 }
 
-inline bool isTextRendered(const RenderText&, const Lines& lines)
+inline bool isTextRendered(const RenderText&, const Layout& layout)
 {
-    for (unsigned i = 0; i < lines.size(); ++i) {
-        if (lines[i].textLength)
+    for (unsigned i = 0; i < layout.runCount(); ++i) {
+        if (layout.runAt(i).textLength)
             return true;
     }
     return false;

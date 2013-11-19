@@ -27,29 +27,26 @@ WebInspector.ProbeManager = function()
 {
     WebInspector.Object.call(this);
 
-    ProbeAgent.enable();
+    // Used to detect deleted probe actions.
+    this._knownProbeIdsForBreakpoint = new Map;
 
-    this._probesEnabledSetting = new WebInspector.Setting("probes-enabled", true);
-    ProbeAgent.setProbesActive(this._probesEnabledSetting.value);
+    // Main lookup tables for probes and probe sets.
+    this._probesById = new Map;
+    this._probeSetsByBreakpoint = new Map;
 
-    this._probes = {};
-    this._probeGroups = {};
+    this._nextProbeId = 0;
 
-    this._placeholderObjectsByURL = {};
+    WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.BreakpointAdded, this._breakpointAdded, this);
+    WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.BreakpointRemoved, this._breakpointRemoved, this);
+    WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.ActionsDidChange, this._breakpointActionsChanged, this);
 
-    this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._probesEnabledSetting.value);
-    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._unresolveAllProbes, this);
+    // Initialize probes for breakpoints that already exist.
+    WebInspector.debuggerManager.breakpoints.map(this._breakpointAdded.bind(this));
 }
 
 WebInspector.ProbeManager.Event = {
-    ProbesEnablementChanged: "probe-manager-probes-active-state-changed",
-    ProbeAdded: "probe-manager-probe-added",
-    ProbeRemoved: "probe-manager-probe-removed",
-    ProbeDisabled: "probe-manager-probe-disabled",
-    ProbeEnabled: "probe-manager-probe-enabled",
-    ProbeResolveStateDidChange: "probe-manager-probe-resolve-state-did-change",
-    ProbeGroupAdded: "probe-manager-probe-group-added",
-    ProbeGroupRemoved: "probe-manager-probe-group-removed",
+    ProbeSetAdded: "probe-manager-probe-set-added",
+    ProbeSetRemoved: "probe-manager-probe-set-removed",
 };
 
 WebInspector.ProbeManager.prototype = {
@@ -58,175 +55,118 @@ WebInspector.ProbeManager.prototype = {
 
     // Public
 
-    get probeGroups()
+    get probeSets()
     {
-        return this._probeGroups;
+        var sets = [];
+        this._probeSetsByBreakpoint.forEach(function(set) { sets.push(set); });
+        return sets;
     },
 
-    get probesEnabled()
+    getNextProbeId: function()
     {
-        return this._probesEnabledSetting.value;
+        return ++this._nextProbeId;
     },
 
-    set probesEnabled(enabled)
+    // Protected (called by WebInspector.DebuggerObserver)
+
+    didSampleProbe: function(sample)
     {
-        if (this._probesEnabledSetting.value === enabled)
-            return;
-
-        this._probesEnabledSetting.value = enabled;
-
-        ProbeAgent.setProbesActive(enabled);
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbesEnablementChanged, enabled);
-    },
-
-    enableProbe: function(probe)
-    {
-        console.assert(probe === this._probes[probe.probeId], "Can't enable unknown probe: ", probe);
-        if (probe.enabled)
-            return;
-
-        ProbeAgent.enableProbe(probe.probeId);
-    },
-
-    disableProbe: function(probe)
-    {
-        console.assert(probe === this._probes[probe.probeId], "Can't disable unknown probe: ", probe);
-        if (!probe.enabled)
-            return;
-
-        ProbeAgent.disableProbe(probe.probeId);
-    },
-
-    removeProbe: function(probe)
-    {
-        console.assert(probe === this._probes[probe.probeId], "Can't remove unknown probe: ", probe);
-        ProbeAgent.removeProbe(probe.probeId);
-    },
-
-    // This is a hack so that unresolved probes can be added to the same placeholder tree elements.
-    // Each tree element requires a representedObject; this method returns a canonical placeholder.
-
-    // N.B. the placeholders are reset when the page is reloaded.
-    getPlaceholderObjectForURL: function(url)
-    {
-        if (!(url in this._placeholderObjectsByURL))
-            this._placeholderObjectsByURL[url] = { url: url };
-
-        return this._placeholderObjectsByURL[url];
-    },
-
-    // Protected (called by WebInspector.ProbeObserver)
-
-    addProbeSample: function(sample)
-    {
-        console.assert(sample.probeId in this._probes, "Unknown probe id specified for sample: ", sample);
-        var probe = this._probes[sample.probeId];
+        console.assert(this._probesById.has(sample.probeId), "Unknown probe id specified for sample: ", sample);
+        var probe = this._probesById.get(sample.probeId);
         probe.addSample(new WebInspector.ProbeSampleObject(sample.sampleId, sample.batchId, sample.timestamp, sample.payload));
-    },
-
-    probeAdded: function(probe)
-    {
-        console.assert(!(probe.probeId in this._probes), "Probe with id", probe.probeId, " already exists:");
-
-        var probeObject = new WebInspector.ProbeObject(probe.probeId, probe.url, probe.lineNumber, probe.columnNumber, probe.expression);
-        this._probes[probe.probeId] = probeObject;
-
-        if (this._probeGroups[probeObject.groupKey])
-            this._probeGroups[probeObject.groupKey].addProbe(probeObject);
-        else {
-            var probeGroup = new WebInspector.ProbeGroupObject(probeObject.url, probeObject.position);
-            probeGroup.addProbe(probeObject);
-            this._probeGroups[probeObject.groupKey] = probeGroup;
-            this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeGroupAdded, probeGroup);
-        }
-
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeAdded, probeObject);
-        ProbeAgent.getProbeSamples(probeObject.probeId, this._didReceiveSamples.bind(this));
-    },
-
-    probeRemoved: function(probeId)
-    {
-        console.assert(probeId in this._probes, "Unknown probe id requseted: ", probeId);
-        var probe = this._probes[probeId];
-        probe.resolved = false;
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, probe);
-        delete this._probes[probeId];
-
-        if (this._probeGroups[probe.groupKey]) {
-            var probeGroup = this._probeGroups[probe.groupKey];
-            probeGroup.removeProbe(probe);
-
-            if (!probeGroup.probes.length) {
-                probeGroup.willRemove();
-                delete this._probeGroups[probe.groupKey];
-                this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeGroupRemoved, probeGroup);
-            }
-        }
-
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeRemoved, probe);
-    },
-
-    probeEnabled: function(probeId)
-    {
-        console.assert(probeId in this._probes, "Unknown probe id requested: ", probeId);
-        var probe = this._probes[probeId];
-        probe.enabled = true;
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeEnabled, probe);
-    },
-
-    probeDisabled: function(probeId)
-    {
-        console.assert(probeId in this._probes, "Unknown probe id requested: ", probeId);
-        var probe = this._probes[probeId];
-        probe.enabled = false;
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeDisabled, probe);
-    },
-
-    probeResolved: function(probeId, scriptId)
-    {
-        console.assert(probeId in this._probes, "Unknown probe id requested: ", probeId);
-        var probe = this._probes[probeId];
-        probe.resolved = true;
-        probe.sourceCode = WebInspector.debuggerManager.scriptForIdentifier(scriptId);
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, probe);
     },
 
     // Private
 
-    _clearSamplesForProbe: function(probe)
+    _breakpointAdded: function(breakpointOrEvent)
     {
-        probe.samples = [];
+        var breakpoint;
+        if (breakpointOrEvent instanceof WebInspector.Breakpoint)
+            breakpoint = breakpointOrEvent;
+        else
+            breakpoint = breakpointOrEvent.data.breakpoint;
+        console.assert(!this._knownProbeIdsForBreakpoint.has(breakpoint));
+
+        this._knownProbeIdsForBreakpoint.set(breakpoint, new Set);
+        this._breakpointActionsChanged(breakpoint);
     },
 
-    _unresolveAllProbes: function(event)
+    _breakpointRemoved: function(event)
     {
-        for (var key in this._probes) {
-            var probe = this._probes[key];
-            if (!probe.resolved)
-                continue;
+        var breakpoint = event.data.breakpoint;
+        console.assert(this._knownProbeIdsForBreakpoint.has(breakpoint));
 
-            probe.resolved = false;
-            this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, probe);
-        }
-
-        this._placeholderObjectsByURL = {};
+        this._breakpointActionsChanged(breakpoint);
+        this._knownProbeIdsForBreakpoint.delete(breakpoint);
     },
 
-    _didReceiveSamples: function(error, samples)
+    _breakpointActionsChanged: function(breakpointOrEvent)
     {
-        if (error) {
-            console.error("Problem when loading data for probe with id ", this.probeId, ": ", error);
+        var breakpoint;
+        if (breakpointOrEvent instanceof WebInspector.Breakpoint)
+            breakpoint = breakpointOrEvent;
+        else
+            breakpoint = breakpointOrEvent.target;
+
+        // Sometimes actions change before the added breakpoint is fully dispatched.
+        if (!this._knownProbeIdsForBreakpoint.has(breakpoint)) {
+            this._breakpointAdded(breakpoint);
             return;
         }
 
-        if (!samples.length)
-            return;
+        var knownProbeIds = this._knownProbeIdsForBreakpoint.get(breakpoint);
+        var seenProbeIds = new Set;
 
-        console.log("DEBUG: Received array of probe samples: ", samples);
-        // Clear existing samples, since we just received all active samples en-masse.
+        breakpoint.probeActions.forEach(function(probeAction) {
+            var probeId = probeAction.id;
+            console.assert(probeId, "Probe added without id in breakpoint: ", breakpoint);
 
-        var probe = this._probes[samples[0].probeId];
-        this._clearSamplesForProbe(probes);
-        samples.map(this.addProbeSample.bind(this));
+            seenProbeIds.add(probeId);
+            if (!knownProbeIds.has(probeId)) {
+                // New probe; find or create relevant probe set.
+                knownProbeIds.add(probeId);
+                var probeSet = this._getProbeSetForBreakpoint(breakpoint);
+                var newProbe = new WebInspector.ProbeObject(probeId, breakpoint, probeAction.data);
+                this._probesById.set(probeId, newProbe);
+                probeSet.addProbe(newProbe);
+                return;
+            }
+
+            var probe = this._probesById.get(probeId);
+            console.assert(probe, "Probe known but couldn't be found by id: ", probeId);
+            // Update probe expression; if it differed, change events will fire.
+            probe.expression = probeAction.data;
+        }.bind(this));
+
+        // Look for missing probes based on what we saw last.
+        knownProbeIds.forEach(function(probeId) {
+            if (seenProbeIds.has(probeId))
+                return;
+
+            // The probe has gone missing, remove it.
+            var probeSet = this._getProbeSetForBreakpoint(breakpoint);
+            var probe = this._probesById.get(probeId);
+            this._probesById.delete(probeId);
+            knownProbeIds.delete(probeId);
+            probeSet.removeProbe(probe);
+
+            // Remove the probe set if it has become empty.
+            if (!probeSet.probes.length) {
+                this._probeSetsByBreakpoint.delete(probeSet.breakpoint);
+                probeSet.willRemove();
+                this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeSetRemoved, probeSet);
+            }
+        }.bind(this));
+    },
+
+    _getProbeSetForBreakpoint: function(breakpoint)
+    {
+        if (this._probeSetsByBreakpoint.has(breakpoint))
+            return this._probeSetsByBreakpoint.get(breakpoint);
+
+        var newProbeSet = new WebInspector.ProbeSetObject(breakpoint);
+        this._probeSetsByBreakpoint.set(breakpoint, newProbeSet);
+        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeSetAdded, newProbeSet);
+        return newProbeSet;
     }
 };

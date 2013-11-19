@@ -242,6 +242,8 @@ InspectorBackend.registerEvent("CSS.namedFlowCreated", ["namedFlow"]);
 InspectorBackend.registerEvent("CSS.namedFlowRemoved", ["documentNodeId", "flowName"]);
 InspectorBackend.registerEvent("CSS.regionLayoutUpdated", ["namedFlow"]);
 InspectorBackend.registerEvent("CSS.regionOversetChanged", ["namedFlow"]);
+InspectorBackend.registerEvent("CSS.registeredNamedFlowContentElement", ["documentNodeId", "flowName", "contentNodeId", "nextContentNodeId"]);
+InspectorBackend.registerEvent("CSS.unregisteredNamedFlowContentElement", ["documentNodeId", "flowName", "contentNodeId"]);
 InspectorBackend.registerCommand("CSS.enable", [], []);
 InspectorBackend.registerCommand("CSS.disable", [], []);
 InspectorBackend.registerCommand("CSS.getMatchedStylesForNode", [{"name": "nodeId", "type": "number", "optional": false}, {"name": "includePseudo", "type": "boolean", "optional": true}, {"name": "includeInherited", "type": "boolean", "optional": true}], ["matchedCSSRules", "pseudoElements", "inherited"]);
@@ -266,14 +268,14 @@ InspectorBackend.registerCommand("CSS.getNamedFlowCollection", [{"name": "docume
 InspectorBackend.registerTimelineDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Timeline");
 InspectorBackend.registerEnum("Timeline.EventType", {EventDispatch: "EventDispatch", BeginFrame: "BeginFrame", ScheduleStyleRecalculation: "ScheduleStyleRecalculation", RecalculateStyles: "RecalculateStyles", InvalidateLayout: "InvalidateLayout", Layout: "Layout", Paint: "Paint", ScrollLayer: "ScrollLayer", ResizeImage: "ResizeImage", CompositeLayers: "CompositeLayers", ParseHTML: "ParseHTML", TimerInstall: "TimerInstall", TimerRemove: "TimerRemove", TimerFire: "TimerFire", EvaluateScript: "EvaluateScript", MarkLoad: "MarkLoad", MarkDOMContent: "MarkDOMContent", TimeStamp: "TimeStamp", Time: "Time", TimeEnd: "TimeEnd", ScheduleResourceRequest: "ScheduleResourceRequest", ResourceSendRequest: "ResourceSendRequest", ResourceReceiveResponse: "ResourceReceiveResponse", ResourceReceivedData: "ResourceReceivedData", ResourceFinish: "ResourceFinish", XHRReadyStateChange: "XHRReadyStateChange", XHRLoad: "XHRLoad", FunctionCall: "FunctionCall", GCEvent: "GCEvent", RequestAnimationFrame: "RequestAnimationFrame", CancelAnimationFrame: "CancelAnimationFrame", FireAnimationFrame: "FireAnimationFrame", WebSocketCreate: "WebSocketCreate", WebSocketSendHandshakeRequest: "WebSocketSendHandshakeRequest", WebSocketReceiveHandshakeResponse: "WebSocketReceiveHandshakeResponse", WebSocketDestroy: "WebSocketDestroy"});
 InspectorBackend.registerEvent("Timeline.eventRecorded", ["record"]);
-InspectorBackend.registerCommand("Timeline.start", [{"name": "maxCallStackDepth", "type": "number", "optional": true}, {"name": "includeDomCounters", "type": "boolean", "optional": true}, {"name": "includeNativeMemoryStatistics", "type": "boolean", "optional": true}], []);
+InspectorBackend.registerCommand("Timeline.start", [{"name": "maxCallStackDepth", "type": "number", "optional": true}, {"name": "includeDomCounters", "type": "boolean", "optional": true}], []);
 InspectorBackend.registerCommand("Timeline.stop", [], []);
 InspectorBackend.registerCommand("Timeline.supportsFrameInstrumentation", [], ["result"]);
 InspectorBackend.registerCommand("Timeline.canMonitorMainThread", [], ["result"]);
 
 // Debugger.
 InspectorBackend.registerDebuggerDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Debugger");
-InspectorBackend.registerEnum("Debugger.BreakpointActionType", {Log: "log", Evaluate: "evaluate", Sound: "sound"});
+InspectorBackend.registerEnum("Debugger.BreakpointActionType", {Log: "log", Evaluate: "evaluate", Sound: "sound", Probe: "probe"});
 InspectorBackend.registerEnum("Debugger.ScopeType", {Global: "global", Local: "local", With: "with", Closure: "closure", Catch: "catch"});
 InspectorBackend.registerEvent("Debugger.globalObjectCleared", []);
 InspectorBackend.registerEvent("Debugger.scriptParsed", ["scriptId", "url", "startLine", "startColumn", "endLine", "endColumn", "isContentScript", "sourceMapURL", "hasSourceURL"]);
@@ -281,6 +283,7 @@ InspectorBackend.registerEvent("Debugger.scriptFailedToParse", ["url", "scriptSo
 InspectorBackend.registerEvent("Debugger.breakpointResolved", ["breakpointId", "location"]);
 InspectorBackend.registerEvent("Debugger.paused", ["callFrames", "reason", "data"]);
 InspectorBackend.registerEvent("Debugger.resumed", []);
+InspectorBackend.registerEvent("Debugger.didSampleProbe", ["sample"]);
 InspectorBackend.registerCommand("Debugger.causesRecompilation", [], ["result"]);
 InspectorBackend.registerCommand("Debugger.supportsSeparateScriptCompilationAndExecution", [], ["result"]);
 InspectorBackend.registerCommand("Debugger.enable", [], []);
@@ -402,25 +405,6 @@ InspectorBackend.registerCommand("LayerTree.enable", [], []);
 InspectorBackend.registerCommand("LayerTree.disable", [], []);
 InspectorBackend.registerCommand("LayerTree.layersForNode", [{"name": "nodeId", "type": "number", "optional": false}], ["layers"]);
 InspectorBackend.registerCommand("LayerTree.reasonsForCompositingLayer", [{"name": "layerId", "type": "string", "optional": false}], ["compositingReasons"]);
-
-// Probe.
-InspectorBackend.registerProbeDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Probe");
-InspectorBackend.registerEvent("Probe.probeSampleReceived", ["sample"]);
-InspectorBackend.registerEvent("Probe.probeAdded", ["probe"]);
-InspectorBackend.registerEvent("Probe.probeRemoved", ["probeId"]);
-InspectorBackend.registerEvent("Probe.probeEnabled", ["probeId"]);
-InspectorBackend.registerEvent("Probe.probeDisabled", ["probeId"]);
-InspectorBackend.registerEvent("Probe.probeResolved", ["probeId", "scriptId"]);
-InspectorBackend.registerCommand("Probe.enable", [], []);
-InspectorBackend.registerCommand("Probe.disable", [], []);
-InspectorBackend.registerCommand("Probe.setProbesActive", [{"name": "active", "type": "boolean", "optional": false}], []);
-InspectorBackend.registerCommand("Probe.clearAllProbes", [], []);
-InspectorBackend.registerCommand("Probe.getAvailableProbes", [], ["probes"]);
-InspectorBackend.registerCommand("Probe.getProbeSamples", [{"name": "probeId", "type": "number", "optional": false}], ["samples"]);
-InspectorBackend.registerCommand("Probe.removeProbe", [{"name": "probeId", "type": "number", "optional": false}], []);
-InspectorBackend.registerCommand("Probe.enableProbe", [{"name": "probeId", "type": "number", "optional": false}], []);
-InspectorBackend.registerCommand("Probe.disableProbe", [{"name": "probeId", "type": "number", "optional": false}], []);
-InspectorBackend.registerCommand("Probe.createScriptProbe", [{"name": "url", "type": "string", "optional": false}, {"name": "lineNumber", "type": "number", "optional": false}, {"name": "columnNumber", "type": "number", "optional": false}, {"name": "expression", "type": "string", "optional": false}], []);
 
 // Recordings.
 InspectorBackend.registerRecordingsDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Recordings");

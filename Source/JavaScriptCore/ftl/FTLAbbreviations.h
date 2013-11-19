@@ -259,8 +259,16 @@ static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, L
     LValue args[] = { arg1, arg2, arg3, arg4, arg5, arg6 };
     return buildCall(builder, function, args, 6);
 }
-enum TailCallMode { IsNotTailCall, IsTailCall };
-static inline void setTailCall(LValue call, TailCallMode mode) { llvm->SetTailCall(call, mode == IsTailCall); }
+static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3, LValue arg4, LValue arg5, LValue arg6, LValue arg7)
+{
+    LValue args[] = { arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
+    return buildCall(builder, function, args, 7);
+}
+static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3, LValue arg4, LValue arg5, LValue arg6, LValue arg7, LValue arg8)
+{
+    LValue args[] = { arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
+    return buildCall(builder, function, args, 8);
+}
 static inline LValue buildExtractValue(LBuilder builder, LValue aggVal, unsigned index) { return llvm->BuildExtractValue(builder, aggVal, index, ""); }
 static inline LValue buildSelect(LBuilder builder, LValue condition, LValue taken, LValue notTaken) { return llvm->BuildSelect(builder, condition, taken, notTaken, ""); }
 static inline LValue buildBr(LBuilder builder, LBasicBlock destination) { return llvm->BuildBr(builder, destination); }

@@ -64,8 +64,8 @@ class RenderTableRow;
 
 class RenderTableSection FINAL : public RenderBox {
 public:
-    explicit RenderTableSection(Element&);
-    explicit RenderTableSection(Document&);
+    RenderTableSection(Element&, PassRef<RenderStyle>);
+    RenderTableSection(Document&, PassRef<RenderStyle>);
     virtual ~RenderTableSection();
 
     RenderTableRow* firstRow() const;
@@ -123,17 +123,17 @@ public:
     const BorderValue& borderAdjoiningTableStart() const
     {
         if (hasSameDirectionAs(table()))
-            return style()->borderStart();
+            return style().borderStart();
 
-        return style()->borderEnd();
+        return style().borderEnd();
     }
 
     const BorderValue& borderAdjoiningTableEnd() const
     {
         if (hasSameDirectionAs(table()))
-            return style()->borderEnd();
+            return style().borderEnd();
 
-        return style()->borderStart();
+        return style().borderStart();
     }
 
     const BorderValue& borderAdjoiningStartCell(const RenderTableCell*) const;
@@ -309,6 +309,7 @@ private:
     HashMap<pair<const RenderTableCell*, int>, CollapsedBorderValue > m_cellsCollapsedBorders;
 };
 
+template<> inline bool isRendererOfType<const RenderTableSection>(const RenderObject& renderer) { return renderer.isTableSection(); }
 RENDER_OBJECT_TYPE_CASTS(RenderTableSection, isTableSection())
 
 } // namespace WebCore

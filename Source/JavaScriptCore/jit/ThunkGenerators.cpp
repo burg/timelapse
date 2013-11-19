@@ -56,6 +56,277 @@ inline void emitPointerValidation(CCallHelpers& jit, GPRReg pointerGPR)
 #endif
 }
 
+static void returnFromJavaScript(CCallHelpers& jit)
+{
+#if CPU(X86_64)
+#if OS(WINDOWS)
+    // JIT operations can use up to 6 args (4 in registers and 2 on the stack).
+    // In addition, X86_64 ABI specifies that the worse case stack alignment
+    // requirement is 32 bytes. Based on these factors, we need to pad the stack
+    // and additional 40 bytes.
+#   define EXTRA_STACK_SIZE              40
+    jit.addPtr(CCallHelpers::TrustedImm32(8), X86Registers::esp);
+#else
+    // We don't need extra stack space for out-going args, but we need to align the
+    // stack to 32 byte alignment, therefore add 8 bytes to the stack.
+#   define EXTRA_STACK_SIZE              8
+    jit.addPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), X86Registers::esp);
+#endif
+
+    jit.pop(X86Registers::ebx);
+    jit.pop(X86Registers::r15);
+    jit.pop(X86Registers::r14);
+    jit.pop(X86Registers::r13);
+    jit.pop(X86Registers::r12);
+    jit.pop(X86Registers::ebp);
+#elif CPU(X86)
+    // JIT Operation can use up to 6 arguments right now. So, we need to
+    // reserve space in this stack frame for the out-going args. To ensure that
+    // the stack remains aligned on an 16 byte boundary, we round the padding up
+    // by 28 bytes.
+#   define EXTRA_STACK_SIZE 28
+
+    jit.addPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), X86Registers::esp);
+
+    jit.pop(X86Registers::ebx);
+    jit.pop(X86Registers::edi);
+    jit.pop(X86Registers::esi);
+    jit.pop(X86Registers::ebp);
+#elif CPU(ARM_TRADITIONAL)
+    // JIT Operation can use up to 6 arguments right now. So, we need to
+    // reserve space in this stack frame for the out-going args. We need to
+    // add space for 16 more bytes.
+#   define EXTRA_STACK_SIZE              16
+
+    jit.addPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), ARMRegisters::sp);
+
+    jit.pop(ARMRegisters::lr);
+    jit.pop(ARMRegisters::r11);
+    jit.pop(ARMRegisters::r10);
+    jit.pop(ARMRegisters::r9);
+    jit.pop(ARMRegisters::r8);
+    jit.pop(ARMRegisters::r6);
+    jit.pop(ARMRegisters::r5);
+    jit.pop(ARMRegisters::r4);
+#elif CPU(ARM_THUMB2)
+    // JIT Operation can use up to 6 arguments right now. So, we need to
+    // reserve space in this stack frame for the out-going args. To ensure that
+    // the stack remains aligned on an 16 byte boundary, we round the padding up
+    // by 28 bytes.
+#   define EXTRA_STACK_SIZE              28
+
+    jit.addPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), ARMRegisters::sp);
+    jit.pop(ARMRegisters::r11);
+    jit.pop(ARMRegisters::r10);
+    jit.pop(ARMRegisters::r9);
+    jit.pop(ARMRegisters::r8);
+    jit.pop(ARMRegisters::r7);
+    jit.pop(ARMRegisters::r6);
+    jit.pop(ARMRegisters::r5);
+    jit.pop(ARMRegisters::r4);
+    jit.pop(ARMRegisters::lr);
+#elif CPU(ARM64)
+    jit.pop(ARM64Registers::x28);
+    jit.pop(ARM64Registers::x27);
+    jit.pop(ARM64Registers::x26);
+    jit.pop(ARM64Registers::x25);
+    jit.pop(ARM64Registers::x24);
+    jit.pop(ARM64Registers::x23);
+    jit.pop(ARM64Registers::x22);
+    jit.pop(ARM64Registers::x21);
+    jit.pop(ARM64Registers::x20);
+    jit.pop(ARM64Registers::x19);
+    jit.pop(ARM64Registers::lr);
+#elif CPU(MIPS)
+#   define PRESERVED_GP_OFFSET         60
+#   define PRESERVED_S0_OFFSET         64
+#   define PRESERVED_S1_OFFSET         68
+#   define PRESERVED_S2_OFFSET         72
+#   define PRESERVED_S3_OFFSET         76
+#   define PRESERVED_S4_OFFSET         80
+#   define PRESERVED_RETURN_ADDRESS_OFFSET 84
+#   define PRESERVED_FP_OFFSET         88
+#   define STACK_LENGTH               112
+
+    jit.loadPtr(CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S0_OFFSET), MIPSRegisters::s0);
+    jit.loadPtr(CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S1_OFFSET), MIPSRegisters::s1);
+    jit.loadPtr(CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S2_OFFSET), MIPSRegisters::s2);
+    jit.loadPtr(CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S3_OFFSET), MIPSRegisters::s3);
+    jit.loadPtr(CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S4_OFFSET), MIPSRegisters::s4);
+    jit.loadPtr(CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_RETURN_ADDRESS_OFFSET), MIPSRegisters::ra);
+    jit.loadPtr(CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_FP_OFFSET), MIPSRegisters::fp);
+    jit.addPtr(CCallHelpers::TrustedImm32(STACK_LENGTH), MIPSRegisters::sp);
+#elif CPU(SH4)
+#   define EXTRA_STACK_SIZE 20
+
+    jit.addPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), SH4Registers::sp);
+    jit.pop(SH4Registers::r8);
+    jit.pop(SH4Registers::r9);
+    jit.pop(SH4Registers::r10);
+    jit.pop(SH4Registers::r11);
+    jit.pop(SH4Registers::r13);
+    jit.pop(SH4Registers::pr);
+    jit.pop(SH4Registers::fp);
+#endif
+
+    jit.ret();
+}
+
+MacroAssemblerCodeRef callToJavaScript(VM* vm)
+{
+    // The signature of the code generated is EncodedJSValue callToJavaScript(void* code, CallFrame*)
+
+    CCallHelpers jit(vm);
+
+#if CPU(X86_64)
+#if OS(WINDOWS)
+    // Dump register parameters to their home address
+    jit.storePtr(X86Registers::r9, CCallHelpers::Address(X86Registers::esp, 0x20));
+    jit.storePtr(X86Registers::r8, CCallHelpers::Address(X86Registers::esp, 0x18));
+    jit.storePtr(X86Registers::edx, CCallHelpers::Address(X86Registers::esp, 0x10));
+    jit.storePtr(X86Registers::ecx, CCallHelpers::Address(X86Registers::esp, 0x8));
+#endif // OS(WINDOWS)
+    jit.push(X86Registers::ebp);
+    jit.move(X86Registers::ebp, GPRInfo::nonArgGPR0);
+    jit.move(X86Registers::esp, X86Registers::ebp);
+    jit.push(X86Registers::r12);
+    jit.push(X86Registers::r13);
+    jit.push(X86Registers::r14);
+    jit.push(X86Registers::r15);
+    jit.push(X86Registers::ebx);
+
+    jit.subPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), X86Registers::esp);
+
+#   define CALLFRAME_SRC_REG GPRInfo::argumentGPR1
+#   define PREVIOUS_CALLFRAME_REG GPRInfo::nonArgGPR0
+#elif CPU(X86)
+    jit.push(X86Registers::ebp);
+    jit.move(X86Registers::ebp, GPRInfo::nonArgGPR0);
+    jit.move(X86Registers::esp, X86Registers::ebp);
+    jit.push(X86Registers::esi);
+    jit.push(X86Registers::edi);
+    jit.push(X86Registers::ebx);
+
+    jit.subPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), X86Registers::esp);
+
+    jit.load32(CCallHelpers::Address(X86Registers::esp, EXTRA_STACK_SIZE + 24), GPRInfo::callFrameRegister);
+
+#   define CALLFRAME_SRC_REG GPRInfo::callFrameRegister
+#   define CALL_CODE jit.call(CCallHelpers::Address(X86Registers::esp, EXTRA_STACK_SIZE + 20))
+#   define PREVIOUS_CALLFRAME_REG GPRInfo::nonArgGPR0
+#elif CPU(ARM_TRADITIONAL)
+    jit.push(ARMRegisters::r4);
+    jit.push(ARMRegisters::r5);
+    jit.push(ARMRegisters::r6);
+    jit.push(ARMRegisters::r8);
+    jit.push(ARMRegisters::r9);
+    jit.push(ARMRegisters::r10);
+    jit.push(ARMRegisters::r11);
+    jit.push(ARMRegisters::lr);
+    jit.move(ARMRegisters::r11, GPRInfo::nonArgGPR0);
+    jit.subPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), ARMRegisters::sp);
+
+#   define CALLFRAME_SRC_REG GPRInfo::argumentGPR1
+#   define PREVIOUS_CALLFRAME_REG GPRInfo::nonArgGPR0
+#elif CPU(ARM_THUMB2)
+    jit.push(ARMRegisters::lr);
+    jit.push(ARMRegisters::r4);
+    jit.push(ARMRegisters::r5);
+    jit.push(ARMRegisters::r6);
+    jit.push(ARMRegisters::r7);
+    jit.push(ARMRegisters::r8);
+    jit.push(ARMRegisters::r9);
+    jit.push(ARMRegisters::r10);
+    jit.push(ARMRegisters::r11);
+    jit.move(ARMRegisters::r7, GPRInfo::nonArgGPR0);
+    jit.subPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), ARMRegisters::sp);
+
+#   define CALLFRAME_SRC_REG GPRInfo::argumentGPR1
+#   define PREVIOUS_CALLFRAME_REG GPRInfo::nonArgGPR0
+#elif CPU(ARM64)
+    jit.push(ARM64Registers::lr);
+    jit.push(ARM64Registers::x19);
+    jit.push(ARM64Registers::x20);
+    jit.push(ARM64Registers::x21);
+    jit.push(ARM64Registers::x22);
+    jit.push(ARM64Registers::x23);
+    jit.push(ARM64Registers::x24);
+    jit.push(ARM64Registers::x25);
+    jit.push(ARM64Registers::x26);
+    jit.push(ARM64Registers::x27);
+    jit.push(ARM64Registers::x28);
+    jit.push(ARM64Registers::x29);
+    jit.move(ARM64Registers::x29, GPRInfo::nonArgGPR0);
+
+#   define CALLFRAME_SRC_REG GPRInfo::argumentGPR1
+#   define PREVIOUS_CALLFRAME_REG GPRInfo::nonArgGPR0
+#elif CPU(MIPS)
+    jit.subPtr(CCallHelpers::TrustedImm32(STACK_LENGTH), MIPSRegisters::sp);
+    jit.storePtr(MIPSRegisters::fp, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_FP_OFFSET));
+    jit.storePtr(MIPSRegisters::ra, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_RETURN_ADDRESS_OFFSET));
+    jit.storePtr(MIPSRegisters::s4, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S4_OFFSET));
+    jit.storePtr(MIPSRegisters::s3, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S3_OFFSET));
+    jit.storePtr(MIPSRegisters::s2, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S2_OFFSET));
+    jit.storePtr(MIPSRegisters::s1, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S1_OFFSET));
+    jit.storePtr(MIPSRegisters::s0, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_S0_OFFSET));
+#if WTF_MIPS_PIC
+    jit.storePtr(MIPSRegisters::gp, CCallHelpers::Address(MIPSRegisters::sp, PRESERVED_GP_OFFSET));
+#endif
+    jit.move(MIPSRegisters::fp, GPRInfo::nonArgGPR0);
+
+#   define CALLFRAME_SRC_REG GPRInfo::argumentGPR1
+#   define PREVIOUS_CALLFRAME_REG GPRInfo::nonArgGPR0
+#elif CPU(SH4)
+    jit.push(SH4Registers::fp);
+    jit.push(SH4Registers::pr);
+    jit.push(SH4Registers::r13);
+    jit.push(SH4Registers::r11);
+    jit.push(SH4Registers::r10);
+    jit.push(SH4Registers::r9);
+    jit.push(SH4Registers::r8);
+    jit.subPtr(CCallHelpers::TrustedImm32(EXTRA_STACK_SIZE), SH4Registers::sp);
+    jit.move(SH4Registers::fp, GPRInfo::nonArgGPR0);
+
+#   define CALLFRAME_SRC_REG GPRInfo::argumentGPR1
+#   define PREVIOUS_CALLFRAME_REG GPRInfo::nonArgGPR0
+#endif
+
+    if (CALLFRAME_SRC_REG != GPRInfo::callFrameRegister)
+        jit.move(CALLFRAME_SRC_REG, GPRInfo::callFrameRegister);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::callFrameRegister), GPRInfo::nonArgGPR1);
+    jit.storePtr(PREVIOUS_CALLFRAME_REG, CCallHelpers::Address(GPRInfo::nonArgGPR1));
+
+#if USE(JSVALUE64)
+    jit.move(CCallHelpers::TrustedImm64(0xffff000000000000L), GPRInfo::tagTypeNumberRegister);
+    jit.move(CCallHelpers::TrustedImm64(0xffff000000000002L), GPRInfo::tagMaskRegister);
+#endif
+
+#if defined(CALL_CODE)
+    CALL_CODE;
+#else
+    jit.call(GPRInfo::argumentGPR0);
+#endif
+
+#undef CALLFRAME_SRC_REG
+#undef CALL_CODE
+#undef PREVIOUS_CALLFRAME_REG
+
+    returnFromJavaScript(jit);
+
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    return FINALIZE_CODE(patchBuffer, ("Call to JavaScript thunk"));
+}
+
+MacroAssemblerCodeRef throwNotCaught(VM* vm)
+{
+    CCallHelpers jit(vm);
+
+    returnFromJavaScript(jit);
+
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    return FINALIZE_CODE(patchBuffer, ("Uncaught throw thunk"));
+}
+
 // We will jump here if the JIT code tries to make a call, but the
 // linking helper (C++ code) decides to throw an exception instead.
 MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(VM* vm)
@@ -67,11 +338,7 @@ MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(VM* vm)
     jit.preserveReturnAddressAfterCall(GPRInfo::nonPreservedNonReturnGPR);
 
     // The CallFrame register points to the (failed) callee frame, so we need to pop back one frame.
-    jit.loadPtr(
-        CCallHelpers::Address(
-            GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::CallerFrame),
-        GPRInfo::callFrameRegister);
+    jit.emitGetCallerFrameFromCallFrameHeaderPtr(GPRInfo::callFrameRegister);
 
     jit.setupArgumentsExecState();
     jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(lookupExceptionHandler)), GPRInfo::nonArgGPR0);
@@ -88,11 +355,7 @@ static void slowPathFor(
 {
     jit.preserveReturnAddressAfterCall(GPRInfo::nonArgGPR2);
     emitPointerValidation(jit, GPRInfo::nonArgGPR2);
-    jit.storePtr(
-        GPRInfo::nonArgGPR2,
-        CCallHelpers::Address(
-            GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC));
+    jit.emitPutReturnPCToCallFrameHeader(GPRInfo::nonArgGPR2);
     jit.storePtr(GPRInfo::callFrameRegister, &vm->topCallFrame);
     jit.setupArgumentsExecState();
     jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(slowPathFunction)), GPRInfo::nonArgGPR0);
@@ -103,16 +366,8 @@ static void slowPathFor(
     // 1) Exception throwing thunk.
     // 2) Host call return value returner thingy.
     // 3) The function to call.
-    jit.loadPtr(
-        CCallHelpers::Address(
-            GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC),
-        GPRInfo::nonPreservedNonReturnGPR);
-    jit.storePtr(
-        CCallHelpers::TrustedImmPtr(0),
-        CCallHelpers::Address(
-            GPRInfo::callFrameRegister,
-            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC));
+    jit.emitGetReturnPCFromCallFrameHeaderPtr(GPRInfo::nonPreservedNonReturnGPR);
+    jit.emitPutReturnPCToCallFrameHeader(CCallHelpers::TrustedImmPtr(0));
     emitPointerValidation(jit, GPRInfo::nonPreservedNonReturnGPR);
     jit.restoreReturnAddressBeforeReturn(GPRInfo::nonPreservedNonReturnGPR);
     emitPointerValidation(jit, GPRInfo::returnValueGPR);
@@ -272,12 +527,12 @@ static MacroAssemblerCodeRef nativeForGenerator(VM* vm, CodeSpecializationKind k
 #if CPU(X86)
     // Load caller frame's scope chain into this callframe so that whatever we call can
     // get to its global data.
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, JSInterfaceJIT::regT0);
+    jit.emitGetCallerFrameFromCallFrameHeaderPtr(JSInterfaceJIT::regT0);
     jit.emitGetFromCallFrameHeaderPtr(JSStack::ScopeChain, JSInterfaceJIT::regT1, JSInterfaceJIT::regT0);
     jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
 
     jit.peek(JSInterfaceJIT::regT1);
-    jit.emitPutToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ReturnPC);
+    jit.emitPutReturnPCToCallFrameHeader(JSInterfaceJIT::regT1);
 
     // Calling convention:      f(ecx, edx, ...);
     // Host function signature: f(ExecState*);
@@ -296,12 +551,12 @@ static MacroAssemblerCodeRef nativeForGenerator(VM* vm, CodeSpecializationKind k
 #elif CPU(X86_64)
     // Load caller frame's scope chain into this callframe so that whatever we call can
     // get to its global data.
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, JSInterfaceJIT::regT0);
+    jit.emitGetCallerFrameFromCallFrameHeaderPtr(JSInterfaceJIT::regT0);
     jit.emitGetFromCallFrameHeaderPtr(JSStack::ScopeChain, JSInterfaceJIT::regT1, JSInterfaceJIT::regT0);
     jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
 
     jit.peek(JSInterfaceJIT::regT1);
-    jit.emitPutToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ReturnPC);
+    jit.emitPutReturnPCToCallFrameHeader(JSInterfaceJIT::regT1);
 
 #if !OS(WINDOWS)
     // Calling convention:      f(edi, esi, edx, ecx, ...);
@@ -341,12 +596,12 @@ static MacroAssemblerCodeRef nativeForGenerator(VM* vm, CodeSpecializationKind k
 
     // Load caller frame's scope chain into this callframe so that whatever we call can
     // get to its global data.
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, ARM64Registers::x3);
+    jit.emitGetCallerFrameFromCallFrameHeaderPtr(ARM64Registers::x3);
     jit.emitGetFromCallFrameHeaderPtr(JSStack::ScopeChain, JSInterfaceJIT::regT1, ARM64Registers::x3);
     jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
 
     jit.preserveReturnAddressAfterCall(JSInterfaceJIT::regT3); // Callee preserved
-    jit.emitPutToCallFrameHeader(ARM64Registers::lr, JSStack::ReturnPC);
+    jit.emitPutReturnPCToCallFrameHeader(ARM64Registers::lr);
 
     // Host function signature: f(ExecState*);
     jit.move(JSInterfaceJIT::callFrameRegister, ARM64Registers::x0);
@@ -361,12 +616,12 @@ static MacroAssemblerCodeRef nativeForGenerator(VM* vm, CodeSpecializationKind k
 #elif CPU(ARM)
     // Load caller frame's scope chain into this callframe so that whatever we call can
     // get to its global data.
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, JSInterfaceJIT::regT2);
+    jit.emitGetCallerFrameFromCallFrameHeaderPtr(JSInterfaceJIT::regT2);
     jit.emitGetFromCallFrameHeaderPtr(JSStack::ScopeChain, JSInterfaceJIT::regT1, JSInterfaceJIT::regT2);
     jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
 
     jit.preserveReturnAddressAfterCall(JSInterfaceJIT::regT3); // Callee preserved
-    jit.emitPutToCallFrameHeader(JSInterfaceJIT::regT3, JSStack::ReturnPC);
+    jit.emitPutReturnPCToCallFrameHeader(JSInterfaceJIT::regT3);
 
     // Calling convention:      f(r0 == regT0, r1 == regT1, ...);
     // Host function signature: f(ExecState*);
@@ -382,12 +637,12 @@ static MacroAssemblerCodeRef nativeForGenerator(VM* vm, CodeSpecializationKind k
 #elif CPU(SH4)
     // Load caller frame's scope chain into this callframe so that whatever we call can
     // get to its global data.
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, JSInterfaceJIT::regT2);
+    jit.emitGetCallerFrameFromCallFrameHeaderPtr(JSInterfaceJIT::regT2);
     jit.emitGetFromCallFrameHeaderPtr(JSStack::ScopeChain, JSInterfaceJIT::regT1, JSInterfaceJIT::regT2);
     jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
 
     jit.preserveReturnAddressAfterCall(JSInterfaceJIT::regT3); // Callee preserved
-    jit.emitPutToCallFrameHeader(JSInterfaceJIT::regT3, JSStack::ReturnPC);
+    jit.emitPutReturnPCToCallFrameHeader(JSInterfaceJIT::regT3);
 
     // Calling convention: f(r0 == regT4, r1 == regT5, ...);
     // Host function signature: f(ExecState*);
@@ -403,12 +658,12 @@ static MacroAssemblerCodeRef nativeForGenerator(VM* vm, CodeSpecializationKind k
 #elif CPU(MIPS)
     // Load caller frame's scope chain into this callframe so that whatever we call can
     // get to its global data.
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, JSInterfaceJIT::regT0);
+    jit.emitGetCallerFrameFromCallFrameHeaderPtr(JSInterfaceJIT::regT0);
     jit.emitGetFromCallFrameHeaderPtr(JSStack::ScopeChain, JSInterfaceJIT::regT1, JSInterfaceJIT::regT0);
     jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
 
     jit.preserveReturnAddressAfterCall(JSInterfaceJIT::regT3); // Callee preserved
-    jit.emitPutToCallFrameHeader(JSInterfaceJIT::regT3, JSStack::ReturnPC);
+    jit.emitPutReturnPCToCallFrameHeader(JSInterfaceJIT::regT3);
 
     // Calling convention:      f(a0, a1, a2, a3);
     // Host function signature: f(ExecState*);
@@ -465,7 +720,7 @@ static MacroAssemblerCodeRef nativeForGenerator(VM* vm, CodeSpecializationKind k
     jit.addPtr(JSInterfaceJIT::TrustedImm32(-12), JSInterfaceJIT::stackPointerRegister);
     jit.push(JSInterfaceJIT::callFrameRegister);
 #else
-    jit.move(JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::firstArgumentRegister);
+    jit.move(JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::argumentGPR0);
 #endif
     jit.move(JSInterfaceJIT::TrustedImmPtr(FunctionPtr(operationVMHandleException).value()), JSInterfaceJIT::regT3);
     jit.call(JSInterfaceJIT::regT3);
@@ -499,7 +754,7 @@ MacroAssemblerCodeRef arityFixup(VM* vm)
     jit.pop(JSInterfaceJIT::regT4);
 #  endif
     jit.neg64(JSInterfaceJIT::regT0);
-    jit.addPtr(JSInterfaceJIT::TrustedImm32(8), JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::regT3);
+    jit.move(JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::regT3);
     jit.load32(JSInterfaceJIT::Address(JSInterfaceJIT::callFrameRegister, JSStack::ArgumentCount * 8), JSInterfaceJIT::regT2);
     jit.add32(JSInterfaceJIT::TrustedImm32(JSStack::CallFrameHeaderSize), JSInterfaceJIT::regT2);
 
@@ -531,7 +786,7 @@ MacroAssemblerCodeRef arityFixup(VM* vm)
     jit.pop(JSInterfaceJIT::regT4);
 #  endif
     jit.neg32(JSInterfaceJIT::regT0);
-    jit.addPtr(JSInterfaceJIT::TrustedImm32(8), JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::regT3);
+    jit.move(JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::regT3);
     jit.load32(JSInterfaceJIT::Address(JSInterfaceJIT::callFrameRegister, JSStack::ArgumentCount * 8), JSInterfaceJIT::regT2);
     jit.add32(JSInterfaceJIT::TrustedImm32(JSStack::CallFrameHeaderSize), JSInterfaceJIT::regT2);
 

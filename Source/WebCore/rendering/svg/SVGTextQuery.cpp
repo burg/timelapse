@@ -61,8 +61,8 @@ static inline InlineFlowBox* flowBoxForRenderer(RenderObject* renderer)
         RenderBlockFlow& renderBlock = toRenderBlockFlow(*renderer);
 
         // RenderSVGText only ever contains a single line box.
-        InlineFlowBox* flowBox = renderBlock.firstLineBox();
-        ASSERT(flowBox == renderBlock.lastLineBox());
+        auto flowBox = renderBlock.firstRootBox();
+        ASSERT(flowBox == renderBlock.lastRootBox());
         return flowBox;
     }
 
@@ -96,7 +96,7 @@ void SVGTextQuery::collectTextBoxesInFlowBox(InlineFlowBox* flowBox)
             if (!child->renderer().node())
                 continue;
 
-            collectTextBoxesInFlowBox(static_cast<InlineFlowBox*>(child));
+            collectTextBoxesInFlowBox(toInlineFlowBox(child));
             continue;
         }
 
@@ -116,10 +116,8 @@ bool SVGTextQuery::executeQuery(Data* queryData, ProcessTextFragmentCallback fra
     for (unsigned textBoxPosition = 0; textBoxPosition < textBoxCount; ++textBoxPosition) {
         queryData->textBox = m_textBoxes.at(textBoxPosition);
         queryData->textRenderer = &queryData->textBox->renderer();
-        ASSERT(queryData->textRenderer->style());
-        ASSERT(queryData->textRenderer->style()->svgStyle());
 
-        queryData->isVerticalText = queryData->textRenderer->style()->svgStyle()->isVerticalWritingMode();
+        queryData->isVerticalText = queryData->textRenderer->style().svgStyle().isVerticalWritingMode();
         const Vector<SVGTextFragment>& fragments = queryData->textBox->textFragments();
     
         // Loop over all text fragments in this text box, firing a callback for each.
@@ -166,7 +164,7 @@ void SVGTextQuery::modifyStartEndPositionsRespectingLigatures(Data* queryData, i
     unsigned textMetricsSize = textMetricsValues.size();
 
     unsigned positionOffset = 0;
-    unsigned positionSize = layoutAttributes->context()->textLength();
+    unsigned positionSize = layoutAttributes->context().textLength();
 
     bool alterStartPosition = true;
     bool alterEndPosition = true;

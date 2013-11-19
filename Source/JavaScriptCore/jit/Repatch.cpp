@@ -460,6 +460,7 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
         
         stubInfo.u.getByIdSelfList.listSize++;
         
+        GPRReg callFrameRegister = static_cast<GPRReg>(stubInfo.patch.callFrameRegister);
         GPRReg baseGPR = static_cast<GPRReg>(stubInfo.patch.baseGPR);
 #if USE(JSVALUE32_64)
         GPRReg resultTagGPR = static_cast<GPRReg>(stubInfo.patch.valueTagGPR);
@@ -500,11 +501,11 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
                     stubJit.load32(MacroAssembler::Address(scratchGPR, offsetRelativeToBase(slot.cachedOffset())), scratchGPR);
 #endif
                 }
-                stubJit.setupArgumentsWithExecState(baseGPR, scratchGPR);
+                stubJit.setupArguments(callFrameRegister, baseGPR, scratchGPR);
                 operationFunction = operationCallGetter;
             } else {
-                stubJit.setupArgumentsWithExecState(
-                    baseGPR,
+                stubJit.setupArguments(
+                    callFrameRegister, baseGPR,
                     MacroAssembler::TrustedImmPtr(FunctionPtr(slot.customGetter()).executableAddress()),
                     MacroAssembler::TrustedImmPtr(ident.impl()));
                 operationFunction = operationCallCustomGetter;
@@ -757,6 +758,7 @@ static void emitPutTransitionStub(
 {
     VM* vm = &exec->vm();
 
+    GPRReg callFrameRegister = static_cast<GPRReg>(stubInfo.patch.callFrameRegister);
     GPRReg baseGPR = static_cast<GPRReg>(stubInfo.patch.baseGPR);
 #if USE(JSVALUE32_64)
     GPRReg valueTagGPR = static_cast<GPRReg>(stubInfo.patch.valueTagGPR);
@@ -771,7 +773,7 @@ static void emitPutTransitionStub(
     allocator.lock(valueGPR);
     
     CCallHelpers stubJit(vm);
-            
+    
     GPRReg scratchGPR1 = allocator.allocateScratchGPR();
     ASSERT(scratchGPR1 != baseGPR);
     ASSERT(scratchGPR1 != valueGPR);
@@ -859,9 +861,9 @@ static void emitPutTransitionStub(
             stubJit.addPtr(MacroAssembler::AbsoluteAddress(&copiedAllocator->m_currentPayloadEnd), scratchGPR1);
             stubJit.addPtr(MacroAssembler::TrustedImm32(sizeof(JSValue)), scratchGPR1);
             // We have scratchGPR1 = new storage, scratchGPR3 = old storage, scratchGPR2 = available
-            for (ptrdiff_t offset = 0; offset < static_cast<ptrdiff_t>(oldSize); offset += sizeof(void*)) {
-                stubJit.loadPtr(MacroAssembler::Address(scratchGPR3, -(offset + sizeof(JSValue) + sizeof(void*))), scratchGPR2);
-                stubJit.storePtr(scratchGPR2, MacroAssembler::Address(scratchGPR1, -(offset + sizeof(JSValue) + sizeof(void*))));
+            for (size_t offset = 0; offset < oldSize; offset += sizeof(void*)) {
+                stubJit.loadPtr(MacroAssembler::Address(scratchGPR3, -static_cast<ptrdiff_t>(offset + sizeof(JSValue) + sizeof(void*))), scratchGPR2);
+                stubJit.storePtr(scratchGPR2, MacroAssembler::Address(scratchGPR1, -static_cast<ptrdiff_t>(offset + sizeof(JSValue) + sizeof(void*))));
             }
         }
         
@@ -913,9 +915,9 @@ static void emitPutTransitionStub(
         ScratchBuffer* scratchBuffer = vm->scratchBufferForSize(allocator.desiredScratchBufferSize());
         allocator.preserveUsedRegistersToScratchBuffer(stubJit, scratchBuffer, scratchGPR1);
 #if USE(JSVALUE64)
-        stubJit.setupArgumentsWithExecState(baseGPR, MacroAssembler::TrustedImmPtr(structure), MacroAssembler::TrustedImm32(slot.cachedOffset()), valueGPR);
+        stubJit.setupArguments(callFrameRegister, baseGPR, MacroAssembler::TrustedImmPtr(structure), MacroAssembler::TrustedImm32(slot.cachedOffset()), valueGPR);
 #else
-        stubJit.setupArgumentsWithExecState(baseGPR, MacroAssembler::TrustedImmPtr(structure), MacroAssembler::TrustedImm32(slot.cachedOffset()), valueGPR, valueTagGPR);
+        stubJit.setupArguments(callFrameRegister, baseGPR, MacroAssembler::TrustedImmPtr(structure), MacroAssembler::TrustedImm32(slot.cachedOffset()), valueGPR, valueTagGPR);
 #endif
         operationCall = stubJit.call();
         allocator.restoreUsedRegistersFromScratchBuffer(stubJit, scratchBuffer, scratchGPR1);

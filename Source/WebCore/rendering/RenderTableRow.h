@@ -34,8 +34,8 @@ static const unsigned maxRowIndex = 0x7FFFFFFE; // 2,147,483,646
 
 class RenderTableRow FINAL : public RenderBox {
 public:
-    explicit RenderTableRow(Element&);
-    explicit RenderTableRow(Document&);
+    RenderTableRow(Element&, PassRef<RenderStyle>);
+    RenderTableRow(Document&, PassRef<RenderStyle>);
 
     RenderTableRow* nextRow() const;
     RenderTableRow* previousRow() const;
@@ -72,17 +72,17 @@ public:
     const BorderValue& borderAdjoiningTableStart() const
     {
         if (section()->hasSameDirectionAs(table()))
-            return style()->borderStart();
+            return style().borderStart();
 
-        return style()->borderEnd();
+        return style().borderEnd();
     }
 
     const BorderValue& borderAdjoiningTableEnd() const
     {
         if (section()->hasSameDirectionAs(table()))
-            return style()->borderEnd();
+            return style().borderEnd();
 
-        return style()->borderStart();
+        return style().borderStart();
     }
 
     const BorderValue& borderAdjoiningStartCell(const RenderTableCell*) const;

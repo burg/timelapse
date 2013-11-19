@@ -29,6 +29,7 @@
 #if USE(COREMEDIA)
 
 #include "Clock.h"
+#include <wtf/MediaTime.h>
 #include <wtf/RetainPtr.h>
 
 typedef struct OpaqueCMTimebase* CMTimebaseRef;
@@ -41,11 +42,11 @@ public:
     PlatformClockCM();
     PlatformClockCM(CMClockRef);
 
-private:
-    void initializeWithTimingSource(CMClockRef);
-
     virtual void setCurrentTime(double) OVERRIDE;
     virtual double currentTime() const OVERRIDE;
+
+    void setCurrentMediaTime(const MediaTime&);
+    MediaTime currentMediaTime() const;
 
     virtual void setPlayRate(double) OVERRIDE;
     virtual double playRate() const OVERRIDE { return m_rate; }
@@ -53,6 +54,9 @@ private:
     virtual void start() OVERRIDE;
     virtual void stop() OVERRIDE;
     virtual bool isRunning() const OVERRIDE { return m_running; }
+
+private:
+    void initializeWithTimingSource(CMClockRef);
 
     RetainPtr<CMTimebaseRef> m_timebase;
     double m_rate;

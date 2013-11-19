@@ -149,9 +149,9 @@ ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueRe
 {
     MacroAssembler::Call call = appendCallWithExceptionCheck(function);
 #if USE(JSVALUE64)
-    emitPutVirtualRegister(dst, returnValueRegister);
+    emitPutVirtualRegister(dst, returnValueGPR);
 #else
-    emitStore(dst, returnValue2Register, returnValueRegister);
+    emitStore(dst, returnValueGPR2, returnValueGPR);
 #endif
     return call;
 }
@@ -161,9 +161,9 @@ ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueRe
     MacroAssembler::Call call = appendCallWithExceptionCheck(function);
     emitValueProfilingSite(regT4);
 #if USE(JSVALUE64)
-    emitPutVirtualRegister(dst, returnValueRegister);
+    emitPutVirtualRegister(dst, returnValueGPR);
 #else
-    emitStore(dst, returnValue2Register, returnValueRegister);
+    emitStore(dst, returnValueGPR2, returnValueGPR);
 #endif
     return call;
 }
@@ -992,7 +992,7 @@ inline void JIT::unmap(RegisterID registerID)
 inline void JIT::unmap()
 {
     m_mappedBytecodeOffset = (unsigned)-1;
-    m_mappedVirtualRegisterIndex = JSStack::ReturnPC;
+    m_mappedVirtualRegisterIndex = UINT_MAX;
     m_mappedTag = (RegisterID)-1;
     m_mappedPayload = (RegisterID)-1;
 }

@@ -104,7 +104,7 @@ namespace WebCore {
         const ResourceRequest& request() const;
         ResourceRequest& request();
 
-        CachedResourceLoader* cachedResourceLoader() const { return m_cachedResourceLoader.get(); }
+        CachedResourceLoader& cachedResourceLoader() { return m_cachedResourceLoader.get(); }
 
         const SubstituteData& substituteData() const { return m_substituteData; }
 
@@ -291,10 +291,8 @@ namespace WebCore {
         bool isMultipartReplacingLoad() const;
         bool isPostOrRedirectAfterPost(const ResourceRequest&, const ResourceResponse&);
 
-        static void callContinueAfterNavigationPolicy(void*, const ResourceRequest&, PassRefPtr<FormState>, bool shouldContinue);
         void continueAfterNavigationPolicy(const ResourceRequest&, bool shouldContinue);
 
-        static void callContinueAfterContentPolicy(void*, PolicyAction);
         void continueAfterContentPolicy(PolicyAction);
 
         void stopLoadingForPolicyChange();
@@ -315,7 +313,7 @@ namespace WebCore {
         void clearMainResource();
 
         Frame* m_frame;
-        RefPtr<CachedResourceLoader> m_cachedResourceLoader;
+        Ref<CachedResourceLoader> m_cachedResourceLoader;
 
         CachedResourceHandle<CachedRawResource> m_mainResource;
         ResourceLoaderMap m_subresourceLoaders;

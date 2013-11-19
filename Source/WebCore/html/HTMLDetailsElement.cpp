@@ -22,13 +22,11 @@
 #include "HTMLDetailsElement.h"
 
 #if ENABLE(DETAILS_ELEMENT)
-#include "HTMLNames.h"
 #include "HTMLSummaryElement.h"
 #include "InsertionPoint.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "RenderBlockFlow.h"
-#include "ShadowRoot.h"
 #include "Text.h"
 
 namespace WebCore {
@@ -112,9 +110,9 @@ HTMLDetailsElement::HTMLDetailsElement(const QualifiedName& tagName, Document& d
     ASSERT(hasTagName(detailsTag));
 }
 
-RenderElement* HTMLDetailsElement::createRenderer(RenderStyle&)
+RenderElement* HTMLDetailsElement::createRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderBlockFlow(*this);
+    return new RenderBlockFlow(*this, std::move(style));
 }
 
 void HTMLDetailsElement::didAddUserAgentShadowRoot(ShadowRoot* root)

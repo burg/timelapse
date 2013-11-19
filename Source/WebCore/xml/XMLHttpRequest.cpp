@@ -165,7 +165,7 @@ static void logConsoleError(ScriptExecutionContext* context, const String& messa
     context->addConsoleMessage(JSMessageSource, ErrorMessageLevel, message);
 }
 
-PassRefPtr<XMLHttpRequest> XMLHttpRequest::create(ScriptExecutionContext* context)
+PassRefPtr<XMLHttpRequest> XMLHttpRequest::create(ScriptExecutionContext& context)
 {
     RefPtr<XMLHttpRequest> xmlHttpRequest(adoptRef(new XMLHttpRequest(context)));
     xmlHttpRequest->suspendIfNeeded();
@@ -173,8 +173,8 @@ PassRefPtr<XMLHttpRequest> XMLHttpRequest::create(ScriptExecutionContext* contex
     return xmlHttpRequest.release();
 }
 
-XMLHttpRequest::XMLHttpRequest(ScriptExecutionContext* context)
-    : ActiveDOMObject(context)
+XMLHttpRequest::XMLHttpRequest(ScriptExecutionContext& context)
+    : ActiveDOMObject(&context)
     , m_async(true)
     , m_includeCredentials(false)
 #if ENABLE(XHR_TIMEOUT)
@@ -188,6 +188,7 @@ XMLHttpRequest::XMLHttpRequest(ScriptExecutionContext* context)
     , m_sameOriginRequest(true)
     , m_receivedLength(0)
     , m_lastSendLineNumber(0)
+    , m_lastSendColumnNumber(0)
     , m_exceptionCode(0)
     , m_progressEventThrottle(this)
     , m_responseTypeCode(ResponseTypeDefault)
@@ -325,8 +326,11 @@ ArrayBuffer* XMLHttpRequest::responseArrayBuffer()
     if (m_state != DONE)
         return 0;
 
-    if (!m_responseArrayBuffer.get() && m_binaryResponseBuilder.get() && m_binaryResponseBuilder->size() > 0) {
-        m_responseArrayBuffer = ArrayBuffer::create(const_cast<char*>(m_binaryResponseBuilder->data()), static_cast<unsigned>(m_binaryResponseBuilder->size()));
+    if (!m_responseArrayBuffer) {
+        if (m_binaryResponseBuilder)
+            m_responseArrayBuffer = ArrayBuffer::create(const_cast<char*>(m_binaryResponseBuilder->data()), static_cast<unsigned>(m_binaryResponseBuilder->size()));
+        else
+            m_responseArrayBuffer = ArrayBuffer::create(nullptr, 0);
         m_binaryResponseBuilder.clear();
     }
 
@@ -397,6 +401,12 @@ String XMLHttpRequest::responseType()
         return "arraybuffer";
     }
     return "";
+}
+
+void XMLHttpRequest::setLastSendLineAndColumnNumber(unsigned lineNumber, unsigned columnNumber)
+{
+    m_lastSendLineNumber = lineNumber;
+    m_lastSendColumnNumber = columnNumber;
 }
 
 XMLHttpRequestUpload* XMLHttpRequest::upload()
@@ -1152,7 +1162,7 @@ void XMLHttpRequest::didFinishLoading(unsigned long identifier, double)
 
     m_responseBuilder.shrinkToFit();
 
-    InspectorInstrumentation::didFinishXHRLoading(scriptExecutionContext(), this, identifier, m_responseBuilder.toStringPreserveCapacity(), m_url, m_lastSendURL, m_lastSendLineNumber);
+    InspectorInstrumentation::didFinishXHRLoading(scriptExecutionContext(), this, identifier, m_responseBuilder.toStringPreserveCapacity(), m_url, m_lastSendURL, m_lastSendLineNumber, m_lastSendColumnNumber);
 
     bool hadLoader = m_loader;
     m_loader = 0;

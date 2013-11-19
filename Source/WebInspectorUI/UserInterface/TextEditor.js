@@ -55,13 +55,13 @@ WebInspector.TextEditor = function(element, mimeType, delegate)
     this.mimeType = mimeType;
 
     this._breakpoints = {};
-    this._probeGroups = {};
     this._executionLineNumber = NaN;
     this._executionColumnNumber = NaN;
 
     this._searchQuery = null;
     this._searchResults = [];
     this._currentSearchResultIndex = -1;
+    this._ignoreCodeMirrorContentDidChangeEvent = 0;
 
     this._formatted = false;
     this._formatterSourceMap = null;
@@ -77,12 +77,9 @@ WebInspector.TextEditor.ProbeHighlightedStyleClassName = "probe-highlighted";
 WebInspector.TextEditor.SearchResultStyleClassName = "search-result";
 WebInspector.TextEditor.HasBreakpointStyleClassName = "has-breakpoint";
 WebInspector.TextEditor.BreakpointResolvedStyleClassName = "breakpoint-resolved";
+WebInspector.TextEditor.BreakpointAutoContinueStyleClassName = "breakpoint-auto-continue";
 WebInspector.TextEditor.BreakpointDisabledStyleClassName = "breakpoint-disabled";
 WebInspector.TextEditor.MultipleBreakpointsStyleClassName = "multiple-breakpoints";
-WebInspector.TextEditor.HasProbeGroupStyleClassName = "has-probe-group";
-WebInspector.TextEditor.ProbeGroupResolvedStyleClassName = "probe-group-resolved";
-WebInspector.TextEditor.ProbeGroupDisabledStyleClassName = "probe-group-disabled";
-WebInspector.TextEditor.MultipleProbeGroupsStyleClassName = "multiple-probe-groups";
 WebInspector.TextEditor.ExecutionLineStyleClassName = "execution-line";
 WebInspector.TextEditor.BouncyHighlightStyleClassName = "bouncy-highlight";
 WebInspector.TextEditor.NumberOfFindsPerSearchBatch = 10;
@@ -140,9 +137,10 @@ WebInspector.TextEditor.prototype = {
             this._revealPendingPositionIfPossible();
         }
 
-        this._ignoreCodeMirrorContentDidChangeEvent = true;
+        this._ignoreCodeMirrorContentDidChangeEvent++;
         this._codeMirror.operation(update.bind(this));
-        delete this._ignoreCodeMirrorContentDidChangeEvent;
+        this._ignoreCodeMirrorContentDidChangeEvent--;
+        console.assert(this._ignoreCodeMirrorContentDidChangeEvent >= 0);
     },
 
     get readOnly()
@@ -169,9 +167,10 @@ WebInspector.TextEditor.prototype = {
         if (formatted && !this.canBeFormatted())
             return;
 
-        this._ignoreCodeMirrorContentDidChangeEvent = true;
+        this._ignoreCodeMirrorContentDidChangeEvent++;
         this._prettyPrint(formatted);
-        delete this._ignoreCodeMirrorContentDidChangeEvent;
+        this._ignoreCodeMirrorContentDidChangeEvent--;
+        console.assert(this._ignoreCodeMirrorContentDidChangeEvent >= 0);
 
         this._formatted = formatted;
 
@@ -495,7 +494,7 @@ WebInspector.TextEditor.prototype = {
                 return;
 
             var lineKey = [WebInspector.contentBrowser.currentContentView.resource.url, position.start.line, position.start.ch].join(":");
-            if (WebInspector.probeManager.probeGroups[lineKey])
+            if (WebInspector.probeManager.probeSets[lineKey])
                 this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeHighlightedStyleClassName);
             else
                 this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.HighlightedStyleClassName);
@@ -541,14 +540,6 @@ WebInspector.TextEditor.prototype = {
             this._addBreakpointToLineAndColumnWithInfo(lineNumber, columnNumber, breakpointInfo);
         else
             this._removeBreakpointFromLineAndColumn(lineNumber, columnNumber);
-    },
-
-    setProbeGroupInfoForLineAndColumn: function(lineNumber, columnNumber, probeGroupInfo)
-    {
-        if (probeGroupInfo)
-            this._addProbeGroupToLineAndColumnWithInfo(lineNumber, columnNumber, probeGroupInfo);
-        else
-            this._removeProbeGroupFromLineAndColumn(lineNumber, columnNumber);
     },
 
     updateBreakpointLineAndColumn: function(oldLineNumber, oldColumnNumber, newLineNumber, newColumnNumber)
@@ -610,7 +601,7 @@ WebInspector.TextEditor.prototype = {
 
     _contentChanged: function(codeMirror, change)
     {
-        if (this._ignoreCodeMirrorContentDidChangeEvent)
+        if (this._ignoreCodeMirrorContentDidChangeEvent > 0)
             return;
 
         if (this._formatted) {
@@ -868,11 +859,14 @@ WebInspector.TextEditor.prototype = {
 
         var allDisabled = true;
         var allResolved = true;
+        var allAutoContinue = true;
         var multiple = Object.keys(columnBreakpoints).length > 1;
         for (var columnNumber in columnBreakpoints) {
             var breakpointInfo = columnBreakpoints[columnNumber];
-            if (!breakpointInfo.disabled)
+            if (breakpointInfo.mode !== WebInspector.Breakpoint.Mode.Disabled)
                 allDisabled = false;
+            if (breakpointInfo.mode !== WebInspector.Breakpoint.Mode.AutoContinue)
+                allAutoContinue = false;
             if (!breakpointInfo.resolved)
                 allResolved = false;
         }
@@ -896,6 +890,11 @@ WebInspector.TextEditor.prototype = {
                 this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointDisabledStyleClassName);
             else
                 this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointDisabledStyleClassName);
+
+            if (allAutoContinue)
+                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointAutoContinueStyleClassName);
+            else
+                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointAutoContinueStyleClassName);
 
             if (multiple)
                 this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleBreakpointsStyleClassName);
@@ -937,91 +936,8 @@ WebInspector.TextEditor.prototype = {
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.HasBreakpointStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointResolvedStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointDisabledStyleClassName);
+            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointAutoContinueStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleBreakpointsStyleClassName);
-        }
-
-        this._codeMirror.operation(updateStyles.bind(this));
-    },
-
-    _setProbeGroupStylesOnLine: function(lineNumber)
-    {
-        var columnProbeGroups = this._probeGroups[lineNumber];
-        console.assert(columnProbeGroups);
-        if (!columnProbeGroups)
-            return;
-
-        var allDisabled = true;
-        var allResolved = true;
-        var multiple = Object.keys(columnProbeGroups).length > 1;
-        for (var columnNumber in columnProbeGroups) {
-            var probeGroupInfo = columnProbeGroups[columnNumber];
-            if (!probeGroupInfo.disabled)
-                allDisabled = false;
-            if (!probeGroupInfo.resolved)
-                allResolved = false;
-        }
-
-        function updateStyles()
-        {
-            // We might not have a line if the content isn't fully populated yet.
-            // This will be called again when the content is available.
-            var lineHandle = this._codeMirror.getLineHandle(lineNumber);
-            if (!lineHandle)
-                return;
-
-            this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.HasProbeGroupStyleClassName);
-
-            if (allResolved)
-                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupResolvedStyleClassName);
-            else
-                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupResolvedStyleClassName);
-
-            if (allDisabled)
-                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupDisabledStyleClassName);
-            else
-                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupDisabledStyleClassName);
-
-            if (multiple)
-                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleProbeGroupsStyleClassName);
-            else
-                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleProbeGroupsStyleClassName);
-        }
-
-        this._codeMirror.operation(updateStyles.bind(this));
-    },
-
-    _addProbeGroupToLineAndColumnWithInfo: function(lineNumber, columnNumber, probeGroupInfo)
-    {
-        if (!this._probeGroups[lineNumber])
-            this._probeGroups[lineNumber] = {};
-        this._probeGroups[lineNumber][columnNumber] = probeGroupInfo;
-
-        this._setProbeGroupStylesOnLine(lineNumber);
-    },
-
-    _removeProbeGroupFromLineAndColumn: function(lineNumber, columnNumber)
-    {
-        console.assert(columnNumber in this._probeGroups[lineNumber]);
-        delete this._probeGroups[lineNumber][columnNumber];
-
-        // There are still probe groups on the line. Update the probe group style.
-        if (!isEmptyObject(this._probeGroups[lineNumber])) {
-            this._setProbeGroupStylesOnLine(lineNumber);
-            return;
-        }
-
-        delete this._probeGroups[lineNumber];
-
-        function updateStyles()
-        {
-            var lineHandle = this._codeMirror.getLineHandle(lineNumber);
-            if (!lineHandle)
-                return;
-
-            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.HasProbeGroupStyleClassName);
-            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupDisabledStyleClassName);
-            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupResolvedStyleClassName);
-            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleProbeGroupsStyleClassName);
         }
 
         this._codeMirror.operation(updateStyles.bind(this));
@@ -1041,6 +957,27 @@ WebInspector.TextEditor.prototype = {
 
     _gutterMouseDown: function(codeMirror, lineNumber, gutterElement, event)
     {
+        function tryCreateBreakpoint()
+        {
+            if (this._codeMirror.hasLineClass(lineNumber, "wrap", WebInspector.TextEditor.HasBreakpointStyleClassName))
+                return false;
+
+            console.assert(!(lineNumber in this._breakpoints));
+            if (this._delegate && typeof this._delegate.textEditorBreakpointAdded === "function") {
+                var data = this._delegate.textEditorBreakpointAdded(this, lineNumber, 0);
+                if (!data)
+                    return false;
+
+                var breakpointInfo = data.breakpointInfo;
+                if (!breakpointInfo)
+                    return false;
+
+                this._addBreakpointToLineAndColumnWithInfo(data.lineNumber, data.columnNumber, breakpointInfo);
+                return true;
+            }
+            return false;
+        };
+
         if (event.button !== 0 || event.ctrlKey)
             return;
 
@@ -1051,25 +988,41 @@ WebInspector.TextEditor.prototype = {
             {
                 if (event.keyCode !== 13)
                     return;
-                var url = WebInspector.contentBrowser.currentContentView.resource.url;
+
                 var lineInfo = { lineNumber: lineNumber, columnNumber: 0 };
-                if (this.formatterSourceMap)
-                    lineInfo = this.formatterSourceMap.formattedToOriginal(lineInfo.lineNumber, lineInfo.columnNumber);
-                var sourceLocation = this.sourceCode.createSourceCodeLocation(lineInfo.lineNumber, lineInfo.columnNumber);
                 var expression = event.target.value;
-                ProbeAgent.createScriptProbe(url, sourceLocation.lineNumber, sourceLocation.columnNumber, expression);
+
+                var didCreateBreakpoint = tryCreateBreakpoint.call(this);
+                // We can't directly get the associated breakpoint, so look up from manager.
+                var breakpointCandidates = WebInspector.debuggerManager.breakpointsForSourceCode(this.sourceCode);
+                var foundBreakpoint = null;
+                // Return the first breakpoint with the same display line number.
+                for (var i = 0; i < breakpointCandidates.length; ++i) {
+                    var breakpoint = breakpointCandidates[i];
+                    if (breakpoint.sourceCodeLocation.displayLineNumber === lineNumber) {
+                        foundBreakpoint = breakpoint;
+                        break;
+                    }
+                }
+
+                // If we created the breakpoint just for the probe, default to auto-continue.
+                if (didCreateBreakpoint)
+                    foundBreakpoint.mode = WebInspector.Breakpoint.Mode.AutoContinue;
+
+                var newAction = foundBreakpoint.createAction(WebInspector.BreakpointAction.Type.Probe);
+                newAction.data = expression;
                 popover.dismiss();
             }
 
             var popover = new WebInspector.Popover;
             var content = document.createElement("div");
-            content.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
-            content.createChild("div").textContent = "Add Probe?";
+            content.classList.add(WebInspector.ProbeSetDetailsSection.ProbePopoverElementStyleClassName);
+            content.createChild("div").textContent = WebInspector.UIString("Add Probe?");
             var textBox = content.createChild("input");
             textBox.addEventListener("keypress", getInitialProbeExpression.bind(this, popover));
             textBox.addEventListener("click", function (event) {event.target.select()});
             textBox.type = "text";
-            textBox.value = "Enter Expression";
+            textBox.value = WebInspector.UIString("Enter Expression");
             popover.content = content;
             var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
             popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
@@ -1077,22 +1030,10 @@ WebInspector.TextEditor.prototype = {
             return;
         }
 
-        if (!this._codeMirror.hasLineClass(lineNumber, "wrap", WebInspector.TextEditor.HasBreakpointStyleClassName)) {
-            console.assert(!(lineNumber in this._breakpoints));
-
-            // No breakpoint, add a new one.
-            if (this._delegate && typeof this._delegate.textEditorBreakpointAdded === "function") {
-                var data = this._delegate.textEditorBreakpointAdded(this, lineNumber, 0);
-                if (data) {
-                    var breakpointInfo = data.breakpointInfo;
-                    if (breakpointInfo)
-                        this._addBreakpointToLineAndColumnWithInfo(data.lineNumber, data.columnNumber, breakpointInfo);
-                }
-            }
-
+        if (tryCreateBreakpoint.call(this))
             return;
-        }
 
+        // A breakpoint already exists.
         console.assert(lineNumber in this._breakpoints);
 
         if (this._codeMirror.hasLineClass(lineNumber, "wrap", WebInspector.TextEditor.MultipleBreakpointsStyleClassName)) {

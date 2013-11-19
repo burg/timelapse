@@ -32,7 +32,6 @@
 #include "HTMLAnchorElement.h"
 #include "HTMLDocument.h"
 #include "HTMLFormElement.h"
-#include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "Page.h"
 #include "RenderImage.h"
@@ -86,7 +85,7 @@ bool HTMLImageElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLImageElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLImageElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet& style)
 {
     if (name == widthAttr)
         addHTMLLengthToStyle(style, CSSPropertyWidth, value);
@@ -175,12 +174,12 @@ String HTMLImageElement::altText() const
     return alt;
 }
 
-RenderElement* HTMLImageElement::createRenderer(RenderStyle& style)
+RenderElement* HTMLImageElement::createRenderer(PassRef<RenderStyle> style)
 {
-    if (style.hasContent())
-        return RenderElement::createFor(*this, style);
+    if (style.get().hasContent())
+        return RenderElement::createFor(*this, std::move(style));
 
-    RenderImage* image = new RenderImage(*this);
+    RenderImage* image = new RenderImage(*this, std::move(style));
     image->setImageResource(RenderImageResource::create());
     return image;
 }

@@ -187,6 +187,10 @@
 #include "WebVTTElement.h"
 #endif
 
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+#include "HTMLMediaElement.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -296,8 +300,8 @@ StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
 void StyleResolver::appendAuthorStyleSheets(unsigned firstNew, const Vector<RefPtr<CSSStyleSheet>>& styleSheets)
 {
     m_ruleSets.appendAuthorStyleSheets(firstNew, styleSheets, m_medium.get(), m_inspectorCSSOMWrappers, document().isViewSource(), this);
-    if (document().renderView() && document().renderView()->style())
-        document().renderView()->style()->font().update(fontSelector());
+    if (auto renderView = document().renderView())
+        renderView->style().font().update(fontSelector());
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     viewportStyleResolver()->resolve();
@@ -671,13 +675,15 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
 #if USE(ACCELERATED_COMPOSITING)
     // Turn off style sharing for elements that can gain layers for reasons outside of the style system.
     // See comments in RenderObject::setStyle().
-    if (element->hasTagName(iframeTag) || element->hasTagName(frameTag) || element->hasTagName(embedTag) || element->hasTagName(objectTag) || element->hasTagName(appletTag) || element->hasTagName(canvasTag)
-#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-        // With proxying, the media elements are backed by a RenderEmbeddedObject.
-        || element->hasTagName(videoTag) || isHTMLAudioElement(element)
-#endif
-        )
+    if (element->hasTagName(iframeTag) || element->hasTagName(frameTag) || element->hasTagName(embedTag) || element->hasTagName(objectTag) || element->hasTagName(appletTag) || element->hasTagName(canvasTag))
         return false;
+
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+    // With proxying, the media elements are backed by a RenderEmbeddedObject.
+    if ((element->hasTagName(videoTag) || element->hasTagName(audioTag)) && toMediaElement(element)->shouldUseVideoPluginProxy())
+        return false;
+#endif
+
 #endif
 
     if (elementHasDirectionAuto(element))
@@ -1357,7 +1363,7 @@ void StyleResolver::adjustRenderStyle(RenderStyle* style, RenderStyle* parentSty
     if (e && e->hasTagName(iframeTag) && style->display() == INLINE && toHTMLIFrameElement(e)->shouldDisplaySeamlessly())
         style->setDisplay(INLINE_BLOCK);
 
-    adjustGridItemPosition(style);
+    adjustGridItemPosition(style, parentStyle);
 
 #if ENABLE(SVG)
     if (e && e->isSVGElement()) {
@@ -1384,18 +1390,35 @@ void StyleResolver::adjustRenderStyle(RenderStyle* style, RenderStyle* parentSty
 #endif
 }
 
-void StyleResolver::adjustGridItemPosition(RenderStyle* style) const
+void StyleResolver::adjustGridItemPosition(RenderStyle* style, RenderStyle* parentStyle) const
 {
+    const GridPosition& columnStartPosition = style->gridItemColumnStart();
+    const GridPosition& columnEndPosition = style->gridItemColumnEnd();
+    const GridPosition& rowStartPosition = style->gridItemRowStart();
+    const GridPosition& rowEndPosition = style->gridItemRowEnd();
+
     // If opposing grid-placement properties both specify a grid span, they both compute to ‘auto’.
-    if (style->gridItemColumnStart().isSpan() && style->gridItemColumnEnd().isSpan()) {
+    if (columnStartPosition.isSpan() && columnEndPosition.isSpan()) {
         style->setGridItemColumnStart(GridPosition());
         style->setGridItemColumnEnd(GridPosition());
     }
 
-    if (style->gridItemRowStart().isSpan() && style->gridItemRowEnd().isSpan()) {
+    if (rowStartPosition.isSpan() && rowEndPosition.isSpan()) {
         style->setGridItemRowStart(GridPosition());
         style->setGridItemRowEnd(GridPosition());
     }
+
+    // Unknown named grid area compute to 'auto'.
+    const NamedGridAreaMap& map = parentStyle->namedGridArea();
+
+#define CLEAR_UNKNOWN_NAMED_AREA(prop, Prop) \
+    if (prop.isNamedGridArea() && !map.contains(prop.namedGridLine())) \
+        style->setGridItem##Prop(GridPosition());
+
+    CLEAR_UNKNOWN_NAMED_AREA(columnStartPosition, ColumnStart);
+    CLEAR_UNKNOWN_NAMED_AREA(columnEndPosition, ColumnEnd);
+    CLEAR_UNKNOWN_NAMED_AREA(rowStartPosition, RowStart);
+    CLEAR_UNKNOWN_NAMED_AREA(rowEndPosition, RowEnd);
 }
 
 bool StyleResolver::checkRegionStyle(Element* regionElement)
@@ -1796,9 +1819,9 @@ inline bool isValidVisitedLinkProperty(CSSPropertyID id)
     case CSSPropertyColor:
     case CSSPropertyOutlineColor:
     case CSSPropertyWebkitColumnRuleColor:
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
     case CSSPropertyWebkitTextDecorationColor:
-#endif // CSS3_TEXT
+#endif
     case CSSPropertyWebkitTextEmphasisColor:
     case CSSPropertyWebkitTextFillColor:
     case CSSPropertyWebkitTextStrokeColor:
@@ -1969,21 +1992,26 @@ static bool createGridTrackList(CSSValue* value, Vector<GridTrackSize>& trackSiz
         trackSizes.append(trackSize);
     }
 
-    if (trackSizes.isEmpty())
-        return false;
-
+    // The parser should have rejected any <track-list> without any <track-size> as
+    // this is not conformant to the syntax.
+    ASSERT(!trackSizes.isEmpty());
     return true;
 }
 
 
 static bool createGridPosition(CSSValue* value, GridPosition& position)
 {
-    // For now, we only accept: 'auto' | [ <integer> || <string> ] | span && <integer>?
+    // We accept the specification's grammar:
+    // 'auto' | [ <integer> || <string> ] | [ span && [ <integer> || string ] ] | <ident>
     if (value->isPrimitiveValue()) {
-#if !ASSERT_DISABLED
         CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
+        // We translate <ident> to <string> during parsing as it makes handling it simpler.
+        if (primitiveValue->isString()) {
+            position.setNamedGridArea(primitiveValue->getStringValue());
+            return true;
+        }
+
         ASSERT(primitiveValue->getValueID() == CSSValueAuto);
-#endif
         return true;
     }
 
@@ -2527,7 +2555,8 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                 result *= 3;
             else if (primitiveValue->getValueID() == CSSValueThick)
                 result *= 5;
-            width = CSSPrimitiveValue::create(result, CSSPrimitiveValue::CSS_EMS)->computeLength<float>(state.style(), state.rootElementStyle(), zoomFactor);
+            Ref<CSSPrimitiveValue> value(CSSPrimitiveValue::create(result, CSSPrimitiveValue::CSS_EMS));
+            width = value.get().computeLength<float>(state.style(), state.rootElementStyle(), zoomFactor);
             break;
         }
         default:
@@ -2560,7 +2589,8 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
             perspectiveValue = primitiveValue->computeLength<float>(state.style(), state.rootElementStyle(), zoomFactor);
         else if (primitiveValue->isNumber()) {
             // For backward compatibility, treat valueless numbers as px.
-            perspectiveValue = CSSPrimitiveValue::create(primitiveValue->getDoubleValue(), CSSPrimitiveValue::CSS_PX)->computeLength<float>(state.style(), state.rootElementStyle(), zoomFactor);
+            Ref<CSSPrimitiveValue> value(CSSPrimitiveValue::create(primitiveValue->getDoubleValue(), CSSPrimitiveValue::CSS_PX));
+            perspectiveValue = value.get().computeLength<float>(state.style(), state.rootElementStyle(), zoomFactor);
         } else
             return;
 
@@ -2729,6 +2759,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     }
 #endif
     case CSSPropertyWebkitGridAutoColumns: {
+        HANDLE_INHERIT_AND_INITIAL(gridAutoColumns, GridAutoColumns);
         GridTrackSize trackSize;
         if (!createGridTrackSize(value, trackSize, state))
             return;
@@ -2736,6 +2767,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         return;
     }
     case CSSPropertyWebkitGridAutoRows: {
+        HANDLE_INHERIT_AND_INITIAL(gridAutoRows, GridAutoRows);
         GridTrackSize trackSize;
         if (!createGridTrackSize(value, trackSize, state))
             return;
@@ -2743,6 +2775,16 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         return;
     }
     case CSSPropertyWebkitGridDefinitionColumns: {
+        if (isInherit) {
+            m_state.style()->setGridColumns(m_state.parentStyle()->gridColumns());
+            m_state.style()->setNamedGridColumnLines(m_state.parentStyle()->namedGridColumnLines());
+            return;
+        }
+        if (isInitial) {
+            m_state.style()->setGridColumns(RenderStyle::initialGridColumns());
+            m_state.style()->setNamedGridColumnLines(RenderStyle::initialNamedGridColumnLines());
+            return;
+        }
         Vector<GridTrackSize> trackSizes;
         NamedGridLinesMap namedGridLines;
         if (!createGridTrackList(value, trackSizes, namedGridLines, state))
@@ -2752,6 +2794,16 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         return;
     }
     case CSSPropertyWebkitGridDefinitionRows: {
+        if (isInherit) {
+            m_state.style()->setGridRows(m_state.parentStyle()->gridRows());
+            m_state.style()->setNamedGridRowLines(m_state.parentStyle()->namedGridRowLines());
+            return;
+        }
+        if (isInitial) {
+            m_state.style()->setGridRows(RenderStyle::initialGridRows());
+            m_state.style()->setNamedGridRowLines(RenderStyle::initialNamedGridRowLines());
+            return;
+        }
         Vector<GridTrackSize> trackSizes;
         NamedGridLinesMap namedGridLines;
         if (!createGridTrackList(value, trackSizes, namedGridLines, state))
@@ -3042,13 +3094,16 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     case CSSPropertyWebkitRubyPosition:
     case CSSPropertyWebkitTextCombine:
 #if ENABLE(CSS3_TEXT)
+    case CSSPropertyWebkitTextAlignLast:
+    case CSSPropertyWebkitTextJustify:
+#endif // CSS3_TEXT
+#if ENABLE(CSS3_TEXT_DECORATION)
     case CSSPropertyWebkitTextDecorationLine:
     case CSSPropertyWebkitTextDecorationStyle:
     case CSSPropertyWebkitTextDecorationColor:
-    case CSSPropertyWebkitTextAlignLast:
-    case CSSPropertyWebkitTextJustify:
+    case CSSPropertyWebkitTextDecorationSkip:
     case CSSPropertyWebkitTextUnderlinePosition:
-#endif // CSS3_TEXT
+#endif
     case CSSPropertyWebkitTextEmphasisColor:
     case CSSPropertyWebkitTextEmphasisPosition:
     case CSSPropertyWebkitTextEmphasisStyle:
@@ -3967,7 +4022,8 @@ void StyleResolver::loadPendingShapeImage(ShapeValue* shapeValue)
     CachedResourceLoader* cachedResourceLoader = m_state.document().cachedResourceLoader();
 
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    options.requestOriginPolicy = RestrictToSameOrigin;
+    options.requestOriginPolicy = PotentiallyCrossOriginEnabled;
+    options.allowCredentials = DoNotAllowStoredCredentials;
 
     shapeValue->setImage(cssImageValue->cachedImage(cachedResourceLoader, options));
 }

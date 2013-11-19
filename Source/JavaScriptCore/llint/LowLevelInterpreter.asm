@@ -31,16 +31,24 @@ if ARMv7s
 end
 
 # These declarations must match interpreter/JSStack.h.
-const CallFrameHeaderSize = 48
-const CallFrameHeaderSlots = 6
-const ArgumentCount = 48
-const CallerFrame = 40
-const Callee = 32
-const ScopeChain = 24
-const ReturnPC = 16
-const CodeBlock = 8
 
-const ThisArgumentOffset = CallFrameHeaderSize + 8
+if JSVALUE64
+const PtrSize = 8
+const CallFrameHeaderSlots = 6
+else
+const PtrSize = 4
+const CallFrameHeaderSlots = 5
+end
+const SlotSize = 8
+
+const CallerFrame = 0
+const ReturnPC = CallerFrame + PtrSize
+const CodeBlock = ReturnPC + PtrSize
+const ScopeChain = CodeBlock + SlotSize
+const Callee = ScopeChain + SlotSize
+const ArgumentCount = Callee + SlotSize
+const ThisArgumentOffset = ArgumentCount + SlotSize
+const CallFrameHeaderSize = ThisArgumentOffset
 
 # Some value representation constants.
 if JSVALUE64
@@ -372,6 +380,7 @@ macro functionInitialization(profileArgSkip)
         
     # Check stack height.
     loadi CodeBlock::m_numCalleeRegisters[t1], t0
+    addi 1, t0 # Account that local0 goes at slot -1
     loadp CodeBlock::m_vm[t1], t2
     loadp VM::interpreter[t2], t2
     lshiftp 3, t0

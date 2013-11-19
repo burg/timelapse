@@ -330,7 +330,7 @@ struct WKViewInterpretKeyEventsParameters {
     _data->_inBecomeFirstResponder = true;
     
     [self _updateSecureInputState];
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsFocused);
+    _data->_page->viewStateDidChange(ViewState::IsFocused);
 
     _data->_inBecomeFirstResponder = false;
     
@@ -358,7 +358,7 @@ struct WKViewInterpretKeyEventsParameters {
     if (!_data->_page->maintainsInactiveSelection())
         _data->_page->clearSelection();
     
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsFocused);
+    _data->_page->viewStateDidChange(ViewState::IsFocused);
 
     _data->_inResignFirstResponder = false;
 
@@ -1906,16 +1906,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     if (window == currentWindow)
         return;
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1070
-    // Avoid calling the code added in 121482 that ensures that the undo stack is cleaned up
-    // before the WKView is moved from one window to another when the WKView is being moved
-    // out of a popover window. This avoids a bug in OS X 10.7 that was fixed in 10.8.
-    // While this technically reopens a potentially crashing code path that 121482 closed,
-    // it only reopens it for WKViews that are used for text editing and that are removed
-    // from an NSPopover at some time earlier than tear-down of the NSPopover.
-    if (![currentWindow isKindOfClass:NSClassFromString(@"_NSPopoverWindow")])
-#endif
-        _data->_pageClient->viewWillMoveToAnotherWindow();
+    _data->_pageClient->viewWillMoveToAnotherWindow();
     
     [self removeWindowObservers];
     [self addWindowObserversForWindow:window];
@@ -1923,20 +1914,16 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
 - (void)viewDidMoveToWindow
 {
-    // We want to make sure to update the active state while hidden, so if the view is about to become visible, we
-    // update the active state first and then make it visible. If the view is about to be hidden, we hide it first and then
-    // update the active state.
     if ([self window]) {
         _data->_windowHasValidBackingStore = NO;
         [self doWindowDidChangeScreen];
-        _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
-        _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
 
-        if ([self isDeferringViewInWindowChanges]) {
-            _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
+        ViewState::Flags viewStateChanges = ViewState::WindowIsVisible | ViewState::WindowIsActive | ViewState::IsVisible;
+        if ([self isDeferringViewInWindowChanges])
             _data->_viewInWindowChangeWasDeferred = YES;
-        } else
-            _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible | WebPageProxy::ViewIsInWindow);
+        else
+            viewStateChanges |= ViewState::IsInWindow;
+        _data->_page->viewStateDidChange(viewStateChanges);
 
         [self _updateWindowAndViewFrames];
 
@@ -1949,14 +1936,12 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
         [self _accessibilityRegisterUIProcessTokens];
     } else {
-        _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
-        _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
-
-        if ([self isDeferringViewInWindowChanges]) {
-            _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
+        ViewState::Flags viewStateChanges = ViewState::WindowIsVisible | ViewState::WindowIsActive | ViewState::IsVisible;
+        if ([self isDeferringViewInWindowChanges])
             _data->_viewInWindowChangeWasDeferred = YES;
-        } else
-            _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive | WebPageProxy::ViewIsInWindow);
+        else
+            viewStateChanges |= ViewState::IsInWindow;
+        _data->_page->viewStateDidChange(viewStateChanges);
 
         [NSEvent removeMonitor:_data->_flagsChangedEventMonitor];
         _data->_flagsChangedEventMonitor = nil;
@@ -1977,7 +1962,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     NSWindow *keyWindow = [notification object];
     if (keyWindow == [self window] || keyWindow == [[self window] attachedSheet]) {
         [self _updateSecureInputState];
-        _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
+        _data->_page->viewStateDidChange(ViewState::WindowIsActive);
     }
 }
 
@@ -1991,19 +1976,19 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     NSWindow *formerKeyWindow = [notification object];
     if (formerKeyWindow == [self window] || formerKeyWindow == [[self window] attachedSheet]) {
         [self _updateSecureInputState];
-        _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
+        _data->_page->viewStateDidChange(ViewState::WindowIsActive);
     }
 }
 
 - (void)_windowDidMiniaturize:(NSNotification *)notification
 {
     _data->_windowHasValidBackingStore = NO;
-    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
+    _data->_page->viewStateDidChange(ViewState::WindowIsVisible);
 }
 
 - (void)_windowDidDeminiaturize:(NSNotification *)notification
 {
-    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
+    _data->_page->viewStateDidChange(ViewState::WindowIsVisible);
 }
 
 - (void)_windowDidMove:(NSNotification *)notification
@@ -2020,20 +2005,12 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
 - (void)_windowDidOrderOffScreen:(NSNotification *)notification
 {
-    // We want to make sure to update the active state while hidden, so since the view is about to be hidden,
-    // we hide it first and then update the active state.
-    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
-    _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
+    _data->_page->viewStateDidChange(ViewState::WindowIsVisible | ViewState::IsVisible | ViewState::WindowIsActive);
 }
 
 - (void)_windowDidOrderOnScreen:(NSNotification *)notification
 {
-    // We want to make sure to update the active state while hidden, so since the view is about to become visible,
-    // we update the active state first and then make it visible.
-    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
-    _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
+    _data->_page->viewStateDidChange(ViewState::WindowIsVisible | ViewState::IsVisible | ViewState::WindowIsActive);
 }
 
 - (void)_windowDidChangeBackingProperties:(NSNotification *)notification
@@ -2050,7 +2027,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 - (void)_windowDidChangeOcclusionState:(NSNotification *)notification
 {
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
+    _data->_page->viewStateDidChange(ViewState::IsVisible);
 }
 #endif
 
@@ -2074,12 +2051,12 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
 - (void)viewDidHide
 {
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
+    _data->_page->viewStateDidChange(ViewState::IsVisible);
 }
 
 - (void)viewDidUnhide
 {
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
+    _data->_page->viewStateDidChange(ViewState::IsVisible);
 }
 
 - (void)viewDidChangeBackingProperties
@@ -2095,7 +2072,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
 - (void)_activeSpaceDidChange:(NSNotification *)notification
 {
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
+    _data->_page->viewStateDidChange(ViewState::IsVisible);
 }
 
 - (void)_accessibilityRegisterUIProcessTokens
@@ -3171,7 +3148,7 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_shouldDeferViewInWindowChanges = NO;
 
     if (_data->_viewInWindowChangeWasDeferred) {
-        _data->_page->viewInWindowStateDidChange();
+        _data->_page->viewStateDidChange(ViewState::IsInWindow);
         _data->_viewInWindowChangeWasDeferred = NO;
     }
 }
@@ -3189,12 +3166,12 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_shouldDeferViewInWindowChanges = NO;
 
     if (_data->_viewInWindowChangeWasDeferred) {
-        _data->_page->viewInWindowStateDidChange(hasPendingViewInWindowChange ? WebPageProxy::WantsReplyOrNot::DoesWantReply : WebPageProxy::WantsReplyOrNot::DoesNotWantReply);
+        _data->_page->viewStateDidChange(ViewState::IsInWindow, hasPendingViewInWindowChange ? WebPageProxy::WantsReplyOrNot::DoesWantReply : WebPageProxy::WantsReplyOrNot::DoesNotWantReply);
         _data->_viewInWindowChangeWasDeferred = NO;
     }
 
     if (hasPendingViewInWindowChange)
-        _data->_page->waitForDidUpdateInWindowState();
+        _data->_page->waitForDidUpdateViewState();
 }
 
 - (BOOL)isDeferringViewInWindowChanges

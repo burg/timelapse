@@ -44,14 +44,12 @@ class FileList;
 
 class FileInputType : public BaseClickableWithKeyInputType, private FileChooserClient, private FileIconLoaderClient {
 public:
-    static OwnPtr<InputType> create(HTMLInputElement&);
+    explicit FileInputType(HTMLInputElement&);
     virtual ~FileInputType();
 
     static Vector<FileChooserFileInfo> filesFromFormControlState(const FormControlState&);
 
 private:
-    explicit FileInputType(HTMLInputElement&);
-
     virtual const AtomicString& formControlType() const OVERRIDE;
     virtual FormControlState saveFormControlState() const OVERRIDE;
     virtual void restoreFormControlState(const FormControlState&) OVERRIDE;
@@ -59,7 +57,7 @@ private:
     virtual bool valueMissing(const String&) const OVERRIDE;
     virtual String valueMissingText() const OVERRIDE;
     virtual void handleDOMActivateEvent(Event*) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderStyle&) const OVERRIDE;
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) const OVERRIDE;
     virtual bool canSetStringValue() const OVERRIDE;
     virtual bool canChangeFromAnotherType() const OVERRIDE;
     virtual FileList* files() OVERRIDE;

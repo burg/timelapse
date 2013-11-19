@@ -41,14 +41,6 @@ typedef id PlatformUIElement;
 #else
 typedef struct objc_object* PlatformUIElement;
 #endif
-#elif PLATFORM(WIN)
-#undef _WINSOCKAPI_
-#define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
-
-#include <WebCore/COMPtr.h>
-#include <oleacc.h>
-
-typedef COMPtr<IAccessible> PlatformUIElement;
 #elif PLATFORM(GTK) || (PLATFORM(EFL) && HAVE(ACCESSIBILITY))
 #include "AccessibilityNotificationHandlerAtk.h"
 #include <atk/atk.h>
@@ -233,6 +225,8 @@ public:
     int indexForTextMarker(AccessibilityTextMarker*);
     bool isTextMarkerValid(AccessibilityTextMarker*);
     PassRefPtr<AccessibilityTextMarker> textMarkerForIndex(int);
+    PassRefPtr<AccessibilityTextMarker> startTextMarker();
+    PassRefPtr<AccessibilityTextMarker> endTextMarker();
 
     // Returns an ordered list of supported actions for an element.
     JSRetainPtr<JSStringRef> supportedActions() const;

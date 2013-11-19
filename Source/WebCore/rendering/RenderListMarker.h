@@ -35,7 +35,7 @@ String listMarkerText(EListStyleType, int value);
 // The RenderListMarker always has to be a child of a RenderListItem.
 class RenderListMarker FINAL : public RenderBox {
 public:
-    explicit RenderListMarker(RenderListItem&);
+    RenderListMarker(RenderListItem&, PassRef<RenderStyle>);
     virtual ~RenderListMarker();
 
     const String& text() const { return m_text; }
@@ -60,7 +60,7 @@ private:
 
     virtual void imageChanged(WrappedImagePtr, const IntRect* = 0) OVERRIDE;
 
-    virtual InlineBox* createInlineBox() OVERRIDE;
+    virtual std::unique_ptr<InlineElementBox> createInlineBox() OVERRIDE;
 
     virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const OVERRIDE;
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const OVERRIDE;

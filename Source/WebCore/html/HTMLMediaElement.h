@@ -160,8 +160,6 @@ public:
 // playback state
     virtual double currentTime() const OVERRIDE;
     virtual void setCurrentTime(double, ExceptionCode&) OVERRIDE;
-    double initialTime() const;
-    double startTime() const;
     virtual double duration() const OVERRIDE;
     virtual bool paused() const OVERRIDE;
     virtual double defaultPlaybackRate() const OVERRIDE;
@@ -379,11 +377,13 @@ public:
     MediaController* controller() const;
     void setController(PassRefPtr<MediaController>);
 
-    virtual bool dispatchEvent(PassRefPtr<Event>) OVERRIDE;
-
     virtual bool willRespondToMouseClickEvents() OVERRIDE;
 
     void enteredOrExitedFullscreen() { configureMediaControls(); }
+
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+    bool shouldUseVideoPluginProxy() const;
+#endif
 
 protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool);
@@ -429,6 +429,8 @@ protected:
     void endIgnoringTrackDisplayUpdateRequests();
 #endif
 
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+
 private:
     void createMediaPlayer();
 
@@ -439,7 +441,6 @@ private:
     virtual bool supportsFocus() const OVERRIDE;
     virtual bool isMouseFocusable() const OVERRIDE;
     virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
     virtual bool childShouldCreateRenderer(const Node*) const OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
     virtual void removedFrom(ContainerNode&) OVERRIDE;
@@ -729,7 +730,6 @@ private:
     bool m_needWidgetUpdate : 1;
 #endif
 
-    bool m_dispatchingCanPlayEvent : 1;
     bool m_loadInitiatedByUserGesture : 1;
     bool m_completelyLoaded : 1;
     bool m_havePreparedToPlay : 1;

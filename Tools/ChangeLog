@@ -1,3 +1,1408 @@
+2013-11-08  Matthew Hanson  <matthew_hanson@apple.com>
+
+        Unreviewed. Added myself as a contributor.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+
+2013-11-08  Krzysztof Czech  <k.czech@samsung.com>
+
+        [GTK] accessibility/aria-link-supports-press.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=98355
+
+        Reviewed by Mario Sanchez Prada.
+
+        Checking "jump" action for link elements. Action "jump" occurs when a link 
+        element is pressed/clicked.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::isPressActionSupported):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::isPressActionSupported):
+
+2013-11-08  Przemyslaw Szymanski  <p.szymanski3@samsung.com>
+
+        [JHBUILD] Jhbuild Makefile build bug workaround
+        https://bugs.webkit.org/show_bug.cgi?id=123971
+
+        Reviewed by Ryosuke Niwa.
+
+        After Jhbuild repository is cloned (for instance when you use
+        Tools/Scripts/update-webkitefl-libs) it is built from sources.
+        If you have GREP_OPTIONS grep env variable set (for instance
+        GREP_OPTIONS=-n) then it is jhbuild build error. Makefile.plain
+        uses shell grep. For specific GREP_OPTIONS grep output will be
+        different than expected one by Jhbuild and there is an error
+        with Jhbuild build. Jhbuild will not be built and then WebKit
+        source also will not be built. This patch is a workaround to this
+        issue. It disables GREP_OPTIONS for Jhbuild build time.
+
+        * jhbuild/jhbuild-wrapper:
+        (install_jhbuild):
+
+2013-11-08  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Ignore deprecated macros when generating gtk-doc
+        https://bugs.webkit.org/show_bug.cgi?id=123988
+
+        Reviewed by Philippe Normand.
+
+        * gtk/generate-gtkdoc:
+        (get_common_options): Ignore also WEBKIT_DEPRECATED and
+        WEBKIT_DEPRECATED_FOR decorators.
+
+2013-11-08  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Pass the library namespace to gtkdoc-mkdb
+        https://bugs.webkit.org/show_bug.cgi?id=123900
+
+        Reviewed by Martin Robinson.
+
+        This fixes the generation of the index of symbols in the API
+        documentation.
+
+        * gtk/generate-gtkdoc:
+        (get_webkit2_options): Define namespace as WebKit.
+        (get_webkit1_options): Ditto.
+        (get_webkitdom_options): Define namespace as WebKitDOM.
+        * gtk/gtkdoc.py:
+        (GTKDoc.__init__): Add namespace option.
+        (GTKDoc._run_gtkdoc_mkdb): Pass namespace to mkdb if present.
+
+2013-11-07  Chris Fleizach  <cfleizach@apple.com>
+
+        Modify email order list for James Craig so his primary email is first.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+
+2013-11-07  Nick Diego Yamane  <nick.yamane@openbossa.org>
+
+        [Gtk] Disable LTO when building cairo
+        https://bugs.webkit.org/show_bug.cgi?id=123954
+
+        Reviewed by Martin Robinson.
+
+        Cairo always uses LTO, when it detects compiler support.
+        LTO is buggy in many/all versions of GCC and shouldn't be enabled by
+        default. This patch disables LTO when building cairo library.
+        - See: https://bugs.freedesktop.org/show_bug.cgi?id=60852
+
+        With gcc 4.7.3, for example, the build fails with the following message:
+        'lto1: fatal error: LTO_tags out of range: Range is 0 to 361, value is 15872'
+
+        * gtk/jhbuild.modules:
+
+2013-11-07  Samuel White  <samuel_white@apple.com>
+
+        AX: DRT AccessibilityUIElement::isFocused methods should be finished.
+        https://bugs.webkit.org/show_bug.cgi?id=123774
+
+        Reviewed by Chris Fleizach.
+
+        Implemented AccessibilityUIElement::isFocused methods and removed FIXMEs.
+
+        * DumpRenderTree/mac/AccessibilityUIElementMac.mm:
+        (AccessibilityUIElement::isFocused):
+        * WebKitTestRunner/InjectedBundle/mac/AccessibilityUIElementMac.mm:
+        (WTR::AccessibilityUIElement::isFocused):
+
+2013-11-07  Dániel Bátyai  <Batyai.Daniel@stud.u-szeged.hu>
+
+        Removed retrieveQMakespecVar function
+        https://bugs.webkit.org/show_bug.cgi?id=123996
+
+        Reviewed by Csaba Osztrogonác.
+
+        * Scripts/webkitdirs.pm:
+
+2013-11-07  Dániel Bátyai  <Batyai.Daniel@stud.u-szeged.hu>
+
+        Removed QMake related filters
+        https://bugs.webkit.org/show_bug.cgi?id=123992
+
+        Reviewed by Csaba Osztrogonác.
+
+        * Scripts/webkitpy/tool/commands/rebaseline_unittest.py:
+        (TestRebaseline.test_rebaseline):
+        (TestRebaselineExpectations.test_rebaseline_expectations):
+
+2013-11-07  Nick Diego Yamane  <nick.yamane@openbossa.org>
+
+        [Efl] Disable LTO when building cairo
+        https://bugs.webkit.org/show_bug.cgi?id=123947
+
+        Reviewed by Gyuyoung Kim.
+
+        Cairo always uses LTO, when it detects compiler support.
+        LTO is buggy in many/all versions of GCC and shouldn't be enabled by
+        default. This patch disables LTO when building cairo library.
+        - See: https://bugs.freedesktop.org/show_bug.cgi?id=60852
+
+        With gcc 4.7.3, for example, the build fails with the following message:
+        'lto1: fatal error: LTO_tags out of range: Range is 0 to 361, value is 15872'
+
+        * efl/jhbuild.modules:
+
+2013-11-07  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        AX: [ATK] Video and audio elements are not properly exposed
+        https://bugs.webkit.org/show_bug.cgi?id=123894
+
+        Reviewed by Chris Fleizach.
+
+        Update DRT and WKTR to handle the ATK_ROLE_EMBEDDED role.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp: Updated.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp: Updated.
+
+2013-11-07  Peter Molnar  <pmolnar.u-szeged@partner.samsung.com>
+
+        Change git_commit_from_svn_revision() to work in a pure git checkout
+        https://bugs.webkit.org/show_bug.cgi?id=111668
+
+        Reviewed by Ryosuke Niwa.
+
+        * Scripts/webkitpy/common/checkout/scm/git.py:
+        (Git.git_commit_from_svn_revision):
+
+2013-11-06  Jer Noble  <jer.noble@apple.com>
+
+        Unreviewed webkitpy unit test fix; update baselines after r158765
+
+        * Scripts/webkitpy/port/win_unittest.py:
+        (WinPortTest.test_baseline_search_path):
+
+2013-11-06  Jer Noble  <jer.noble@apple.com>
+
+        [Win] run-webkit-tests on the win platform should fall back to mac-mountainlion, not mac-lion.
+        https://bugs.webkit.org/show_bug.cgi?id=123905
+
+        Reviewed by Brent Fulgham.
+
+        Now that the mac-lion results have been removed, the win port should fall back to
+        the mac-mountainlion results.
+
+        * Scripts/webkitpy/port/win.py:
+        (WinPort.default_baseline_search_path):
+
+2013-11-06  Anders Carlsson  <andersca@apple.com>
+
+        Fix a Mountain Lion test failure.
+
+        NSURLRequest doesn't conform to NSSecureCoding on Mountain Lion, so don't try to test encoding it.
+
+        * TestWebKitAPI/Tests/WebKit2ObjC/WKRemoteObjectRegistry.mm:
+        (TestWebKitAPI::TEST):
+
+2013-11-06  Krzysztof Czech  <k.czech@samsung.com>
+
+        [ATK] Implement tables-related attributesOf*() functions for AccessibilityUIElement
+        https://bugs.webkit.org/show_bug.cgi?id=118969
+
+        Reviewed by Mario Sanchez Prada.
+
+        Added missing implementation of attributesOfColumnHeaders, attributesOfRowHeaders, attributesOfVisibleCells.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::attributesOfChildren):
+        (AccessibilityUIElement::attributesOfColumnHeaders):
+        (AccessibilityUIElement::attributesOfRowHeaders):
+        (AccessibilityUIElement::attributesOfVisibleCells):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::attributesOfChildren):
+        (WTR::AccessibilityUIElement::attributesOfColumnHeaders):
+        (WTR::AccessibilityUIElement::attributesOfRowHeaders):
+        (WTR::AccessibilityUIElement::attributesOfVisibleCells):
+
+2013-11-05  Benjamin Poulain  <benjamin@webkit.org>
+
+        [WK2] Add a WebKit2 API for Geolocation's highAccuracy
+        https://bugs.webkit.org/show_bug.cgi?id=123786
+
+        Reviewed by Darin Adler.
+
+        Add basic testing for the Geolocation API (start, stop and change accuracy).
+
+        * TestWebKitAPI/GNUmakefile.am:
+        * TestWebKitAPI/PlatformEfl.cmake:
+        * TestWebKitAPI/PlatformGTK.cmake:
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        * TestWebKitAPI/Tests/WebKit2/Geolocation.cpp: Added.
+        (TestWebKitAPI::operator<<):
+        (TestWebKitAPI::GeolocationStateTracker::~GeolocationStateTracker):
+        (TestWebKitAPI::GeolocationStateTracker::eventsChanged):
+        (TestWebKitAPI::GeolocationStateTracker::startUpdatingCallback):
+        (TestWebKitAPI::GeolocationStateTracker::stopUpdatingCallback):
+        (TestWebKitAPI::GeolocationStateTracker::setEnableHighAccuracyCallback):
+        (TestWebKitAPI::decidePolicyForGeolocationPermissionRequestCallBack):
+        (TestWebKitAPI::setupGeolocationProvider):
+        (TestWebKitAPI::setupView):
+        (TestWebKitAPI::GeolocationBasicStateTracker::GeolocationBasicStateTracker):
+        (TestWebKitAPI::GeolocationBasicStateTracker::eventsChanged):
+        (TestWebKitAPI::GeolocationBasicWithHighAccuracyStateTracker::GeolocationBasicWithHighAccuracyStateTracker):
+        (TestWebKitAPI::GeolocationBasicWithHighAccuracyStateTracker::eventsChanged):
+        (TestWebKitAPI::GeolocationTransitionToHighAccuracyStateTracker::GeolocationTransitionToHighAccuracyStateTracker):
+        (TestWebKitAPI::GeolocationTransitionToHighAccuracyStateTracker::eventsChanged):
+        (TestWebKitAPI::GeolocationTransitionToLowAccuracyStateTracker::GeolocationTransitionToLowAccuracyStateTracker):
+        (TestWebKitAPI::GeolocationTransitionToLowAccuracyStateTracker::eventsChanged):
+        (TestWebKitAPI::didFinishLoadForFrame):
+        * TestWebKitAPI/Tests/WebKit2/geolocationGetCurrentPosition.html: Added.
+        * TestWebKitAPI/Tests/WebKit2/geolocationGetCurrentPositionWithHighAccuracy.html: Added.
+        * TestWebKitAPI/Tests/WebKit2/geolocationWatchPosition.html: Added.
+        * TestWebKitAPI/Tests/WebKit2/geolocationWatchPositionWithHighAccuracy.html: Added.
+        * WebKitTestRunner/GeolocationProviderMock.cpp:
+        (WTR::GeolocationProviderMock::GeolocationProviderMock):
+
+2013-11-05  Anders Carlsson  <andersca@apple.com>
+
+        Implement more NSCoder methods
+        https://bugs.webkit.org/show_bug.cgi?id=123815
+
+        Reviewed by Dan Bernstein.
+
+        Add a method that takes an NSArray, an NSDictionary and an NSURLRequest.
+
+        * TestWebKitAPI/Tests/WebKit2ObjC/WKRemoteObjectRegistry.mm:
+        (TestWebKitAPI::TEST):
+        * TestWebKitAPI/Tests/mac/WKRemoteObjectRegistry_Bundle.mm:
+        (-[BundleObject testMethodWithArray:dictionary:request:]):
+        * TestWebKitAPI/Tests/mac/WKRemoteObjectRegistry_Shared.h:
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Update ReducedFTL
+        https://bugs.webkit.org/show_bug.cgi?id=123805
+
+        Reviewed by Sam Weinig.
+        
+        - Make ReducedFTL build with debug info.
+        
+        - Give ReducedFTL a --loop mode that runs everything in a loop. Great for finding
+          memory leaks and attaching a profiler.
+        
+        - Reorder the passes so that they match the FTL.
+        
+        - Make it possible to change the backend opt level and enable the fast isel.
+
+        * ReducedFTL/ReducedFTL.c:
+        (usage):
+        (roundUpSize):
+        (mmAllocateCodeSection):
+        (main):
+        * ReducedFTL/build.sh:
+
+2013-11-05  Chris Fleizach  <cfleizach@apple.com>
+
+        AX: switch DRT AX methods to use nullptr
+        https://bugs.webkit.org/show_bug.cgi?id=123773
+
+        Reviewed by Andreas Kling.
+
+        Switch AX related code in DRT and WKTR to use nullptr.
+
+        * DumpRenderTree/AccessibilityUIElement.cpp:
+        (AccessibilityUIElement::startTextMarker):
+        (AccessibilityUIElement::endTextMarker):
+        * DumpRenderTree/mac/AccessibilityControllerMac.mm:
+        (findAccessibleObjectById):
+        (AccessibilityController::accessibleElementById):
+        * DumpRenderTree/mac/AccessibilityUIElementMac.mm:
+        (AccessibilityUIElement::getChildAtIndex):
+        (AccessibilityUIElement::linkedUIElementAtIndex):
+        (AccessibilityUIElement::ariaOwnsElementAtIndex):
+        (AccessibilityUIElement::ariaFlowToElementAtIndex):
+        (AccessibilityUIElement::disclosedRowAtIndex):
+        (AccessibilityUIElement::selectedChildAtIndex):
+        (AccessibilityUIElement::selectedRowAtIndex):
+        (AccessibilityUIElement::rowAtIndex):
+        (AccessibilityUIElement::titleUIElement):
+        (AccessibilityUIElement::parentElement):
+        (AccessibilityUIElement::disclosedByRow):
+        (AccessibilityUIElement::stringAttributeValue):
+        (AccessibilityUIElement::uiElementAttributeValue):
+        (AccessibilityUIElement::role):
+        (AccessibilityUIElement::subrole):
+        (AccessibilityUIElement::roleDescription):
+        (AccessibilityUIElement::title):
+        (AccessibilityUIElement::description):
+        (AccessibilityUIElement::orientation):
+        (AccessibilityUIElement::stringValue):
+        (AccessibilityUIElement::language):
+        (AccessibilityUIElement::helpText):
+        (AccessibilityUIElement::valueDescription):
+        (AccessibilityUIElement::speak):
+        (AccessibilityUIElement::classList):
+        (AccessibilityUIElement::ariaDropEffects):
+        (AccessibilityUIElement::rangeForLine):
+        (AccessibilityUIElement::rangeForPosition):
+        (AccessibilityUIElement::boundsForRange):
+        (AccessibilityUIElement::stringForRange):
+        (AccessibilityUIElement::attributedStringForRange):
+        (AccessibilityUIElement::uiElementForSearchPredicate):
+        (AccessibilityUIElement::attributesOfColumnHeaders):
+        (AccessibilityUIElement::attributesOfRowHeaders):
+        (AccessibilityUIElement::attributesOfColumns):
+        (AccessibilityUIElement::attributesOfRows):
+        (AccessibilityUIElement::attributesOfVisibleCells):
+        (AccessibilityUIElement::attributesOfHeader):
+        (AccessibilityUIElement::rowIndexRange):
+        (AccessibilityUIElement::columnIndexRange):
+        (AccessibilityUIElement::cellForColumnAndRow):
+        (AccessibilityUIElement::horizontalScrollbar):
+        (AccessibilityUIElement::verticalScrollbar):
+        (AccessibilityUIElement::pathDescription):
+        (AccessibilityUIElement::selectedTextRange):
+        (AccessibilityUIElement::url):
+        (AccessibilityUIElement::textMarkerRangeForElement):
+        (AccessibilityUIElement::textMarkerForIndex):
+        (AccessibilityUIElement::previousTextMarker):
+        (AccessibilityUIElement::nextTextMarker):
+        (AccessibilityUIElement::stringForTextMarkerRange):
+        (AccessibilityUIElement::textMarkerRangeForMarkers):
+        (AccessibilityUIElement::startTextMarkerForTextMarkerRange):
+        (AccessibilityUIElement::endTextMarkerForTextMarkerRange):
+        (AccessibilityUIElement::endTextMarkerForBounds):
+        (AccessibilityUIElement::startTextMarkerForBounds):
+        (AccessibilityUIElement::textMarkerForPoint):
+        (AccessibilityUIElement::accessibilityElementForTextMarker):
+        (AccessibilityUIElement::startTextMarker):
+        (AccessibilityUIElement::endTextMarker):
+        (AccessibilityUIElement::supportedActions):
+        (AccessibilityUIElement::mathPostscriptsDescription):
+        (AccessibilityUIElement::mathPrescriptsDescription):
+        * WebKitTestRunner/InjectedBundle/AccessibilityController.cpp:
+        (WTR::AccessibilityController::accessibleElementById):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::startTextMarker):
+        (WTR::AccessibilityUIElement::endTextMarker):
+        * WebKitTestRunner/InjectedBundle/mac/AccessibilityControllerMac.mm:
+        (WTR::findAccessibleObjectById):
+        (WTR::AccessibilityController::accessibleElementById):
+        * WebKitTestRunner/InjectedBundle/mac/AccessibilityUIElementMac.mm:
+        (WTR::AccessibilityUIElement::childAtIndex):
+        (WTR::AccessibilityUIElement::linkedUIElementAtIndex):
+        (WTR::AccessibilityUIElement::ariaOwnsElementAtIndex):
+        (WTR::AccessibilityUIElement::ariaFlowToElementAtIndex):
+        (WTR::AccessibilityUIElement::disclosedRowAtIndex):
+        (WTR::AccessibilityUIElement::rowAtIndex):
+        (WTR::AccessibilityUIElement::selectedChildAtIndex):
+        (WTR::AccessibilityUIElement::selectedRowAtIndex):
+        (WTR::AccessibilityUIElement::titleUIElement):
+        (WTR::AccessibilityUIElement::parentElement):
+        (WTR::AccessibilityUIElement::disclosedByRow):
+        (WTR::AccessibilityUIElement::stringAttributeValue):
+        (WTR::AccessibilityUIElement::uiElementAttributeValue):
+        (WTR::AccessibilityUIElement::role):
+        (WTR::AccessibilityUIElement::subrole):
+        (WTR::AccessibilityUIElement::roleDescription):
+        (WTR::AccessibilityUIElement::title):
+        (WTR::AccessibilityUIElement::description):
+        (WTR::AccessibilityUIElement::orientation):
+        (WTR::AccessibilityUIElement::stringValue):
+        (WTR::AccessibilityUIElement::language):
+        (WTR::AccessibilityUIElement::helpText):
+        (WTR::AccessibilityUIElement::valueDescription):
+        (WTR::AccessibilityUIElement::classList):
+        (WTR::AccessibilityUIElement::speak):
+        (WTR::AccessibilityUIElement::ariaDropEffects):
+        (WTR::AccessibilityUIElement::rangeForLine):
+        (WTR::AccessibilityUIElement::rangeForPosition):
+        (WTR::AccessibilityUIElement::boundsForRange):
+        (WTR::AccessibilityUIElement::stringForRange):
+        (WTR::AccessibilityUIElement::attributedStringForRange):
+        (WTR::AccessibilityUIElement::uiElementForSearchPredicate):
+        (WTR::AccessibilityUIElement::attributesOfColumnHeaders):
+        (WTR::AccessibilityUIElement::attributesOfRowHeaders):
+        (WTR::AccessibilityUIElement::attributesOfColumns):
+        (WTR::AccessibilityUIElement::attributesOfRows):
+        (WTR::AccessibilityUIElement::attributesOfVisibleCells):
+        (WTR::AccessibilityUIElement::attributesOfHeader):
+        (WTR::AccessibilityUIElement::rowIndexRange):
+        (WTR::AccessibilityUIElement::columnIndexRange):
+        (WTR::AccessibilityUIElement::cellForColumnAndRow):
+        (WTR::AccessibilityUIElement::horizontalScrollbar):
+        (WTR::AccessibilityUIElement::verticalScrollbar):
+        (WTR::AccessibilityUIElement::selectedTextRange):
+        (WTR::AccessibilityUIElement::url):
+        (WTR::AccessibilityUIElement::textMarkerRangeForElement):
+        (WTR::AccessibilityUIElement::previousTextMarker):
+        (WTR::AccessibilityUIElement::nextTextMarker):
+        (WTR::AccessibilityUIElement::stringForTextMarkerRange):
+        (WTR::AccessibilityUIElement::textMarkerRangeForMarkers):
+        (WTR::AccessibilityUIElement::startTextMarkerForTextMarkerRange):
+        (WTR::AccessibilityUIElement::endTextMarkerForTextMarkerRange):
+        (WTR::AccessibilityUIElement::endTextMarkerForBounds):
+        (WTR::AccessibilityUIElement::startTextMarkerForBounds):
+        (WTR::AccessibilityUIElement::textMarkerForPoint):
+        (WTR::AccessibilityUIElement::accessibilityElementForTextMarker):
+        (WTR::AccessibilityUIElement::textMarkerForIndex):
+        (WTR::AccessibilityUIElement::startTextMarker):
+        (WTR::AccessibilityUIElement::endTextMarker):
+        (WTR::AccessibilityUIElement::mathPostscriptsDescription):
+        (WTR::AccessibilityUIElement::mathPrescriptsDescription):
+        (WTR::AccessibilityUIElement::pathDescription):
+        (WTR::AccessibilityUIElement::supportedActions):
+
+2013-11-05  László Langó  <laszlo.lango@frontendart.com>
+
+        Remove leftover Qt related things from the flakiness_dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=123800
+
+        Reviewed by Anders Carlsson.
+
+        * TestResultServer/static-dashboards/flakiness_dashboard_unittests.js:
+        (test):
+
+2013-11-05  Robert Plociennik  <r.plociennik@samsung.com>
+
+        [EFL] accessibility/svg-group-element-with-title.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=114151
+
+        Reviewed by Mario Sanchez Prada.
+
+        atk_component_ref_accessible_at_point(), utilized in
+        AccessibilityUIElement::elementAtPoint(), is expected to 'get a reference to the
+        accessible child, if one exists, at the coordinate point specified' and not
+        explicitly return self in case of lack of child elements. This contradicts with
+        expected behavior of elementAtPoint(). Therefore, elementAtPoint() is
+        changed to return self regardless of coordinates specified, provided no child
+        element could be retrieved, effectively mimicing the behaviour of equivalent
+        Mac implementation in accessibilityHitTest().
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::elementAtPoint): Fixed.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::elementAtPoint): Fixed.
+
+2013-11-05  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [CSS] Enable css-image-orientation on EFL and GTK ports.
+        https://bugs.webkit.org/show_bug.cgi?id=123698
+
+        Reviewed by Beth Dakin.
+
+        r157909 added wrong early return for css-image-orientation. It causes about 20 regressions in layout test
+        when enabling css-image-orientaiton. This fixes those wrong implementation as well as enables it on EFL
+        and GTK ports by default.
+
+        * Scripts/webkitperl/FeatureList.pm:
+
+2013-11-04  Alexey Proskuryakov  <ap@apple.com>
+
+        DumpRenderTree should reset its preferences file on launch
+        https://bugs.webkit.org/show_bug.cgi?id=29751
+
+        Reviewed by Dan Bernstein.
+
+        Using NSArgumentDomain was not a good idea. While it works with NSUserDefaults
+        and CFPreferencesCopyAppValue family of functions, it doesn't work with
+        CFPreferencesCopyValue(..., kCFPreferencesCurrentApplication, ...).
+
+        So, now we'll just set defaults in the current application.
+
+        * DumpRenderTree/mac/DumpRenderTree.mm: (setDefaultsToConsistentValuesForTesting):
+        - Delete the defaults.
+        - Removed CFPreferencesSetAppValue calls, as -setValuesForKeysWithDictionary: does the same.
+        - The comment about [NSUserDefaults standardUserDefaults] indirectly initializing NSApplication was incorrect.
+
+        * WebKitTestRunner/mac/main.mm: (setDefaultsToConsistentValuesForTesting):
+        Switched to -setValuesForKeysWithDictionary for consistency.
+
+2013-11-04  Filip Pizlo  <fpizlo@apple.com>
+
+        Running FTL tests shouldn't reduce coverage on DFG tests
+        https://bugs.webkit.org/show_bug.cgi?id=123780
+
+        Reviewed by Geoffrey Garen.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-11-04  Anders Carlsson  <andersca@apple.com>
+
+        More WKRemoteObjectRegistry work
+        https://bugs.webkit.org/show_bug.cgi?id=123754
+
+        Reviewed by Dan Bernstein.
+
+        * TestWebKitAPI/Tests/WebKit2ObjC/WKRemoteObjectRegistry.mm:
+        (TestWebKitAPI::TEST):
+        Use the correct bundle test name. Call Util::run.
+
+        * TestWebKitAPI/Tests/mac/WKRemoteObjectRegistry_Bundle.mm:
+        (-[BundleObject sayHello]):
+        (-[BundleObject testMethodWithString:double:integer:]):
+        Add BundleObject implementation. Register the bundle object with
+        the remote object registry. Call _handleMessageWithName:body: on the incoming message.
+
+2013-11-04  Krzysztof Czech  <k.czech@samsung.com>
+
+        [EFL] Change ATK version to 2.10.0
+        https://bugs.webkit.org/show_bug.cgi?id=123727
+
+        Reviewed by Mario Sanchez Prada.
+
+        Provided new API to retrieve text at a given offset.
+
+        * efl/jhbuild.modules:
+
+2013-11-04  Robert Plociennik  <r.plociennik@samsung.com>
+
+        [EFL] accessibility/textarea-line-for-index.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=112015
+
+        Reviewed by Mario Sanchez Prada.
+
+        Provided implementation for AccessibilityUIElement::lineForIndex().
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::lineForIndex): Implemented.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::lineForIndex): Implemented.
+
+2013-11-04  Krzysztof Czech  <k.czech@samsung.com>
+
+        [EFL] accessibility/button-press-action.html
+        https://bugs.webkit.org/show_bug.cgi?id=111993
+
+        Reviewed by Mario Sanchez Prada.
+
+        Provided an implementation for AccessibilityUIElement::isPressActionSupported.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::isPressActionSupported):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::isPressActionSupported):
+
+2013-11-03  Patrick Gansterer  <paroga@webkit.org>
+
+        Add test for ListHashSet::removeLast()
+        https://bugs.webkit.org/show_bug.cgi?id=121810
+
+        Reviewed by Anders Carlsson.
+
+        * TestWebKitAPI/Tests/WTF/ListHashSet.cpp:
+        (TestWebKitAPI::TEST):
+
+2013-11-02  Filip Pizlo  <fpizlo@apple.com>
+
+        LLVM assertion failures should funnel into WTF's crash handling
+        https://bugs.webkit.org/show_bug.cgi?id=123682
+
+        Reviewed by Geoffrey Garen.
+        
+        Need to disable LLVM's crash overrides so that we can do our own crash overrides.
+
+        * Scripts/configure-llvm:
+
+2013-11-01  Andy Estes  <aestes@apple.com>
+
+        Teach check-for-webkit-framework-include-consistency to ignore stale iOS Private headers that might exist in build directories due to r158443
+        https://bugs.webkit.org/show_bug.cgi?id=123636
+
+        Reviewed by Andreas Kling.
+
+        * Scripts/check-for-webkit-framework-include-consistency:
+
+2013-11-01  Anders Carlsson  <andersca@apple.com>
+
+        Begin work on encoding argument types
+        https://bugs.webkit.org/show_bug.cgi?id=123631
+
+        Reviewed by Dan Bernstein.
+
+        Add another test method.
+
+        * TestWebKitAPI/Tests/WebKit2ObjC/WKRemoteObjectRegistry.mm:
+        * TestWebKitAPI/Tests/mac/WKRemoteObjectRegistry_Shared.h:
+
+2013-11-01  Afonso R. Costa Jr.  <afonso.costa@samsung.com>
+
+        Expose setApplicationCacheOriginQuota via window.internals
+        https://bugs.webkit.org/show_bug.cgi?id=87838
+
+        Reviewed by Joseph Pecoraro.
+
+        * DumpRenderTree/TestRunner.cpp: Move setApplicationCacheOriginQuota
+        to window.internals
+        (TestRunner::staticFunctions):
+        * DumpRenderTree/TestRunner.h: Ditto.
+        * DumpRenderTree/blackberry/TestRunnerBlackBerry.cpp: Remove setApplicationCacheOriginQuota.
+        * DumpRenderTree/efl/TestRunnerEfl.cpp: Ditto.
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp: Ditto.
+        * DumpRenderTree/mac/TestRunnerMac.mm: Ditto.
+        * DumpRenderTree/win/TestRunnerWin.cpp: Ditto.
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl: Ditto.
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp: Ditto.
+        * WebKitTestRunner/InjectedBundle/TestRunner.h: Ditto.
+
+2013-10-31  Mark Lam  <mark.lam@apple.com>
+
+        REGRESSION: Crashes in -[UIDelegate webView:frame:exceededDatabaseQuotaForSecurityOrigin:database:].
+        https://bugs.webkit.org/show_bug.cgi?id=123383.
+
+        Reviewed by Geoffrey Garen.
+
+        Removed an inappropriate assertion in DumpRenderTree/mac/UIDelegate.mm and
+        added 2 attributes (databaseDefaultQuota and databaseMaxQuota) to allow
+        tests to set appropriate quota settings to exercise quota expansion tests
+        when needed.
+
+        * DumpRenderTree/TestRunner.cpp:
+        (TestRunner::TestRunner):
+        (getDatabaseDefaultQuotaCallback):
+        (getDatabaseMaxQuotaCallback):
+        (setDatabaseDefaultQuotaCallback):
+        (setDatabaseMaxQuotaCallback):
+        (TestRunner::staticValues):
+        * DumpRenderTree/TestRunner.h:
+        (TestRunner::databaseDefaultQuota):
+        (TestRunner::setDatabaseDefaultQuota):
+        (TestRunner::databaseMaxQuota):
+        (TestRunner::setDatabaseMaxQuota):
+        * DumpRenderTree/blackberry/DumpRenderTree.cpp:
+        (BlackBerry::WebKit::DumpRenderTree::exceededDatabaseQuota):
+        * DumpRenderTree/efl/DumpRenderTreeView.cpp:
+        (onExceededDatabaseQuota):
+        * DumpRenderTree/mac/UIDelegate.mm:
+        (-[UIDelegate webView:frame:exceededDatabaseQuotaForSecurityOrigin:database:]):
+        * DumpRenderTree/win/UIDelegate.cpp:
+        (UIDelegate::exceededDatabaseQuota):
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl:
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::didExceedDatabaseQuota):
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp:
+        (WTR::TestRunner::TestRunner):
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+        (WTR::TestRunner::databaseDefaultQuota):
+        (WTR::TestRunner::setDatabaseDefaultQuota):
+        (WTR::TestRunner::databaseMaxQuota):
+        (WTR::TestRunner::setDatabaseMaxQuota):
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::createOtherPage):
+        (WTR::TestController::createWebViewWithOptions):
+
+2013-10-31  Anders Carlsson  <andersca@apple.com>
+
+        Add a WKRemoteObject class
+        https://bugs.webkit.org/show_bug.cgi?id=123586
+
+        Reviewed by Dan Bernstein.
+
+        * TestWebKitAPI/Tests/WebKit2ObjC/WKRemoteObjectRegistry.mm:
+        (TestWebKitAPI::TEST):
+        Add a conformsToProtocol: test.
+
+2013-10-30  Ryosuke Niwa  <rniwa@webkit.org>
+
+        build.webkit.org should have a clean build button
+        https://bugs.webkit.org/show_bug.cgi?id=123559
+
+        Reviewed by Darin Adler.
+
+        Add a new "clean" forced scheduler. When a build was created by this scheduler, CleanBuildIfScheduled
+        step executes clean-build script that removes the WebKitBuild directory.
+
+        Also added make-passwords-json.py which creates a fake passwords.json from config.json for testing purposes.
+
+        * BuildSlaveSupport/build.webkit.org-config/make-passwords-json.py: Added.
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (CleanBuildIfScheduled): Added.
+        (CleanBuildIfScheduled.start): Added. Don't do a clean build if if this build wasn't schecueld by
+        the clean build scheduler.
+        (DeleteStaleBuildFiles): Added.
+        (DeleteStaleBuildFiles.start): Added. Don't delete stale build files if this build was scheduled by
+        the clean build scheduler since everything in the WebKitBuild directory had already been removed.
+        (Factory.__init__): Always add CleanBuildIfScheduled.  The step itself checks whether to run
+        clean-build script or hide itself.
+        (loadBuilderConfig): Added the new clean build scheduler. Also make ForceScheduler future proof; in newer
+        versions of buildbot, builderNames needs to be a list of regular strings.
+        * BuildSlaveSupport/clean-build: Added.
+
+2013-10-31  Filip Pizlo  <fpizlo@apple.com>
+
+        Remove CachedTranscendentalFunction because caching math functions is an ugly idea
+        https://bugs.webkit.org/show_bug.cgi?id=123574
+
+        Reviewed by Mark Hahnenberg.
+
+        Make it easier to see that a test doesn't have an -expected file.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-31  Tamas Gergely  <gertom@inf.u-szeged.hu>
+
+        Run tests as if they are expected to pass when --force is given.
+        https://bugs.webkit.org/show_bug.cgi?id=112890
+
+        Reviewed by Ryosuke Niwa.
+
+        The --force switch of new-run-webkit-tests is now forces all tests to
+        be run with 'PASS' as expected result.
+
+        * Scripts/webkitpy/layout_tests/controllers/manager.py:
+        (Manager.run):
+        * Scripts/webkitpy/layout_tests/models/test_expectations.py:
+        (TestExpectations.__init__):
+        (TestExpectations._add_expectations):
+        * Scripts/webkitpy/layout_tests/run_webkit_tests.py:
+        (parse_args):
+        (_set_up_derived_options):
+
+2013-10-31  Geoffrey Garen  <ggaren@apple.com>
+
+        Added Mark Lam as a reviewer.
+
+        Unreviewed.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+
+2013-10-30  Alexey Proskuryakov  <ap@apple.com>
+
+        Teach the style checker about ENUM_CLASS
+        https://bugs.webkit.org/show_bug.cgi?id=123528
+
+        Reviewed by Andy Estes.
+
+        * Scripts/webkitpy/style/checkers/cpp.py:
+        (_EnumState.process_clean_line): Make content of an ENUM_CLASS declaration
+        equivalent to enum content for checking.
+        (check_braces): Allow semicolon at the end.
+
+        * Scripts/webkitpy/style/checkers/cpp_unittest.py:
+        (NoNonVirtualDestructorsTest.test_enum_casing):
+        (NoNonVirtualDestructorsTest.test_enum_trailing_semicolon):
+        (WebKitStyleTest.test_braces):
+        Test it.
+
+2013-10-30  Ryosuke Niwa  <rniwa@webkit.org>
+
+        kill-old-processes should kill Web Socket script
+        https://bugs.webkit.org/show_bug.cgi?id=123546
+
+        Reviewed by Benjamin Poulain.
+
+        * BuildSlaveSupport/kill-old-processes:
+        (main):
+
+2013-10-30  Alexey Proskuryakov  <ap@apple.com>
+
+        Set svn:ignore for .pyc files created for test-webkitpy.
+
+        * Scripts/webkitpy/layout_tests/reftests: Added property svn:ignore.
+        * Scripts/webkitpy/performance_tests: Added property svn:ignore.
+        * Scripts/webkitpy/to_be_moved: Added property svn:ignore.
+        * Scripts/webkitpy/w3c: Added property svn:ignore.
+
+2013-10-30  Alexey Proskuryakov  <ap@apple.com>
+
+        85 inspector tests asserting in DrawingAreaProxyImpl::updateAcceleratedCompositingMode()
+        when there is a stale WebKitTestRunner preference
+        https://bugs.webkit.org/show_bug.cgi?id=115115
+
+        Reviewed by Darin Adler.
+
+        Delete stale preferences on launch.
+
+        * WebKitTestRunner/TestController.h:
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::initialize): Now that we don't have preferences stored from
+        the previous run, we need th reinstate them before creating a WKView. Not all preferences
+        can be applied to an existing view retroactively.
+        (WTR::TestController::resetPreferencesToConsistentValues): Split out of resetStateToConsistentValues,
+        because there is no injected bundle yet when calling this function from initialize().
+
+        * WebKitTestRunner/mac/main.mm: (setDefaultsToConsistentValuesForTesting): Delete
+        the preferences.
+
+        * WebKitTestRunner/InjectedBundle/mac/InjectedBundleMac.mm: (WTR::InjectedBundle::platformInitialize):
+        Added some FIXMEs.
+
+2013-10-30  Anders Carlsson  <andersca@apple.com>
+
+        Try to fix the 32-bit build.
+        
+        * TestWebKitAPI/Tests/WebKit2ObjC/WKRemoteObjectRegistry.mm:
+        * TestWebKitAPI/Tests/mac/WKRemoteObjectRegistry_Bundle.mm:
+
+2013-10-30  Anders Carlsson  <andersca@apple.com>
+
+        Begin fleshing out an API test for WKRemoteObjectRegistry
+        https://bugs.webkit.org/show_bug.cgi?id=123531
+
+        Reviewed by Andreas Kling.
+
+        Add a very simple test that doesn't really test anything for now.
+
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        * TestWebKitAPI/Tests/WebKit2ObjC/WKRemoteObjectRegistry.mm: Added.
+        * TestWebKitAPI/Tests/mac/WKRemoteObjectRegistry_Bundle.mm: Added.
+        * TestWebKitAPI/Tests/mac/WKRemoteObjectRegistry_Shared.h: Added.
+
+2013-10-30  Filip Pizlo  <fpizlo@apple.com>
+
+        Remove unnecessary touch
+
+        Rubber stamped by Mark Hahnenberg.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-30  Samuel White  <samuel_white@apple.com>
+
+        AX: Add samuel_white@apple.com to accessibility watchlist cc rules
+        https://bugs.webkit.org/show_bug.cgi?id=123515
+
+        Reviewed by Chris Fleizach.
+
+        Adding myself and jcraig@apple.com (per his request) to the accessibility watchlist. Also
+        updating contributors.json with permission from bweinstein@apple.com to make this possible.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+        * Scripts/webkitpy/common/config/watchlist:
+
+2013-10-30  Patrick Gansterer  <paroga@webkit.org>
+
+        [WIN] Add executable entry points to DRT and WinLauncher
+        https://bugs.webkit.org/show_bug.cgi?id=121837
+
+        Reviewed by Brent Fulgham.
+
+        This allows to compile and run the executables without DLLLauncher.
+
+        * DumpRenderTree/win/DumpRenderTree.cpp:
+        (main):
+        (dllLauncherEntryPoint):
+        * WinLauncher/WinLauncher.cpp:
+        (wWinMain):
+        (dllLauncherEntryPoint):
+
+2013-10-30  Filip Pizlo  <fpizlo@apple.com>
+
+        run-jsc-stress-tests should handle ".." in paths and "slow!" in cmd's
+        https://bugs.webkit.org/show_bug.cgi?id=123521
+
+        Reviewed by Mark Hahnenberg.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-30  Alexey Proskuryakov  <ap@apple.com>
+
+        Mavericks: 128 tests are failing due to pixel differences
+        https://bugs.webkit.org/show_bug.cgi?id=123488
+
+        Reviewed by Simon Fraser.
+
+        Apple font preferences cannot be fully reset after they've been read, so we
+        need to set them using CFPreferences before initializing NSApplication.
+
+        In theory, this should be an issue on WebKit2 as well, but somehow it doesn't
+        appear to be. I guess we can figure out the reasons for this difference when/if
+        any observable problems start to occur.
+
+        * DumpRenderTree/mac/DumpRenderTree.mm:
+        (setDefaultsToConsistentValuesForTesting): Only set defaults here, move other work
+        to prepareConsistentTestingEnvironment().
+        (main): Call setDefaultsToConsistentValuesForTesting before [NSApplication sharedApplication]
+        (which is unnecessary anyway since NSUserDefaults will implicitly call it, but seems
+        useful to keep in case we change out approach to defaults again).
+
+2013-10-29  Andy Estes  <aestes@apple.com>
+
+        Teach the style checker how to handle Objective-C categories and NS_ENUM
+        https://bugs.webkit.org/show_bug.cgi?id=123482
+
+        Reviewed by Dan Bernstein.
+
+        * Scripts/webkitpy/style/checkers/cpp.py:
+        (check_spacing_for_function_call): Allow a space before '(' in a line
+        starting with @interface or @implementation, since this is defining an
+        Objective-C category rather than a function.
+        (check_braces): The opening brace of an NS_ENUM should not be on its
+        own line.
+        * Scripts/webkitpy/style/checkers/cpp_unittest.py: Added unit tests.
+
+2013-10-30  Robert Plociennik  <r.plociennik@samsung.com>
+
+        [EFL] accessibility/textarea-selected-text-range.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=112016
+
+        Reviewed by Mario Sanchez Prada.
+
+        Provided implementation for AccessibilityUIElement::selectedTextRange() and
+        AccessibilityUIElement::setSelectedTextRange().
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::selectedTextRange): Implemented.
+        (AccessibilityUIElement::setSelectedTextRange): Implemented
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::selectedTextRange): Implemented.
+        (WTR::AccessibilityUIElement::setSelectedTextRange): Implemented.
+
+2013-10-30  Robert Plociennik  <r.plociennik@samsung.com>
+
+        [GTK] accessibility/svg-remote-element.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=101185
+
+        Reviewed by Chris Fleizach.
+
+        Implemented missing methods by mimicing existing functionality in
+        AccessibilityObject::clickPoint() using available ATK API.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::clickPointX): Implemented.
+        (AccessibilityUIElement::clickPointY): Implemented.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::clickPointX): Implemented.
+        (WTR::AccessibilityUIElement::clickPointY): Implemented.
+
+2013-10-30  Tamas Gergely  <gertom@inf.u-szeged.hu>
+
+        Removed Windows platform configurations from WebKitTestRunner.
+        https://bugs.webkit.org/show_bug.cgi?id=123152
+
+        Reviewed by Csaba Osztrogonác.
+
+        Removed Windows specific parts from the source files, Windows specific
+        subdirectory (win) and Visual Studio property files from the WebKitTestRunner,
+        as the platform is no longer supported by this tool.
+
+        * WebKitTestRunner/Configurations/InjectedBundleCFLite.vsprops: Removed.
+        * WebKitTestRunner/Configurations/InjectedBundleCommon.vsprops: Removed.
+        * WebKitTestRunner/Configurations/InjectedBundleCoreFoundation.vsprops: Removed.
+        * WebKitTestRunner/Configurations/WebKitTestRunnerCFLite.vsprops: Removed.
+        * WebKitTestRunner/Configurations/WebKitTestRunnerCommon.vsprops: Removed.
+        * WebKitTestRunner/Configurations/WebKitTestRunnerCoreFoundation.vsprops: Removed.
+        * WebKitTestRunner/Configurations/WebKitTestRunnerCoreGraphics.vsprops: Removed.
+        * WebKitTestRunner/InjectedBundle/AccessibilityController.cpp:
+        (WTR::AccessibilityController::rootElement):
+        (WTR::AccessibilityController::focusedElement):
+        * WebKitTestRunner/InjectedBundle/AccessibilityController.h:
+        * WebKitTestRunner/InjectedBundle/AccessibilityUIElement.h:
+        * WebKitTestRunner/InjectedBundle/InjectedBundleMain.cpp:
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+        * WebKitTestRunner/PlatformWebView.h:
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::initialize):
+        * WebKitTestRunner/TestInvocation.cpp:
+        (WTR::createWKURL):
+        * WebKitTestRunner/cg/TestInvocationCG.cpp:
+        * WebKitTestRunner/config.h:
+        * WebKitTestRunner/win/InjectedBundle.vcproj: Removed.
+        * WebKitTestRunner/win/InjectedBundleDebug.vsprops: Removed.
+        * WebKitTestRunner/win/InjectedBundleDebugAll.vsprops: Removed.
+        * WebKitTestRunner/win/InjectedBundleDebugCairoCFLite.vsprops: Removed.
+        * WebKitTestRunner/win/InjectedBundleGenerated.vcproj: Removed.
+        * WebKitTestRunner/win/InjectedBundleGeneratedCommon.vsprops: Removed.
+        * WebKitTestRunner/win/InjectedBundlePostBuild.cmd: Removed.
+        * WebKitTestRunner/win/InjectedBundlePreBuild.cmd: Removed.
+        * WebKitTestRunner/win/InjectedBundleProduction.vsprops: Removed.
+        * WebKitTestRunner/win/InjectedBundleRelease.vsprops: Removed.
+        * WebKitTestRunner/win/InjectedBundleReleaseCairoCFLite.vsprops: Removed.
+        * WebKitTestRunner/win/PlatformWebViewWin.cpp: Removed.
+        * WebKitTestRunner/win/TestControllerWin.cpp: Removed.
+        * WebKitTestRunner/win/TestInvocationWin.cpp: Removed.
+        * WebKitTestRunner/win/WebKitTestRunner.vcproj: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerDebug.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerDebugAll.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerDebugCairoCFLite.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncher.vcproj: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncherCommon.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncherDebug.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncherDebugAll.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncherDebugCairoCFLite.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncherProduction.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncherRelease.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerLauncherReleaseCairoCFLite.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerPostBuild.cmd: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerPreBuild.cmd: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerProduction.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerRelease.vsprops: Removed.
+        * WebKitTestRunner/win/WebKitTestRunnerReleaseCairoCFLite.vsprops: Removed.
+        * WebKitTestRunner/win/build-generated-files.sh: Removed.
+        * WebKitTestRunner/win/main.cpp: Removed.
+
+2013-10-29  Alexey Proskuryakov  <ap@apple.com>
+
+        Result of focus-option-control-on-page.html depends on system preferences
+        https://bugs.webkit.org/show_bug.cgi?id=123304
+
+        Reviewed by Simon Fraser.
+
+        * DumpRenderTree/mac/DumpRenderTree.mm: (setDefaultsToConsistentValuesForTesting):
+        Override a preference that WebKit reads to decide what Tab does, so that current
+        user default doesn't affect tests.
+
+        * WebKitTestRunner/mac/main.mm: (setDefaultsToConsistentValuesForTesting):
+        Ditto.
+
+2013-10-29  Filip Pizlo  <fpizlo@apple.com>
+
+        It should be possible to specify extra tests to run-javascriptcore-tests
+        https://bugs.webkit.org/show_bug.cgi?id=123495
+
+        Reviewed by Oliver Hunt.
+        
+        This adds two ways to specify additional tests: the option --extra-tests=<blah>, and
+        the environment variable EXTRA_JSC_TESTS.
+        
+        Those two values (the command-line option and the environment variable) are passed
+        as extra arguments to run-jsc-stress-tests.
+        
+        To make this extra super useful, run-jsc-stress-tests now allows yaml configuration
+        files to be recursive: if a "- collection:" line is found, the string is handled
+        just as if it was a command-line argument. This allows you to use --extra-tests=file
+        where file contains a bunch of "- collection:" lines, and this is equivalent to each
+        of those lines being a command-line argument.
+
+        * Scripts/run-javascriptcore-tests:
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-29  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Add Mavericks builders to the old flakiness dashboard.
+
+        * TestResultServer/static-dashboards/builders.jsonp:
+        * TestResultServer/static-dashboards/flakiness_dashboard.js:
+
+2013-10-29  Seokju Kwon  <seokju@webkit.org>
+
+        Fix memory leak in Tools/DumpRenderTree/TestNetscapePlugIn/main.cpp
+        https://bugs.webkit.org/show_bug.cgi?id=123478
+
+        Reviewed by Anders Carlsson.
+
+        * DumpRenderTree/TestNetscapePlugIn/main.cpp:
+        (NPP_Destroy): Add a missing free() for 'obj->evaluateScriptOnMouseDownOrKeyDown'.
+
+2013-10-29  Lucas Forschler  <lforschler@apple.com>
+
+        Move the SEO bots from testers to archivers.
+        
+        Unreviewed.
+        
+        * BuildSlaveSupport/build.webkit.org-config/config.json:
+
+2013-10-29  Hugo Parente Lima  <hugo.lima@openbossa.org>
+
+        Adding Nix files in Source/Platform to trunk
+        https://bugs.webkit.org/show_bug.cgi?id=118331
+
+        Reviewed by Benjamin Poulain.
+
+        Add a special rule for Nix API files located at Source/Platform/nix.
+
+        * Scripts/webkitpy/style/checker.py:
+
+ 2013-10-29  Nadav Rotem  <nrotem@apple.com>
+ 
+         Add myself as a comitter.
+         https://bugs.webkit.org/show_bug.cgi?id=123455
+ 
+         Reviewed by Anders Carlsson.
+ 
+         * Scripts/webkitpy/common/config/contributors.json:
+ 
+2013-10-29  Lucas Forschler  <lforschler@apple.com>
+
+        Teach the WebKit2 testers to abort early by setting the shouldAbortEarly property to True.
+        https://bugs.webkit.org/show_bug.cgi?id=123450
+
+        Reviewed by Alexey Proskuryakov.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (RunWebKit2Tests.start):
+
+2013-10-29  Alexey Proskuryakov  <ap@apple.com>
+
+        [Mac] Rationalize user defaults override code
+        https://bugs.webkit.org/show_bug.cgi?id=123436
+
+        Reviewed by Dan Bernstein.
+
+        * DumpRenderTree/mac/DumpRenderTree.mm:
+        (resetWebPreferencesToConsistentValues): Renamed from resetDefaultsToConsistentValues,
+        because this function only resets WebPreferences now.
+        (setDefaultsToConsistentValuesForTesting): Moved code for setting the defaults
+        here, because tests never change them, and they only need to be set once, not
+        before each test. Removed long obsolete workaround for HIToolbox preferences.
+        Don't call resetWebPreferencesToConsistentValues, because it will be called before
+        the first test anyway.
+        (main): Don't set AppleMagnifiedMode here, moved that to setDefaultsToConsistentValuesForTesting.
+        (resetWebViewToConsistentStateBeforeTesting): Moved TestRunner::setSerializeHTTPLoads
+        and setlocale calls out of resetWebPreferencesToConsistentValues().
+        Added AppleAquaAntiAliasingChanged notification that we had in WK2, because it's
+        also needed in WK1.
+
+        * WebKitTestRunner/InjectedBundle/mac/InjectedBundleMac.mm:
+        (WTR::InjectedBundle::platformInitialize): Use literal syntax for defaults
+        dictionary.
+
+        * WebKitTestRunner/mac/main.mm:
+        (setDefaultsToConsistentValuesForTesting): Factored out of main(), and changed to
+        use NSArgumentDomain for everything.
+
+2013-10-29  Philippe Normand  <pnormand@igalia.com>
+
+        [GTK] enable media-stream in build-webkit
+        https://bugs.webkit.org/show_bug.cgi?id=123144
+
+        Reviewed by Martin Robinson.
+
+        * Scripts/webkitperl/FeatureList.pm: Enable media-stream build
+        for the GTK+ port.
+
+2013-10-29  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        EFL 32 bit buildbot doesn't work on dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=123435
+
+        Reviewed by Csaba Osztrogonác.
+
+        32 bit buildbot doesn't work on dashboard because name is different from buildbot list.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot):
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Floating left the header broke other pages, and this CSS has no way to customize
+        per-page.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/default.css:
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Remove underlines on the bot names in the header.
+        
+        * BuildSlaveSupport/build.webkit.org-config/public_html/default.css:
+        (td.LastBuild a):
+
+2013-10-28  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Add EFL release bots to the buildbot dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=123430
+
+        Reviewed by Darin Adler.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/EFL.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot): add 64 bits release wk2 and wk1 testers and 32 bits release builder.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Styles/Main.css:
+        (table.queue-grid tr.platform.linux-efl img.logo): use the EFL logo in its dashboard line.
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        More waterfall tweaking.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/default.css:
+        (body > .header):
+        (td.LastBuild):
+        (td.LastBuild a):
+        (td.LastBuild,td.Activity a,td.Change a,td.Builder a):
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        More waterfall tweaking.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/default.css:
+        (body.interface):
+        (body > hr):
+        (div.content h1):
+        (body > .header):
+        (td.Activity a,td.Change a,td.Builder a):
+        (td.Builder):
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Apply changes to default.css, revert buildbot.css which seems to be unused.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/buildbot.css:
+        (body):
+        (body, td):
+        (a:link,a:visited,a:active):
+        (td.Time):
+        (td.Activity):
+        (.exception, td.offline):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/default.css:
+        (body.interface):
+        (.auth):
+        (td.LastBuild):
+        (td.Time):
+        (td.Activity):
+        (.offline,td.offline,.retry):
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Prettify the waterfall page, and make it a little more space-efficient.
+        
+        * BuildSlaveSupport/build.webkit.org-config/public_html/buildbot.css:
+        (body, td):
+        (body.interface):
+        (.auth):
+        (.header):
+        (div.content h1):
+        (a):
+        (a:link,a:active):
+        (a:link,a:visited,a:active):
+        (td.LastBuild):
+        (td.Time):
+        (td.Activity):
+        (.exception, td.offline, .retry):
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Fix Lion readableName (spotted by Dan Bernstein).
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Buildbot.js:
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Add tooltips to the platform icons in Dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=123429
+
+        Reviewed by Alexey Proskuryakov.
+        
+        Add a human readable name to Buildbot.Platform entries, and use it to
+        show a tooltip on the ring image.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Buildbot.js:
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Main.js:
+        (documentReady):
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Allow explicit sort order for Dashboard platforms
+        https://bugs.webkit.org/show_bug.cgi?id=123419
+
+        Reviewed by Tim Hatcher.
+        
+        Assign a specific sort order to Dashboard platforms, rather than
+        just using object property order.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Buildbot.js:
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotQueue.js:
+        (BuildbotQueue):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Main.js:
+        (documentReady):
+
+2013-10-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Tidy up main http://build.webkit.org page
+        https://bugs.webkit.org/show_bug.cgi?id=123413
+
+        Reviewed by Alexey Proskuryakov.
+        
+        Break the list of links into sections. Add some font style.
+
+        * BuildSlaveSupport/build.webkit.org-config/templates/root.html:
+
+2013-10-28  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        Parsing support for -webkit-text-decoration-skip: ink
+        https://bugs.webkit.org/show_bug.cgi?id=123358
+
+        Reviewed by Dean Jackson.
+
+        Adding ENABLE(CSS3_TEXT_DECORATION)
+
+        * Scripts/webkitperl/FeatureList.pm:
+
+2013-10-28  Lucas Forschler  <lforschler@apple.com>
+
+        Add additional Apple Mavericks test bots.
+        
+        Unreviewed.
+        
+        * BuildSlaveSupport/build.webkit.org-config/config.json:
+
+2013-10-28  Bastien Nocera <hadess@hadess.net>
+
+        Name all the GLib timeout sources
+        https://bugs.webkit.org/show_bug.cgi?id=123229
+
+        Reviewed by Anders Carlsson.
+
+        Give a name to GLib timeout sources, this is helpful when
+        profiling WebKitGTK applications.
+
+2013-10-28  Bastien Nocera <hadess@hadess.net>
+
+        Replace 0 timeouts g_timeout_add() by g_idle_add()
+        https://bugs.webkit.org/show_bug.cgi?id=123260
+
+        Reviewed by Carlos Garcia Campos.
+
+        A zero timeout should be equivalent to using g_idle_add_full(G_PRIORITY_DEFAULT, ...)
+        without the nagging feeling that the wrong API was used.
+
+        * DumpRenderTree/gtk/DumpRenderTree.cpp: Use g_idle_add() instead
+        of 0-timer.
+        (topLoadingFrameLoadFinished):
+        * DumpRenderTree/gtk/EventSender.cpp: Ditto.
+        (scheduleAsynchronousClickCallback):
+        (scheduleAsynchronousKeyDownCallback):
+
+2013-10-25  Anton Obzhirov  <a.obzhirov@samsung.com>
+
+        [GTK] [WebKit2] CanHandleRequest API test fails
+        https://bugs.webkit.org/show_bug.cgi?id=88453
+
+        Reviewed by Martin Robinson.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner):
+
+2013-10-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Build fix after r157815. Don't resolve the path from webkit_base. Use the relative path as is.
+
+        * Scripts/webkitpy/port/base.py:
+        (Port.repository_paths):
+
+2013-10-25  Jer Noble  <jer.noble@apple.com>
+
+        [WTF] Add a multiplication operator (and a few others) to MediaTime
+        https://bugs.webkit.org/show_bug.cgi?id=123137
+
+        Reviewed by Eric Carlson.
+
+        Add tests for new MediaTime operators.
+
+        * TestWebKitAPI/Tests/WTF/MediaTime.cpp:
+        (TestWebKitAPI::TEST):
+
+2013-10-24  Mark Rowe  <mrowe@apple.com>
+
+        Remove references to OS X 10.7 from Xcode configuration settings.
+
+        Now that we're not building for OS X 10.7 they're no longer needed.
+
+        Reviewed by Anders Carlsson.
+
+        * DumpRenderTree/mac/Configurations/Base.xcconfig:
+        * DumpRenderTree/mac/Configurations/DebugRelease.xcconfig:
+        * MiniBrowser/Configurations/Base.xcconfig:
+        * MiniBrowser/Configurations/DebugRelease.xcconfig:
+        * TestWebKitAPI/Configurations/Base.xcconfig:
+        * TestWebKitAPI/Configurations/DebugRelease.xcconfig:
+        * WebKitLauncher/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/DebugRelease.xcconfig:
+
+2013-10-24  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/15312643> Prepare for the mysterious future.
+
+        Reviewed by David Kilzer.
+
+        * DumpRenderTree/mac/Configurations/Base.xcconfig:
+        * DumpRenderTree/mac/Configurations/DebugRelease.xcconfig:
+        * MiniBrowser/Configurations/Base.xcconfig:
+        * MiniBrowser/Configurations/DebugRelease.xcconfig:
+        * TestWebKitAPI/Configurations/Base.xcconfig:
+        * TestWebKitAPI/Configurations/DebugRelease.xcconfig:
+        * WebKitLauncher/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/DebugRelease.xcconfig:
+
 2013-10-24  Daniel Bates  <dabates@apple.com>
 
         Crash in WebCore::NavigationScheduler::startTimer()

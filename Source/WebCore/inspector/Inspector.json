@@ -2567,152 +2567,25 @@
                     { "name": "namedFlow", "$ref": "NamedFlow", "description": "The Named Flow containing the regions whose regionOverset values changed." }
                 ],
                 "description": "Fires if any of the regionOverset values changed in a Named Flow's region chain."
-            }
-        ]
-    },
-    {
-        "domain": "Probe",
-        "hidden": true,
-        "description": "Controls script probe instrumentation.",
-        "types": [
-            {
-                "id": "ScriptProbeId",
-                "type": "integer",
-                "description": "Unique data probe identifier."
             },
             {
-                "id": "ScriptProbeSampleId",
-                "type": "integer",
-                "description": "Unique data probe sample identifier."
-            },
-            {
-                "id": "ScriptProbe",
-                "type": "object",
-                "properties": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
-                    { "name": "url", "type": "string", "optional": true, "description": "Script URL, if any." },
-                    { "name": "lineNumber", "type": "integer", "description": "Line number where the probe is located (0-based)." },
-                    { "name": "columnNumber", "type": "integer", "description": "Column number where the probe is located (0-based)." },
-                    { "name": "expression", "type": "string", "description": "Expression evaluated by the probe." },
-                    { "name": "isEnabled", "type": "boolean", "description": "Whether the probe is enabled." }
-                ]
-            },
-            {
-                "id": "ScriptProbeSample",
-                "type": "object",
-                "properties": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
-                    { "name": "sampleId", "$ref": "ScriptProbeSampleId", "description": "Sample unique id." },
-                    { "name": "batchId", "type": "integer", "description": "Sample batch number." },
-                    { "name": "timestamp", "type": "number", "description": "Sample timestamp." },
-                    { "name": "payload", "$ref": "Runtime.RemoteObject", "description": "Contents of the sample." }
-                ]
-            }
-        ],
-        "commands": [
-            {
-                "name": "enable"
-            },
-            {
-                "name": "disable"
-            },
-            {
-                "name": "setProbesActive",
+                "name": "registeredNamedFlowContentElement",
                 "parameters": [
-                    { "name": "active", "type": "boolean", "description": "New value for probes active state." }
+                    { "name": "documentNodeId", "$ref": "DOM.NodeId", "description": "The document node id." },
+                    { "name": "flowName", "type": "string", "description": "Named Flow identifier for which the new content element was registered." },
+                    { "name": "contentNodeId", "$ref": "DOM.NodeId", "description": "The node id of the registered content node." },
+                    { "name": "nextContentNodeId", "$ref": "DOM.NodeId", "description": "The node id of the element following the registered content node." }
                 ],
-                "description": "Activates / deactivates all probes on the page."
+                "description": "Fires when a Named Flow's has been registered with a new content node."
             },
-
             {
-                "name": "getAvailableProbes",
-                "returns": [
-                    { "name": "probes", "type": "array", "items": { "$ref": "ScriptProbe" } }
+                "name": "unregisteredNamedFlowContentElement",
+                "parameters": [
+                    { "name": "documentNodeId", "$ref": "DOM.NodeId", "description": "The document node id." },
+                    { "name": "flowName", "type": "string", "description": "Named Flow identifier for which the new content element was unregistered." },
+                    { "name": "contentNodeId", "$ref": "DOM.NodeId", "description": "The node id of the unregistered content node." }
                 ],
-                "description": "Array of all probes registered with the backend probe agent."
-            },
-            {
-                "name": "getProbeSamples",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ],
-                "returns": [
-                    { "name": "samples", "type": "array", "items": { "$ref": "ScriptProbeSample" }, "description": "All samples for the requested probe, if it exists." }
-                ]
-            },
-            {
-                "name": "enableProbe",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ]
-            },
-            {
-                "name": "disableProbe",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ]
-            },
-            {
-                "name": "removeProbe",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
-                ]
-            },
-            {
-                "name": "createScriptProbe",
-                "parameters": [
-                    { "name": "url", "type": "string", "description": "Script URL." },
-                    { "name": "lineNumber", "type": "integer", "description": "Script line number." },
-                    { "name": "columnNumber", "type": "integer", "description": "Script column number." },
-                    { "name": "expression", "type": "string", "description": "Expression to sample." }
-                ],
-                "description": "Create a new script probe at the specified file, line, column which samples the provided expression."
-            }
-        ],
-
-        "events": [
-            {
-                "name": "probeSampleReceived",
-                "parameters": [
-                    { "name": "sample", "$ref": "ScriptProbeSample", "description": "Generated script probe sample." }
-                ],
-                "description": "Fires when a new probe sample is collected or re-requested."
-            },
-            {
-                "name": "probeAdded",
-                "parameters": [
-                    { "name": "probe", "$ref": "ScriptProbe", "description": "Information for newly-created probe." }
-                ],
-                "description": "A new probe was added."
-            },
-            {
-                "name": "probeRemoved",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the removed probe." }
-                ],
-                "description": "A probe was deleted."
-            },
-            {
-                "name": "probeEnabled",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." }
-                ],
-                "description": "A probe was enabled."
-            },
-            {
-                "name": "probeDisabled",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." }
-                ],
-                "description": "A probe was disabled."
-            },
-            {
-                "name": "probeResolved",
-                "parameters": [
-                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." },
-                    { "name": "scriptId", "$ref": "Debugger.ScriptId", "description": "Script id." }
-                ],
-                "description": "A probe was resolved within a parsed source file."
+                "description": "Fires when a Named Flow's has been registered with a new content node."
             }
         ]
     },
@@ -2994,8 +2867,7 @@
                     { "name": "data", "type": "object", "description": "Event data." },
                     { "name": "children", "type": "array", "optional": true, "items": { "$ref": "TimelineEvent" }, "description": "Nested records." },
                     { "name": "counters", "$ref": "DOMCounters", "optional": true,  "description": "Current values of DOM counters." },
-                    { "name": "usedHeapSize", "type": "integer", "optional": true,  "description": "Current size of JS heap." },
-                    { "name": "nativeHeapStatistics", "type": "object", "optional": true,  "description": "Native heap statistics." }
+                    { "name": "usedHeapSize", "type": "integer", "optional": true,  "description": "Current size of JS heap." }
                 ],
                 "description": "Timeline record contains information about the recorded activity."
             }
@@ -3005,8 +2877,7 @@
                 "name": "start",
                 "parameters": [
                     { "name": "maxCallStackDepth", "optional": true, "type": "integer", "description": "Samples JavaScript stack traces up to <code>maxCallStackDepth</code>, defaults to 5." },
-                    { "name": "includeDomCounters", "optional": true, "type": "boolean",  "description": "Whether DOM counters data should be included into timeline events." },
-                    { "name": "includeNativeMemoryStatistics", "optional": true, "type": "boolean",  "description": "Whether native memory usage statistics should be reported as part of timeline events." }
+                    { "name": "includeDomCounters", "optional": true, "type": "boolean",  "description": "Whether DOM counters data should be included into timeline events." }
                 ],
                 "description": "Starts capturing instrumentation events."
             },
@@ -3072,8 +2943,9 @@
                 "id": "BreakpointAction",
                 "type": "object",
                 "properties": [
-                    { "name": "type", "type": "string", "enum": ["log", "evaluate", "sound"], "description": "Different kinds of breakpoint actions." },
-                    { "name": "data", "type": "string", "optional": true, "description": "Data associated with this breakpoint type (e.g. for type \"eval\" this is the JavaScript string to evalulate)." }
+                    { "name": "type", "type": "string", "enum": ["log", "evaluate", "sound", "probe"], "description": "Different kinds of breakpoint actions." },
+                    { "name": "data", "type": "string", "optional": true, "description": "Data associated with this breakpoint type (e.g. for type \"eval\" this is the JavaScript string to evalulate)." },
+                    { "name": "id", "type": "integer", "optional": true, "description": "Unique identifier for this breakpoint action (used for probe actions only)" }
                 ],
                 "description": "Action to perform when a breakpoint is triggered."
             },
@@ -3119,6 +2991,17 @@
                     { "name": "object", "$ref": "Runtime.RemoteObject", "description": "Object representing the scope. For <code>global</code> and <code>with</code> scopes it represents the actual object; for the rest of the scopes, it is artificial transient object enumerating scope variables as its properties." }
                 ],
                 "description": "Scope description."
+            },
+            {
+                "id": "ProbeSample",
+                "type": "object",
+                "properties": [
+                    { "name": "probeId", "type": "integer", "description": "Unique identifier for probe that created the sample." },
+                    { "name": "sampleId", "type": "integer", "description": "Unique identifier for this sample." },
+                    { "name": "batchId", "type": "integer", "description": "A batch identifier which is the same for all samples taken at the same breakpoint hit." },
+                    { "name": "timestamp", "type": "number", "description": "Timestamp of when the sample was taken." },
+                    { "name": "payload", "$ref": "Runtime.RemoteObject", "description": "Contents of the sample." }
+                ]
             }
         ],
         "commands": [
@@ -3374,6 +3257,13 @@
             {
                 "name": "resumed",
                 "description": "Fired when the virtual machine resumed execution."
+            },
+            {
+                "name": "didSampleProbe",
+                "parameters": [
+                    { "name": "sample", "$ref": "ProbeSample", "description": "A collected probe sample." }
+                ],
+               "description": "Fires when a new probe sample is collected or re-requested."
             }
         ]
     },

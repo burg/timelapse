@@ -37,9 +37,11 @@
 #include "PrintContext.h"
 #include "PseudoElement.h"
 #include "RenderBlockFlow.h"
+#include "RenderCounter.h"
 #include "RenderDetailsMarker.h"
 #include "RenderFileUploadControl.h"
 #include "RenderInline.h"
+#include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderLineBreak.h"
 #include "RenderListItem.h"
@@ -76,49 +78,6 @@ namespace WebCore {
 using namespace HTMLNames;
 
 static void writeLayers(TextStream&, const RenderLayer* rootLayer, RenderLayer*, const LayoutRect& paintDirtyRect, int indent = 0, RenderAsTextBehavior = RenderAsTextBehaviorNormal);
-
-TextStream& operator<<(TextStream& ts, const IntRect& r)
-{
-    return ts << "at (" << r.x() << "," << r.y() << ") size " << r.width() << "x" << r.height();
-}
-
-TextStream& operator<<(TextStream& ts, const IntPoint& p)
-{
-    return ts << "(" << p.x() << "," << p.y() << ")";
-}
-
-TextStream& operator<<(TextStream& ts, const LayoutRect& r)
-{
-    // FIXME: These should be printed as floats. Keeping them ints for consistency with previous test expectations.
-    return ts << pixelSnappedIntRect(r);
-}
-
-TextStream& operator<<(TextStream& ts, const LayoutPoint& p)
-{
-    // FIXME: These should be printed as floats. Keeping them ints for consistency with previous test expectations.
-    return ts << "(" << p.x().toInt() << "," << p.y().toInt() << ")";
-}
-
-TextStream& operator<<(TextStream& ts, const FloatPoint& p)
-{
-    ts << "(" << TextStream::FormatNumberRespectingIntegers(p.x());
-    ts << "," << TextStream::FormatNumberRespectingIntegers(p.y());
-    ts << ")";
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, const FloatSize& s)
-{
-    ts << "width=" << TextStream::FormatNumberRespectingIntegers(s.width());
-    ts << " height=" << TextStream::FormatNumberRespectingIntegers(s.height());
-    return ts;
-}
-
-void writeIndent(TextStream& ts, int indent)
-{
-    for (int i = 0; i != indent; ++i)
-        ts << "  ";
-}
 
 static void printBorderStyle(TextStream& ts, const EBorderStyle borderStyle)
 {
@@ -220,8 +179,8 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     if (behavior & RenderAsTextShowAddresses)
         ts << " " << static_cast<const void*>(&o);
 
-    if (o.style() && o.style()->zIndex())
-        ts << " zI: " << o.style()->zIndex();
+    if (o.style().zIndex())
+        ts << " zI: " << o.style().zIndex();
 
     if (o.node()) {
         String tagName = getTagName(o.node());
@@ -246,7 +205,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         // many test results.
         const RenderText& text = toRenderText(o);
         IntRect linesBox = text.linesBoundingBox();
-        if (text.simpleLines()) {
+        if (text.simpleLineLayout()) {
             int y = linesBox.y();
             if (text.containingBlock()->isTableCell())
                 y -= toRenderTableCell(o.containingBlock())->intrinsicPaddingBefore();
@@ -288,28 +247,28 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             ts << " " << quoteAndEscapeNonPrintables(toRenderFileUploadControl(&o)->fileTextValue());
 
         if (o.parent()) {
-            Color color = o.style()->visitedDependentColor(CSSPropertyColor);
-            if (o.parent()->style()->visitedDependentColor(CSSPropertyColor) != color)
+            Color color = o.style().visitedDependentColor(CSSPropertyColor);
+            if (o.parent()->style().visitedDependentColor(CSSPropertyColor) != color)
                 ts << " [color=" << color.nameForRenderTreeAsText() << "]";
 
             // Do not dump invalid or transparent backgrounds, since that is the default.
-            Color backgroundColor = o.style()->visitedDependentColor(CSSPropertyBackgroundColor);
-            if (o.parent()->style()->visitedDependentColor(CSSPropertyBackgroundColor) != backgroundColor
+            Color backgroundColor = o.style().visitedDependentColor(CSSPropertyBackgroundColor);
+            if (o.parent()->style().visitedDependentColor(CSSPropertyBackgroundColor) != backgroundColor
                 && backgroundColor.isValid() && backgroundColor.rgb())
                 ts << " [bgcolor=" << backgroundColor.nameForRenderTreeAsText() << "]";
             
-            Color textFillColor = o.style()->visitedDependentColor(CSSPropertyWebkitTextFillColor);
-            if (o.parent()->style()->visitedDependentColor(CSSPropertyWebkitTextFillColor) != textFillColor
+            Color textFillColor = o.style().visitedDependentColor(CSSPropertyWebkitTextFillColor);
+            if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextFillColor) != textFillColor
                 && textFillColor.isValid() && textFillColor != color && textFillColor.rgb())
                 ts << " [textFillColor=" << textFillColor.nameForRenderTreeAsText() << "]";
 
-            Color textStrokeColor = o.style()->visitedDependentColor(CSSPropertyWebkitTextStrokeColor);
-            if (o.parent()->style()->visitedDependentColor(CSSPropertyWebkitTextStrokeColor) != textStrokeColor
+            Color textStrokeColor = o.style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor);
+            if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor) != textStrokeColor
                 && textStrokeColor.isValid() && textStrokeColor != color && textStrokeColor.rgb())
                 ts << " [textStrokeColor=" << textStrokeColor.nameForRenderTreeAsText() << "]";
 
-            if (o.parent()->style()->textStrokeWidth() != o.style()->textStrokeWidth() && o.style()->textStrokeWidth() > 0)
-                ts << " [textStrokeWidth=" << o.style()->textStrokeWidth() << "]";
+            if (o.parent()->style().textStrokeWidth() != o.style().textStrokeWidth() && o.style().textStrokeWidth() > 0)
+                ts << " [textStrokeWidth=" << o.style().textStrokeWidth() << "]";
         }
 
         if (!o.isBoxModelObject() || o.isLineBreak())
@@ -319,56 +278,56 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         if (box.borderTop() || box.borderRight() || box.borderBottom() || box.borderLeft()) {
             ts << " [border:";
 
-            BorderValue prevBorder = o.style()->borderTop();
+            BorderValue prevBorder = o.style().borderTop();
             if (!box.borderTop())
                 ts << " none";
             else {
                 ts << " (" << box.borderTop() << "px ";
-                printBorderStyle(ts, o.style()->borderTopStyle());
-                Color col = o.style()->borderTopColor();
+                printBorderStyle(ts, o.style().borderTopStyle());
+                Color col = o.style().borderTopColor();
                 if (!col.isValid())
-                    col = o.style()->color();
+                    col = o.style().color();
                 ts << col.nameForRenderTreeAsText() << ")";
             }
 
-            if (o.style()->borderRight() != prevBorder) {
-                prevBorder = o.style()->borderRight();
+            if (o.style().borderRight() != prevBorder) {
+                prevBorder = o.style().borderRight();
                 if (!box.borderRight())
                     ts << " none";
                 else {
                     ts << " (" << box.borderRight() << "px ";
-                    printBorderStyle(ts, o.style()->borderRightStyle());
-                    Color col = o.style()->borderRightColor();
+                    printBorderStyle(ts, o.style().borderRightStyle());
+                    Color col = o.style().borderRightColor();
                     if (!col.isValid())
-                        col = o.style()->color();
+                        col = o.style().color();
                     ts << col.nameForRenderTreeAsText() << ")";
                 }
             }
 
-            if (o.style()->borderBottom() != prevBorder) {
-                prevBorder = box.style()->borderBottom();
+            if (o.style().borderBottom() != prevBorder) {
+                prevBorder = box.style().borderBottom();
                 if (!box.borderBottom())
                     ts << " none";
                 else {
                     ts << " (" << box.borderBottom() << "px ";
-                    printBorderStyle(ts, o.style()->borderBottomStyle());
-                    Color col = o.style()->borderBottomColor();
+                    printBorderStyle(ts, o.style().borderBottomStyle());
+                    Color col = o.style().borderBottomColor();
                     if (!col.isValid())
-                        col = o.style()->color();
+                        col = o.style().color();
                     ts << col.nameForRenderTreeAsText() << ")";
                 }
             }
 
-            if (o.style()->borderLeft() != prevBorder) {
-                prevBorder = o.style()->borderLeft();
+            if (o.style().borderLeft() != prevBorder) {
+                prevBorder = o.style().borderLeft();
                 if (!box.borderLeft())
                     ts << " none";
                 else {
                     ts << " (" << box.borderLeft() << "px ";
-                    printBorderStyle(ts, o.style()->borderLeftStyle());
-                    Color col = o.style()->borderLeftColor();
+                    printBorderStyle(ts, o.style().borderLeftStyle());
+                    Color col = o.style().borderLeftColor();
                     if (!col.isValid())
-                        col = o.style()->color();
+                        col = o.style().color();
                     ts << col.nameForRenderTreeAsText() << ")";
                 }
             }
@@ -377,7 +336,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         }
 
 #if ENABLE(MATHML)
-        // We want to show any layout padding, both CSS padding and intrinsic padding, so we can't just check o.style()->hasPadding().
+        // We want to show any layout padding, both CSS padding and intrinsic padding, so we can't just check o.style().hasPadding().
         if (o.isRenderMathMLBlock() && (box.paddingTop() || box.paddingRight() || box.paddingBottom() || box.paddingLeft())) {
             ts << " [";
             LayoutUnit cssTop = box.computedCSSPaddingTop();
@@ -530,7 +489,7 @@ static void writeTextRun(TextStream& ts, const RenderText& o, const InlineTextBo
     ts << ": "
         << quoteAndEscapeNonPrintables(String(o.text()).substring(run.start(), run.len()));
     if (run.hasHyphen())
-        ts << " + hyphen string " << quoteAndEscapeNonPrintables(o.style()->hyphenString());
+        ts << " + hyphen string " << quoteAndEscapeNonPrintables(o.style().hyphenString());
     ts << "\n";
 }
 
@@ -593,13 +552,13 @@ void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavi
 
     if (o.isText()) {
         auto& text = toRenderText(o);
-        if (auto lines = text.simpleLines()) {
+        if (auto layout = text.simpleLineLayout()) {
             ASSERT(!text.firstTextBox());
-            SimpleLineLayout::Resolver resolver(*lines, toRenderBlockFlow(*text.parent()));
+            auto resolver = runResolver(toRenderBlockFlow(*text.parent()), *layout);
             for (auto it = resolver.begin(), end = resolver.end(); it != end; ++it) {
-                auto line = *it;
+                auto run = *it;
                 writeIndent(ts, indent + 1);
-                writeSimpleLine(ts, text, line.rect(), line.text());
+                writeSimpleLine(ts, text, run.rect(), run.text());
             }
         } else {
             for (auto box = text.firstTextBox(); box; box = box->nextTextBox()) {
@@ -609,12 +568,10 @@ void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavi
         }
 
     } else {
-        if (!toRenderElement(o).isRenderNamedFlowFragmentContainer()) {
-            for (RenderObject* child = toRenderElement(o).firstChild(); child; child = child->nextSibling()) {
-                if (child->hasLayer())
-                    continue;
-                write(ts, *child, indent + 1, behavior);
-            }
+        for (RenderObject* child = toRenderElement(o).firstChild(); child; child = child->nextSibling()) {
+            if (child->hasLayer())
+                continue;
+            write(ts, *child, indent + 1, behavior);
         }
     }
 
@@ -700,28 +657,48 @@ static void write(TextStream& ts, RenderLayer& l,
 static void writeRenderRegionList(const RenderRegionList& flowThreadRegionList, TextStream& ts, int indent)
 {
     for (RenderRegionList::const_iterator itRR = flowThreadRegionList.begin(); itRR != flowThreadRegionList.end(); ++itRR) {
-        RenderRegion* renderRegion = *itRR;
-        writeIndent(ts, indent + 2);
-        ts << "RenderRegion";
-        if (renderRegion->generatingElement()) {
-            String tagName = getTagName(renderRegion->generatingElement());
-            if (!tagName.isEmpty())
-                ts << " {" << tagName << "}";
-            if (renderRegion->generatingElement()->hasID())
-                ts << " #" << renderRegion->generatingElement()->idForStyleResolution();
+        RenderRegion* renderRegion = (*itRR);
+
+        writeIndent(ts, indent);
+        ts << static_cast<const RenderObject*>(renderRegion)->renderName();
+
+        Element* generatingElement = renderRegion->generatingElement();
+        if (generatingElement) {
             if (renderRegion->hasCustomRegionStyle())
                 ts << " region style: 1";
             if (renderRegion->hasAutoLogicalHeight())
                 ts << " hasAutoLogicalHeight";
+
+            bool isRenderNamedFlowFragment = renderRegion->isRenderNamedFlowFragment();
+            if (isRenderNamedFlowFragment)
+                ts << " (anonymous child of";
+
+            StringBuilder tagName;
+            tagName.append(generatingElement->nodeName());
+
+            RenderElement* renderElementForRegion = isRenderNamedFlowFragment ? renderRegion->parent() : renderRegion;
+            if (renderElementForRegion->isPseudoElement()) {
+                if (renderElementForRegion->element()->isBeforePseudoElement())
+                    tagName.append("::before");
+                else if (renderElementForRegion->element()->isAfterPseudoElement())
+                    tagName.append("::after");
+            }
+
+            ts << " {" << tagName.toString() << "}";
+
+            if (generatingElement->hasID())
+                ts << " #" << generatingElement->idForStyleResolution();
+
+            if (isRenderNamedFlowFragment)
+                ts << ")";
         }
-        if (!renderRegion->isValid())
-            ts << " invalid";
+
         ts << "\n";
     }
 }
 
 static void writeRenderNamedFlowThreads(TextStream& ts, RenderView& renderView, const RenderLayer* rootLayer,
-                        const LayoutRect& paintRect, int indent, RenderAsTextBehavior behavior)
+    const LayoutRect& paintRect, int indent, RenderAsTextBehavior behavior)
 {
     if (!renderView.hasRenderNamedFlowThreads())
         return;
@@ -729,13 +706,13 @@ static void writeRenderNamedFlowThreads(TextStream& ts, RenderView& renderView, 
     const RenderNamedFlowThreadList* list = renderView.flowThreadController().renderNamedFlowThreadList();
 
     writeIndent(ts, indent);
-    ts << "Flow Threads\n";
+    ts << "Named flows\n";
 
     for (RenderNamedFlowThreadList::const_iterator iter = list->begin(); iter != list->end(); ++iter) {
         const RenderNamedFlowThread* renderFlowThread = *iter;
 
         writeIndent(ts, indent + 1);
-        ts << "Thread with flow-name '" << renderFlowThread->flowThreadName() << "'\n";
+        ts << "Named flow '" << renderFlowThread->flowThreadName() << "'\n";
 
         RenderLayer* layer = renderFlowThread->layer();
         writeLayers(ts, rootLayer, layer, paintRect, indent + 2, behavior);
@@ -743,11 +720,15 @@ static void writeRenderNamedFlowThreads(TextStream& ts, RenderView& renderView, 
         // Display the valid and invalid render regions attached to this flow thread.
         const RenderRegionList& validRegionsList = renderFlowThread->renderRegionList();
         const RenderRegionList& invalidRegionsList = renderFlowThread->invalidRenderRegionList();
-        if (!validRegionsList.isEmpty() || !invalidRegionsList.isEmpty()) {
-            writeIndent(ts, indent + 1);
-            ts << "Regions for flow '"<< renderFlowThread->flowThreadName() << "'\n";
-            writeRenderRegionList(validRegionsList, ts, indent);
-            writeRenderRegionList(invalidRegionsList, ts, indent);
+        if (!validRegionsList.isEmpty()) {
+            writeIndent(ts, indent + 2);
+            ts << "Regions for named flow '" << renderFlowThread->flowThreadName() << "'\n";
+            writeRenderRegionList(validRegionsList, ts, indent + 3);
+        }
+        if (!invalidRegionsList.isEmpty()) {
+            writeIndent(ts, indent + 2);
+            ts << "Invalid regions for named flow '" << renderFlowThread->flowThreadName() << "'\n";
+            writeRenderRegionList(invalidRegionsList, ts, indent + 3);
         }
     }
 }
@@ -931,18 +912,17 @@ String externalRepresentation(Element* element, RenderAsTextBehavior behavior)
     return externalRepresentation(toRenderBox(renderer), behavior | RenderAsTextShowAllLayers);
 }
 
-static void writeCounterValuesFromChildren(TextStream& stream, RenderElement* parent, bool& isFirstCounter)
+static void writeCounterValuesFromChildren(TextStream& stream, const RenderElement* parent, bool& isFirstCounter)
 {
     if (!parent)
         return;
-    for (RenderObject* child = parent->firstChild(); child; child = child->nextSibling()) {
-        if (child->isCounter()) {
-            if (!isFirstCounter)
-                stream << " ";
-            isFirstCounter = false;
-            String str(toRenderText(child)->text());
-            stream << str;
-        }
+    auto counters = childrenOfType<RenderCounter>(*parent);
+    for (auto counter = counters.begin(), end = counters.end(); counter != end; ++counter) {
+        if (!isFirstCounter)
+            stream << " ";
+        isFirstCounter = false;
+        String str(counter->text());
+        stream << str;
     }
 }
 

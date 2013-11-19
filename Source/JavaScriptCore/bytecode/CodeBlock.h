@@ -61,7 +61,6 @@
 #include "JITCode.h"
 #include "JITWriteBarrier.h"
 #include "JSGlobalObject.h"
-#include "JumpReplacementWatchpoint.h"
 #include "JumpTable.h"
 #include "LLIntCallLinkInfo.h"
 #include "LazyOperandValueProfile.h"
@@ -91,6 +90,8 @@ class RepatchBuffer;
 inline VirtualRegister unmodifiedArgumentsRegister(VirtualRegister argumentsRegister) { return VirtualRegister(argumentsRegister.offset() + 1); }
 
 static ALWAYS_INLINE int missingThisObjectMarker() { return std::numeric_limits<int>::max(); }
+
+enum ReoptimizationMode { DontCountReoptimization, CountReoptimization };
 
 class CodeBlock : public ThreadSafeRefCounted<CodeBlock>, public UnconditionalFinalizer, public WeakReferenceHarvester {
     WTF_MAKE_FAST_ALLOCATED;
@@ -135,6 +136,10 @@ public:
         return specializationFromIsConstruct(m_isConstructor);
     }
     
+    CodeBlock* baselineAlternative();
+    
+    // FIXME: Get rid of this.
+    // https://bugs.webkit.org/show_bug.cgi?id=123677
     CodeBlock* baselineVersion();
 
     void visitAggregate(SlotVisitor&);
@@ -277,7 +282,6 @@ public:
     {
         return jitType() == JITCode::BaselineJIT;
     }
-    void jettison();
     
     virtual CodeBlock* replacement() = 0;
 
@@ -294,6 +298,8 @@ public:
     bool hasOptimizedReplacement(); // the typeToReplace is my JITType
 #endif
 
+    void jettison(ReoptimizationMode = DontCountReoptimization);
+    
     ScriptExecutable* ownerExecutable() const { return m_ownerExecutable.get(); }
 
     void setVM(VM* vm) { m_vm = vm; }
@@ -583,7 +589,12 @@ public:
     {
         return m_lazyOperandValueProfiles;
     }
-#endif
+#else // ENABLE(DFG_JIT)
+    bool addFrequentExitSite(const DFG::FrequentExitSite&)
+    {
+        return false;
+    }
+#endif // ENABLE(DFG_JIT)
 
     // Constant Pool
 #if ENABLE(DFG_JIT)
@@ -853,10 +864,6 @@ public:
     void updateAllValueProfilePredictions() { }
     void updateAllArrayPredictions() { }
     void updateAllPredictions() { }
-#endif
-
-#if ENABLE(JIT)
-    void reoptimize();
 #endif
 
 #if ENABLE(VERBOSE_VALUE_PROFILE)

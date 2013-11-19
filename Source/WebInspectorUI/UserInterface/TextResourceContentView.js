@@ -37,6 +37,11 @@ WebInspector.TextResourceContentView = function(resource)
     this._textEditor.addEventListener(WebInspector.SourceCodeTextEditor.Event.ContentWillPopulate, this._contentWillPopulate, this);
     this._textEditor.addEventListener(WebInspector.SourceCodeTextEditor.Event.ContentDidPopulate, this._contentDidPopulate, this);
 
+    if (resource instanceof WebInspector.Script) {
+        WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.ProbeSetAdded, this._probeSetsChanged, this);
+        WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.ProbeSetRemoved, this._probeSetsChanged, this);
+    }
+
     var toolTip = WebInspector.UIString("Pretty print");
     var activatedToolTip = WebInspector.UIString("Original formatting");
     this._prettyPrintButtonNavigationItem = new WebInspector.ActivateButtonNavigationItem("pretty-print", toolTip, activatedToolTip, "Images/NavigationItemCurleyBraces.svg", 16, 16);
@@ -69,19 +74,16 @@ WebInspector.TextResourceContentView.prototype = {
 
     get supplementalRepresentedObjects()
     {
-        for (var groupKey in WebInspector.probeManager.probeGroups) {
-            if (!WebInspector.probeDetailsSidebarPanel.currentProbeGroup)
-                break;
-            if (WebInspector.probeManager.probeGroups[groupKey].probes[0].sourceCode.url === this._resource.url)
-                return [WebInspector.probeManager.probeGroups[groupKey]]
-        }
-
-        if (isNaN(this._textEditor.executionLineNumber))
-            return [];
+        var objects = WebInspector.probeManager.probeSets.filter(function(probeSet) {
+            return this._resource.url === probeSet.breakpoint.url;
+        }.bind(this));
 
         // If the SourceCodeTextEditor has an executionLineNumber, we can assume
         // it is always the active call frame.
-        return [WebInspector.debuggerManager.activeCallFrame];
+        if (!isNaN(this._textEditor.executionLineNumber))
+            objects.push(WebInspector.debuggerManager.activeCallFrame);
+
+        return objects;
     },
 
     revealPosition: function(position, textRangeToSelect, forceUnformatted)
@@ -230,6 +232,14 @@ WebInspector.TextResourceContentView.prototype = {
     _numberOfSearchResultsDidChange: function(event)
     {
         this.dispatchEventToListeners(WebInspector.ContentView.Event.NumberOfSearchResultsDidChange);
+    },
+
+    _probeSetsChanged: function(event)
+    {
+        // Possibly show or hide the probes sidebar whenever an action is changed.
+        var breakpoint = event.data.breakpoint;
+        if (breakpoint.sourceCodeLocation.sourceCode === this.resource)
+            this.dispatchEventToListeners(WebInspector.ContentView.Event.SupplementalRepresentedObjectsDidChange);
     }
 };
 

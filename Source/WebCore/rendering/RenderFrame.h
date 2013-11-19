@@ -32,7 +32,7 @@ class HTMLFrameElement;
 
 class RenderFrame FINAL : public RenderFrameBase {
 public:
-    explicit RenderFrame(HTMLFrameElement&);
+    RenderFrame(HTMLFrameElement&, PassRef<RenderStyle>);
 
     HTMLFrameElement& frameElement() const;
     FrameEdgeInfo edgeInfo() const;
@@ -44,7 +44,6 @@ private:
     virtual bool isFrame() const OVERRIDE { return true; }
 
     virtual void updateFromElement() OVERRIDE;
-    virtual void viewCleared() OVERRIDE;
 };
 
 RENDER_OBJECT_TYPE_CASTS(RenderFrame, isFrame())

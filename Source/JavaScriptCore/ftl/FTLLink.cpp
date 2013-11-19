@@ -46,7 +46,7 @@ using namespace DFG;
 static void compileEntry(CCallHelpers& jit)
 {
     jit.preserveReturnAddressAfterCall(GPRInfo::regT2);
-    jit.emitPutToCallFrameHeader(GPRInfo::regT2, JSStack::ReturnPC);
+    jit.emitPutReturnPCToCallFrameHeader(GPRInfo::regT2);
     jit.emitPutImmediateToCallFrameHeader(jit.codeBlock(), JSStack::CodeBlock);
 }
 
@@ -56,6 +56,9 @@ void link(State& state)
     
     // LLVM will create its own jump tables as needed.
     codeBlock->clearSwitchJumpTables();
+    
+    if (!state.graph.m_inlineCallFrames->isEmpty())
+        state.jitCode->common.inlineCallFrames = std::move(state.graph.m_inlineCallFrames);
     
     // Create the entrypoint. Note that we use this entrypoint totally differently
     // depending on whether we're doing OSR entry or not.
@@ -90,8 +93,8 @@ void link(State& state)
             CCallHelpers::TrustedImmPtr(reinterpret_cast<void*>(state.generatedFunction)),
             GPRInfo::nonArgGPR0);
         jit.call(GPRInfo::nonArgGPR0);
-        jit.emitGetFromCallFrameHeaderPtr(JSStack::ReturnPC, GPRInfo::regT1);
-        jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, GPRInfo::callFrameRegister);
+        jit.emitGetReturnPCFromCallFrameHeaderPtr(GPRInfo::regT1);
+        jit.emitGetCallerFrameFromCallFrameHeaderPtr(GPRInfo::callFrameRegister);
         jit.restoreReturnAddressBeforeReturn(GPRInfo::regT1);
         jit.ret();
         
@@ -159,8 +162,8 @@ void link(State& state)
             CCallHelpers::TrustedImmPtr(reinterpret_cast<void*>(state.generatedFunction)),
             GPRInfo::nonArgGPR0);
         jit.call(GPRInfo::nonArgGPR0);
-        jit.emitGetFromCallFrameHeaderPtr(JSStack::ReturnPC, GPRInfo::regT1);
-        jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, GPRInfo::callFrameRegister);
+        jit.emitGetReturnPCFromCallFrameHeaderPtr(GPRInfo::regT1);
+        jit.emitGetCallerFrameFromCallFrameHeaderPtr(GPRInfo::callFrameRegister);
         jit.restoreReturnAddressBeforeReturn(GPRInfo::regT1);
         jit.ret();
         

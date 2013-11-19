@@ -41,7 +41,6 @@
 #include "InspectorDebuggerAgent.h"
 #include "InspectorFrontend.h"
 #include "InspectorRecordingsAgent.h"
-#include "InspectorState.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "JSONEncoderContext.h"
@@ -67,12 +66,8 @@ using namespace WTF;
 
 namespace WebCore {
 
-namespace ReplayPersistentAgentState {
-static const char replayEnabled[] = "replayEnabled";
-}
-
-InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage)
-: InspectorBaseAgent<InspectorReplayAgent>("Replay", instrumentingAgents, state)
+InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, Page* inspectedPage)
+: InspectorBaseAgent<InspectorReplayAgent>("Replay", instrumentingAgents)
 , m_instrumentingAgents(instrumentingAgents)
 , m_inspectedPage(inspectedPage)
 , m_nextMarkIndex(0)
@@ -82,25 +77,20 @@ InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAge
 InspectorReplayAgent::~InspectorReplayAgent()
 {
     // if destroying replayAgent, then stop instrumenting for marks (if we are)
-    m_instrumentingAgents->setInspectorReplayAgent(0);
-    m_instrumentingAgents = 0;
-    m_state = 0;
-    m_inspectedPage = 0;
+    m_instrumentingAgents->setInspectorReplayAgent(nullptr);
+    m_instrumentingAgents = nullptr;
+    m_inspectedPage = nullptr;
 }
 
 void InspectorReplayAgent::setFrontend(InspectorFrontend* frontend)
 {
     m_frontend = frontend->replay();
-    if (m_state->getBoolean(ReplayPersistentAgentState::replayEnabled)) {
-        ErrorString error;
-        enable(&error);
-    }
 }
 
 void InspectorReplayAgent::clearFrontend()
 {
     //TODO: stop instrumenting, stop capturing, etc. see InspectorTimelineAgent::clearFrontend
-    m_frontend = 0;
+    m_frontend = nullptr;
 }
 
 void InspectorReplayAgent::willDispatchEvent(const Event& event, Frame* frame)
@@ -287,7 +277,6 @@ void InspectorReplayAgent::enable(ErrorString*)
         return;
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
-    m_state->setBoolean(ReplayPersistentAgentState::replayEnabled, true);
     m_instrumentingAgents->setInspectorReplayAgent(this);
 
     if (m_frontend)
@@ -300,7 +289,6 @@ void InspectorReplayAgent::disable(ErrorString*)
         return;
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::Disabled);
-    m_state->setBoolean(ReplayPersistentAgentState::replayEnabled, false);
     m_instrumentingAgents->setInspectorReplayAgent(0);
 
     if (m_frontend)

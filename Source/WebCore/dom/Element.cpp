@@ -29,51 +29,37 @@
 #include "AXObjectCache.h"
 #include "Attr.h"
 #include "CSSParser.h"
-#include "CSSSelectorList.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "ClassList.h"
 #include "ClientRect.h"
 #include "ClientRectList.h"
 #include "ContainerNodeAlgorithms.h"
 #include "DOMTokenList.h"
-#include "DatasetDOMStringMap.h"
-#include "Document.h"
-#include "DocumentFragment.h"
 #include "DocumentSharedObjectPool.h"
 #include "ElementRareData.h"
-#include "ElementTraversal.h"
 #include "EventDispatcher.h"
-#include "ExceptionCode.h"
 #include "FlowThreadController.h"
 #include "FocusController.h"
 #include "FocusEvent.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
 #include "HTMLCollection.h"
 #include "HTMLDocument.h"
 #include "HTMLElement.h"
 #include "HTMLFormControlsCollection.h"
-#include "HTMLFrameOwnerElement.h"
 #include "HTMLLabelElement.h"
 #include "HTMLNameCollection.h"
-#include "HTMLNames.h"
 #include "HTMLOptionsCollection.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLSelectElement.h"
 #include "HTMLTableRowsCollection.h"
 #include "InsertionPoint.h"
-#include "InspectorInstrumentation.h"
 #include "KeyboardEvent.h"
 #include "MutationObserverInterestGroup.h"
 #include "MutationRecord.h"
-#include "NamedNodeMap.h"
-#include "NodeList.h"
 #include "NodeRenderStyle.h"
-#include "Page.h"
 #include "PlatformWheelEvent.h"
 #include "PointerLockController.h"
-#include "PseudoElement.h"
 #include "RenderNamedFlowFragment.h"
 #include "RenderRegion.h"
 #include "RenderTheme.h"
@@ -81,10 +67,8 @@
 #include "RenderWidget.h"
 #include "SelectorQuery.h"
 #include "Settings.h"
-#include "ShadowRoot.h"
 #include "StylePropertySet.h"
 #include "StyleResolver.h"
-#include "Text.h"
 #include "TextIterator.h"
 #include "VoidCallback.h"
 #include "WheelEvent.h"
@@ -474,7 +458,7 @@ bool Element::isFocusable() const
         while (e && !e->hasLocalName(canvasTag))
             e = e->parentElement();
         ASSERT(e);
-        return e->renderer() && e->renderer()->style()->visibility() == VISIBLE;
+        return e->renderer() && e->renderer()->style().visibility() == VISIBLE;
     }
 
     if (renderer())
@@ -487,7 +471,7 @@ bool Element::isFocusable() const
 
     // FIXME: Even if we are not visible, we might have a child that is visible.
     // Hyatt wants to fix that some day with a "has visible content" flag or the like.
-    if (!renderer() || renderer()->style()->visibility() != VISIBLE)
+    if (!renderer() || renderer()->style().visibility() != VISIBLE)
         return false;
 
     return true;
@@ -531,7 +515,7 @@ void Element::setActive(bool flag, bool pause)
     if (reactsToPress)
         setNeedsStyleRecalc();
 
-    if (renderer()->style()->hasAppearance() && renderer()->theme()->stateChanged(renderer(), PressedState))
+    if (renderer()->style().hasAppearance() && renderer()->theme()->stateChanged(renderer(), PressedState))
         reactsToPress = true;
 
     // The rest of this function implements a feature that only works if the
@@ -593,10 +577,10 @@ void Element::setHovered(bool flag)
         return;
     }
 
-    if (renderer()->style()->affectedByHover() || childrenAffectedByHover())
+    if (renderer()->style().affectedByHover() || childrenAffectedByHover())
         setNeedsStyleRecalc();
 
-    if (renderer()->style()->hasAppearance())
+    if (renderer()->style().hasAppearance())
         renderer()->theme()->stateChanged(renderer(), HoverState);
 }
 
@@ -664,19 +648,19 @@ static float localZoomForRenderer(RenderElement* renderer)
     // other out, but the alternative is that we'd have to crawl up the whole render tree every
     // time (or store an additional bit in the RenderStyle to indicate that a zoom was specified).
     float zoomFactor = 1;
-    if (renderer->style()->effectiveZoom() != 1) {
+    if (renderer->style().effectiveZoom() != 1) {
         // Need to find the nearest enclosing RenderElement that set up
         // a differing zoom, and then we divide our result by it to eliminate the zoom.
         RenderElement* prev = renderer;
         for (RenderElement* curr = prev->parent(); curr; curr = curr->parent()) {
-            if (curr->style()->effectiveZoom() != prev->style()->effectiveZoom()) {
-                zoomFactor = prev->style()->zoom();
+            if (curr->style().effectiveZoom() != prev->style().effectiveZoom()) {
+                zoomFactor = prev->style().zoom();
                 break;
             }
             prev = curr;
         }
         if (prev->isRenderView())
-            zoomFactor = prev->style()->zoom();
+            zoomFactor = prev->style().zoom();
     }
     return zoomFactor;
 }
@@ -870,13 +854,13 @@ void Element::setScrollLeft(int newLeft)
 
     if (document().documentElement() == this) {
         RenderView& renderView = *document().renderView();
-        int zoom = renderView.style()->effectiveZoom();
+        int zoom = renderView.style().effectiveZoom();
         renderView.frameView().setScrollPosition(IntPoint(newLeft * zoom, renderView.frameView().scrollY() * zoom));
         return;
     }
 
     if (RenderBox* rend = renderBox())
-        rend->setScrollLeft(static_cast<int>(newLeft * rend->style()->effectiveZoom()));
+        rend->setScrollLeft(static_cast<int>(newLeft * rend->style().effectiveZoom()));
 }
 
 void Element::setScrollTop(int newTop)
@@ -891,13 +875,13 @@ void Element::setScrollTop(int newTop)
 
     if (document().documentElement() == this) {
         RenderView& renderView = *document().renderView();
-        int zoom = renderView.style()->effectiveZoom();
+        int zoom = renderView.style().effectiveZoom();
         renderView.frameView().setScrollPosition(IntPoint(renderView.frameView().scrollX() * zoom, newTop * zoom));
         return;
     }
 
     if (RenderBox* rend = renderBox())
-        rend->setScrollTop(static_cast<int>(newTop * rend->style()->effectiveZoom()));
+        rend->setScrollTop(static_cast<int>(newTop * rend->style().effectiveZoom()));
 }
 
 int Element::scrollWidth()
@@ -964,7 +948,7 @@ PassRefPtr<ClientRectList> Element::getClientRects()
 
     Vector<FloatQuad> quads;
     renderBoxModelObject->absoluteQuads(quads);
-    document().adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(quads, *renderBoxModelObject->style());
+    document().adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(quads, renderBoxModelObject->style());
     return ClientRectList::create(quads);
 }
 
@@ -995,7 +979,7 @@ PassRefPtr<ClientRect> Element::getBoundingClientRect()
     for (size_t i = 1; i < quads.size(); ++i)
         result.unite(quads[i].boundingBox());
 
-    document().adjustFloatRectForScrollAndAbsoluteZoomAndFrameScale(result, *renderer()->style());
+    document().adjustFloatRectForScrollAndAbsoluteZoomAndFrameScale(result, renderer()->style());
     return ClientRect::create(result);
 }
     
@@ -1125,7 +1109,7 @@ void Element::attributeChanged(const QualifiedName& name, const AtomicString& ne
         shouldInvalidateStyle |= testShouldInvalidateStyle && isInShadowTree();
 
 
-    invalidateNodeListCachesInAncestors(&name, this);
+    invalidateNodeListAndCollectionCachesInAncestors(&name, this);
 
     // If there is currently no StyleResolver, we can't be sure that this attribute change won't affect style.
     shouldInvalidateStyle |= !styleResolver;
@@ -1348,9 +1332,9 @@ bool Element::rendererIsNeeded(const RenderStyle& style)
     return style.display() != NONE;
 }
 
-RenderElement* Element::createRenderer(RenderStyle& style)
+RenderElement* Element::createRenderer(PassRef<RenderStyle> style)
 {
-    return RenderElement::createFor(*this, style);
+    return RenderElement::createFor(*this, std::move(style));
 }
 
 Node::InsertionNotificationRequest Element::insertedInto(ContainerNode& insertionPoint)
@@ -2411,7 +2395,7 @@ PassRefPtr<PseudoElement> Element::createPseudoElementIfNeeded(PseudoId pseudoId
         return 0;
     if (!pseudoElementRendererIsNeeded(renderer()->getCachedPseudoStyle(pseudoId)))
         return 0;
-    RefPtr<PseudoElement> pseudoElement = PseudoElement::create(this, pseudoId);
+    RefPtr<PseudoElement> pseudoElement = PseudoElement::create(*this, pseudoId);
     Style::attachRenderTree(*pseudoElement);
     return pseudoElement.release();
 }
@@ -2491,12 +2475,12 @@ void Element::clearAfterPseudoElement()
 // ElementTraversal API
 Element* Element::firstElementChild() const
 {
-    return ElementTraversal::firstWithin(this);
+    return ElementTraversal::firstChild(this);
 }
 
 Element* Element::lastElementChild() const
 {
-    return ElementTraversal::lastWithin(this);
+    return ElementTraversal::lastChild(this);
 }
 
 Element* Element::previousElementSibling() const
@@ -2550,7 +2534,7 @@ DOMTokenList* Element::classList()
 {
     ElementRareData& data = ensureElementRareData();
     if (!data.classList())
-        data.setClassList(ClassList::create(this));
+        data.setClassList(std::make_unique<ClassList>(*this));
     return data.classList();
 }
 
@@ -2558,7 +2542,7 @@ DOMStringMap* Element::dataset()
 {
     ElementRareData& data = ensureElementRareData();
     if (!data.dataset())
-        data.setDataset(DatasetDOMStringMap::create(this));
+        data.setDataset(std::make_unique<DatasetDOMStringMap>(*this));
     return data.dataset();
 }
 
@@ -2619,17 +2603,15 @@ const AtomicString& Element::UIActions() const
 }
 #endif
 
-    
-#if ENABLE(SVG)
 bool Element::childShouldCreateRenderer(const Node* child) const
 {
+#if ENABLE(SVG)
     // Only create renderers for SVG elements whose parents are SVG elements, or for proper <svg xmlns="svgNS"> subdocuments.
     if (child->isSVGElement())
         return child->hasTagName(SVGNames::svgTag) || isSVGElement();
-
+#endif
     return ContainerNode::childShouldCreateRenderer(child);
 }
-#endif
 
 #if ENABLE(FULLSCREEN_API)
 void Element::webkitRequestFullscreen()
@@ -2967,21 +2949,19 @@ PassRefPtr<HTMLCollection> Element::ensureCachedHTMLCollection(CollectionType ty
 
     RefPtr<HTMLCollection> collection;
     if (type == TableRows) {
-        ASSERT(hasTagName(tableTag));
-        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLTableRowsCollection>(*this, type);
+        return ensureRareData().ensureNodeLists().addCachedCollection<HTMLTableRowsCollection>(toHTMLTableElement(*this), type);
     } else if (type == SelectOptions) {
-        ASSERT(hasTagName(selectTag));
-        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLOptionsCollection>(*this, type);
+        return ensureRareData().ensureNodeLists().addCachedCollection<HTMLOptionsCollection>(toHTMLSelectElement(*this), type);
     } else if (type == FormControls) {
         ASSERT(hasTagName(formTag) || hasTagName(fieldsetTag));
-        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLFormControlsCollection>(*this, type);
+        return ensureRareData().ensureNodeLists().addCachedCollection<HTMLFormControlsCollection>(*this, type);
     }
-    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLCollection>(*this, type);
+    return ensureRareData().ensureNodeLists().addCachedCollection<HTMLCollection>(*this, type);
 }
 
 HTMLCollection* Element::cachedHTMLCollection(CollectionType type)
 {
-    return hasRareData() && rareData()->nodeLists() ? rareData()->nodeLists()->cacheWithAtomicName<HTMLCollection>(type) : 0;
+    return hasRareData() && rareData()->nodeLists() ? rareData()->nodeLists()->cachedCollection<HTMLCollection>(type) : 0;
 }
 
 IntSize Element::savedLayerScrollOffset() const

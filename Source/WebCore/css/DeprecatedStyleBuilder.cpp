@@ -1267,6 +1267,46 @@ public:
     }
 };
 
+#if ENABLE(CSS3_TEXT_DECORATION)
+static TextDecorationSkip valueToDecorationSkip(CSSPrimitiveValue& primitiveValue)
+{
+    ASSERT(primitiveValue.isValueID());
+
+    switch (primitiveValue.getValueID()) {
+    case CSSValueNone:
+        return TextDecorationSkipNone;
+    case CSSValueInk:
+        return TextDecorationSkipInk;
+    default:
+        break;
+    }
+
+    ASSERT_NOT_REACHED();
+    return TextDecorationSkipNone;
+}
+
+class ApplyPropertyTextDecorationSkip {
+public:
+    static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
+    {
+        if (value->isPrimitiveValue()) {
+            styleResolver->style()->setTextDecorationSkip(valueToDecorationSkip(*toCSSPrimitiveValue(value)));
+            return;
+        }
+
+        TextDecorationSkip skip = RenderStyle::initialTextDecorationSkip();
+        for (CSSValueListIterator i(value); i.hasMore(); i.advance())
+            skip |= valueToDecorationSkip(*toCSSPrimitiveValue(i.value()));
+        styleResolver->style()->setTextDecorationSkip(skip);
+    }
+    static PropertyHandler createHandler()
+    {
+        PropertyHandler handler = ApplyPropertyDefaultBase<TextDecorationSkip, &RenderStyle::textDecorationSkip, TextDecorationSkip, &RenderStyle::setTextDecorationSkip, TextDecorationSkip, &RenderStyle::initialTextDecorationSkip>::createHandler();
+        return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
+    }
+};
+#endif // CSS3_TEXT_DECORATION
+
 class ApplyPropertyMarqueeIncrement {
 public:
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
@@ -1356,7 +1396,7 @@ public:
     }
 };
 
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
 class ApplyPropertyTextUnderlinePosition {
 public:
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
@@ -1383,7 +1423,7 @@ public:
         return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
     }
 };
-#endif // CSS3_TEXT
+#endif // CSS3_TEXT_DECORATION
 
 class ApplyPropertyLineHeight {
 public:
@@ -1404,7 +1444,7 @@ public:
             lineHeight = primitiveValue->computeLength<Length>(styleResolver->style(), styleResolver->rootElementStyle(), multiplier);
         } else if (primitiveValue->isPercentage()) {
             // FIXME: percentage should not be restricted to an integer here.
-            lineHeight = Length((styleResolver->style()->fontSize() * primitiveValue->getIntValue()) / 100, Fixed);
+            lineHeight = Length((styleResolver->style()->computedFontSize() * primitiveValue->getIntValue()) / 100, Fixed);
         } else if (primitiveValue->isNumber()) {
             // FIXME: number and percentage values should produce the same type of Length (ie. Fixed or Percent).
             lineHeight = Length(primitiveValue->getDoubleValue() * 100.0, Percent);
@@ -1482,8 +1522,16 @@ public:
 
 class ApplyPropertyPageSize {
 private:
-    static Length mmLength(double mm) { return CSSPrimitiveValue::create(mm, CSSPrimitiveValue::CSS_MM)->computeLength<Length>(0, 0); }
-    static Length inchLength(double inch) { return CSSPrimitiveValue::create(inch, CSSPrimitiveValue::CSS_IN)->computeLength<Length>(0, 0); }
+    static Length mmLength(double mm)
+    {
+        Ref<CSSPrimitiveValue> value(CSSPrimitiveValue::create(mm, CSSPrimitiveValue::CSS_MM));
+        return value.get().computeLength<Length>(0, 0);
+    }
+    static Length inchLength(double inch)
+    {
+        Ref<CSSPrimitiveValue> value(CSSPrimitiveValue::create(inch, CSSPrimitiveValue::CSS_IN));
+        return value.get().computeLength<Length>(0, 0);
+    }
     static bool getPageSizeFromName(CSSPrimitiveValue* pageSizeName, CSSPrimitiveValue* pageOrientation, Length& width, Length& height)
     {
         DEFINE_STATIC_LOCAL(Length, a5Width, (mmLength(148)));
@@ -2266,13 +2314,16 @@ DeprecatedStyleBuilder::DeprecatedStyleBuilder()
     setPropertyHandler(CSSPropertyTextAlign, ApplyPropertyTextAlign::createHandler());
     setPropertyHandler(CSSPropertyTextDecoration, ApplyPropertyTextDecoration::createHandler());
 #if ENABLE(CSS3_TEXT)
+    setPropertyHandler(CSSPropertyWebkitTextAlignLast, ApplyPropertyDefault<TextAlignLast, &RenderStyle::textAlignLast, TextAlignLast, &RenderStyle::setTextAlignLast, TextAlignLast, &RenderStyle::initialTextAlignLast>::createHandler());
+    setPropertyHandler(CSSPropertyWebkitTextJustify, ApplyPropertyDefault<TextJustify, &RenderStyle::textJustify, TextJustify, &RenderStyle::setTextJustify, TextJustify, &RenderStyle::initialTextJustify>::createHandler());
+#endif // CSS3_TEXT
+#if ENABLE(CSS3_TEXT_DECORATION)
     setPropertyHandler(CSSPropertyWebkitTextDecorationLine, ApplyPropertyTextDecoration::createHandler());
     setPropertyHandler(CSSPropertyWebkitTextDecorationStyle, ApplyPropertyDefault<TextDecorationStyle, &RenderStyle::textDecorationStyle, TextDecorationStyle, &RenderStyle::setTextDecorationStyle, TextDecorationStyle, &RenderStyle::initialTextDecorationStyle>::createHandler());
     setPropertyHandler(CSSPropertyWebkitTextDecorationColor, ApplyPropertyColor<NoInheritFromParent, &RenderStyle::textDecorationColor, &RenderStyle::setTextDecorationColor, &RenderStyle::setVisitedLinkTextDecorationColor, &RenderStyle::color>::createHandler());
-    setPropertyHandler(CSSPropertyWebkitTextAlignLast, ApplyPropertyDefault<TextAlignLast, &RenderStyle::textAlignLast, TextAlignLast, &RenderStyle::setTextAlignLast, TextAlignLast, &RenderStyle::initialTextAlignLast>::createHandler());
-    setPropertyHandler(CSSPropertyWebkitTextJustify, ApplyPropertyDefault<TextJustify, &RenderStyle::textJustify, TextJustify, &RenderStyle::setTextJustify, TextJustify, &RenderStyle::initialTextJustify>::createHandler());
+    setPropertyHandler(CSSPropertyWebkitTextDecorationSkip, ApplyPropertyTextDecorationSkip::createHandler());
     setPropertyHandler(CSSPropertyWebkitTextUnderlinePosition, ApplyPropertyTextUnderlinePosition::createHandler());
-#endif // CSS3_TEXT
+#endif
     setPropertyHandler(CSSPropertyTextIndent, ApplyPropertyTextIndent::createHandler());
     setPropertyHandler(CSSPropertyTextOverflow, ApplyPropertyDefault<TextOverflow, &RenderStyle::textOverflow, TextOverflow, &RenderStyle::setTextOverflow, TextOverflow, &RenderStyle::initialTextOverflow>::createHandler());
     setPropertyHandler(CSSPropertyTextRendering, ApplyPropertyFont<TextRenderingMode, &FontDescription::textRenderingMode, &FontDescription::setTextRenderingMode, AutoTextRendering>::createHandler());

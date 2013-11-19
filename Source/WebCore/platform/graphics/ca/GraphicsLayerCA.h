@@ -167,16 +167,18 @@ private:
 
     virtual void platformCALayerAnimationStarted(CFTimeInterval beginTime);
     virtual CompositingCoordinatesOrientation platformCALayerContentsOrientation() const { return contentsOrientation(); }
-    virtual void platformCALayerPaintContents(GraphicsContext&, const IntRect& clip);
+    virtual void platformCALayerPaintContents(PlatformCALayer*, GraphicsContext&, const IntRect& clip);
     virtual bool platformCALayerShowDebugBorders() const { return isShowingDebugBorder(); }
     virtual bool platformCALayerShowRepaintCounter(PlatformCALayer*) const;
-    virtual int platformCALayerIncrementRepaintCount() { return incrementRepaintCount(); }
+    virtual int platformCALayerIncrementRepaintCount(PlatformCALayer*) { return incrementRepaintCount(); }
 
     virtual bool platformCALayerContentsOpaque() const { return contentsOpaque(); }
     virtual bool platformCALayerDrawsContent() const { return drawsContent(); }
     virtual void platformCALayerLayerDidDisplay(PlatformLayer* layer) { return layerDidDisplay(layer); }
     virtual void platformCALayerSetNeedsToRevalidateTiles() OVERRIDE;
-    virtual float platformCALayerDeviceScaleFactor() OVERRIDE;
+    virtual float platformCALayerDeviceScaleFactor() const OVERRIDE;
+    virtual float platformCALayerContentsScaleMultiplierForNewTiles(PlatformCALayer*) const OVERRIDE;
+
     virtual bool isCommittingChanges() const OVERRIDE { return m_isCommittingChanges; }
 
     virtual double backingStoreMemoryEstimate() const;

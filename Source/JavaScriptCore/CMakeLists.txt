@@ -50,6 +50,7 @@ set(JavaScriptCore_SOURCES
     bytecode/CallLinkStatus.cpp
     bytecode/CodeBlock.cpp
     bytecode/CodeBlockHash.cpp
+    bytecode/CodeBlockJettisoningWatchpoint.cpp
     bytecode/CodeOrigin.cpp
     bytecode/CodeType.cpp
     bytecode/DFGExitProfile.cpp
@@ -64,6 +65,7 @@ set(JavaScriptCore_SOURCES
     bytecode/Opcode.cpp
     bytecode/PolymorphicPutByIdList.cpp
     bytecode/PreciseJumpTargets.cpp
+    bytecode/ProfiledCodeBlockJettisoningWatchpoint.cpp
     bytecode/PutByIdStatus.cpp
     bytecode/ReduceWhitespace.cpp
     bytecode/SamplingTool.cpp
@@ -124,9 +126,11 @@ set(JavaScriptCore_SOURCES
     dfg/DFGFlushedAt.cpp
     dfg/DFGGraph.cpp
     dfg/DFGInPlaceAbstractState.cpp
+    dfg/DFGInvalidationPointInjectionPhase.cpp
     dfg/DFGJITCode.cpp
     dfg/DFGJITCompiler.cpp
     dfg/DFGJITFinalizer.cpp
+    dfg/DFGJumpReplacement.cpp
     dfg/DFGLICMPhase.cpp
     dfg/DFGLazyJSValue.cpp
     dfg/DFGLivenessAnalysisPhase.cpp
@@ -168,6 +172,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGVariableEvent.cpp
     dfg/DFGVariableEventStream.cpp
     dfg/DFGVirtualRegisterAllocationPhase.cpp
+    dfg/DFGWatchpointCollectionPhase.cpp
     dfg/DFGWorklist.cpp
 
     disassembler/ARMv7Disassembler.cpp
@@ -236,7 +241,6 @@ set(JavaScriptCore_SOURCES
     jit/JITStubs.cpp
     jit/JITThunks.cpp
     jit/JITToDFGDeferredCompilationCallback.cpp
-    jit/JumpReplacementWatchpoint.cpp
     jit/RegisterSet.cpp
     jit/Repatch.cpp
     jit/TempRegisterSet.cpp
@@ -269,6 +273,8 @@ set(JavaScriptCore_SOURCES
 
     runtime/ArgList.cpp
     runtime/Arguments.cpp
+    runtime/ArgumentsIteratorConstructor.cpp
+    runtime/ArgumentsIteratorPrototype.cpp
     runtime/ArrayBuffer.cpp
     runtime/ArrayBufferView.cpp
     runtime/ArrayConstructor.cpp
@@ -312,6 +318,7 @@ set(JavaScriptCore_SOURCES
     runtime/InternalFunction.cpp
     runtime/JSAPIValueWrapper.cpp
     runtime/JSActivation.cpp
+    runtime/JSArgumentsIterator.cpp
     runtime/JSArray.cpp
     runtime/JSArrayBuffer.cpp
     runtime/JSArrayBufferConstructor.cpp

@@ -278,7 +278,9 @@ private:
             break;
         }
             
-        case ArithSqrt: {
+        case ArithSqrt:
+        case ArithSin:
+        case ArithCos: {
             fixEdge<NumberUse>(node->child1());
             break;
         }
@@ -804,18 +806,6 @@ private:
             break;
         }
             
-        case CheckArray: {
-            switch (node->arrayMode().type()) {
-            case Array::String:
-                fixEdge<StringUse>(node->child1());
-                break;
-            default:
-                fixEdge<CellUse>(node->child1());
-                break;
-            }
-            break;
-        }
-            
         case Arrayify:
         case ArrayifyToStructure: {
             fixEdge<CellUse>(node->child1());
@@ -885,6 +875,8 @@ private:
         case CheckTierUpAndOSREnter:
         case Int52ToDouble:
         case Int52ToValue:
+        case InvalidationPoint:
+        case CheckArray:
             RELEASE_ASSERT_NOT_REACHED();
             break;
 
@@ -907,7 +899,6 @@ private:
         case Flush:
         case PhantomLocal:
         case GetLocalUnlinked:
-        case InlineStart:
         case GetMyScope:
         case GetClosureVar:
         case GetGlobalVar:
@@ -1273,29 +1264,35 @@ private:
     {
         ASSERT(arrayMode.isSpecific());
         
-        Structure* structure = arrayMode.originalArrayStructure(m_graph, codeOrigin);
-        
-        Edge indexEdge = index ? Edge(index, Int32Use) : Edge();
-        
-        if (arrayMode.doesConversion()) {
-            if (structure) {
-                m_insertionSet.insertNode(
-                    m_indexInBlock, SpecNone, ArrayifyToStructure, codeOrigin,
-                    OpInfo(structure), OpInfo(arrayMode.asWord()), Edge(array, CellUse), indexEdge);
-            } else {
-                m_insertionSet.insertNode(
-                    m_indexInBlock, SpecNone, Arrayify, codeOrigin,
-                    OpInfo(arrayMode.asWord()), Edge(array, CellUse), indexEdge);
-            }
+        if (arrayMode.type() == Array::String) {
+            m_insertionSet.insertNode(
+                m_indexInBlock, SpecNone, Phantom, codeOrigin,
+                Edge(array, StringUse));
         } else {
-            if (structure) {
-                m_insertionSet.insertNode(
-                    m_indexInBlock, SpecNone, CheckStructure, codeOrigin,
-                    OpInfo(m_graph.addStructureSet(structure)), Edge(array, CellUse));
+            Structure* structure = arrayMode.originalArrayStructure(m_graph, codeOrigin);
+        
+            Edge indexEdge = index ? Edge(index, Int32Use) : Edge();
+        
+            if (arrayMode.doesConversion()) {
+                if (structure) {
+                    m_insertionSet.insertNode(
+                        m_indexInBlock, SpecNone, ArrayifyToStructure, codeOrigin,
+                        OpInfo(structure), OpInfo(arrayMode.asWord()), Edge(array, CellUse), indexEdge);
+                } else {
+                    m_insertionSet.insertNode(
+                        m_indexInBlock, SpecNone, Arrayify, codeOrigin,
+                        OpInfo(arrayMode.asWord()), Edge(array, CellUse), indexEdge);
+                }
             } else {
-                m_insertionSet.insertNode(
-                    m_indexInBlock, SpecNone, CheckArray, codeOrigin,
-                    OpInfo(arrayMode.asWord()), Edge(array, CellUse));
+                if (structure) {
+                    m_insertionSet.insertNode(
+                        m_indexInBlock, SpecNone, CheckStructure, codeOrigin,
+                        OpInfo(m_graph.addStructureSet(structure)), Edge(array, CellUse));
+                } else {
+                    m_insertionSet.insertNode(
+                        m_indexInBlock, SpecNone, CheckArray, codeOrigin,
+                        OpInfo(arrayMode.asWord()), Edge(array, CellUse));
+                }
             }
         }
         

@@ -55,9 +55,9 @@ class CanvasObserver {
 public:
     virtual ~CanvasObserver() { }
 
-    virtual void canvasChanged(HTMLCanvasElement*, const FloatRect& changedRect) = 0;
-    virtual void canvasResized(HTMLCanvasElement*) = 0;
-    virtual void canvasDestroyed(HTMLCanvasElement*) = 0;
+    virtual void canvasChanged(HTMLCanvasElement&, const FloatRect& changedRect) = 0;
+    virtual void canvasResized(HTMLCanvasElement&) = 0;
+    virtual void canvasDestroyed(HTMLCanvasElement&) = 0;
 };
 
 class HTMLCanvasElement FINAL : public HTMLElement {
@@ -66,8 +66,8 @@ public:
     static PassRefPtr<HTMLCanvasElement> create(const QualifiedName&, Document&);
     virtual ~HTMLCanvasElement();
 
-    void addObserver(CanvasObserver*);
-    void removeObserver(CanvasObserver*);
+    void addObserver(CanvasObserver&);
+    void removeObserver(CanvasObserver&);
 
     // Attributes and functions exposed to script
     int width() const { return size().width(); }
@@ -144,7 +144,7 @@ private:
     HTMLCanvasElement(const QualifiedName&, Document&);
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual void willAttachRenderers() OVERRIDE;
     virtual bool areAuthorShadowsAllowed() const OVERRIDE;
 

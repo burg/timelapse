@@ -1011,9 +1011,6 @@
     <ClCompile Include="..\loader\cache\MemoryCache.cpp">
       <Filter>loader\cache</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\Arena.cpp">
-      <Filter>platform</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\CalculationValue.cpp">
       <Filter>platform</Filter>
     </ClCompile>
@@ -2028,16 +2025,7 @@
     <ClCompile Include="..\platform\graphics\WidthIterator.cpp">
       <Filter>platform\text</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\text\cf\AtomicStringCF.cpp">
-      <Filter>platform\text\cf</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\text\cf\HyphenationCF.cpp">
-      <Filter>platform\text\cf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\platform\text\cf\StringCF.cpp">
-      <Filter>platform\text\cf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\platform\text\cf\StringImplCF.cpp">
       <Filter>platform\text\cf</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\text\win\TextBreakIteratorInternalICUWin.cpp">
@@ -2397,6 +2385,9 @@
     <ClCompile Include="..\rendering\InlineBox.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
+    <ClCompile Include="..\rendering\InlineElementBox.cpp">
+      <Filter>rendering</Filter>
+    </ClCompile>
     <ClCompile Include="..\rendering\InlineFlowBox.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
@@ -2410,9 +2401,6 @@
       <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\PointerEventsHitRules.cpp">
-      <Filter>rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="..\rendering\RenderArena.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\RenderBlock.cpp">
@@ -2939,6 +2927,9 @@
     </ClCompile>
     <ClCompile Include="..\rendering\svg\SVGTextRunRenderingContext.cpp">
       <Filter>rendering\svg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\rendering\TextPainter.cpp">
+      <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\xml\DOMParser.cpp">
       <Filter>xml</Filter>
@@ -4257,9 +4248,6 @@
     <ClCompile Include="..\bindings\generic\ActiveDOMCallback.cpp">
       <Filter>bindings\generic</Filter>
     </ClCompile>
-    <ClCompile Include="..\bindings\generic\BindingSecurity.cpp">
-      <Filter>bindings\generic</Filter>
-    </ClCompile>
     <ClCompile Include="..\bindings\generic\RuntimeEnabledFeatures.cpp">
       <Filter>bindings\generic</Filter>
     </ClCompile>
@@ -4360,6 +4348,9 @@
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDOMPluginCustom.cpp">
+      <Filter>bindings\js</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bindings\js\JSDOMPromise.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDOMStringListCustom.cpp">
@@ -4485,6 +4476,8 @@
     <ClCompile Include="..\bindings\js\JSSQLTransactionSyncCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
+    <ClCompile Include="..\bindings\js\JSRTCPeerConnectionCustom.cpp">
+      <Filter>bindings\js</Filter>
     <ClCompile Include="..\bindings\js\JSRTCStatsResponseCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
@@ -4897,9 +4890,6 @@
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\InspectorRuntimeAgent.cpp">
-      <Filter>inspector</Filter>
-    </ClCompile>
-    <ClCompile Include="..\inspector\InspectorState.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\InspectorStyleSheet.cpp">
@@ -7915,9 +7905,6 @@
     <ClInclude Include="..\loader\cache\MemoryCache.h">
       <Filter>loader\cache</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\Arena.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\CalculationValue.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -9268,6 +9255,9 @@
     <ClInclude Include="..\rendering\InlineBox.h">
       <Filter>rendering</Filter>
     </ClInclude>
+    <ClInclude Include="..\rendering\InlineElementBox.h">
+      <Filter>rendering</Filter>
+    </ClInclude>
     <ClInclude Include="..\rendering\InlineFlowBox.h">
       <Filter>rendering</Filter>
     </ClInclude>
@@ -9290,9 +9280,6 @@
       <Filter>rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\PointerEventsHitRules.h">
-      <Filter>rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="..\rendering\RenderArena.h">
       <Filter>rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\RenderBlock.h">
@@ -9617,6 +9604,9 @@
       <Filter>rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\TableLayout.h">
+      <Filter>rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rendering\TextPainter.h">
       <Filter>rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\TrailingFloatsRootInlineBox.h">
@@ -11329,13 +11319,13 @@
     <ClInclude Include="..\bindings\generic\ActiveDOMCallback.h">
       <Filter>bindings\generic</Filter>
     </ClInclude>
-    <ClInclude Include="..\bindings\generic\BindingSecurity.h">
-      <Filter>bindings\generic</Filter>
-    </ClInclude>
     <ClInclude Include="..\bindings\generic\RuntimeEnabledFeatures.h">
       <Filter>bindings\generic</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\ArrayValue.h">
+      <Filter>bindings\js</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bindings\js\BreakpointID.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\CachedScriptSourceProvider.h">
@@ -11381,6 +11371,9 @@
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\JSDOMGlobalObjectTask.h">
+      <Filter>bindings\js</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bindings\js\JSDOMPromise.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\JSErrorHandler.h">
@@ -11468,6 +11461,9 @@
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\SerializedScriptValue.h">
+      <Filter>bindings\js</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bindings\js\SourceID.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\WebCoreJSClientData.h">
@@ -12412,12 +12408,6 @@
     <ClInclude Include="..\inspector\InspectorRuntimeAgent.h">
       <Filter>inspector</Filter>
     </ClInclude>
-    <ClInclude Include="..\inspector\InspectorState.h">
-      <Filter>inspector</Filter>
-    </ClInclude>
-    <ClInclude Include="..\inspector\InspectorStateClient.h">
-      <Filter>inspector</Filter>
-    </ClInclude>
     <ClInclude Include="..\inspector\InspectorStyleSheet.h">
       <Filter>inspector</Filter>
     </ClInclude>
@@ -12919,6 +12909,9 @@
       <Filter>platform</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\AudioTrackPrivate.h">
+      <Filter>html\track</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platform\graphics\TrackBasePrivate.h">
       <Filter>html\track</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\VideoTrackPrivate.h">

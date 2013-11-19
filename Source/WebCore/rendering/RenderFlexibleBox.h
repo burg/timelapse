@@ -31,14 +31,15 @@
 #ifndef RenderFlexibleBox_h
 #define RenderFlexibleBox_h
 
+#include "OrderIterator.h"
 #include "RenderBlock.h"
 
 namespace WebCore {
 
 class RenderFlexibleBox : public RenderBlock {
 public:
-    explicit RenderFlexibleBox(Element&);
-    explicit RenderFlexibleBox(Document&);
+    RenderFlexibleBox(Element&, PassRef<RenderStyle>);
+    RenderFlexibleBox(Document&, PassRef<RenderStyle>);
     virtual ~RenderFlexibleBox();
 
     virtual const char* renderName() const OVERRIDE;
@@ -71,26 +72,6 @@ private:
     enum PositionedLayoutMode {
         FlipForRowReverse,
         NoFlipForRowReverse,
-    };
-
-    struct OrderHashTraits;
-    typedef HashSet<int, DefaultHash<int>::Hash, OrderHashTraits> OrderHashSet;
-
-    class OrderIterator {
-        WTF_MAKE_NONCOPYABLE(OrderIterator);
-    public:
-        OrderIterator(const RenderFlexibleBox*);
-        void setOrderValues(const OrderHashSet&);
-        RenderBox* currentChild() const { return m_currentChild; }
-        RenderBox* first();
-        RenderBox* next();
-        void reset();
-
-    private:
-        const RenderFlexibleBox* m_flexibleBox;
-        RenderBox* m_currentChild;
-        Vector<int> m_orderValues;
-        Vector<int>::const_iterator m_orderValuesIterator;
     };
 
     typedef HashMap<const RenderBox*, LayoutUnit> InflexibleFlexItemSize;
@@ -153,7 +134,7 @@ private:
     LayoutUnit marginBoxAscentForChild(RenderBox&);
 
     LayoutUnit computeChildMarginValue(const Length& margin);
-    void computeMainAxisPreferredSizes(OrderHashSet&);
+    void computeMainAxisPreferredSizes(OrderIterator::OrderValues&);
     LayoutUnit adjustChildSizeForMinAndMax(RenderBox&, LayoutUnit childSize);
     bool computeNextFlexLine(OrderedFlexItemList& orderedChildren, LayoutUnit& preferredMainAxisExtent, double& totalFlexGrow, double& totalWeightedFlexShrink, LayoutUnit& minMaxAppliedMainAxisExtent, bool& hasInfiniteLineLength);
 

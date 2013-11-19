@@ -35,9 +35,9 @@
 	top: 22px;
 }
 
-.details-section.probe-group .options > .probe-remove,
-.details-section.probe-group .options > .probe-clear-samples,
-.details-section.probe-group .options > .probe-add {
+.details-section.probe-set .options > .probe-remove,
+.details-section.probe-set .options > .probe-clear-samples,
+.details-section.probe-set .options > .probe-add {
 	float: right;
 	height: 11px;
 	margin-top: 1px;
@@ -45,20 +45,20 @@
 	cursor: pointer;
 }
 
-.details-section.probe-group .options > .probe-clear-samples {
+.details-section.probe-set .options > .probe-clear-samples {
 	content: url(Images/NavigationItemTrash.svg);
 	height: 13px;
 }
 
-.details-section.probe-group .options > .probe-remove {
+.details-section.probe-set .options > .probe-remove {
 	content: url(Images/Close.svg);
 }
 
-.details-section.probe-group .options > .probe-add {
+.details-section.probe-set .options > .probe-add {
 	content: url(Images/Plus.svg);
 }
 
-.details-section.probe-group .options > input {
+.details-section.probe-set .options > input {
 	height: 12px;
 	width: 40px;
 	font-size: 10px;

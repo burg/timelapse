@@ -61,6 +61,11 @@ WebInspector.DebuggerObserver.prototype = {
     resumed: function()
     {
         WebInspector.debuggerManager.debuggerDidResume();
+    },
+
+    didSampleProbe: function(sample)
+    {
+        WebInspector.probeManager.didSampleProbe(sample);
     }
 };
 

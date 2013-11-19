@@ -57,6 +57,11 @@
 #import <wtf/text/Base64.h>
 #import <wtf/text/StringConcatenate.h>
 
+#if ENABLE(REMOTE_INSPECTOR)
+#import "WebInspectorClientRegistry.h"
+#import "WebInspectorRemoteChannel.h"
+#endif
+
 SOFT_LINK_STAGED_FRAMEWORK(WebInspectorUI, PrivateFrameworks, A)
 
 // The margin from the top and right of the dock button (same as the full screen button).
@@ -132,11 +137,23 @@ WebInspectorClient::WebInspectorClient(WebView *webView)
     , m_highlighter(adoptNS([[WebNodeHighlighter alloc] initWithInspectedWebView:webView]))
     , m_frontendPage(0)
     , m_frontendClient(0)
+#if ENABLE(REMOTE_INSPECTOR)
+    , m_remoteChannel(0)
+    , m_pageId(0)
+#endif
 {
+#if ENABLE(REMOTE_INSPECTOR)
+    [[WebInspectorClientRegistry sharedRegistry] registerClient:this];
+#endif
 }
 
 void WebInspectorClient::inspectorDestroyed()
 {
+#if ENABLE(REMOTE_INSPECTOR)
+    [[WebInspectorClientRegistry sharedRegistry] unregisterClient:this];
+    teardownRemoteConnection(true);
+#endif
+
     closeInspectorFrontend();
     delete this;
 }
@@ -198,11 +215,96 @@ bool WebInspectorClient::captureScreenshot(int x, int y, int width, int height, 
     return true;
 }
 
+void WebInspectorClient::didSetSearchingForNode(bool enabled)
+{
+    WebInspector *inspector = [m_webView inspector];
+
+    ASSERT(isMainThread());
+
+    if (enabled)
+        [[NSNotificationCenter defaultCenter] postNotificationName:WebInspectorDidStartSearchingForNode object:inspector];
+    else
+        [[NSNotificationCenter defaultCenter] postNotificationName:WebInspectorDidStopSearchingForNode object:inspector];
+}
+
 void WebInspectorClient::releaseFrontend()
 {
     m_frontendClient = 0;
     m_frontendPage = 0;
 }
+
+#if ENABLE(REMOTE_INSPECTOR)
+bool WebInspectorClient::sendMessageToFrontend(const String& message)
+{
+    if (m_remoteChannel) {
+        [m_remoteChannel sendMessageToFrontend:message];
+        return true;
+    }
+
+    return doDispatchMessageOnFrontendPage(m_frontendPage, message);
+}
+
+void WebInspectorClient::sendMessageToBackend(const String& message)
+{
+    ASSERT(m_remoteChannel);
+
+    Page* page = core(m_webView);
+    page->inspectorController()->dispatchMessageFromFrontend(message);
+}
+
+bool WebInspectorClient::setupRemoteConnection(WebInspectorRemoteChannel *remoteChannel)
+{
+    // There is already a local session, do not allow a remote session.
+    if (hasLocalSession())
+        return false;
+
+    // There is already a remote session, do not allow a new remote session.
+    if (m_remoteChannel)
+        return false;
+
+    ASSERT([[m_webView preferences] developerExtrasEnabled]);
+
+    m_remoteChannel = remoteChannel;
+
+    Page* page = core(m_webView);
+    page->inspectorController()->connectFrontend(this);
+
+    return true;
+}
+
+void WebInspectorClient::teardownRemoteConnection(bool fromLocalSide)
+{
+    if (!m_remoteChannel)
+        return;
+
+    if (fromLocalSide)
+        [m_remoteChannel closeFromLocalSide];
+
+    if (Page* page = core(m_webView))
+        page->inspectorController()->disconnectFrontend();
+
+    if (fromLocalSide)
+        [m_remoteChannel release];
+
+    m_remoteChannel = 0;
+}
+
+bool WebInspectorClient::hasLocalSession() const
+{
+    return m_frontendPage != 0;
+}
+
+bool WebInspectorClient::canBeRemotelyInspected() const
+{
+    return [m_webView canBeRemotelyInspected];
+}
+
+WebView *WebInspectorClient::inspectedWebView()
+{
+    return m_webView;
+}
+#endif
+
 
 WebInspectorFrontendClient::WebInspectorFrontendClient(WebView* inspectedWebView, WebInspectorWindowController* windowController, InspectorController* inspectorController, Page* frontendPage, WTF::PassOwnPtr<Settings> settings)
     : InspectorFrontendClientLocal(inspectorController,  frontendPage, settings)
@@ -794,6 +896,5 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     return YES;
 }
-
 
 @end

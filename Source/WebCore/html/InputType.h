@@ -57,7 +57,6 @@ class Icon;
 class KeyboardEvent;
 class MouseEvent;
 class Node;
-class RenderArena;
 class RenderStyle;
 class TouchEvent;
 class TextControlInnerTextElement;
@@ -74,8 +73,8 @@ class InputType {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    static OwnPtr<InputType> create(HTMLInputElement&, const AtomicString&);
-    static OwnPtr<InputType> createText(HTMLInputElement&);
+    static std::unique_ptr<InputType> create(HTMLInputElement&, const AtomicString&);
+    static std::unique_ptr<InputType> createText(HTMLInputElement&);
     virtual ~InputType();
 
     static bool themeSupportsDataListUI(InputType*);
@@ -233,7 +232,7 @@ public:
     // Miscellaneous functions
 
     virtual bool rendererIsNeeded();
-    virtual RenderElement* createRenderer(RenderStyle&) const;
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) const;
     virtual void addSearchResult();
     virtual void attach();
     virtual void detach();

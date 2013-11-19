@@ -36,7 +36,6 @@
 #include <gst/gst.h>
 #ifdef GST_API_VERSION_1
 #include <gst/video/gstvideometa.h>
-#include <gst/video/gstvideopool.h>
 #endif
 #include <wtf/OwnPtr.h>
 
@@ -90,10 +89,6 @@ struct _WebKitVideoSinkPrivate {
 
 #ifdef GST_API_VERSION_1
     GstVideoInfo info;
-#endif
-
-#if USE(NATIVE_FULLSCREEN_VIDEO)
-    WebCore::GStreamerGWorld* gstGWorld;
 #endif
 
     GstCaps* currentCaps;
@@ -166,15 +161,6 @@ static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buf
         g_mutex_unlock(priv->bufferMutex);
         return GST_FLOW_OK;
     }
-
-#if USE(NATIVE_FULLSCREEN_VIDEO)
-    // Ignore buffers if the video is already in fullscreen using
-    // another sink.
-    if (priv->gstGWorld->isFullscreen()) {
-        g_mutex_unlock(priv->bufferMutex);
-        return GST_FLOW_OK;
-    }
-#endif
 
     priv->buffer = gst_buffer_ref(buffer);
 
@@ -270,6 +256,7 @@ static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buf
     // See: https://bugzilla.gnome.org/show_bug.cgi?id=610830.
     priv->timeoutId = g_timeout_add_full(G_PRIORITY_DEFAULT, 0, webkitVideoSinkTimeoutCallback,
                                           gst_object_ref(sink), reinterpret_cast<GDestroyNotify>(gst_object_unref));
+    g_source_set_name_by_id(priv->timeoutId, "[WebKit] webkitVideoSinkTimeoutCallback");
 
     g_cond_wait(priv->dataCondition, priv->bufferMutex);
     g_mutex_unlock(priv->bufferMutex);
@@ -489,18 +476,9 @@ static void webkit_video_sink_class_init(WebKitVideoSinkClass* klass)
 }
 
 
-#if USE(NATIVE_FULLSCREEN_VIDEO)
-GstElement* webkitVideoSinkNew(WebCore::GStreamerGWorld* gstGWorld)
-{
-    GstElement* element = GST_ELEMENT(g_object_new(WEBKIT_TYPE_VIDEO_SINK, 0));
-    WEBKIT_VIDEO_SINK(element)->priv->gstGWorld = gstGWorld;
-    return element;
-}
-#else
 GstElement* webkitVideoSinkNew()
 {
     return GST_ELEMENT(g_object_new(WEBKIT_TYPE_VIDEO_SINK, 0));
 }
-#endif
 
 #endif // ENABLE(VIDEO) && USE(GSTREAMER)

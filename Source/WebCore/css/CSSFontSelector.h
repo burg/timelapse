@@ -28,6 +28,7 @@
 
 #include "CachedResourceHandle.h"
 #include "FontSelector.h"
+#include "SimpleFontData.h"
 #include "Timer.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>

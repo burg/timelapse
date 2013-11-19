@@ -32,6 +32,7 @@ namespace WebCore {
 
 struct CompositionUnderline;
 class DocumentMarker;
+class TextPainter;
 
 const unsigned short cNoTruncation = USHRT_MAX;
 const unsigned short cFullTruncation = USHRT_MAX - 1;
@@ -54,10 +55,10 @@ public:
         setBehavesLikeText(true);
     }
 
-    RenderText& renderer() const { return toRenderText(InlineBox::renderer()); }
-    const RenderStyle& lineStyle() const { return isFirstLine() ? *renderer().firstLineStyle() : *renderer().style(); }
+    virtual ~InlineTextBox();
 
-    virtual void destroy(RenderArena&) OVERRIDE FINAL;
+    RenderText& renderer() const { return toRenderText(InlineBox::renderer()); }
+    const RenderStyle& lineStyle() const { return isFirstLine() ? renderer().firstLineStyle() : renderer().style(); }
 
     InlineTextBox* prevTextBox() const { return m_prevTextBox; }
     InlineTextBox* nextTextBox() const { return m_nextTextBox; }
@@ -122,7 +123,7 @@ protected:
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) OVERRIDE;
 
 private:
-    virtual void deleteLine(RenderArena&) OVERRIDE FINAL;
+    virtual void deleteLine() OVERRIDE FINAL;
     virtual void extractLine() OVERRIDE FINAL;
     virtual void attachLine() OVERRIDE FINAL;
 
@@ -169,7 +170,7 @@ protected:
 #endif
 
 private:
-    void paintDecoration(GraphicsContext*, const FloatPoint& boxOrigin, TextDecoration, TextDecorationStyle, const ShadowData*);
+    void paintDecoration(GraphicsContext&, const FloatPoint& boxOrigin, TextDecoration, TextDecorationStyle, const ShadowData*, TextPainter&);
     void paintSelection(GraphicsContext*, const FloatPoint& boxOrigin, const RenderStyle&, const Font&, Color textColor);
     void paintDocumentMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, const RenderStyle&, const Font&, bool grammar);
     void paintTextMatchMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, const RenderStyle&, const Font&);
@@ -194,20 +195,7 @@ private:
     unsigned short m_truncation;
 };
 
-inline InlineTextBox* toInlineTextBox(InlineBox* inlineBox)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!inlineBox || inlineBox->isInlineTextBox());
-    return static_cast<InlineTextBox*>(inlineBox);
-}
-
-inline const InlineTextBox* toInlineTextBox(const InlineBox* inlineBox)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!inlineBox || inlineBox->isInlineTextBox());
-    return static_cast<const InlineTextBox*>(inlineBox);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toInlineTextBox(const InlineTextBox*);
+INLINE_BOX_OBJECT_TYPE_CASTS(InlineTextBox, isInlineTextBox())
 
 void alignSelectionRectToDevicePixels(FloatRect&);
 

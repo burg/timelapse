@@ -66,7 +66,6 @@
 #include "PluginView.h"
 #include "PointerLockController.h"
 #include "ProgressTracker.h"
-#include "RenderArena.h"
 #include "RenderLayerCompositor.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -246,16 +245,13 @@ Page::~Page()
 #endif
 }
 
-ArenaSize Page::renderTreeSize() const
+uint64_t Page::renderTreeSize() const
 {
-    ArenaSize total(0, 0);
+    uint64_t total = 0;
     for (const Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->document())
+        if (!frame->document() || !frame->document()->renderView())
             continue;
-        if (RenderArena* arena = frame->document()->renderArena()) {
-            total.treeSize += arena->totalRenderArenaSize();
-            total.allocated += arena->totalRenderArenaAllocatedBytes();
-        }
+        total += frame->document()->renderView()->rendererCount();
     }
     return total;
 }
@@ -756,7 +752,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin)
 
     if (scale == m_pageScaleFactor) {
         if (view && (view->scrollPosition() != origin || view->delegatesScrolling())) {
-            if (!m_settings->applyPageScaleFactorInCompositor())
+            if (!m_settings->delegatesPageScaling())
                 document->updateLayoutIgnorePendingStylesheets();
             view->setScrollPosition(origin);
         }
@@ -765,7 +761,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin)
 
     m_pageScaleFactor = scale;
 
-    if (!m_settings->applyPageScaleFactorInCompositor()) {
+    if (!m_settings->delegatesPageScaling()) {
         if (document->renderView())
             document->renderView()->setNeedsLayout();
 
@@ -783,7 +779,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin)
         view->setViewportConstrainedObjectsNeedLayout();
 
     if (view && view->scrollPosition() != origin) {
-        if (!m_settings->applyPageScaleFactorInCompositor() && document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
+        if (!m_settings->delegatesPageScaling() && document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
             view->layout();
         view->setScrollPosition(origin);
     }
@@ -1047,15 +1043,6 @@ void Page::visitedStateChanged(PageGroup* group, LinkHash linkHash)
         for (Frame* frame = page->m_mainFrame.get(); frame; frame = frame->tree().traverseNext())
             frame->document()->visitedLinkState().invalidateStyleForLink(linkHash);
     }
-}
-
-void Page::setDebuggerForAllPages(JSC::Debugger* debugger)
-{
-    ASSERT(allPages);
-
-    HashSet<Page*>::iterator end = allPages->end();
-    for (HashSet<Page*>::iterator it = allPages->begin(); it != end; ++it)
-        (*it)->setDebugger(debugger);
 }
 
 void Page::setDebugger(JSC::Debugger* debugger)

@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
@@ -69,7 +70,6 @@ WebInspector.loaded = function()
         InspectorBackend.registerRuntimeDispatcher(new WebInspector.RuntimeObserver);
     InspectorBackend.registerReplayDispatcher(new WebInspector.ReplayObserver);
     InspectorBackend.registerRecordingsDispatcher(new WebInspector.RecordingsObserver);
-    InspectorBackend.registerProbeDispatcher(new WebInspector.ProbeObserver);
 
     // Enable agents.
     InspectorAgent.enable();
@@ -339,7 +339,7 @@ WebInspector.sidebarPanelForCurrentContentView = function()
 WebInspector.sidebarPanelForRepresentedObject = function(representedObject)
 {
     if (representedObject instanceof WebInspector.Frame || representedObject instanceof WebInspector.Resource ||
-        representedObject instanceof WebInspector.Script)
+        representedObject instanceof WebInspector.Script || representedObject instanceof WebInspector.ContentFlow)
         return this.resourceSidebarPanel;
 
     if (representedObject instanceof WebInspector.DOMStorageObject || representedObject instanceof WebInspector.CookieStorageObject ||
@@ -856,6 +856,8 @@ WebInspector._revealAndSelectRepresentedObjectInNavigationSidebar = function(rep
         return;
 
     var selectedSidebarPanel = this.navigationSidebar.selectedSidebarPanel;
+    if (!selectedSidebarPanel)
+        return;
 
     // If the tree outline is processing a selection currently then we can assume the selection does not
     // need to be changed. This is needed to allow breakpoints tree elements to be selected without jumping
@@ -886,7 +888,7 @@ WebInspector._updateNavigationSidebarForCurrentContentView = function()
     // Ensure the navigation sidebar panel is allowed by the current content view, if not ask the sidebar panel
     // to show the content view for the current selection.
     var allowedNavigationSidebarPanels = currentContentView.allowedNavigationSidebarPanels;
-    if (!allowedNavigationSidebarPanels.contains(selectedSidebarPanel.identifier)) {
+    if (allowedNavigationSidebarPanels.length && !allowedNavigationSidebarPanels.contains(selectedSidebarPanel.identifier)) {
         selectedSidebarPanel.showContentViewForCurrentSelection();
 
         // Fetch the current content view again, since it likely changed.
@@ -1018,9 +1020,13 @@ WebInspector._contentBrowserCurrentContentViewDidChange = function(event)
     if (!currentContentView)
         return;
 
+    var selectedSidebarPanel = this.navigationSidebar.selectedSidebarPanel;
+    if (!selectedSidebarPanel)
+        return;
+
     // Ensure the navigation sidebar panel is allowed by the current content view, if not change the navigation sidebar panel
     // to the last navigation sidebar panel used with the content view or the first one allowed.
-    var selectedSidebarPanelIdentifier = this.navigationSidebar.selectedSidebarPanel.identifier;
+    var selectedSidebarPanelIdentifier = selectedSidebarPanel.identifier;
 
     var allowedNavigationSidebarPanels = currentContentView.allowedNavigationSidebarPanels;
     if (allowedNavigationSidebarPanels.length && !allowedNavigationSidebarPanels.contains(selectedSidebarPanelIdentifier)) {

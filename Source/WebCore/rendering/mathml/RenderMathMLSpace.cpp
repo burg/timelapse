@@ -36,8 +36,8 @@ namespace WebCore {
     
 using namespace MathMLNames;
 
-RenderMathMLSpace::RenderMathMLSpace(MathMLTextElement& element)
-    : RenderMathMLBlock(element)
+RenderMathMLSpace::RenderMathMLSpace(MathMLTextElement& element, PassRef<RenderStyle> style)
+    : RenderMathMLBlock(element, std::move(style))
     , m_width(0)
     , m_height(0)
     , m_depth(0)
@@ -58,9 +58,9 @@ void RenderMathMLSpace::updateFromElement()
     m_width = 0;
     m_height = 0;
     m_depth = 0;
-    parseMathMLLength(spaceElement.getAttribute(MathMLNames::widthAttr), m_width, style());
-    parseMathMLLength(spaceElement.getAttribute(MathMLNames::heightAttr), m_height, style());
-    parseMathMLLength(spaceElement.getAttribute(MathMLNames::depthAttr), m_depth, style());
+    parseMathMLLength(spaceElement.getAttribute(MathMLNames::widthAttr), m_width, &style());
+    parseMathMLLength(spaceElement.getAttribute(MathMLNames::heightAttr), m_height, &style());
+    parseMathMLLength(spaceElement.getAttribute(MathMLNames::depthAttr), m_depth, &style());
 
     // FIXME: Negative width values should be accepted.
     if (m_width < 0)

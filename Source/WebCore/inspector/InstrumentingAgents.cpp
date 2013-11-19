@@ -66,7 +66,6 @@ InstrumentingAgents::InstrumentingAgents()
     , m_inspectorApplicationCacheAgent(0)
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     , m_inspectorDebuggerAgent(0)
-    , m_inspectorProbeAgent(0)
     , m_pageDebuggerAgent(0)
     , m_inspectorDOMDebuggerAgent(0)
     , m_inspectorProfilerAgent(0)
@@ -93,7 +92,6 @@ void InstrumentingAgents::reset()
 #if ENABLE(WEB_REPLAY)
     m_inspectorRecordingsAgent = 0;
     m_inspectorReplayAgent = 0;
-    m_inspectorProbeAgent = 0;
 #endif
     m_workerRuntimeAgent = 0;
     m_inspectorTimelineAgent = 0;

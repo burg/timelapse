@@ -32,7 +32,7 @@
 #include "Editor.h"
 #include "EditorClient.h"
 #include "Element.h"
-#include "ElementTraversal.h"
+#include "ElementIterator.h"
 #include "EventHandler.h"
 #include "ExceptionCode.h"
 #include "FloatQuad.h"
@@ -50,7 +50,6 @@
 #include "HitTestResult.h"
 #include "InlineTextBox.h"
 #include "Page.h"
-#include "Range.h"
 #include "RenderText.h"
 #include "RenderTextControl.h"
 #include "RenderTheme.h"
@@ -60,7 +59,6 @@
 #include "Settings.h"
 #include "SpatialNavigation.h"
 #include "StylePropertySet.h"
-#include "TextIterator.h"
 #include "TypingCommand.h"
 #include "VisibleUnits.h"
 #include "htmlediting.h"
@@ -460,7 +458,13 @@ void FrameSelection::textWasReplaced(CharacterData* node, unsigned offset, unsig
 
     if (base != m_selection.base() || extent != m_selection.extent() || start != m_selection.start() || end != m_selection.end()) {
         VisibleSelection newSelection;
-        newSelection.setWithoutValidation(base, extent);
+        if (base != extent)
+            newSelection.setWithoutValidation(base, extent);
+        else if (m_selection.isDirectional() && !m_selection.isBaseFirst())
+            newSelection.setWithoutValidation(end, start);
+        else
+            newSelection.setWithoutValidation(start, end);
+
         m_frame->document()->updateLayout();
         setSelection(newSelection, DoNotSetFocus);
     }
@@ -1451,8 +1455,8 @@ void CaretBase::paintCaret(Node* node, GraphicsContext* context, const LayoutPoi
     Element* element = node->isElementNode() ? toElement(node) : node->parentElement();
 
     if (element && element->renderer()) {
-        caretColor = element->renderer()->style()->visitedDependentColor(CSSPropertyColor);
-        colorSpace = element->renderer()->style()->colorSpace();
+        caretColor = element->renderer()->style().visitedDependentColor(CSSPropertyColor);
+        colorSpace = element->renderer()->style().colorSpace();
     }
 
     context->fillRect(caret, caretColor, colorSpace);
@@ -1704,7 +1708,7 @@ void FrameSelection::focusedOrActiveStateChanged()
     if (Element* element = m_frame->document()->focusedElement()) {
         element->setNeedsStyleRecalc();
         if (RenderObject* renderer = element->renderer())
-            if (renderer && renderer->style()->hasAppearance())
+            if (renderer && renderer->style().hasAppearance())
                 renderer->theme()->stateChanged(renderer, FocusState);
     }
 }
@@ -1945,39 +1949,43 @@ void FrameSelection::getClippedVisibleTextRectangles(Vector<FloatRect>& rectangl
 }
 
 // Scans logically forward from "start", including any child frames.
-static HTMLFormElement* scanForForm(Node* start)
+static HTMLFormElement* scanForForm(Element* start)
 {
     if (!start)
-        return 0;
-    HTMLElement* element = start->isHTMLElement() ? toHTMLElement(start) : Traversal<HTMLElement>::next(start);
-    for (; element; element = Traversal<HTMLElement>::next(element)) {
-        if (isHTMLFormElement(element))
-            return toHTMLFormElement(element);
-        if (element->isFormControlElement())
-            return static_cast<HTMLFormControlElement*>(element)->form();
-        if (element->hasTagName(frameTag) || element->hasTagName(iframeTag))
-            if (HTMLFormElement* frameResult = scanForForm(toHTMLFrameElementBase(element)->contentDocument()))
+        return nullptr;
+
+    auto descendants = descendantsOfType<HTMLElement>(start->document());
+    for (auto it = descendants.from(*start), end = descendants.end(); it != end; ++it) {
+        HTMLElement& element = *it;
+        if (isHTMLFormElement(&element))
+            return toHTMLFormElement(&element);
+        if (isHTMLFormControlElement(element))
+            return toHTMLFormControlElement(element).form();
+        if (isHTMLFrameElementBase(element)) {
+            Document* contentDocument = toHTMLFrameElementBase(element).contentDocument();
+            if (!contentDocument)
+                continue;
+            if (HTMLFormElement* frameResult = scanForForm(contentDocument->documentElement()))
                 return frameResult;
+        }
     }
-    return 0;
+    return nullptr;
 }
 
 // We look for either the form containing the current focus, or for one immediately after it
 HTMLFormElement* FrameSelection::currentForm() const
 {
     // Start looking either at the active (first responder) node, or where the selection is.
-    Node* start = m_frame->document()->focusedElement();
+    Element* start = m_frame->document()->focusedElement();
     if (!start)
-        start = this->start().deprecatedNode();
+        start = this->start().element();
+    if (!start)
+        return nullptr;
 
-    // Try walking up the node tree to find a form element.
-    Node* node;
-    for (node = start; node; node = node->parentNode()) {
-        if (isHTMLFormElement(node))
-            return toHTMLFormElement(node);
-        if (node->isHTMLElement() && toHTMLElement(node)->isFormControlElement())
-            return static_cast<HTMLFormControlElement*>(node)->form();
-    }
+    if (auto form = lineageOfType<HTMLFormElement>(*start).first())
+        return form;
+    if (auto formControl = lineageOfType<HTMLFormControlElement>(*start).first())
+        return formControl->form();
 
     // Try walking forward in the node tree to find a form element.
     return scanForForm(start);

@@ -27,9 +27,9 @@
 #include "PositionIterator.h"
 
 #include "HTMLNames.h"
-#include "Node.h"
 #include "RenderBlock.h"
 #include "RenderText.h"
+#include "TextIterator.h"
 #include "htmlediting.h"
 
 namespace WebCore {
@@ -148,7 +148,7 @@ bool PositionIterator::isCandidate() const
     if (!renderer)
         return false;
     
-    if (renderer->style()->visibility() != VISIBLE)
+    if (renderer->style().visibility() != VISIBLE)
         return false;
 
     if (renderer->isBR())

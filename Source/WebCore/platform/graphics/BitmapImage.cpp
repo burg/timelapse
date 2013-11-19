@@ -77,7 +77,11 @@ void BitmapImage::destroyDecodedData(bool destroyAll)
 {
     unsigned frameBytesCleared = 0;
     const size_t clearBeforeFrame = destroyAll ? m_frames.size() : m_currentFrame;
-    for (size_t i = 0; i < clearBeforeFrame; ++i) {
+
+    // Because we can advance frames without always needing to decode the actual
+    // bitmap data, |m_currentFrame| may be larger than m_frames.size();
+    // make sure not to walk off the end of the container in this case.
+    for (size_t i = 0; i <  std::min(clearBeforeFrame, m_frames.size()); ++i) {
         // The underlying frame isn't actually changing (we're just trying to
         // save the memory for the framebuffer data), so we don't need to clear
         // the metadata.
@@ -182,12 +186,7 @@ void BitmapImage::didDecodeProperties() const
 
 void BitmapImage::updateSize(ImageOrientationDescription description) const
 {
-    if (!m_sizeAvailable || (m_haveSize
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-        && description.imageOrientation() == static_cast<ImageOrientationEnum>(m_imageOrientation)
-        && description.respectImageOrientation() == static_cast<RespectImageOrientationEnum>(m_shouldRespectImageOrientation)
-#endif
-        ))
+    if (!m_sizeAvailable || m_haveSize)
         return;
 
     m_size = m_source.size(description);

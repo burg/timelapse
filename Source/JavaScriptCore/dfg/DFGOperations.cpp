@@ -614,7 +614,7 @@ char* JIT_OPERATION operationNewArray(ExecState* exec, Structure* arrayStructure
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
     
-    return bitwise_cast<char*>(constructArrayNegativeIndexed(exec, arrayStructure, static_cast<JSValue*>(buffer), size));
+    return bitwise_cast<char*>(constructArray(exec, arrayStructure, static_cast<JSValue*>(buffer), size));
 }
 
 char* JIT_OPERATION operationNewEmptyArray(ExecState* exec, Structure* arrayStructure)
@@ -640,7 +640,7 @@ char* JIT_OPERATION operationNewArrayBuffer(ExecState* exec, Structure* arrayStr
 {
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
-    return bitwise_cast<char*>(constructArrayNegativeIndexed(exec, arrayStructure, exec->codeBlock()->constantBuffer(start), size));
+    return bitwise_cast<char*>(constructArray(exec, arrayStructure, exec->codeBlock()->constantBuffer(start), size));
 }
 
 char* JIT_OPERATION operationNewInt8ArrayWithSize(
@@ -1097,7 +1097,7 @@ extern "C" void JIT_OPERATION triggerReoptimizationNow(CodeBlock* codeBlock)
         return;
     }
 
-    codeBlock->reoptimize();
+    optimizedCodeBlock->jettison(CountReoptimization);
 }
 
 #if ENABLE(FTL_JIT)

@@ -83,7 +83,7 @@ JIT::JIT(VM* vm, CodeBlock* codeBlock)
 #if USE(JSVALUE32_64)
     , m_jumpTargetIndex(0)
     , m_mappedBytecodeOffset((unsigned)-1)
-    , m_mappedVirtualRegisterIndex(JSStack::ReturnPC)
+    , m_mappedVirtualRegisterIndex(UINT_MAX)
     , m_mappedTag((RegisterID)-1)
     , m_mappedPayload((RegisterID)-1)
 #else
@@ -109,8 +109,8 @@ void JIT::emitEnterOptimizationCheck()
     skipOptimize.append(branchAdd32(Signed, TrustedImm32(Options::executionCounterIncrementForEntry()), AbsoluteAddress(m_codeBlock->addressOfJITExecuteCounter())));
     ASSERT(!m_bytecodeOffset);
     callOperation(operationOptimize, m_bytecodeOffset);
-    skipOptimize.append(branchTestPtr(Zero, returnValueRegister));
-    jump(returnValueRegister);
+    skipOptimize.append(branchTestPtr(Zero, returnValueGPR));
+    jump(returnValueGPR);
     skipOptimize.link(this);
 }
 #endif
@@ -547,7 +547,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         nop();
 
     preserveReturnAddressAfterCall(regT2);
-    emitPutToCallFrameHeader(regT2, JSStack::ReturnPC);
+    emitPutReturnPCToCallFrameHeader(regT2);
     emitPutImmediateToCallFrameHeader(m_codeBlock, JSStack::CodeBlock);
 
     Label beginLabel(this);
@@ -586,7 +586,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         }
 #endif
 
-        addPtr(TrustedImm32(-m_codeBlock->m_numCalleeRegisters * sizeof(Register)), callFrameRegister, regT1);
+        addPtr(TrustedImm32(virtualRegisterForLocal(m_codeBlock->m_numCalleeRegisters).offset() * sizeof(Register)), callFrameRegister, regT1);
         stackCheck = branchPtr(Above, AbsoluteAddress(m_vm->interpreter->stack().addressOfEnd()), regT1);
     }
 
@@ -612,7 +612,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         arityCheck = label();
         store8(TrustedImm32(0), &m_codeBlock->m_shouldAlwaysBeInlined);
         preserveReturnAddressAfterCall(regT2);
-        emitPutToCallFrameHeader(regT2, JSStack::ReturnPC);
+        emitPutReturnPCToCallFrameHeader(regT2);
         emitPutImmediateToCallFrameHeader(m_codeBlock, JSStack::CodeBlock);
 
         load32(payloadFor(JSStack::ArgumentCount), regT1);
@@ -621,8 +621,8 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         m_bytecodeOffset = 0;
 
         callOperationWithCallFrameRollbackOnException(m_codeBlock->m_isConstructor ? operationConstructArityCheck : operationCallArityCheck);
-        if (returnValueRegister != regT0)
-            move(returnValueRegister, regT0);
+        if (returnValueGPR != regT0)
+            move(returnValueGPR, regT0);
         branchTest32(Zero, regT0).linkTo(beginLabel, this);
         emitNakedCall(m_vm->getCTIStub(arityFixup).code());
 
@@ -800,10 +800,8 @@ void JIT::privateCompileExceptionHandlers()
     Jump doLookup;
 
     if (!m_exceptionChecksWithCallFrameRollback.empty()) {
-        // Remove hostCallFlag from caller
         m_exceptionChecksWithCallFrameRollback.link(this);
-        emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, GPRInfo::argumentGPR0);
-        andPtr(TrustedImm32(safeCast<int32_t>(~CallFrame::hostCallFrameFlag())), GPRInfo::argumentGPR0);
+        emitGetCallerFrameFromCallFrameHeaderPtr(GPRInfo::argumentGPR0);
         doLookup = jump();
     }
 

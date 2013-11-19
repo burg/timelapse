@@ -1,3 +1,2439 @@
+2013-11-08  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed GTK build fix.
+
+        * GNUmakefile.list.am: Remove redundant build targets.
+
+2013-11-08  Filip Pizlo  <fpizlo@apple.com>
+
+        Remove dead FTL C ABI support
+        https://bugs.webkit.org/show_bug.cgi?id=124100
+
+        Reviewed by Jer Noble.
+
+        * JavaScriptCore.xcodeproj/project.pbxproj:
+        * ftl/FTLCArgumentGetter.cpp: Removed.
+        * ftl/FTLCArgumentGetter.h: Removed.
+        * ftl/FTLOSRExitCompiler.cpp:
+        * jit/FPRInfo.h:
+
+2013-11-08  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support Phantom(FinalObject:)
+        https://bugs.webkit.org/show_bug.cgi?id=124092
+
+        Reviewed by Oliver Hunt.
+
+        * ftl/FTLAbstractHeapRepository.h:
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::speculate):
+        (JSC::FTL::LowerDFGToLLVM::isType):
+        (JSC::FTL::LowerDFGToLLVM::isNotType):
+        (JSC::FTL::LowerDFGToLLVM::speculateFinalObject):
+
+2013-11-08  Filip Pizlo  <fpizlo@apple.com>
+
+        Get rid of the FTL tail call APIs since they are unused
+        https://bugs.webkit.org/show_bug.cgi?id=124093
+
+        Reviewed by Oliver Hunt.
+
+        * ftl/FTLAbbreviations.h:
+        (JSC::FTL::buildCall):
+        * ftl/FTLOutput.h:
+
+2013-11-08  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support AllocatePropertyStorage
+        https://bugs.webkit.org/show_bug.cgi?id=124086
+
+        Reviewed by Oliver Hunt.
+        
+        Also rationalized some offsets in the DFG.
+
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileAllocatePropertyStorage):
+        (JSC::DFG::SpeculativeJIT::compileReallocatePropertyStorage):
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLIntrinsicRepository.h:
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileAllocatePropertyStorage):
+
+2013-11-08  Filip Pizlo  <fpizlo@apple.com>
+
+        Get rid of the bizarre Darwin/x86-only MacroAssembler::shouldBlindForSpecificArch(uintptr_t) overload
+        https://bugs.webkit.org/show_bug.cgi?id=124087
+
+        Reviewed by Michael Saboff.
+
+        * assembler/MacroAssembler.h:
+        (JSC::MacroAssembler::shouldBlindPointerForSpecificArch):
+        (JSC::MacroAssembler::shouldBlind):
+        * assembler/MacroAssemblerX86Common.h:
+        (JSC::MacroAssemblerX86Common::shouldBlindForSpecificArch):
+
+2013-11-08  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support NewArrayBuffer
+        https://bugs.webkit.org/show_bug.cgi?id=124067
+
+        Reviewed by Michael Saboff.
+        
+        This expanded coverage and revealed some bugs.
+        
+        This revealed a bug in FTL::OSRExitCompiler where it was assuming that it could save
+        the framePointer in regT3 even though DFG::reifyInlinedCallFrames() would clobber it.
+        It turns out that this can be fixed by just completely restoring the stack prior to
+        doing reifyInlineCallFrames().
+        
+        I used this as an opportunity to simplify NewArray. That revealed a bug; whenever we say
+        lowJSValue() in there we need to use ManualOperandSpeculation since we're using it to
+        rebox values even when we also have to do some speculations. The speculations are done
+        at the top of compileNewArray().
+        
+        This also revealed a bug in StringCharAt() for the OOB case.
+
+        * ftl/FTLAbstractHeapRepository.h:
+        (JSC::FTL::AbstractHeapRepository::forIndexingType):
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLIntrinsicRepository.h:
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileNewArray):
+        (JSC::FTL::LowerDFGToLLVM::compileNewArrayBuffer):
+        (JSC::FTL::LowerDFGToLLVM::compileStringCharAt):
+        * ftl/FTLOSRExitCompiler.cpp:
+        (JSC::FTL::compileStub):
+
+2013-11-08  Filip Pizlo  <fpizlo@apple.com>
+
+        It should be easy to disable blinding on a per-architecture basis
+        https://bugs.webkit.org/show_bug.cgi?id=124083
+
+        Reviewed by Michael Saboff.
+
+        * assembler/AbstractMacroAssembler.h:
+        (JSC::AbstractMacroAssembler::haveScratchRegisterForBlinding):
+        (JSC::AbstractMacroAssembler::scratchRegisterForBlinding):
+        (JSC::AbstractMacroAssembler::canBlind):
+        (JSC::AbstractMacroAssembler::shouldBlindForSpecificArch):
+        * assembler/MacroAssembler.h:
+        (JSC::MacroAssembler::shouldBlind):
+        (JSC::MacroAssembler::store32):
+        (JSC::MacroAssembler::branch32):
+        (JSC::MacroAssembler::branchAdd32):
+        (JSC::MacroAssembler::branchMul32):
+        * assembler/MacroAssemblerX86Common.h:
+        (JSC::MacroAssemblerX86Common::canBlind):
+        * assembler/MacroAssemblerX86_64.h:
+        (JSC::MacroAssemblerX86_64::haveScratchRegisterForBlinding):
+
+2013-11-08  Oliver Hunt  <oliver@apple.com>
+
+        Remove more accidentally added files.
+
+        * runtime/SetIteratorConstructor.cpp: Removed.
+        * runtime/SetIteratorConstructor.h: Removed.
+        * runtime/SetIteratorPrototype.cpp: Removed.
+        * runtime/SetIteratorPrototype.h: Removed.
+
+2013-11-08  Oliver Hunt  <oliver@apple.com>
+
+        Remove accidentally added files.
+
+        * runtime/JSSetIterator.cpp: Removed.
+        * runtime/JSSetIterator.h: Removed.
+
+2013-11-08  Oliver Hunt  <oliver@apple.com>
+
+        Fix minor (unobservable) bug in ArrayIterator::next()
+        https://bugs.webkit.org/show_bug.cgi?id=124061
+
+        Reviewed by Beth Dakin.
+
+        I noticed this while reading the array iterator code.  Due to how
+        ArrayIterator::next() and our enumeration behaviour is implemented
+        this is not actually a code path that can be hit.  But in order to
+        future proof this it should be correct.
+        
+        * runtime/JSArrayIterator.cpp:
+        (JSC::arrayIteratorNext):
+
+2013-11-08  Mark Lam  <mark.lam@apple.com>
+
+        Move breakpoint (and exception break) functionality into JSC::Debugger.
+        https://bugs.webkit.org/show_bug.cgi?id=121796.
+
+        Reviewed by Geoffrey Garen.
+
+        - In ScriptDebugServer and JSC::Debugger, SourceID and BreakpointID are
+          now numeric tokens.
+
+        - JSC::Debugger now tracks user defined breakpoints in a JSC::Breakpoint
+          record. Previously, this info is tracked in the ScriptBreakpoint record
+          in ScriptDebugServer. The only element of ScriptBreakpoint that is not
+          being tracked by JSC::Breakpoint is the ScriptBreakpointAction.
+             The ScriptBreakpointAction is still tracked by the ScriptDebugServer
+          in a list keyed on the corresponding BreakpointID.
+             The ScriptBreakpoint record is now only used as a means of passing
+          breakpoint paramaters to the ScriptDebugServer.
+
+        - ScriptDebugServer now no longer accesses the JSC::CallFrame* directly.
+          It always goes through the DebuggerCallFrame.
+
+        * GNUmakefile.list.am:
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj:
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj.filters:
+        * JavaScriptCore.xcodeproj/project.pbxproj:
+        * debugger/Breakpoint.h: Added.
+        (JSC::Breakpoint::Breakpoint):
+        - Breakpoint class to track info for each breakpoint in JSC::Debugger.
+        * debugger/Debugger.cpp:
+        (JSC::DebuggerCallFrameScope::DebuggerCallFrameScope):
+        (JSC::DebuggerCallFrameScope::~DebuggerCallFrameScope):
+        (JSC::Debugger::Debugger):
+        (JSC::Debugger::detach):
+        (JSC::Debugger::updateNeedForOpDebugCallbacks):
+        (JSC::Debugger::setBreakpoint):
+        (JSC::Debugger::removeBreakpoint):
+        (JSC::Debugger::hasBreakpoint):
+        (JSC::Debugger::clearBreakpoints):
+        (JSC::Debugger::setBreakpointsActivated):
+        (JSC::Debugger::setPauseOnExceptionsState):
+        (JSC::Debugger::setPauseOnNextStatement):
+        (JSC::Debugger::breakProgram):
+        (JSC::Debugger::continueProgram):
+        (JSC::Debugger::stepIntoStatement):
+        (JSC::Debugger::stepOverStatement):
+        (JSC::Debugger::stepOutOfFunction):
+        (JSC::Debugger::updateCallFrame):
+        (JSC::Debugger::updateCallFrameAndPauseIfNeeded):
+        (JSC::Debugger::pauseIfNeeded):
+        (JSC::Debugger::exception):
+        (JSC::Debugger::atStatement):
+        (JSC::Debugger::callEvent):
+        (JSC::Debugger::returnEvent):
+        (JSC::Debugger::willExecuteProgram):
+        (JSC::Debugger::didExecuteProgram):
+        (JSC::Debugger::didReachBreakpoint):
+        (JSC::Debugger::currentDebuggerCallFrame):
+        * debugger/Debugger.h:
+        * debugger/DebuggerCallFrame.cpp:
+        (JSC::DebuggerCallFrame::sourceID):
+        (JSC::DebuggerCallFrame::sourceIDForCallFrame):
+        * debugger/DebuggerCallFrame.h:
+        * debugger/DebuggerPrimitives.h: Added.
+        - define SourceID, noSourceID, BreakpointID, and noBreakpointID.
+
+2013-11-08  Oliver Hunt  <oliver@apple.com>
+
+        Map.forEach crashes on deleted values
+        https://bugs.webkit.org/show_bug.cgi?id=124017
+
+        Reviewed by Ryosuke Niwa.
+
+        MapData iterator did not consider the case of the first entries
+        being holes.  To fix this I've refactored iteration so that we
+        can perform an initialisation increment on construction, whle
+        retaining the useful assertion in MapData::const_iterator::operator++
+
+        * runtime/MapData.h:
+        (JSC::MapData::const_iterator::operator++):
+        (JSC::MapData::const_iterator::internalIncrement):
+        (JSC::MapData::const_iterator::const_iterator):
+
+2013-11-08  Julien Brianceau  <jbriance@cisco.com>
+
+        REGRESSION(r158883): Fix crashes for ARM architecture.
+        https://bugs.webkit.org/show_bug.cgi?id=124038
+
+        Reviewed by Michael Saboff.
+
+        * jit/GPRInfo.h: Remove r11 from the temporary register set, use a free register for
+        nonPreservedNonReturnGPR and remove obsolete declaration of bucketCounterRegister.
+        (JSC::GPRInfo::toRegister):
+        (JSC::GPRInfo::toIndex):
+        * jit/JITOperations.cpp: Frame pointer register is r11 for ARM_TRADITIONAL and
+        r7 for ARM_THUMB2 instead of r5 since r158883.
+
+2013-11-08  Julien Brianceau  <jbriance@cisco.com>
+
+        REGRESSION(r158883): Fix crashes for MIPS architecture.
+        https://bugs.webkit.org/show_bug.cgi?id=124044
+
+        Reviewed by Michael Saboff.
+
+        * jit/JITOperations.cpp: Frame pointer register is fp instead of s0 since r158883 for MIPS.
+        * jit/ThunkGenerators.cpp: Save and restore the new frame pointer register.
+        (JSC::returnFromJavaScript):
+        (JSC::callToJavaScript):
+
+2013-11-08  peavo@outlook.com  <peavo@outlook.com>
+
+        [Win] JavaScript crash in getHostCallReturnValue.
+        https://bugs.webkit.org/show_bug.cgi?id=124040
+
+        Reviewed by Geoffrey Garen.
+
+        * jit/JITOperations.cpp: Update MSVC assembler code in getHostCallReturnValue according to gcc x86 version.
+
+2013-11-08  Julien Brianceau  <jbriance@cisco.com>
+
+        [mips] Fix typo (introduced in r158751).
+        https://bugs.webkit.org/show_bug.cgi?id=124033.
+
+        Reviewed by Csaba Osztrogonác.
+
+        * jit/ThunkGenerators.cpp:
+        (JSC::callToJavaScript):
+
+2013-11-08  Julien Brianceau  <jbriance@cisco.com>
+
+        [arm] Use specific PatchableJump implementation for CPU(ARM_TRADITIONAL).
+        https://bugs.webkit.org/show_bug.cgi?id=123891
+
+        Reviewed by Michael Saboff.
+
+        Although patchableBranch32 is implemented in MacroAssemblerARM.h, the used implementation
+        is the generic one in MacroAssembler.h. This patch fixes it and also implements the
+        patchableJump() function for CPU(ARM_TRADITIONAL). These specific implementations are
+        needed for this architecture backend to ensure that these jumps can be relinked.
+
+        * assembler/MacroAssembler.h:
+        * assembler/MacroAssemblerARM.h:
+        (JSC::MacroAssemblerARM::patchableJump):
+        * jit/GPRInfo.h: Remove static_cast that are generating warnings in debug builds.
+        (JSC::GPRInfo::toIndex):
+        (JSC::GPRInfo::debugName):
+
+2013-11-07  Mark Lam  <mark.lam@apple.com>
+
+        Get rid of the regT* definitions in JSInterfaceJIT.h.
+        https://bugs.webkit.org/show_bug.cgi?id=123806.
+
+        Reviewed by Geoffrey Garen.
+
+        JSInterfaceJIT now inherits from GPRInfo and FPRInfo, and relies on them
+        to provide all the register definitions.
+
+        * jit/GPRInfo.h:
+        (JSC::GPRInfo::toArgumentRegister):
+        * jit/JIT.cpp:
+        (JSC::JIT::emitEnterOptimizationCheck):
+        (JSC::JIT::privateCompile):
+        * jit/JITArithmetic.cpp:
+        (JSC::JIT::emit_compareAndJumpSlow):
+        * jit/JITArithmetic32_64.cpp:
+        (JSC::JIT::emit_compareAndJumpSlow):
+        * jit/JITCall.cpp:
+        (JSC::JIT::compileLoadVarargs):
+        * jit/JITCall32_64.cpp:
+        (JSC::JIT::compileLoadVarargs):
+        * jit/JITInlines.h:
+        (JSC::JIT::appendCallWithExceptionCheckSetJSValueResult):
+        (JSC::JIT::appendCallWithExceptionCheckSetJSValueResultWithProfile):
+        * jit/JITOpcodes.cpp:
+        (JSC::JIT::emit_op_end):
+        (JSC::JIT::emitSlow_op_new_object):
+        (JSC::JIT::emit_op_ret):
+        (JSC::JIT::emit_op_ret_object_or_this):
+        (JSC::JIT::emit_op_throw):
+        (JSC::JIT::emit_op_get_pnames):
+        (JSC::JIT::emit_op_switch_imm):
+        (JSC::JIT::emit_op_switch_char):
+        (JSC::JIT::emit_op_switch_string):
+        (JSC::JIT::emit_op_create_activation):
+        (JSC::JIT::emit_op_create_arguments):
+        (JSC::JIT::emitSlow_op_jfalse):
+        (JSC::JIT::emitSlow_op_jtrue):
+        (JSC::JIT::emitSlow_op_eq):
+        (JSC::JIT::emitSlow_op_neq):
+        (JSC::JIT::emitSlow_op_get_argument_by_val):
+        (JSC::JIT::emitSlow_op_loop_hint):
+        * jit/JITOpcodes32_64.cpp:
+        (JSC::JIT::privateCompileCTINativeCall):
+        (JSC::JIT::emit_op_end):
+        (JSC::JIT::emitSlow_op_new_object):
+        (JSC::JIT::emitSlow_op_jfalse):
+        (JSC::JIT::emitSlow_op_jtrue):
+        (JSC::JIT::emitSlow_op_eq):
+        (JSC::JIT::emitSlow_op_neq):
+        (JSC::JIT::emit_op_throw):
+        (JSC::JIT::emit_op_get_pnames):
+        (JSC::JIT::emit_op_switch_imm):
+        (JSC::JIT::emit_op_switch_char):
+        (JSC::JIT::emit_op_switch_string):
+        (JSC::JIT::emit_op_create_activation):
+        (JSC::JIT::emit_op_create_arguments):
+        (JSC::JIT::emitSlow_op_get_argument_by_val):
+        * jit/JSInterfaceJIT.h:
+        (JSC::JSInterfaceJIT::JSInterfaceJIT):
+        * jit/SlowPathCall.h:
+        (JSC::JITSlowPathCall::call):
+        * jit/ThunkGenerators.cpp:
+
+2013-11-07  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support NewArray
+        https://bugs.webkit.org/show_bug.cgi?id=124010
+
+        Reviewed by Oliver Hunt.
+
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLIntrinsicRepository.h:
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileNewObject):
+        (JSC::FTL::LowerDFGToLLVM::compileNewArray):
+        (JSC::FTL::LowerDFGToLLVM::allocateCell):
+        (JSC::FTL::LowerDFGToLLVM::allocateObject):
+        (JSC::FTL::LowerDFGToLLVM::allocateBasicStorageAndGetEnd):
+        (JSC::FTL::LowerDFGToLLVM::ArrayValues::ArrayValues):
+        (JSC::FTL::LowerDFGToLLVM::allocateJSArray):
+        * ftl/FTLOutput.h:
+        (JSC::FTL::Output::loadDouble):
+        (JSC::FTL::Output::storeDouble):
+
+2013-11-07  Michael Saboff  <msaboff@apple.com>
+
+        Change CallFrameRegister to architected frame pointer register
+        https://bugs.webkit.org/show_bug.cgi?id=123956
+
+        Reviewed by Geoffrey Garen.
+
+        Changed X86 and ARM variants as well as MIPS to use their respective architected
+        frame pointer registers.  The freed up callFrameRegisteris are made available to 
+        the DFG register allocator.  Modified the FTL OSR exit compiler to use a temporary
+        register as a stand in for the destination callFrameRegister since the FTL frame
+        pointer register is needed to extract values from the FTL stack.
+
+        Reviewed by Geoffrey Garen.
+
+        * assembler/ARMAssembler.h:
+        * assembler/ARMv7Assembler.h:
+        * assembler/MacroAssemblerMIPS.h:
+        * ftl/FTLOSRExitCompiler.cpp:
+        (JSC::FTL::compileStub):
+        * jit/AssemblyHelpers.h:
+        (JSC::AssemblyHelpers::addressFor):
+        * jit/GPRInfo.h:
+        (JSC::GPRInfo::toRegister):
+        (JSC::GPRInfo::toIndex):
+        * jit/JITOperations.cpp:
+        * jit/JSInterfaceJIT.h:
+        * jit/ThunkGenerators.cpp:
+        (JSC::callToJavaScript):
+        * offlineasm/arm.rb:
+        * offlineasm/arm64.rb:
+        * offlineasm/mips.rb:
+        * offlineasm/x86.rb:
+
+2013-11-07  Oliver Hunt  <oliver@apple.com>
+
+        Reproducible crash when using Map (affects Web Inspector)
+        https://bugs.webkit.org/show_bug.cgi?id=123940
+
+        Reviewed by Geoffrey Garen.
+
+        Trivial fix.  Once again we get bitten by attempting to be clever when
+        growing while adding entries to indexing maps.
+
+        Now we simply do a find(), and then add() _after_ we've ensured there is
+        sufficient space in the MapData list.
+
+        * runtime/MapData.cpp:
+        (JSC::MapData::add):
+
+2013-11-07  Mark Lam  <mark.lam@apple.com>
+
+        Cosmetic: rename xxxId to xxxID for ScriptId, SourceId, and BreakpointId.
+        https://bugs.webkit.org/show_bug.cgi?id=123945.
+
+        Reviewed by Geoffrey Garen.
+
+        * debugger/DebuggerCallFrame.cpp:
+        (JSC::DebuggerCallFrame::sourceID):
+        (JSC::DebuggerCallFrame::sourceIDForCallFrame):
+        * debugger/DebuggerCallFrame.h:
+
+2013-11-07  Michael Saboff  <msaboff@apple.com>
+
+        returnFromJavaScript() for ARM_THUMB2 uses push()s which should be pop()s
+        https://bugs.webkit.org/show_bug.cgi?id=124006
+
+        Rubber stamped by Mark Hahnenberg.
+
+        Changed the push() calls to pop().
+
+        * jit/ThunkGenerators.cpp:
+        (JSC::returnFromJavaScript):
+
+2013-11-07  Michael Saboff  <msaboff@apple.com>
+
+        Remove unneeded moving of ESP to ECX in callToJavaScript for COMPILER(MSVC)
+        https://bugs.webkit.org/show_bug.cgi?id=123998
+
+        Reviewed by Mark Lam.
+
+        Dead code removal.  Passing esp as the first "C" argument to a JavaScript
+        function is no longer needed.
+
+        * jit/ThunkGenerators.cpp:
+        (JSC::callToJavaScript):
+
+2013-11-07  Julien Brianceau  <jbriance@cisco.com>
+
+        Fix build for architectures with 4 argument registers (broken since r158820).
+        https://bugs.webkit.org/show_bug.cgi?id=123969
+
+        Reviewed by Andreas Kling.
+
+        * jit/CCallHelpers.h:
+        (JSC::CCallHelpers::setupArguments):
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support CheckFunction
+        https://bugs.webkit.org/show_bug.cgi?id=123862
+
+        Reviewed by Sam Weinig.
+
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileCheckFunction):
+
+2013-11-06  Filip Pizlo  <fpizlo@apple.com>
+
+        IC code should handle the call frame register not being the callFrameRegister
+        https://bugs.webkit.org/show_bug.cgi?id=123865
+
+        Reviewed by Geoffrey Garen.
+        
+        For now, in the FTL, the call frame may be something other than our frame pointer,
+        since it's an argument passed in according to whatever convention LLVM picks.
+        
+        This is temporary in two ways - pretty soon the callFrameRegister will be the actual
+        frame pointer and not some other register, and LLVM will not pass the frame pointer
+        as an argument to IC's.
+
+        * bytecode/StructureStubInfo.h:
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::cachedGetById):
+        (JSC::DFG::SpeculativeJIT::cachedPutById):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::cachedGetById):
+        (JSC::DFG::SpeculativeJIT::cachedPutById):
+        * ftl/FTLCompile.cpp:
+        (JSC::FTL::fixFunctionBasedOnStackMaps):
+        * ftl/FTLInlineCacheSize.cpp:
+        (JSC::FTL::sizeOfGetById):
+        (JSC::FTL::sizeOfPutById):
+        * jit/CCallHelpers.h:
+        (JSC::CCallHelpers::setupArguments):
+        * jit/JITInlineCacheGenerator.cpp:
+        (JSC::JITByIdGenerator::JITByIdGenerator):
+        (JSC::JITPutByIdGenerator::JITPutByIdGenerator):
+        * jit/JITInlineCacheGenerator.h:
+        (JSC::JITGetByIdGenerator::JITGetByIdGenerator):
+        * jit/JITPropertyAccess.cpp:
+        (JSC::JIT::emit_op_get_by_id):
+        (JSC::JIT::emit_op_put_by_id):
+        * jit/JITPropertyAccess32_64.cpp:
+        (JSC::JIT::emit_op_get_by_id):
+        (JSC::JIT::emit_op_put_by_id):
+        * jit/Repatch.cpp:
+        (JSC::tryBuildGetByIDList):
+        (JSC::emitPutTransitionStub):
+
+2013-11-06  Daniel Bates  <dabates@apple.com>
+
+        [iOS] Upstream Letterpress effect
+        https://bugs.webkit.org/show_bug.cgi?id=123932
+
+        Reviewed by Sam Weinig.
+
+        Add feature define ENABLE_LETTERPRESS disabled by default. We only enable
+        letterpress on iOS.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-11-05  Oliver Hunt  <oliver@apple.com>
+
+        Support iteration of the Arguments object
+        https://bugs.webkit.org/show_bug.cgi?id=123835
+
+        Reviewed by Mark Lam.
+
+        Add an ArgumentsIterator object, and associated classes so that we can support
+        iteration of the arguments object.
+
+        This is a largely mechanical patch.  The only gnarliness is in the
+        logic to avoid reifying the Arguments object in for(... of arguments)
+        scenarios.
+
+        * GNUmakefile.list.am:
+        * JavaScriptCore.xcodeproj/project.pbxproj:
+        * bytecompiler/BytecodeGenerator.cpp:
+        (JSC::BytecodeGenerator::emitEnumeration):
+        * runtime/Arguments.cpp:
+        (JSC::Arguments::getOwnPropertySlot):
+        (JSC::argumentsFuncIterator):
+        * runtime/Arguments.h:
+        * runtime/ArgumentsIteratorConstructor.cpp: Added.
+        (JSC::ArgumentsIteratorConstructor::finishCreation):
+        * runtime/ArgumentsIteratorConstructor.h: Added.
+        (JSC::ArgumentsIteratorConstructor::create):
+        (JSC::ArgumentsIteratorConstructor::createStructure):
+        (JSC::ArgumentsIteratorConstructor::ArgumentsIteratorConstructor):
+        * runtime/ArgumentsIteratorPrototype.cpp: Added.
+        (JSC::ArgumentsIteratorPrototype::finishCreation):
+        (JSC::argumentsIteratorPrototypeFuncIterator):
+        (JSC::argumentsIteratorPrototypeFuncNext):
+        * runtime/ArgumentsIteratorPrototype.h: Added.
+        (JSC::ArgumentsIteratorPrototype::create):
+        (JSC::ArgumentsIteratorPrototype::createStructure):
+        (JSC::ArgumentsIteratorPrototype::ArgumentsIteratorPrototype):
+        * runtime/CommonIdentifiers.h:
+        * runtime/JSArgumentsIterator.cpp: Added.
+        (JSC::JSArgumentsIterator::finishCreation):
+        * runtime/JSArgumentsIterator.h: Added.
+        (JSC::JSArgumentsIterator::createStructure):
+        (JSC::JSArgumentsIterator::create):
+        (JSC::JSArgumentsIterator::next):
+        (JSC::JSArgumentsIterator::JSArgumentsIterator):
+        * runtime/JSArrayIterator.cpp:
+        (JSC::createIteratorResult):
+        * runtime/JSGlobalObject.cpp:
+        * runtime/JSGlobalObject.h:
+
+2013-11-06  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG CheckArray(NonArray) should prove that the child isn't an array
+        https://bugs.webkit.org/show_bug.cgi?id=123911
+        <rdar://problem/15202803>
+
+        Reviewed by Mark Hahnenberg.
+
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::jumpSlowForUnwantedArrayMode):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::isArrayType):
+
+2013-11-06  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        JSExport doesn't support constructors
+        https://bugs.webkit.org/show_bug.cgi?id=123380
+
+        Reviewed by Geoffrey Garen.
+
+        Needed another linked-on-or-after check for when we're deciding whether
+        we should copy over init family methods.
+
+        Factored out the link time checks into a separate function so that they can be cached.
+
+        Factored out the check for init-family method selectors into helper function and changed it to
+        match the description in the clang docs, namely that there can be underscores at the beginning
+        and the first letter after 'init' part of the selector (if there is one) must be a capital letter.
+
+        Updated tests to make sure we don't treat "initialize" as an init-family method and that we do
+        treat "_init" as an init-family method.
+
+        * API/JSWrapperMap.h:
+        * API/JSWrapperMap.mm:
+        (isInitFamilyMethod):
+        (shouldSkipMethodWithName):
+        (copyMethodsToObject):
+        (allocateConstructorForCustomClass):
+        (supportsInitMethodConstructors):
+        * API/tests/testapi.mm:
+        (-[ClassA initialize]):
+        (-[ClassD initialize]):
+
+2013-11-06  Michael Saboff  <msaboff@apple.com>
+
+        Change ctiTrampoline into a thunk
+        https://bugs.webkit.org/show_bug.cgi?id=123844
+
+        Reviewed by Filip Pizlo.
+
+        Converted ctiTrampoline and ctiOpThrowNotCaught into thunks named callToJavaScript
+        and returnFromJavaScript.  Cleaned up and in some cases removed JITStubsXXX.h files
+        after removing ctiTrampoline and ctiOpThrowNotCaught.  Added callJavaScriptJITFunction
+        to VM that is a function pointer to the callToJavaScript thunk.
+
+        * GNUmakefile.list.am:
+        * JavaScriptCore.xcodeproj/project.pbxproj:
+        * dfg/DFGDriver.cpp:
+        (JSC::DFG::compileImpl):
+        * jit/JITCode.cpp:
+        (JSC::JITCode::execute):
+        * jit/JITExceptions.cpp:
+        (JSC::genericUnwind):
+        * jit/JITStubs.cpp:
+        * jit/JITStubs.h:
+        * jit/JITStubsARM.h:
+        * jit/JITStubsARM64.h: Removed.
+        * jit/JITStubsARMv7.h:
+        * jit/JITStubsMIPS.h: Removed.
+        * jit/JITStubsMSVC64.asm:
+        * jit/JITStubsSH4.h: Removed.
+        * jit/JITStubsX86.h:
+        * jit/JITStubsX86_64.h:
+        * jit/JSInterfaceJIT.h:
+        * jit/ThunkGenerators.cpp:
+        (JSC::returnFromJavaScript):
+        (JSC::callToJavaScript):
+        * jit/ThunkGenerators.h:
+        * runtime/VM.cpp:
+        (JSC::VM::VM):
+        * runtime/VM.h:
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support StringCharCodeAt
+        https://bugs.webkit.org/show_bug.cgi?id=123854
+
+        Reviewed by Sam Weinig.
+
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileStringCharCodeAt):
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support NewObject
+        https://bugs.webkit.org/show_bug.cgi?id=123849
+
+        Reviewed by Oliver Hunt.
+
+        * ftl/FTLAbstractHeapRepository.cpp:
+        (JSC::FTL::AbstractHeapRepository::AbstractHeapRepository):
+        * ftl/FTLAbstractHeapRepository.h:
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLIntrinsicRepository.h:
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileNewObject):
+        (JSC::FTL::LowerDFGToLLVM::allocate):
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support StringCharAt
+        https://bugs.webkit.org/show_bug.cgi?id=123855
+
+        Reviewed by Oliver Hunt.
+        
+        This is just like GetByVal for String, so we reuse that code.
+
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileGetByVal):
+        (JSC::FTL::LowerDFGToLLVM::compileStringCharAt):
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Remove old unused code for hypothetical LLVM intrinsics
+        https://bugs.webkit.org/show_bug.cgi?id=123824
+
+        Reviewed by Oliver Hunt.
+
+        * ftl/FTLIntrinsicRepository.h:
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support String character access operations
+        https://bugs.webkit.org/show_bug.cgi?id=123783
+
+        Reviewed by Oliver Hunt.
+        
+        Implements:
+        
+        - string.length
+        
+        - string[index]
+
+        * ftl/FTLAbstractHeapRepository.h:
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLIntrinsicRepository.h:
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileGetIndexedPropertyStorage):
+        (JSC::FTL::LowerDFGToLLVM::compileGetArrayLength):
+        (JSC::FTL::LowerDFGToLLVM::compileGetByVal):
+
+2013-11-05  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        ObjCCallbackFunctionImpl's NSInvocation shouldn't retain its target or arguments
+        https://bugs.webkit.org/show_bug.cgi?id=123822
+
+        Reviewed by Geoffrey Garen.
+
+        Using -retainArguments on ObjCCallbackFunctionImpl's NSInvocation leads to memory leaks.
+        We should handle retaining/releasing the target ourselves, and we should never retain the arguments.
+
+        * API/ObjCCallbackFunction.mm:
+        (JSC::ObjCCallbackFunctionImpl::~ObjCCallbackFunctionImpl):
+        (JSC::ObjCCallbackFunctionImpl::name):
+        (objCCallbackFunctionForInvocation):
+        (objCCallbackFunctionForMethod):
+        (objCCallbackFunctionForBlock):
+
+2013-11-05  Julien Brianceau  <jbriance@cisco.com>
+
+        Fix build for architectures with 4 argument registers (broken since r158681).
+        https://bugs.webkit.org/show_bug.cgi?id=123826
+
+        Reviewed by Michael Saboff.
+
+        * jit/CCallHelpers.h:
+        (JSC::CCallHelpers::setupArgumentsWithExecState):
+        (JSC::CCallHelpers::setupArguments):
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Fix register allocation inside control flow in GetByVal String
+        https://bugs.webkit.org/show_bug.cgi?id=123816
+
+        Reviewed by Geoffrey Garen.
+
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileGetByValOnString):
+
+2013-11-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Remove FTL::LowerDFGToLLVM::compileJSConstant()
+        https://bugs.webkit.org/show_bug.cgi?id=123817
+
+        Reviewed by Geoffrey Garen.
+
+        * ftl/FTLLowerDFGToLLVM.cpp:
+
+2013-11-04  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should support PutById
+        https://bugs.webkit.org/show_bug.cgi?id=123784
+
+        Reviewed by Geoffrey Garen.
+
+        * ftl/FTLAbbreviations.h:
+        (JSC::FTL::buildCall):
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLCompile.cpp:
+        (JSC::FTL::generateICFastPath):
+        (JSC::FTL::fixFunctionBasedOnStackMaps):
+        * ftl/FTLInlineCacheDescriptor.h:
+        (JSC::FTL::InlineCacheDescriptor::InlineCacheDescriptor):
+        (JSC::FTL::GetByIdDescriptor::GetByIdDescriptor):
+        (JSC::FTL::PutByIdDescriptor::PutByIdDescriptor):
+        (JSC::FTL::PutByIdDescriptor::ecmaMode):
+        (JSC::FTL::PutByIdDescriptor::putKind):
+        * ftl/FTLIntrinsicRepository.h:
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compilePutById):
+        * ftl/FTLOutput.h:
+        (JSC::FTL::Output::call):
+        * ftl/FTLSlowPathCall.cpp:
+        (JSC::FTL::callOperation):
+        * ftl/FTLSlowPathCall.h:
+        * ftl/FTLState.h:
+        * jit/CCallHelpers.h:
+        (JSC::CCallHelpers::setupArguments):
+        * runtime/Executable.h:
+        (JSC::ScriptExecutable::ecmaMode):
+
+2013-11-04  Filip Pizlo  <fpizlo@apple.com>
+
+        GetById->GetByOffset and PutById->PutByOffset folding should mark haveStructures since it may result in structure transition watchpoints
+        https://bugs.webkit.org/show_bug.cgi?id=123788
+
+        Reviewed by Geoffrey Garen.
+        
+        haveStructures is true if there are any currentlyKnownStructures that have
+        interesting values, since that's the only time when clobbering needs to do things.
+        It's a really important compile-time optimization. But that also means that anytime
+        we might cause currentlyKnownStructures to get set - like when we might insert some
+        structure transition watchpoints - we need to set haveStructures. We were forgetting
+        to do that for GetById->GetByOffset and PutById->PutByOffset because, I guess, we
+        forgot that those might insert structure transition watchpoints.
+
+        * dfg/DFGAbstractInterpreterInlines.h:
+        (JSC::DFG::::executeEffects):
+
+2013-11-05  Julien Brianceau  <jbriance@cisco.com>
+
+        [mips] Make regTx registers match between JSInterfaceJIT and GPRInfo.
+        https://bugs.webkit.org/show_bug.cgi?id=123807
+
+        Reviewed by Mark Lam.
+
+        * jit/GPRInfo.h:
+        (JSC::GPRInfo::toIndex):
+        * jit/JSInterfaceJIT.h:
+
+2013-11-05  Julien Brianceau  <jbriance@cisco.com>
+
+        REGRESSION(r158315): Fix register mixup in JIT::compileOpCall.
+        https://bugs.webkit.org/show_bug.cgi?id=123799
+
+        Reviewed by Mark Lam.
+
+        Changeset r158315 is crashing architectures where JSInterfaceJIT::regT3 is
+        different from GPRInfo::regT3. This is the case for MIPS architecture.
+
+        * jit/JITCall32_64.cpp:
+        (JSC::JIT::compileOpCall):
+
+2013-11-05  Julien Brianceau  <jbriance@cisco.com>
+
+        [mips] Fix build for MIPS platforms.
+        https://bugs.webkit.org/show_bug.cgi?id=123796
+
+        Reviewed by Michael Saboff.
+
+        * assembler/LinkBuffer.cpp:
+        (JSC::LinkBuffer::linkCode): Add specific MIPS call to relocateJumps.
+        * assembler/MIPSAssembler.h: Remove executableCopy (because of r157690) and set relocateJumps function public.
+        (JSC::MIPSAssembler::firstRegister):
+        (JSC::MIPSAssembler::lastRegister):
+        (JSC::MIPSAssembler::firstFPRegister):
+        (JSC::MIPSAssembler::lastFPRegister):
+        (JSC::MIPSAssembler::buffer): Needed since r157690.
+        * assembler/MacroAssemblerMIPS.h: Add framePointerRegister.
+        (JSC::MacroAssemblerMIPS::revertJumpReplacementToPatchableBranchPtrWithPatch): Remove unused parameter warning.
+
+2013-11-04  Filip Pizlo  <fpizlo@apple.com>
+
+        internal-js-tests.yaml/Octane/stress-tests/pdfjs.js.default: ASSERTION FAILED: m_state.forNode(child).m_futurePossibleStructure.isSubsetOf(StructureSet(structure)) at DFGConstantFoldingPhase.cpp:249
+        https://bugs.webkit.org/show_bug.cgi?id=123778
+
+        Unreviewed, remove the other such assertion.
+
+        * dfg/DFGConstantFoldingPhase.cpp:
+        (JSC::DFG::ConstantFoldingPhase::foldConstants):
+
+2013-11-04  Michael Saboff  <msaboff@apple.com>
+
+        REGRESSION(r158586): plugins/refcount-leaks.html fails
+        https://bugs.webkit.org/show_bug.cgi?id=123765
+
+        We were leaving a hole of one slot above a new frame when pushing the new frame on
+        the stack with pushFrame().  This unused slot can contain residual values that will
+        be marked during GC.
+
+        Reviewed by Filip Pizlo.
+
+        * interpreter/JSStackInlines.h:
+        (JSC::JSStack::pushFrame):
+
+2013-11-04  Filip Pizlo  <fpizlo@apple.com>
+
+        internal-js-tests.yaml/Octane/stress-tests/pdfjs.js.default: ASSERTION FAILED: m_state.forNode(child).m_futurePossibleStructure.isSubsetOf(StructureSet(structure)) at DFGConstantFoldingPhase.cpp:249
+        https://bugs.webkit.org/show_bug.cgi?id=123778
+
+        Reviewed by Geoffrey Garen.
+        
+        This assertion was just wrong: ee do an execute() above the assertion. The assertion
+        is asserting that if we need a watchpoint (i.e. the best proven structure was not the
+        current structure) then it must be the future possible structure.  But while that may
+        have been true before execute(), it won't be true after if the PutById was a
+        transition. Of course, this can only happen in the concurrent JIT in which case the
+        code would be invalidated anyway since we would only transform the code in a way that
+        leveraged the lack of a transition if we inserted a watchpoint, in which case we
+        would realize that the watchpoint had been fired during compilation.
+        
+        Since this requires concurrent JIT awesomeness, I don't know how to test it.
+
+        * dfg/DFGConstantFoldingPhase.cpp:
+        (JSC::DFG::ConstantFoldingPhase::foldConstants):
+
+2013-11-04  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG CheckArray(String) should just be a Phantom(String:)
+        https://bugs.webkit.org/show_bug.cgi?id=123779
+
+        Reviewed by Geoffrey Garen.
+        
+        This should be a speed-up since Phantom(String:) is smart enough to use the string
+        structure. It should also be a simplification since CheckArray(String) was totally
+        redundant.
+        
+        Also FixupPhase was assuming that it may see CheckArray's. That's wrong. It can
+        create CheckArray's but it won't see them as input since no previous phase can
+        create them.
+
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        (JSC::DFG::FixupPhase::checkArray):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::checkArray):
+
+2013-11-04  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG NewArray/NewArrayBuffer shouldn't be constructing with negative indexing
+        https://bugs.webkit.org/show_bug.cgi?id=123760
+        <rdar://problem/15356705>
+
+        Reviewed by Mark Hahnenberg and Oliver Hunt.
+
+        * dfg/DFGOperations.cpp:
+
+2013-11-04  Michael Saboff  <msaboff@apple.com>
+
+        Eliminate HostCall bit from JSC Stack CallerFrame
+        https://bugs.webkit.org/show_bug.cgi?id=123642
+
+        Reviewed by Geoffrey Garen.
+
+        Replace the HostCallFrame bit or'ed to the CallerFrame value in a CallFrame with
+        a VM entry sentinel CallFrame.  Logically, the VM entry sentinel call frame is
+        pushed on the stack before the callee frame when calling from native to JavaScript
+        code.  The callee frame's CallerFrame points at the VM entry sentinel call frame
+        and the VM entry sentinel call frame's CallerFrame points to the real caller.
+        The VM entry sentinel call frame has a sentinel (1) in the CodeBlock to indicate
+        its a VM entry sentinel call frame.  It's ScopeChain has vm.topCallFrame at the
+        time of the call.  This allows for a complete stack walk as well as walking just
+        the contiguous JS frames.
+
+        The VM entry sentinel call frame and callee frame are currently allocated and
+        initialized in ExecState::init(), but this initialization will be moved to
+        ctiTrampoline when we actually move onto the native stack.
+
+        * bytecode/CodeBlock.cpp:
+        (JSC::CodeBlock::noticeIncomingCall):
+        * debugger/DebuggerCallFrame.cpp:
+        (JSC::DebuggerCallFrame::callerFrame):
+        * dfg/DFGJITCompiler.cpp:
+        (JSC::DFG::JITCompiler::compileExceptionHandlers):
+        * interpreter/CallFrame.h:
+        (JSC::ExecState::frameExtent):
+        (JSC::ExecState::currentVPC):
+        (JSC::ExecState::setCurrentVPC):
+        (JSC::ExecState::init):
+        (JSC::ExecState::noCaller):
+        (JSC::ExecState::isVMEntrySentinel):
+        (JSC::ExecState::vmEntrySentinelCallerFrame):
+        (JSC::ExecState::initializeVMEntrySentinelFrame):
+        (JSC::ExecState::callerFrameSkippingVMEntrySentinel):
+        (JSC::ExecState::vmEntrySentinelCodeBlock):
+        * interpreter/Interpreter.cpp:
+        (JSC::unwindCallFrame):
+        (JSC::Interpreter::getStackTrace):
+        * interpreter/Interpreter.h:
+        (JSC::TopCallFrameSetter::TopCallFrameSetter):
+        (JSC::TopCallFrameSetter::~TopCallFrameSetter):
+        (JSC::NativeCallFrameTracer::NativeCallFrameTracer):
+        * interpreter/JSStack.cpp:
+        (JSC::JSStack::~JSStack):
+        * interpreter/JSStackInlines.h:
+        (JSC::JSStack::getStartOfFrame):
+        (JSC::JSStack::pushFrame):
+        (JSC::JSStack::popFrame):
+        * interpreter/Register.h:
+        (JSC::Register::operator=):
+        (JSC::Register::callFrame):
+        * interpreter/StackVisitor.cpp:
+        (JSC::StackVisitor::readFrame):
+        (JSC::StackVisitor::readNonInlinedFrame):
+        (JSC::StackVisitor::readInlinedFrame):
+        (JSC::StackVisitor::Frame::print):
+        * interpreter/VMInspector.cpp:
+        (JSC::VMInspector::countFrames):
+        * jit/JIT.cpp:
+        (JSC::JIT::privateCompileExceptionHandlers):
+        * jit/JITOperations.cpp:
+        * jit/JITStubsARM.h:
+        (JSC::ctiTrampoline):
+        * jit/JITStubsARM64.h:
+        * jit/JITStubsARMv7.h:
+        (JSC::ctiTrampoline):
+        * jit/JITStubsMIPS.h:
+        * jit/JITStubsMSVC64.asm:
+        * jit/JITStubsSH4.h:
+        * jit/JITStubsX86.h:
+        * jit/JITStubsX86_64.h:
+        * jsc.cpp:
+        (functionDumpCallFrame):
+        * llint/LowLevelInterpreter.cpp:
+        (JSC::CLoop::execute):
+        * runtime/VM.cpp:
+        (JSC::VM::VM):
+        (JSC::VM::throwException):
+
+2013-11-04  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        JSArrayBufferViews of length 0 allocate 0 CopiedSpace bytes, which is invalid
+        https://bugs.webkit.org/show_bug.cgi?id=123746
+
+        Reviewed by Geoffrey Garen.
+
+        This patch disallows clients from allocating 0 bytes in CopiedSpace. We enforce this invariant 
+        with an ASSERT in C++ code and a breakpoint in JIT code. Clients who care about 0-byte 
+        allocations (like JSArrayBufferViews) must handle that case themselves, but we don't punish 
+        anybody else for the rare case that somebody decides to allocate a 0-length typed array. 
+        It also makes the allocation and copying cases consistent for CopiedSpace: no 0-byte allocations, 
+        no 0-byte copying.
+ 
+        Also added a check so that JSArrayBufferViews don't try to copy their m_vector backing store when 
+        their length is 0. Also sprinkled several ASSERTs throughout the JSArrayBufferView code to make sure that 
+        when length is 0 m_vector is null.
+
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileNewTypedArray):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::emitAllocateBasicStorage):
+        * heap/CopiedSpaceInlines.h:
+        (JSC::CopiedSpace::tryAllocate):
+        * runtime/ArrayBuffer.h:
+        (JSC::ArrayBuffer::create):
+        * runtime/JSArrayBufferView.cpp:
+        (JSC::JSArrayBufferView::ConstructionContext::ConstructionContext):
+        * runtime/JSGenericTypedArrayViewInlines.h:
+        (JSC::::visitChildren):
+        (JSC::::copyBackingStore):
+        (JSC::::slowDownAndWasteMemory):
+
+2013-11-04  Julien Brianceau  <jbriance@cisco.com>
+
+        [sh4] Refactor jumps in baseline JIT to return label after the jump.
+        https://bugs.webkit.org/show_bug.cgi?id=123734
+
+        Reviewed by Michael Saboff.
+
+        Current implementation of jumps in sh4 baseline JIT returns a label on the jump itself
+        and not after it. This is not correct and leads to issues like infinite loop the DFG
+        (https://bugs.webkit.org/show_bug.cgi?id=122597 for instance). This refactor fixes this
+        and also simplifies the link and relink procedures for sh4 jumps.
+
+        * assembler/MacroAssemblerSH4.h:
+        (JSC::MacroAssemblerSH4::branchDouble):
+        (JSC::MacroAssemblerSH4::branchTrue):
+        (JSC::MacroAssemblerSH4::branchFalse):
+        * assembler/SH4Assembler.h:
+        (JSC::SH4Assembler::jmp):
+        (JSC::SH4Assembler::extraInstrForBranch):
+        (JSC::SH4Assembler::jne):
+        (JSC::SH4Assembler::je):
+        (JSC::SH4Assembler::bra):
+        (JSC::SH4Assembler::linkJump):
+        (JSC::SH4Assembler::relinkJump):
+
+2013-11-03  Filip Pizlo  <fpizlo@apple.com>
+
+        Generated color wheel displays incorrectly (regressed in r155567)
+        https://bugs.webkit.org/show_bug.cgi?id=123664
+
+        Reviewed by Andreas Kling.
+
+        Interestingly, r155567 just "un-broke" the attempt to constant-fold ArithMod, but
+        that constant folding was just wrong to begin with. There is no evidence that this
+        constant folding rule is profitable. I'm removing it instead of trying to think
+        about what it means for it to be correct.
+
+        * dfg/DFGAbstractInterpreterInlines.h:
+        (JSC::DFG::::executeEffects):
+
+2013-11-03  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, it is no longer necessary to call DisablePrettyStackTrace.
+
+        * llvm/library/LLVMExports.cpp:
+        (initializeAndGetJSCLLVMAPI):
+
+2013-11-02  Mark Lam  <mark.lam@apple.com>
+
+        Assertion failure in non-JIT'ed LLInt on ARM Thumb.
+        https://bugs.webkit.org/show_bug.cgi?id=97569.
+
+        Reviewed by Geoffrey Garen.
+
+        * assembler/MacroAssemblerCodeRef.h:
+        - Thumb2 alignment assertions do not apply to the C Loop LLINT because
+          the arguments passed to those assertions are actually OpcodeIDs
+          masquerading as addresses.
+        * llint/LLIntOfflineAsmConfig.h:
+        - Some of the #defines belong in the !ENABLE(LLINT_C_LOOP) section.
+          Moving them there.
+        * llint/LowLevelInterpreter.cpp:
+        - Keep the compiler happy from some unreferenced C Loop labels.
+
+2013-11-02  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should use LLVM intrinsics for OSR exit, watchpoints, inline caches, and stack layout
+        https://bugs.webkit.org/show_bug.cgi?id=122318
+
+        Reviewed by Geoffrey Garen.
+        
+        This all now works. This patch just updates our implementation to work with LLVM trunk,
+        and removes all of the old code that tried to do OSR exits and heap accesses without
+        the benefit of those intrinsics.
+        
+        In particular:
+        
+        - StackMaps parsing now uses the new, less compact, but more future-proof, format.
+        
+        - Remove the ftlUsesStackmaps() option and hard-code ftlUsesStackmaps = true. Remove
+          all code for ftlUsesStackmaps = false, since that was only there for back when we
+          didn't have the intrinsics.
+        
+        - Remove the other experimental OSR options (useLLVMOSRExitIntrinsic,
+          ftlTrapsOnOSRExit, and FTLOSRExitOmitsMarshalling).
+        
+        - Remove LowerDFGToLLVM's use of the ExitThunkGenerator since we don't need to generate
+          the exit thunks until after we parse the stackmaps.
+        
+        - Remove all of the exit thunk and compiler code for the no-stackmaps case.
+
+        * dfg/DFGDriver.cpp:
+        (JSC::DFG::compileImpl):
+        * ftl/FTLCompile.cpp:
+        (JSC::FTL::mmAllocateDataSection):
+        * ftl/FTLExitThunkGenerator.cpp:
+        (JSC::FTL::ExitThunkGenerator::emitThunk):
+        * ftl/FTLIntrinsicRepository.h:
+        * ftl/FTLLocation.cpp:
+        (JSC::FTL::Location::forStackmaps):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::LowerDFGToLLVM):
+        (JSC::FTL::LowerDFGToLLVM::lower):
+        (JSC::FTL::LowerDFGToLLVM::compileGetById):
+        (JSC::FTL::LowerDFGToLLVM::compileInvalidationPoint):
+        (JSC::FTL::LowerDFGToLLVM::appendOSRExit):
+        (JSC::FTL::LowerDFGToLLVM::emitOSRExitCall):
+        (JSC::FTL::LowerDFGToLLVM::callStackmap):
+        (JSC::FTL::LowerDFGToLLVM::addExitArgumentForNode):
+        * ftl/FTLOSRExitCompilationInfo.h:
+        (JSC::FTL::OSRExitCompilationInfo::OSRExitCompilationInfo):
+        * ftl/FTLOSRExitCompiler.cpp:
+        (JSC::FTL::compileStub):
+        (JSC::FTL::compileFTLOSRExit):
+        * ftl/FTLStackMaps.cpp:
+        (JSC::FTL::StackMaps::Location::parse):
+        (JSC::FTL::StackMaps::parse):
+        (WTF::printInternal):
+        * ftl/FTLStackMaps.h:
+        * ftl/FTLThunks.cpp:
+        (JSC::FTL::osrExitGenerationThunkGenerator):
+        * ftl/FTLThunks.h:
+        (JSC::FTL::Thunks::getOSRExitGenerationThunk):
+        * runtime/Options.h:
+
+2013-11-02  Patrick Gansterer  <paroga@webkit.org>
+
+        Add missing getHostCallReturnValue() for MSVC ARM
+        https://bugs.webkit.org/show_bug.cgi?id=123685
+
+        Reviewed by Darin Adler.
+
+        * jit/JITStubsARM.h:
+
+2013-11-02  Patrick Gansterer  <paroga@webkit.org>
+
+        Fix MSVC warning about unary minus operator
+        https://bugs.webkit.org/show_bug.cgi?id=123674
+
+        Reviewed by Darin Adler.
+
+        Change some static_cast<> to silence the following warning of Microsoft compiler:
+        warning C4146: unary minus operator applied to unsigned type, result still unsigned
+
+        * jit/Repatch.cpp:
+        (JSC::emitPutTransitionStub):
+
+2013-11-02  Filip Pizlo  <fpizlo@apple.com>
+
+        Disable LLVM's pretty stack traces, which involve intercepting fatal signals
+        https://bugs.webkit.org/show_bug.cgi?id=123681
+
+        Reviewed by Geoffrey Garen.
+
+        * llvm/library/LLVMExports.cpp:
+        (initializeAndGetJSCLLVMAPI):
+
+2013-11-02  Filip Pizlo  <fpizlo@apple.com>
+
+        LLVM assertion failures should funnel into WTF's crash handling
+        https://bugs.webkit.org/show_bug.cgi?id=123682
+
+        Reviewed by Geoffrey Garen.
+        
+        Inside llvmForJSC, we override assertion-related functions and funnel them
+        into g_llvmTrapCallback(). We also now register a fatal error handler inside
+        the library and funnel that into g_llvmTrapCallback, and have
+        initializeAndGetJSCLLVMAPI() take such a callback as an argument.
+        
+        Inside JSC, we no longer call LLVMInstallFatalErrorHandler() but instead we
+        pass WTFLogAlwaysAndCrash() as the trap callback for llvmForJSC.
+
+        * llvm/InitializeLLVM.cpp:
+        (JSC::initializeLLVM):
+        * llvm/InitializeLLVMPOSIX.cpp:
+        (JSC::initializeLLVMPOSIX):
+        * llvm/library/LLVMExports.cpp:
+        (llvmCrash):
+        (initializeAndGetJSCLLVMAPI):
+        * llvm/library/LLVMOverrides.cpp:
+        (raise):
+        (__assert_rtn):
+        (abort):
+        * llvm/library/LLVMTrapCallback.h: Added.
+
+2013-11-02  Filip Pizlo  <fpizlo@apple.com>
+
+        CodeBlock::jettison() shouldn't call baselineVersion()
+        https://bugs.webkit.org/show_bug.cgi?id=123675
+
+        Reviewed by Geoffrey Garen.
+        
+        Fix more uses of baselineVersion().
+
+        * bytecode/CodeBlock.cpp:
+        (JSC::CodeBlock::jettison):
+        * bytecode/CodeBlock.h:
+        * bytecode/ProfiledCodeBlockJettisoningWatchpoint.cpp:
+        (JSC::ProfiledCodeBlockJettisoningWatchpoint::fireInternal):
+
+2013-11-02  Filip Pizlo  <fpizlo@apple.com>
+
+        LLVM asserts in internal-js-tests.yaml/Octane/stress-tests/mandreel.js
+        https://bugs.webkit.org/show_bug.cgi?id=123535
+
+        Reviewed by Geoffrey Garen.
+        
+        Use double comparisons for doubles.
+
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::doubleToInt32):
+
+2013-11-02  Patrick Gansterer  <paroga@webkit.org>
+
+        Various small WinCE build fixes
+
+        * jsc.cpp:
+        (main):
+
+2013-11-02  Patrick Gansterer  <paroga@webkit.org>
+
+        Fix MSVC ARM build after r157581.
+
+        * jit/JITStubsARM.h:
+
+2013-11-01  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should use a simple optimization pipeline by default
+        https://bugs.webkit.org/show_bug.cgi?id=123638
+
+        Reviewed by Geoffrey Garen.
+        
+        20% speed-up on imagine-gaussian-blur, when combined with --ftlUsesStackmaps=true.
+
+        * ftl/FTLCompile.cpp:
+        (JSC::FTL::compile):
+        * runtime/Options.h:
+
+2013-11-01  Andreas Kling  <akling@apple.com>
+
+        Neuter WTF_MAKE_FAST_ALLOCATED in GLOBAL_FASTMALLOC_NEW builds.
+        <https://webkit.org/b/123639>
+
+        JSC::ParserArenaRefCounted really needed to have the new/delete
+        operators overridden, in order for JSC::ScopeNode to be able to
+        choose that "operator new" out of the two it inherits.
+
+        Reviewed by Anders Carlsson.
+
+2013-11-01  Filip Pizlo  <fpizlo@apple.com>
+
+        OSR exit profiling should be robust against all code being cleared
+        https://bugs.webkit.org/show_bug.cgi?id=123629
+        <rdar://problem/15365476>
+
+        Reviewed by Michael Saboff.
+        
+        The problem here is two-fold:
+
+        1) A watchpoint (i.e. ProfiledCodeBlockJettisoningWatchpoint) may be fired after we
+        have cleared the CodeBlock for all or some Executables.  This means that doing
+        codeBlock->baselineVersion() would either crash or return a bogus CodeBlock, since
+        there wasn't a baseline code block reachable from the Executable anymore.  The
+        solution is that we shouldn't be asking for the baseline code block reachable from
+        the owning executable (what baselineVersion did), but instead we should be asking
+        for the baseline version reachable from the code block being watchpointed (basically
+        what CodeBlock::alternative() did).
+
+        2) If dealing with inlined code, baselienCodeBlockForOriginAndBaselineCodeBlock()
+        may return null, for the same reason as above - we might have cleared the baseline
+        codeblock for the executable that was inlined.  The solution is to just not do
+        profiling if there isn't a baseline code block anymore.
+
+        * bytecode/CodeBlock.cpp:
+        (JSC::CodeBlock::baselineAlternative):
+        (JSC::CodeBlock::baselineVersion):
+        (JSC::CodeBlock::jettison):
+        * bytecode/CodeBlock.h:
+        * bytecode/CodeBlockJettisoningWatchpoint.cpp:
+        (JSC::CodeBlockJettisoningWatchpoint::fireInternal):
+        * bytecode/ProfiledCodeBlockJettisoningWatchpoint.cpp:
+        (JSC::ProfiledCodeBlockJettisoningWatchpoint::fireInternal):
+        * dfg/DFGOSRExitBase.cpp:
+        (JSC::DFG::OSRExitBase::considerAddingAsFrequentExitSiteSlow):
+        * jit/AssemblyHelpers.h:
+        (JSC::AssemblyHelpers::AssemblyHelpers):
+        * runtime/Executable.cpp:
+        (JSC::FunctionExecutable::baselineCodeBlockFor):
+
+2013-10-31  Oliver Hunt  <oliver@apple.com>
+
+        JavaScript parser bug
+        https://bugs.webkit.org/show_bug.cgi?id=123506
+
+        Reviewed by Mark Lam.
+
+        Add ParserState as an abstraction and use that to save and restore
+        the parser state around nested functions (We'll need to use this in
+        more places in future).  Also fix a minor error typo this testcases
+        hit.
+
+        * parser/Parser.cpp:
+        (JSC::::parseFunctionInfo):
+        (JSC::::parseAssignmentExpression):
+        * parser/Parser.h:
+        (JSC::Parser::saveState):
+        (JSC::Parser::restoreState):
+
+2013-10-31  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL Int32ToDouble should handle the forward type check case where you need a recovery
+        https://bugs.webkit.org/show_bug.cgi?id=123605
+
+        Reviewed by Mark Hahnenberg.
+        
+        If you have a Int32ToDouble that needs to do a type check and it's required to do a
+        forward exit, then it needs to manually pass in a value recovery for itself in the
+        OSR exit - since this is one of those forward-exiting nodes that doesn't have a
+        preceding MovHint.
+
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileInt32ToDouble):
+        (JSC::FTL::LowerDFGToLLVM::forwardTypeCheck):
+
+2013-10-31  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should implement InvalidationPoint in terms of llvm.stackmap
+        https://bugs.webkit.org/show_bug.cgi?id=113647
+
+        Reviewed by Mark Hahnenberg.
+        
+        This is pretty straightforward now that InvalidationPoint has exactly the semantics
+        that agree with llvm.stackmap.
+
+        * ftl/FTLCompile.cpp:
+        (JSC::FTL::fixFunctionBasedOnStackMaps):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileInvalidationPoint):
+        (JSC::FTL::LowerDFGToLLVM::emitOSRExitCall):
+        (JSC::FTL::LowerDFGToLLVM::buildExitArguments):
+        (JSC::FTL::LowerDFGToLLVM::callStackmap):
+        * ftl/FTLOSRExitCompilationInfo.h:
+        (JSC::FTL::OSRExitCompilationInfo::OSRExitCompilationInfo):
+
+2013-10-30  Oliver Hunt  <oliver@apple.com>
+
+        Implement basic ES6 Math functions
+        https://bugs.webkit.org/show_bug.cgi?id=123536
+
+        Reviewed by Michael Saboff.
+
+        Fairly trivial patch to implement the core ES6 Math functions.
+
+        This doesn't implement Math.hypot as it is not a trivial function.
+        I've also skipped Math.sign as I am yet to be convinced the spec
+        behaviour is good.  Everything else is trivial.
+
+        * runtime/MathObject.cpp:
+        (JSC::MathObject::finishCreation):
+        (JSC::mathProtoFuncACosh):
+        (JSC::mathProtoFuncASinh):
+        (JSC::mathProtoFuncATanh):
+        (JSC::mathProtoFuncCbrt):
+        (JSC::mathProtoFuncCosh):
+        (JSC::mathProtoFuncExpm1):
+        (JSC::mathProtoFuncFround):
+        (JSC::mathProtoFuncLog1p):
+        (JSC::mathProtoFuncLog10):
+        (JSC::mathProtoFuncLog2):
+        (JSC::mathProtoFuncSinh):
+        (JSC::mathProtoFuncTanh):
+        (JSC::mathProtoFuncTrunc):
+
+2013-10-31  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL::Location::restoreInto() doesn't handle stack-related registers correctly if you're using it after pushing a new stack frame
+        https://bugs.webkit.org/show_bug.cgi?id=123591
+
+        Reviewed by Mark Hahnenberg.
+        
+        This gets us to pass more tests with ftlUsesStackmaps.
+
+        * ftl/FTLLocation.cpp:
+        (JSC::FTL::Location::restoreInto):
+        * ftl/FTLLocation.h:
+        * ftl/FTLThunks.cpp:
+        (JSC::FTL::osrExitGenerationWithStackMapThunkGenerator):
+
+2013-10-31  Alexey Proskuryakov  <ap@apple.com>
+
+        Enable WebCrypto on Mac
+        https://bugs.webkit.org/show_bug.cgi?id=123587
+
+        Reviewed by Anders Carlsson.
+
+        * Configurations/FeatureDefines.xcconfig: Do it.
+
+2013-10-31  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, really remove CachedTranscendentalFunction.h.
+
+        * GNUmakefile.list.am:
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj:
+
+2013-10-31  Filip Pizlo  <fpizlo@apple.com>
+
+        Remove CachedTranscendentalFunction because caching math functions is an ugly idea
+        https://bugs.webkit.org/show_bug.cgi?id=123574
+
+        Reviewed by Mark Hahnenberg.
+        
+        This is performance-neutral because I also make Math.cos/sin intrinsic. This means that
+        we gain the "overhead" of actually computing sin and cos but we lose the overhead of
+        going through the native call thunks.
+        
+        Caching transcendental functions is a really ugly idea. It works for SunSpider because
+        that benchmark makes very predictable calls into Math.sin. But I don't believe that this
+        is representative of any kind of reality, and so for sensible uses of Math.sin/cos all
+        that this was doing was adding more call overhead and some hashing overhead.
+
+        * JavaScriptCore.xcodeproj/project.pbxproj:
+        * dfg/DFGAbstractInterpreterInlines.h:
+        (JSC::DFG::::executeEffects):
+        * dfg/DFGBackwardsPropagationPhase.cpp:
+        (JSC::DFG::BackwardsPropagationPhase::propagate):
+        * dfg/DFGByteCodeParser.cpp:
+        (JSC::DFG::ByteCodeParser::handleIntrinsic):
+        * dfg/DFGCSEPhase.cpp:
+        (JSC::DFG::CSEPhase::performNodeCSE):
+        * dfg/DFGClobberize.h:
+        (JSC::DFG::clobberize):
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        * dfg/DFGNodeType.h:
+        * dfg/DFGPredictionPropagationPhase.cpp:
+        (JSC::DFG::PredictionPropagationPhase::propagate):
+        (JSC::DFG::PredictionPropagationPhase::doDoubleVoting):
+        * dfg/DFGSafeToExecute.h:
+        (JSC::DFG::safeToExecute):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::callOperation):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * jit/JITOperations.h:
+        * runtime/CachedTranscendentalFunction.h: Removed.
+        * runtime/DateInstanceCache.h:
+        * runtime/Intrinsic.h:
+        * runtime/MathObject.cpp:
+        (JSC::MathObject::finishCreation):
+        (JSC::mathProtoFuncCos):
+        (JSC::mathProtoFuncSin):
+        * runtime/VM.h:
+
+2013-10-30  Filip Pizlo  <fpizlo@apple.com>
+
+        Assertion failure in js/dom/global-constructors-attributes-dedicated-worker.html
+        https://bugs.webkit.org/show_bug.cgi?id=123551
+        <rdar://problem/15356238>
+
+        Reviewed by Mark Hahnenberg.
+        
+        WatchpointSets have always had this "fire everything on deletion" policy because it
+        seemed like a good fail-safe at the time I first implemented WatchpointSets. But
+        it's actually causing bugs rather than providing safety:
+        
+        - Everyone who registers Watchpoints with WatchpointSets have separate mechanisms
+          for either keeping the WatchpointSets alive or noticing when they are collected.
+          So this wasn't actually providing any safety.
+          
+          One example of this is Structures, where:
+          
+          - CodeBlocks that register Watchpoints on Structure's WatchpointSet will also
+            register weak references to the Structure, and the GC will jettison a CodeBlock
+            if the Structure(s) it cares about dies.
+          
+          - StructureStubInfos that register Watchpoints on Structure's WatchpointSet will
+            also be cleared by GC if the Structures die.
+        
+        - The WatchpointSet destructor would get invoked from finalization/destruction.
+          This would then cause CodeBlock::jettison() to be called on a CodeBlock, but that
+          method requires doing things that access heap objects. This would usually cause
+          problems on VM destruction, since then the CodeBlocks would still be alive but the
+          whole heap would be destroyed.
+        
+        This also ensures that CodeBlock::jettison() cannot cause a GC. This is safe since
+        that method doesn't really allocate objects, and it is likely necessary because
+        jettison() may be called from deep in the stack.
+
+        * bytecode/CodeBlock.cpp:
+        (JSC::CodeBlock::jettison):
+        * bytecode/Watchpoint.cpp:
+        (JSC::WatchpointSet::~WatchpointSet):
+        * bytecode/Watchpoint.h:
+
+2013-10-30  Mark Lam  <mark.lam@apple.com>
+
+        Unreviewed, fix C Loop LLINT build.
+
+        * bytecode/CodeBlockJettisoningWatchpoint.cpp:
+        (JSC::CodeBlockJettisoningWatchpoint::fireInternal):
+        * bytecode/ProfiledCodeBlockJettisoningWatchpoint.cpp:
+        (JSC::ProfiledCodeBlockJettisoningWatchpoint::fireInternal):
+
+2013-10-30  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix FTL build.
+
+        * ftl/FTLAbstractHeapRepository.h:
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileCallOrConstruct):
+
+2013-10-30  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a way to fulfill promises from DOM code
+        https://bugs.webkit.org/show_bug.cgi?id=123466
+
+        Reviewed by Sam Weinig.
+
+        * JavaScriptCore.xcodeproj/project.pbxproj: Make JSPromise.h and JSPromiseResolver.h
+        private headers for WebCore to use.
+
+        * runtime/JSPromise.h:
+        * runtime/JSPromiseResolver.h:
+        Export functions that JSDOMPromise will use.
+
+2013-10-30  Mark Lam  <mark.lam@apple.com>
+
+        Adjust CallFrameHeader's ReturnPC and CallFrame locations to match the native ABI .
+        https://bugs.webkit.org/show_bug.cgi?id=123444.
+
+        Reviewed by Geoffrey Garen.
+
+        - Introduced an explicit CallerFrameAndPC struct.
+        - A CallFrame is expected to start with a CallerFrameAndPC struct. 
+        - The Register class no longer supports CallFrame* and Instruction*.
+
+          These hides the differences between JSVALUE32_64 and JSVALUE64 in
+          terms of managing the callerFrame() and returnPC() values.
+
+        - Convert all uses of JSStack::CallerFrame and JSStack::ReturnPC to
+          go through CallFrame to access the appropriate values and offsets.
+          CallFrame, in turn, will access the callerFrame and returnPC via
+          the CallerFrameAndPC struct.
+
+        - InlineCallFrame will provide offsets for its callerFrame and
+          returnPC. It will make use of CallFrame::callerFrameOffset() and
+          CallerFrame::returnPCOffset() to compute these.
+
+        * bytecode/CodeOrigin.h:
+        (JSC::InlineCallFrame::callerFrameOffset):
+        (JSC::InlineCallFrame::returnPCOffset):
+        * dfg/DFGJITCompiler.cpp:
+        (JSC::DFG::JITCompiler::compileEntry):
+        (JSC::DFG::JITCompiler::compileExceptionHandlers):
+        * dfg/DFGOSRExitCompilerCommon.cpp:
+        (JSC::DFG::reifyInlinedCallFrames):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::calleeFrameSlot):
+        (JSC::DFG::SpeculativeJIT::calleeArgumentSlot):
+        (JSC::DFG::SpeculativeJIT::calleeFrameTagSlot):
+        (JSC::DFG::SpeculativeJIT::calleeFramePayloadSlot):
+        (JSC::DFG::SpeculativeJIT::calleeArgumentTagSlot):
+        (JSC::DFG::SpeculativeJIT::calleeArgumentPayloadSlot):
+        - Prefixed all the above with callee since they apply to the callee frame.
+        (JSC::DFG::SpeculativeJIT::calleeFrameCallerFrame):
+        - Added to set the callerFrame pointer in the callee frame.
+
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::emitCall):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::emitCall):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * ftl/FTLLink.cpp:
+        (JSC::FTL::compileEntry):
+        (JSC::FTL::link):
+        * interpreter/CallFrame.h:
+        (JSC::ExecState::callerFrame):
+        (JSC::ExecState::callerFrameOffset):
+        (JSC::ExecState::returnPC):
+        (JSC::ExecState::hasReturnPC):
+        (JSC::ExecState::clearReturnPC):
+        (JSC::ExecState::returnPCOffset):
+        (JSC::ExecState::setCallerFrame):
+        (JSC::ExecState::setReturnPC):
+        (JSC::ExecState::callerFrameAndPC):
+        * interpreter/JSStack.h:
+        * interpreter/Register.h:
+        * jit/AssemblyHelpers.h:
+        (JSC::AssemblyHelpers::emitPutToCallFrameHeader):
+        - Convert to using storePtr() here and simplify the code.
+        (JSC::AssemblyHelpers::emitGetCallerFrameFromCallFrameHeaderPtr):
+        (JSC::AssemblyHelpers::emitPutCallerFrameToCallFrameHeader):
+        (JSC::AssemblyHelpers::emitGetReturnPCFromCallFrameHeaderPtr):
+        (JSC::AssemblyHelpers::emitPutReturnPCToCallFrameHeader):
+        - Helpers to emit gets/puts of the callerFrame and returnPC.
+        (JSC::AssemblyHelpers::addressForByteOffset):
+        * jit/JIT.cpp:
+        (JSC::JIT::JIT):
+        (JSC::JIT::privateCompile):
+        (JSC::JIT::privateCompileExceptionHandlers):
+        * jit/JITCall.cpp:
+        (JSC::JIT::compileCallEval):
+        (JSC::JIT::compileOpCall):
+        * jit/JITCall32_64.cpp:
+        (JSC::JIT::emit_op_ret):
+        (JSC::JIT::emit_op_ret_object_or_this):
+        (JSC::JIT::compileCallEval):
+        (JSC::JIT::compileOpCall):
+        * jit/JITInlines.h:
+        (JSC::JIT::unmap):
+        * jit/JITOpcodes.cpp:
+        (JSC::JIT::emit_op_end):
+        (JSC::JIT::emit_op_ret):
+        (JSC::JIT::emit_op_ret_object_or_this):
+        * jit/JITOpcodes32_64.cpp:
+        (JSC::JIT::privateCompileCTINativeCall):
+        (JSC::JIT::emit_op_end):
+        * jit/JITOperations.cpp:
+        * jit/SpecializedThunkJIT.h:
+        (JSC::SpecializedThunkJIT::returnJSValue):
+        (JSC::SpecializedThunkJIT::returnDouble):
+        (JSC::SpecializedThunkJIT::returnInt32):
+        (JSC::SpecializedThunkJIT::returnJSCell):
+        * jit/ThunkGenerators.cpp:
+        (JSC::throwExceptionFromCallSlowPathGenerator):
+        (JSC::slowPathFor):
+        (JSC::nativeForGenerator):
+
+        * llint/LLIntData.cpp:
+        (JSC::LLInt::Data::performAssertions):
+        * llint/LowLevelInterpreter.asm:
+        - Updated offsets and asserts to match the new CallFrame layout.
+
+2013-10-30  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix Mac.
+
+        * assembler/AbstractMacroAssembler.h:
+        (JSC::AbstractMacroAssembler::RegisterAllocationOffset::checkOffsets):
+        (JSC::AbstractMacroAssembler::checkRegisterAllocationAgainstBranchRange):
+
+2013-10-30  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix Windows.
+
+        * bytecode/CodeBlock.cpp:
+        (JSC::CodeBlock::jettison):
+
+2013-10-30  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix Windows.
+
+        * bytecode/CodeBlock.h:
+        (JSC::CodeBlock::addFrequentExitSite):
+
+2013-10-29  Filip Pizlo  <fpizlo@apple.com>
+
+        Add InvalidationPoints to the DFG and use them for all watchpoints
+        https://bugs.webkit.org/show_bug.cgi?id=123472
+
+        Reviewed by Mark Hahnenberg.
+        
+        This makes a fundamental change to how watchpoints work in the DFG.
+        
+        Previously, a watchpoint was an instruction whose execution semantics were something
+        like:
+        
+            if (watchpoint->invalidated)
+                exit
+        
+        We would implement this without any branch by using jump replacement.
+        
+        This is a very good optimization. But it's a bit awkward once you get a lot of
+        watchpoints: semantically we will have lots of these branches in the code, which the
+        compiler needs to reason about even though they don't actually result in any emitted
+        code.
+        
+        Separately, we also had a mechanism for jettisoning a CodeBlock. This mechanism would
+        be invoked if a CodeBlock exited a lot. It would ensure that a CodeBlock wouldn't be
+        called into again, but it would do nothing for CodeBlocks that were already on the
+        stack.
+        
+        This change flips jettisoning and watchpoint invalidation on their heads. Now, the jump
+        replacement has nothing to do with watchpoints; instead it's something that happens if
+        you ever jettison a CodeBlock. Jump replacement is now an all-or-nothing operation over
+        all of the potential call-return safe-exit-points in a CodeBlock. We call these
+        "InvalidationPoint"s. A watchpoint instruction is now "lowered" by having the DFG
+        collect all of the watchpoint sets that the CodeBlock cares about, and then registering
+        a CodeBlockJettisoningWatchpoint with all of them. That is, if the watchpoint fires, it
+        jettisons the CodeBlock, which in turn ensures that the CodeBlock can't be called into
+        (because the entrypoint now points to baseline code) and can't be returned into
+        (because returning exits to baseline before the next bytecode instruction).
+        
+        This will allow for a sensible lowering of watchpoints to LLVM IR. It will also allow
+        for jettison() to be used effectively for things like breakpointing and single-stepping
+        in the debugger.
+        
+        Well, basically, this mechanism just takes us into the HotSpot-style world where anyone
+        can, at any time and for any reason, request that an optimized CodeBlock is rendered
+        immediately invalid. You can use this for many cool things, I'm sure.
+
+        * CMakeLists.txt:
+        * GNUmakefile.list.am:
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj:
+        * JavaScriptCore.xcodeproj/project.pbxproj:
+        * assembler/AbstractMacroAssembler.h:
+        * bytecode/CodeBlock.cpp:
+        (JSC::CodeBlock::jettison):
+        * bytecode/CodeBlock.h:
+        * bytecode/CodeBlockJettisoningWatchpoint.cpp: Added.
+        (JSC::CodeBlockJettisoningWatchpoint::fireInternal):
+        * bytecode/CodeBlockJettisoningWatchpoint.h: Added.
+        (JSC::CodeBlockJettisoningWatchpoint::CodeBlockJettisoningWatchpoint):
+        * bytecode/ExitKind.cpp:
+        (JSC::exitKindToString):
+        * bytecode/ExitKind.h:
+        * bytecode/ProfiledCodeBlockJettisoningWatchpoint.cpp: Added.
+        (JSC::ProfiledCodeBlockJettisoningWatchpoint::fireInternal):
+        * bytecode/ProfiledCodeBlockJettisoningWatchpoint.h: Added.
+        (JSC::ProfiledCodeBlockJettisoningWatchpoint::ProfiledCodeBlockJettisoningWatchpoint):
+        * dfg/DFGAbstractHeap.h:
+        * dfg/DFGAbstractInterpreterInlines.h:
+        (JSC::DFG::::executeEffects):
+        * dfg/DFGClobberize.cpp:
+        (JSC::DFG::writesOverlap):
+        * dfg/DFGClobberize.h:
+        (JSC::DFG::clobberize):
+        (JSC::DFG::AbstractHeapOverlaps::AbstractHeapOverlaps):
+        (JSC::DFG::AbstractHeapOverlaps::operator()):
+        (JSC::DFG::AbstractHeapOverlaps::result):
+        * dfg/DFGCommonData.cpp:
+        (JSC::DFG::CommonData::invalidate):
+        * dfg/DFGCommonData.h:
+        (JSC::DFG::CommonData::CommonData):
+        * dfg/DFGDesiredWatchpoints.cpp:
+        (JSC::DFG::DesiredWatchpoints::addLazily):
+        (JSC::DFG::DesiredWatchpoints::reallyAdd):
+        * dfg/DFGDesiredWatchpoints.h:
+        (JSC::DFG::WatchpointForGenericWatchpointSet::WatchpointForGenericWatchpointSet):
+        (JSC::DFG::GenericDesiredWatchpoints::addLazily):
+        (JSC::DFG::GenericDesiredWatchpoints::reallyAdd):
+        (JSC::DFG::GenericDesiredWatchpoints::areStillValid):
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        * dfg/DFGInvalidationPointInjectionPhase.cpp: Added.
+        (JSC::DFG::InvalidationPointInjectionPhase::InvalidationPointInjectionPhase):
+        (JSC::DFG::InvalidationPointInjectionPhase::run):
+        (JSC::DFG::InvalidationPointInjectionPhase::handle):
+        (JSC::DFG::InvalidationPointInjectionPhase::insertInvalidationCheck):
+        (JSC::DFG::performInvalidationPointInjection):
+        * dfg/DFGInvalidationPointInjectionPhase.h: Added.
+        * dfg/DFGJITCode.h:
+        * dfg/DFGJITCompiler.cpp:
+        (JSC::DFG::JITCompiler::linkOSRExits):
+        (JSC::DFG::JITCompiler::link):
+        * dfg/DFGJITCompiler.h:
+        * dfg/DFGJumpReplacement.cpp: Added.
+        (JSC::DFG::JumpReplacement::fire):
+        * dfg/DFGJumpReplacement.h: Added.
+        (JSC::DFG::JumpReplacement::JumpReplacement):
+        * dfg/DFGNodeType.h:
+        * dfg/DFGOSRExitCompilationInfo.h:
+        * dfg/DFGOperations.cpp:
+        * dfg/DFGPlan.cpp:
+        (JSC::DFG::Plan::compileInThreadImpl):
+        (JSC::DFG::Plan::reallyAdd):
+        * dfg/DFGPredictionPropagationPhase.cpp:
+        (JSC::DFG::PredictionPropagationPhase::propagate):
+        * dfg/DFGSafeToExecute.h:
+        (JSC::DFG::safeToExecute):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::emitInvalidationPoint):
+        (JSC::DFG::SpeculativeJIT::compilePeepHoleObjectEquality):
+        (JSC::DFG::SpeculativeJIT::compileGetByValOnString):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::masqueradesAsUndefinedWatchpointIsStillValid):
+        (JSC::DFG::SpeculativeJIT::speculateStringObjectForStructure):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::nonSpeculativeNonPeepholeCompareNull):
+        (JSC::DFG::SpeculativeJIT::nonSpeculativePeepholeBranchNull):
+        (JSC::DFG::SpeculativeJIT::compileObjectEquality):
+        (JSC::DFG::SpeculativeJIT::compileObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compilePeepHoleObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compileObjectOrOtherLogicalNot):
+        (JSC::DFG::SpeculativeJIT::emitObjectOrOtherBranch):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::nonSpeculativeNonPeepholeCompareNull):
+        (JSC::DFG::SpeculativeJIT::nonSpeculativePeepholeBranchNull):
+        (JSC::DFG::SpeculativeJIT::compileObjectEquality):
+        (JSC::DFG::SpeculativeJIT::compileObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compilePeepHoleObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compileObjectOrOtherLogicalNot):
+        (JSC::DFG::SpeculativeJIT::emitObjectOrOtherBranch):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGWatchpointCollectionPhase.cpp: Added.
+        (JSC::DFG::WatchpointCollectionPhase::WatchpointCollectionPhase):
+        (JSC::DFG::WatchpointCollectionPhase::run):
+        (JSC::DFG::WatchpointCollectionPhase::handle):
+        (JSC::DFG::WatchpointCollectionPhase::handleEdge):
+        (JSC::DFG::WatchpointCollectionPhase::handleMasqueradesAsUndefined):
+        (JSC::DFG::WatchpointCollectionPhase::handleStringGetByVal):
+        (JSC::DFG::WatchpointCollectionPhase::addLazily):
+        (JSC::DFG::WatchpointCollectionPhase::globalObject):
+        (JSC::DFG::performWatchpointCollection):
+        * dfg/DFGWatchpointCollectionPhase.h: Added.
+        * ftl/FTLCapabilities.cpp:
+        (JSC::FTL::canCompile):
+        * ftl/FTLLowerDFGToLLVM.cpp:
+        (JSC::FTL::LowerDFGToLLVM::compileNode):
+        (JSC::FTL::LowerDFGToLLVM::compileStructureTransitionWatchpoint):
+        (JSC::FTL::LowerDFGToLLVM::compileGetByVal):
+        (JSC::FTL::LowerDFGToLLVM::compileGlobalVarWatchpoint):
+        (JSC::FTL::LowerDFGToLLVM::compileCompareEqConstant):
+        (JSC::FTL::LowerDFGToLLVM::compileCompareStrictEq):
+        (JSC::FTL::LowerDFGToLLVM::compileCompareStrictEqConstant):
+        (JSC::FTL::LowerDFGToLLVM::compileInvalidationPoint):
+        (JSC::FTL::LowerDFGToLLVM::equalNullOrUndefined):
+        (JSC::FTL::LowerDFGToLLVM::speculateNonNullObject):
+        * jit/JITOperations.cpp:
+        * jit/JumpReplacementWatchpoint.cpp: Removed.
+        * jit/JumpReplacementWatchpoint.h: Removed.
+
+2013-10-25  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        JSExport doesn't support constructors
+        https://bugs.webkit.org/show_bug.cgi?id=123380
+
+        Reviewed by Geoffrey Garen.
+
+        Support for constructor-style callbacks for the Objective-C API to JSC is currently limited to 
+        Objective-C blocks. Any clients who try to call the constructor of a JSExport-ed Objective-C class 
+        are met with a type error stating that it cannot be called as a constructor.
+
+        It would be nice to expand JSExport's functionality to support this idiom. It is a natural 
+        extension to JSExport and would increase the expressiveness and simplicity in both Objective-C and 
+        JavaScript client code.
+
+        The way we'll do this is to expand the capabilities of ObjCCallbackFunction and associated classes. 
+        Instead of constructing a normal C API object for the constructor, we'll instead allocate a full-blown 
+        ObjCCallbackFunction object which can already properly handle being invoked as a constructor.
+
+        * API/JSWrapperMap.mm:
+        (copyMethodsToObject):
+        (allocateConstructorForCustomClass):
+        (-[JSObjCClassInfo allocateConstructorAndPrototypeWithSuperClassInfo:]):
+        (tryUnwrapObjcObject):
+        * API/ObjCCallbackFunction.h:
+        (JSC::ObjCCallbackFunction::impl):
+        * API/ObjCCallbackFunction.mm:
+        (JSC::ObjCCallbackFunctionImpl::ObjCCallbackFunctionImpl):
+        (JSC::ObjCCallbackFunctionImpl::wrappedConstructor):
+        (JSC::ObjCCallbackFunctionImpl::isConstructible):
+        (JSC::ObjCCallbackFunction::getConstructData):
+        (JSC::ObjCCallbackFunctionImpl::name):
+        (JSC::ObjCCallbackFunctionImpl::call):
+        (objCCallbackFunctionForInvocation):
+        (objCCallbackFunctionForInit):
+        (tryUnwrapConstructor):
+        * API/tests/testapi.mm:
+        (-[TextXYZ initWithString:]):
+        (-[ClassA initWithA:]):
+        (-[ClassB initWithA:b:]):
+        (-[ClassC initWithA:]):
+        (-[ClassC initWithA:b:]):
+
+2013-10-30  peavo@outlook.com  <peavo@outlook.com>
+
+        [Win] Compile errors when enabling DFG JIT.
+        https://bugs.webkit.org/show_bug.cgi?id=120998
+
+        Reviewed by Brent Fulgham.
+
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj: Added files.
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj.filters: Ditto.
+        * dfg/DFGAllocator.h: Removed scope.
+        * dfg/DFGWorklist.cpp: Use new ThreadingOnce class instead of pthread_once.
+        (JSC::DFG::globalWorklist):
+        * heap/DeferGC.h: Link fix, member needs to be public.
+        * jit/JITOperationWrappers.h: Added required assembler macros.
+
+2013-10-30  Iago Toral Quiroga  <itoral@igalia.com>
+
+        Add result caching for Math.cos
+        https://bugs.webkit.org/show_bug.cgi?id=123255
+
+        Reviewed by Brent Fulgham.
+
+        * runtime/MathObject.cpp:
+        (JSC::mathProtoFuncCos):
+        * runtime/VM.h:
+
+2013-10-30  Alex Christensen  <achristensen@webkit.org>
+
+        Disabled JIT on Win64.
+        https://bugs.webkit.org/show_bug.cgi?id=122472
+
+        Reviewed by Geoffrey Garen.
+
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj:
+        Disabled building JITStubsMSVC64.
+
+2013-10-29  Michael Saboff  <msaboff@apple.com>
+
+        Change local variable register allocation to start at offset -1
+        https://bugs.webkit.org/show_bug.cgi?id=123182
+
+        Reviewed by Geoffrey Garen.
+
+        Adjusted the virtual register mapping down by one slot.  Reduced
+        the CallFrame header slots offsets by one.  They now start at 0.
+        Changed arity fixup to no longer skip passed register slot 0 as this
+        is now part of the CallFrame header.
+
+        * bytecode/VirtualRegister.h:
+        (JSC::operandIsLocal):
+        (JSC::operandIsArgument):
+        (JSC::VirtualRegister::localToOperand):
+        (JSC::VirtualRegister::operandToLocal):
+          Adjusted functions for shift in mapping from local to register offset.
+
+        * dfg/DFGByteCodeParser.cpp:
+        (JSC::DFG::ByteCodeParser::findArgumentPositionForLocal):
+        (JSC::DFG::ByteCodeParser::addCall):
+        (JSC::DFG::ByteCodeParser::handleInlining):
+        (JSC::DFG::ByteCodeParser::parseBlock):
+        * dfg/DFGVariableEventStream.cpp:
+        (JSC::DFG::VariableEventStream::reconstruct):
+        * dfg/DFGVirtualRegisterAllocationPhase.cpp:
+        (JSC::DFG::VirtualRegisterAllocationPhase::run):
+        * interpreter/CallFrame.h:
+        (JSC::ExecState::frameExtent):
+        (JSC::ExecState::offsetFor):
+        * interpreter/Interpreter.cpp:
+        (JSC::loadVarargs):
+        (JSC::Interpreter::dumpRegisters):
+        (JSC::Interpreter::executeCall):
+        * llint/LLIntData.cpp:
+        (JSC::LLInt::Data::performAssertions):
+        * llint/LowLevelInterpreter.asm:
+          Adjusted math to accomodate for shift in call frame slots.
+
+        * dfg/DFGJITCompiler.cpp:
+        (JSC::DFG::JITCompiler::compileFunction):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::calleeFrameOffset):
+        * interpreter/CallFrame.cpp:
+        (JSC::CallFrame::frameExtentInternal):
+        * interpreter/JSStackInlines.h:
+        (JSC::JSStack::pushFrame):
+        * jit/JIT.cpp:
+        (JSC::JIT::privateCompile):
+        * jit/JITOperations.cpp:
+        * llint/LLIntSlowPaths.cpp:
+        (JSC::LLInt::llint_slow_path_stack_check):
+        * runtime/CommonSlowPaths.h:
+        (JSC::CommonSlowPaths::arityCheckFor):
+          Fixed offset calculation to use VirtualRegister and related calculation instead of
+          doing seperate calculations.
+
+        * interpreter/JSStack.h:
+          Adjusted CallFrame slots down by one.  Did some miscellaneous fixing of dumpRegisters()
+          in the process of testing the fixes.
+
+        * jit/ThunkGenerators.cpp:
+        (JSC::arityFixup):
+          Changed arity fixup to no longer skip passed register slot 0 as this
+          is now part of the CallFrame header.
+
+        * llint/LowLevelInterpreter32_64.asm:
+        * llint/LowLevelInterpreter64.asm:
+          Changed arity fixup to no longer skip passed register slot 0 as this
+          is now part of the CallFrame header.  Updated op_enter processing for
+          the change in local registers.
+
+        * runtime/JSGlobalObject.h:
+          Removed the now unneeded extra slot in the global callframe
+
+2013-10-29  Julien Brianceau  <jbriance@cisco.com>
+
+        [arm] Fix lots of crashes because of 4th argument register trampling.
+        https://bugs.webkit.org/show_bug.cgi?id=123421
+
+        Reviewed by Michael Saboff.
+
+        r3 register is the 4th argument register for ARM and also a scratch
+        register in the baseline JIT for this architecture. We can use r6
+        instead, as this used to be the timeoutCheckRegister and it is no
+        longer used since r148119.
+
+        * assembler/ARMAssembler.h: Temp register is now r6 instead of r3 for ARM.
+        * assembler/MacroAssemblerARMv7.h: Temp register is now r6 instead of r3 for ARMv7.
+        * jit/GPRInfo.h: Add r3 properly in GPRInfo for ARM.
+        (JSC::GPRInfo::toRegister):
+        (JSC::GPRInfo::toIndex):
+        * jit/JITStubsARM.h:
+        (JSC::ctiTrampoline): Remove obsolete timeoutCheckRegister init.
+        * jit/JITStubsARMv7.h:
+        (JSC::ctiTrampoline): Remove obsolete timeoutCheckRegister init.
+        * jit/JSInterfaceJIT.h: Remove useless stuff.
+        * yarr/YarrJIT.cpp: Use r3 and not the new scratch register r6.
+        (JSC::Yarr::YarrGenerator::generateEnter): r8 register doesn't need to be saved.
+        (JSC::Yarr::YarrGenerator::generateReturn):
+
+2013-10-29  Julien Brianceau  <jbriance@cisco.com>
+
+        Fix CPU(ARM_TRADITIONAL) build after r157690.
+        https://bugs.webkit.org/show_bug.cgi?id=123247
+
+        Reviewed by Michael Saboff.
+
+        Since r157690, the executableCopy function has been removed from AssemblerBuffer.h
+        and the copy of executable code occurs in the linkCode function (in LinkBuffer.cpp).
+        As the constant pool for jumps is updated in the executableCopy function of ARM_TRADITIONAL,
+        this part of code still needs to be called and absolute jumps must be corrected to anticipate
+        the copy of the executable code through memcpy.
+
+        * assembler/ARMAssembler.cpp:
+        (JSC::ARMAssembler::prepareExecutableCopy): Rename executableCopy to prepareExecutableCopy
+        and correct absolute jump values using the delta between the source and destination buffers.
+        * assembler/ARMAssembler.h:
+        * assembler/LinkBuffer.cpp:
+        (JSC::LinkBuffer::linkCode): Call prepareExecutableCopy just before the memcpy.
+
+2013-10-28  Filip Pizlo  <fpizlo@apple.com>
+
+        OSRExit::m_watchpointIndex should be in OSRExitCompilationInfo
+        https://bugs.webkit.org/show_bug.cgi?id=123423
+
+        Reviewed by Mark Hahnenberg.
+        
+        Also enable ExitKind to tell you if it's a watchpoint.
+
+        * bytecode/ExitKind.cpp:
+        (JSC::exitKindToString):
+        * bytecode/ExitKind.h:
+        (JSC::isWatchpoint):
+        * dfg/DFGByteCodeParser.cpp:
+        (JSC::DFG::ByteCodeParser::setLocal):
+        (JSC::DFG::ByteCodeParser::setArgument):
+        (JSC::DFG::ByteCodeParser::handleCall):
+        (JSC::DFG::ByteCodeParser::handleGetById):
+        (JSC::DFG::ByteCodeParser::parseBlock):
+        * dfg/DFGJITCompiler.cpp:
+        (JSC::DFG::JITCompiler::linkOSRExits):
+        (JSC::DFG::JITCompiler::link):
+        * dfg/DFGJITCompiler.h:
+        (JSC::DFG::JITCompiler::appendExitInfo):
+        * dfg/DFGOSRExit.cpp:
+        (JSC::DFG::OSRExit::OSRExit):
+        * dfg/DFGOSRExit.h:
+        * dfg/DFGOSRExitCompilationInfo.h:
+        (JSC::DFG::OSRExitCompilationInfo::OSRExitCompilationInfo):
+        * dfg/DFGOSRExitCompiler.cpp:
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::speculationWatchpoint):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2013-10-28  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        Parsing support for -webkit-text-decoration-skip: ink
+        https://bugs.webkit.org/show_bug.cgi?id=123358
+
+        Reviewed by Dean Jackson.
+
+        Adding ENABLE(CSS3_TEXT_DECORATION)
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-10-24  Filip Pizlo  <fpizlo@apple.com>
+
+        Get rid of InlineStart so that I don't have to implement it in FTL
+        https://bugs.webkit.org/show_bug.cgi?id=123302
+
+        Reviewed by Geoffrey Garen.
+        
+        InlineStart was a special instruction that we would insert at the top of inlined code,
+        so that the backend could capture the OSR state of arguments to an inlined call. It used
+        to be that only the backend had this information, so this instruction was sort of an ugly
+        callback from the backend for filling in some data structures.
+        
+        But in the time since when that code was written (two years ago?), we rationalized how
+        variables work. It's now the case that variables that the runtime must know about are
+        treated specially in IR (they are "flushed") and we know how we will represent them even
+        before we get to the backend. The last place that makes changes to their representation
+        is the StackLayoutPhase.
+        
+        So, this patch gets rid of InlineStart, but keeps around the special meta-data that the
+        instruction had. Instead of handling the bookkeeping in the backend, we handle it in
+        StackLayoutPhase. This means that the DFG and FTL can share code for handling this
+        bookkeeping. This also means that now the FTL can compile code blocks that had inlining.
+        
+        Of course, giving the FTL the ability to handle code blocks that had inlining means that
+        we're going to have new bugs. Sure enough, the FTL's linker didn't handle inline call
+        frames. This patch also fixes that.
+
+        * dfg/DFGAbstractInterpreterInlines.h:
+        (JSC::DFG::::executeEffects):
+        * dfg/DFGByteCodeParser.cpp:
+        (JSC::DFG::ByteCodeParser::handleInlining):
+        (JSC::DFG::ByteCodeParser::InlineStackEntry::InlineStackEntry):
+        * dfg/DFGClobberize.h:
+        (JSC::DFG::clobberize):
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        * dfg/DFGGraph.h:
+        * dfg/DFGNode.h:
+        * dfg/DFGNodeType.h:
+        * dfg/DFGPredictionPropagationPhase.cpp:
+        (JSC::DFG::PredictionPropagationPhase::propagate):
+        * dfg/DFGSafeToExecute.h:
+        (JSC::DFG::safeToExecute):
+        * dfg/DFGSpeculativeJIT.cpp:
+        * dfg/DFGSpeculativeJIT.h:
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGStackLayoutPhase.cpp:
+        (JSC::DFG::StackLayoutPhase::run):
+        * ftl/FTLLink.cpp:
+        (JSC::FTL::link):
+
+2013-10-24  Filip Pizlo  <fpizlo@apple.com>
+
+        The GetById->GetByOffset AI-based optimization should actually do things
+        https://bugs.webkit.org/show_bug.cgi?id=123299
+
+        Reviewed by Oliver Hunt.
+        
+        20% speed-up on Octane/gbemu.
+
+        * bytecode/GetByIdStatus.cpp:
+        (JSC::GetByIdStatus::computeFor): Actually finish filling in the Status by setting the state. Previously it would remain set to NoInformation, meaning that this whole method was a no-op.
+
+2013-10-28  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix make distcheck.
+
+        * GNUmakefile.list.am: Add missing files to compilation.
+
+2013-10-25  Oliver Hunt  <oliver@apple.com>
+
+        Refactor parser rollback logic
+        https://bugs.webkit.org/show_bug.cgi?id=123372
+
+        Reviewed by Brady Eidson.
+
+        Add a sane abstraction for rollbacks in the parser.
+
+        * parser/Parser.cpp:
+        (JSC::::parseSourceElements):
+        (JSC::::parseObjectLiteral):
+        * parser/Parser.h:
+        (JSC::Parser::createSavePoint):
+        (JSC::Parser::restoreSavePoint):
+
+2013-10-25  peavo@outlook.com  <peavo@outlook.com>
+
+        [Win] Javascript crash with DFG JIT enabled.
+        https://bugs.webkit.org/show_bug.cgi?id=121001
+
+        Reviewed by Geoffrey Garen.
+
+        On windows, using register GPRInfo::regT0 as parameter to e.g. JIT::storeDouble(..., GPRInfo::regT0)),
+        results in a call to JIT::storeDouble(FPRegisterID src, const void* address),
+        where the address parameter gets the value of GPRInfo::regT0, which is 0 (eax on Windows).
+        This causes the register to be written to address 0, hence the crash.
+  
+        * assembler/MacroAssemblerX86.h:
+        (JSC::MacroAssemblerX86::storeDouble): Assert if we try to generate code which writes to a null pointer.
+        * dfg/DFGOSRExitCompiler32_64.cpp:
+        (JSC::DFG::OSRExitCompiler::compileExit): Use address in regT0 as parameter.
+        * dfg/DFGThunks.cpp:
+        (JSC::DFG::osrExitGenerationThunkGenerator): Ditto.
+
+2013-10-25  Oliver Hunt  <oliver@apple.com>
+
+        Fix a number of problems with destructuring of arguments
+        https://bugs.webkit.org/show_bug.cgi?id=123357
+
+        Reviewed by Filip Pizlo.
+
+        This renames the destructuring node's emitBytecode to bindValue
+        in order to remove the existing confusion over what was happening.
+
+        We then fix an incorrect fall through in the destructuring arguments
+        logic, and fix the then exposed bug where we placed the index rather
+        than value into the bound property.
+
+        * bytecompiler/BytecodeGenerator.cpp:
+        (JSC::BytecodeGenerator::BytecodeGenerator):
+        * bytecompiler/NodesCodegen.cpp:
+        (JSC::ForInNode::emitBytecode):
+        (JSC::ForOfNode::emitBytecode):
+        (JSC::DeconstructingAssignmentNode::emitBytecode):
+        (JSC::ArrayPatternNode::bindValue):
+        (JSC::ArrayPatternNode::emitDirectBinding):
+        (JSC::ObjectPatternNode::bindValue):
+        (JSC::BindingNode::bindValue):
+        * parser/Nodes.h:
+
+2013-10-25  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Upstream ENABLE(REMOTE_INSPECTOR) and enable on iOS and Mac
+        https://bugs.webkit.org/show_bug.cgi?id=123111
+
+        Reviewed by Timothy Hatcher.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-10-25  Oliver Hunt  <oliver@apple.com>
+
+        Fix MSVC again
+
+        * parser/Parser.cpp:
+
+2013-10-25  Oliver Hunt  <oliver@apple.com>
+
+        Fix MSVC
+
+        * parser/Parser.cpp:
+
+2013-10-25  Oliver Hunt  <oliver@apple.com>
+
+        Improve JSC Parser error messages
+        https://bugs.webkit.org/show_bug.cgi?id=123341
+
+        Reviewed by Andreas Kling.
+
+        This patch moves away from the current cludgy mechanisms used to produce
+        error messages and moves to something closer to case by case errors.
+
+        This results in a large change size as previously we may just have
+        'failIfFalse(foo)', but now the logic becomes either
+        'failIfFalseWithMessage(foo, "Cannot do blah with ", foo->thing())'
+        Or alternatively
+
+        if (!foo)
+            check for 'interesting' errors, before falling back to generic error
+
+        This means that this patch is large, but produces no semantic changes, and
+        only hits slow (e.g. error) paths.
+
+        * parser/Parser.cpp:
+        (JSC::::Parser):
+        (JSC::::parseSourceElements):
+        (JSC::::parseVarDeclaration):
+        (JSC::::parseConstDeclaration):
+        (JSC::::parseDoWhileStatement):
+        (JSC::::parseWhileStatement):
+        (JSC::::parseVarDeclarationList):
+        (JSC::::createBindingPattern):
+        (JSC::::parseDeconstructionPattern):
+        (JSC::::parseConstDeclarationList):
+        (JSC::::parseForStatement):
+        (JSC::::parseBreakStatement):
+        (JSC::::parseContinueStatement):
+        (JSC::::parseReturnStatement):
+        (JSC::::parseThrowStatement):
+        (JSC::::parseWithStatement):
+        (JSC::::parseSwitchStatement):
+        (JSC::::parseSwitchClauses):
+        (JSC::::parseSwitchDefaultClause):
+        (JSC::::parseTryStatement):
+        (JSC::::parseDebuggerStatement):
+        (JSC::::parseBlockStatement):
+        (JSC::::parseStatement):
+        (JSC::::parseFormalParameters):
+        (JSC::::parseFunctionBody):
+        (JSC::stringForFunctionMode):
+        (JSC::::parseFunctionInfo):
+        (JSC::::parseFunctionDeclaration):
+        (JSC::::parseExpressionOrLabelStatement):
+        (JSC::::parseExpressionStatement):
+        (JSC::::parseIfStatement):
+        (JSC::::parseExpression):
+        (JSC::::parseAssignmentExpression):
+        (JSC::::parseConditionalExpression):
+        (JSC::::parseBinaryExpression):
+        (JSC::::parseProperty):
+        (JSC::::parseObjectLiteral):
+        (JSC::::parseStrictObjectLiteral):
+        (JSC::::parseArrayLiteral):
+        (JSC::::parsePrimaryExpression):
+        (JSC::::parseArguments):
+        (JSC::::parseMemberExpression):
+        (JSC::operatorString):
+        (JSC::::parseUnaryExpression):
+        (JSC::::printUnexpectedTokenText):
+        * parser/Parser.h:
+        (JSC::Scope::hasDeclaredVariable):
+        (JSC::Scope::hasDeclaredParameter):
+        (JSC::Parser::hasDeclaredVariable):
+        (JSC::Parser::hasDeclaredParameter):
+        (JSC::Parser::setErrorMessage):
+
+2013-10-24  Mark Rowe  <mrowe@apple.com>
+
+        Remove references to OS X 10.7 from Xcode configuration settings.
+
+        Now that we're not building for OS X 10.7 they're no longer needed.
+
+        Reviewed by Anders Carlsson.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/FeatureDefines.xcconfig:
+        * Configurations/Version.xcconfig:
+
+2013-10-24  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/15312643> Prepare for the mysterious future.
+
+        Reviewed by David Kilzer.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/FeatureDefines.xcconfig:
+        * Configurations/Version.xcconfig:
+
 2013-10-24  Mark Lam  <mark.lam@apple.com>
 
         Better way to fix part of broken C Loop LLINT build.

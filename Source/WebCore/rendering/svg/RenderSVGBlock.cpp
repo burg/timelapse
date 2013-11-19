@@ -31,8 +31,8 @@
 
 namespace WebCore {
 
-RenderSVGBlock::RenderSVGBlock(SVGGraphicsElement& element)
-    : RenderBlockFlow(element)
+RenderSVGBlock::RenderSVGBlock(SVGGraphicsElement& element, PassRef<RenderStyle> style)
+    : RenderBlockFlow(element, std::move(style))
 {
 }
 
@@ -40,7 +40,7 @@ LayoutRect RenderSVGBlock::visualOverflowRect() const
 {
     LayoutRect borderRect = borderBoxRect();
 
-    if (const ShadowData* textShadow = style()->textShadow())
+    if (const ShadowData* textShadow = style().textShadow())
         textShadow->adjustRectForShadow(borderRect);
 
     return borderRect;
@@ -90,7 +90,7 @@ void RenderSVGBlock::absoluteRects(Vector<IntRect>&, const LayoutPoint&) const
 
 void RenderSVGBlock::willBeDestroyed()
 {
-    SVGResourcesCache::clientDestroyed(this);
+    SVGResourcesCache::clientDestroyed(*this);
     RenderBlockFlow::willBeDestroyed();
 }
 
@@ -99,7 +99,7 @@ void RenderSVGBlock::styleDidChange(StyleDifference diff, const RenderStyle* old
     if (diff == StyleDifferenceLayout)
         setNeedsBoundariesUpdate();
     RenderBlockFlow::styleDidChange(diff, oldStyle);
-    SVGResourcesCache::clientStyleChanged(this, diff, style());
+    SVGResourcesCache::clientStyleChanged(*this, diff, style());
 }
 
 }

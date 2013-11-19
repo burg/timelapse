@@ -29,6 +29,10 @@
 #import "DrawingAreaProxyMessages.h"
 #import "RemoteLayerTreeContext.h"
 #import "WebPage.h"
+#import <WebCore/Frame.h>
+#import <WebCore/FrameView.h>
+#import <WebCore/MainFrame.h>
+#import <WebCore/Settings.h>
 
 using namespace WebCore;
 
@@ -38,6 +42,7 @@ RemoteLayerTreeDrawingArea::RemoteLayerTreeDrawingArea(WebPage* webPage, const W
     : DrawingArea(DrawingAreaTypeRemoteLayerTree, webPage)
     , m_remoteLayerTreeContext(std::make_unique<RemoteLayerTreeContext>(webPage))
 {
+    webPage->corePage()->settings().setForceCompositingMode(true);
 }
 
 RemoteLayerTreeDrawingArea::~RemoteLayerTreeDrawingArea()
@@ -77,6 +82,21 @@ void RemoteLayerTreeDrawingArea::updateGeometry(const IntSize& viewSize, const I
     scheduleCompositingLayerFlush();
 
     m_webPage->send(Messages::DrawingAreaProxy::DidUpdateGeometry());
+}
+
+bool RemoteLayerTreeDrawingArea::shouldUseTiledBackingForFrameView(const FrameView* frameView)
+{
+    return frameView && frameView->frame().isMainFrame();
+}
+
+void RemoteLayerTreeDrawingArea::updatePreferences(const WebPreferencesStore&)
+{
+    Settings& settings = m_webPage->corePage()->settings();
+
+    // Fixed position elements need to be composited and create stacking contexts
+    // in order to be scrolled by the ScrollingCoordinator.
+    settings.setAcceleratedCompositingForFixedPositionEnabled(true);
+    settings.setFixedPositionCreatesStackingContext(true);
 }
 
 } // namespace WebKit

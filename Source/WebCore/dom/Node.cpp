@@ -27,7 +27,6 @@
 
 #include "AXObjectCache.h"
 #include "Attr.h"
-#include "Attribute.h"
 #include "BeforeLoadEvent.h"
 #include "ChildListMutationScope.h"
 #include "Chrome.h"
@@ -38,79 +37,47 @@
 #include "CSSSelectorList.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
-#include "ChildNodeList.h"
-#include "ClassNodeList.h"
 #include "ContainerNodeAlgorithms.h"
 #include "ContextMenuController.h"
 #include "DOMImplementation.h"
-#include "DOMSettableTokenList.h"
-#include "Document.h"
-#include "DocumentFragment.h"
 #include "DocumentType.h"
-#include "Element.h"
 #include "ElementIterator.h"
 #include "ElementRareData.h"
-#include "Event.h"
 #include "EventDispatcher.h"
 #include "EventException.h"
 #include "EventHandler.h"
-#include "EventListener.h"
-#include "EventNames.h"
-#include "ExceptionCode.h"
-#include "ExceptionCodePlaceholder.h"
 #include "FlowThreadController.h"
-#include "Frame.h"
 #include "FrameView.h"
+#include "HTMLCollection.h"
 #include "HTMLElement.h"
-#include "HTMLFrameOwnerElement.h"
 #include "HTMLImageElement.h"
-#include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "InsertionPoint.h"
-#include "InspectorCounters.h"
 #include "KeyboardEvent.h"
-#include "LabelsNodeList.h"
-#include "LiveNodeList.h"
 #include "Logging.h"
-#include "MouseEvent.h"
 #include "MutationEvent.h"
-#include "NameNodeList.h"
-#include "NamedNodeMap.h"
-#include "NodeRareData.h"
-#include "NodeTraversal.h"
-#include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
 #include "ProcessingInstruction.h"
 #include "ProgressEvent.h"
-#include "RadioNodeList.h"
-#include "RegisteredEventListener.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
 #include "ScopedEventQueue.h"
 #include "Settings.h"
-#include "ShadowRoot.h"
 #include "StorageEvent.h"
 #include "StyleResolver.h"
-#include "TagNodeList.h"
 #include "TemplateContentDocumentFragment.h"
-#include "Text.h"
 #include "TextEvent.h"
 #include "TouchEvent.h"
 #include "TreeScopeAdopter.h"
-#include "UIEvent.h"
-#include "UIEventWithKeyState.h"
 #include "WheelEvent.h"
 #include "XMLNames.h"
 #include "htmlediting.h"
 #include <runtime/Operations.h>
 #include <runtime/VM.h>
-#include <wtf/HashSet.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCountedLeakCounter.h>
-#include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -426,7 +393,9 @@ void Node::setNodeValue(const String& /*nodeValue*/, ExceptionCode& ec)
 
 PassRefPtr<NodeList> Node::childNodes()
 {
-    return ensureRareData().ensureNodeLists().ensureChildNodeList(*this);
+    if (isContainerNode())
+        return ensureRareData().ensureNodeLists().ensureChildNodeList(toContainerNode(*this));
+    return ensureRareData().ensureNodeLists().ensureEmptyChildNodeList(*this);
 }
 
 Node *Node::lastDescendant() const
@@ -602,12 +571,12 @@ bool Node::rendererIsEditable(EditableLevel editableLevel, UserSelectAllTreatmen
 #if ENABLE(USERSELECT_ALL)
             // Elements with user-select: all style are considered atomic
             // therefore non editable.
-            if (treatment == UserSelectAllIsAlwaysNonEditable && node->renderer()->style()->userSelect() == SELECT_ALL)
+            if (treatment == UserSelectAllIsAlwaysNonEditable && node->renderer()->style().userSelect() == SELECT_ALL)
                 return false;
 #else
             UNUSED_PARAM(treatment);
 #endif
-            switch (node->renderer()->style()->userModify()) {
+            switch (node->renderer()->style().userModify()) {
             case READ_ONLY:
                 return false;
             case READ_WRITE:
@@ -721,7 +690,7 @@ unsigned Node::nodeIndex() const
 template<unsigned type>
 bool shouldInvalidateNodeListCachesForAttr(const unsigned nodeListCounts[], const QualifiedName& attrName)
 {
-    if (nodeListCounts[type] && LiveNodeListBase::shouldInvalidateTypeOnAttributeChange(static_cast<NodeListInvalidationType>(type), attrName))
+    if (nodeListCounts[type] && shouldInvalidateTypeOnAttributeChange(static_cast<NodeListInvalidationType>(type), attrName))
         return true;
     return shouldInvalidateNodeListCachesForAttr<type + 1>(nodeListCounts, attrName);
 }
@@ -732,27 +701,28 @@ bool shouldInvalidateNodeListCachesForAttr<numNodeListInvalidationTypes>(const u
     return false;
 }
 
-bool Document::shouldInvalidateNodeListCaches(const QualifiedName* attrName) const
+bool Document::shouldInvalidateNodeListAndCollectionCaches(const QualifiedName* attrName) const
 {
     if (attrName)
-        return shouldInvalidateNodeListCachesForAttr<DoNotInvalidateOnAttributeChanges + 1>(m_nodeListCounts, *attrName);
+        return shouldInvalidateNodeListCachesForAttr<DoNotInvalidateOnAttributeChanges + 1>(m_nodeListAndCollectionCounts, *attrName);
 
     for (int type = 0; type < numNodeListInvalidationTypes; type++) {
-        if (m_nodeListCounts[type])
+        if (m_nodeListAndCollectionCounts[type])
             return true;
     }
 
     return false;
 }
 
-void Document::invalidateNodeListCaches(const QualifiedName* attrName)
+void Document::invalidateNodeListAndCollectionCaches(const QualifiedName* attrName)
 {
-    HashSet<LiveNodeListBase*>::iterator end = m_listsInvalidatedAtDocument.end();
-    for (HashSet<LiveNodeListBase*>::iterator it = m_listsInvalidatedAtDocument.begin(); it != end; ++it)
+    for (HashSet<LiveNodeList*>::iterator it = m_listsInvalidatedAtDocument.begin(), end = m_listsInvalidatedAtDocument.end(); it != end; ++it)
+        (*it)->invalidateCache(attrName);
+    for (HashSet<HTMLCollection*>::iterator it = m_collectionsInvalidatedAtDocument.begin(), end = m_collectionsInvalidatedAtDocument.end(); it != end; ++it)
         (*it)->invalidateCache(attrName);
 }
 
-void Node::invalidateNodeListCachesInAncestors(const QualifiedName* attrName, Element* attributeOwnerElement)
+void Node::invalidateNodeListAndCollectionCachesInAncestors(const QualifiedName* attrName, Element* attributeOwnerElement)
 {
     if (hasRareData() && (!attrName || isAttributeNode())) {
         if (NodeListsNodeData* lists = rareData()->nodeLists())
@@ -763,10 +733,10 @@ void Node::invalidateNodeListCachesInAncestors(const QualifiedName* attrName, El
     if (attrName && !attributeOwnerElement)
         return;
 
-    if (!document().shouldInvalidateNodeListCaches(attrName))
+    if (!document().shouldInvalidateNodeListAndCollectionCaches(attrName))
         return;
 
-    document().invalidateNodeListCaches(attrName);
+    document().invalidateNodeListAndCollectionCaches(attrName);
 
     for (Node* node = this; node; node = node->parentNode()) {
         if (!node->hasRareData())
@@ -933,10 +903,10 @@ bool Node::canStartSelection() const
         return true;
 
     if (renderer()) {
-        RenderStyle* style = renderer()->style();
+        const RenderStyle& style = renderer()->style();
         // We allow selections to begin within an element that has -webkit-user-select: none set,
         // but if the element is draggable then dragging should take priority over selection.
-        if (style->userDrag() == DRAG_ELEMENT && style->userSelect() == SELECT_NONE)
+        if (style.userDrag() == DRAG_ELEMENT && style.userSelect() == SELECT_NONE)
             return false;
     }
     return parentOrShadowHostNode() ? parentOrShadowHostNode()->canStartSelection() : true;
@@ -1052,43 +1022,6 @@ Element* Node::rootEditableElement() const
 }
 
 // FIXME: End of obviously misplaced HTML editing functions.  Try to move these out of Node.
-
-PassRefPtr<NodeList> Node::getElementsByTagName(const AtomicString& localName)
-{
-    if (localName.isNull())
-        return 0;
-
-    if (document().isHTMLDocument())
-        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLTagNodeList>(*this, HTMLTagNodeListType, localName);
-    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<TagNodeList>(*this, TagNodeListType, localName);
-}
-
-PassRefPtr<NodeList> Node::getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName)
-{
-    if (localName.isNull())
-        return 0;
-
-    if (namespaceURI == starAtom)
-        return getElementsByTagName(localName);
-
-    return ensureRareData().ensureNodeLists().addCacheWithQualifiedName(*this, namespaceURI.isEmpty() ? nullAtom : namespaceURI, localName);
-}
-
-PassRefPtr<NodeList> Node::getElementsByName(const String& elementName)
-{
-    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<NameNodeList>(*this, NameNodeListType, elementName);
-}
-
-PassRefPtr<NodeList> Node::getElementsByClassName(const String& classNames)
-{
-    return ensureRareData().ensureNodeLists().addCacheWithName<ClassNodeList>(*this, ClassNodeListType, classNames);
-}
-
-PassRefPtr<RadioNodeList> Node::radioNodeList(const AtomicString& name)
-{
-    ASSERT(hasTagName(formTag) || hasTagName(fieldsetTag));
-    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<RadioNodeList>(*this, RadioNodeListType, name);
-}
 
 Document* Node::ownerDocument() const
 {
@@ -1741,19 +1674,19 @@ void Node::showTreeForThisAcrossFrame() const
 
 void NodeListsNodeData::invalidateCaches(const QualifiedName* attrName)
 {
-    NodeListAtomicNameCacheMap::const_iterator atomicNameCacheEnd = m_atomicNameCaches.end();
-    for (NodeListAtomicNameCacheMap::const_iterator it = m_atomicNameCaches.begin(); it != atomicNameCacheEnd; ++it)
+    for (auto it = m_atomicNameCaches.begin(), end = m_atomicNameCaches.end(); it != end; ++it)
         it->value->invalidateCache(attrName);
 
-    NodeListNameCacheMap::const_iterator nameCacheEnd = m_nameCaches.end();
-    for (NodeListNameCacheMap::const_iterator it = m_nameCaches.begin(); it != nameCacheEnd; ++it)
+    for (auto it = m_nameCaches.begin(), end = m_nameCaches.end(); it != end; ++it)
+        it->value->invalidateCache(attrName);
+
+    for (auto it = m_cachedCollections.begin(), end = m_cachedCollections.end(); it != end; ++it)
         it->value->invalidateCache(attrName);
 
     if (attrName)
         return;
 
-    TagNodeListCacheNS::iterator tagCacheEnd = m_tagNodeListCacheNS.end();
-    for (TagNodeListCacheNS::iterator it = m_tagNodeListCacheNS.begin(); it != tagCacheEnd; ++it)
+    for (auto it = m_tagNodeListCacheNS.begin(), end = m_tagNodeListCacheNS.end(); it != end; ++it)
         it->value->invalidateCache();
 }
 

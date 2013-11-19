@@ -201,7 +201,7 @@ public:
     bool canHaveSelection() const;
 
     virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
+    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual void willAttachRenderers() OVERRIDE;
     virtual void didAttachRenderers() OVERRIDE;
     virtual void didDetachRenderers() OVERRIDE;
@@ -361,7 +361,7 @@ private:
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet&) OVERRIDE;
     virtual void finishParsingChildren() OVERRIDE;
 
     virtual void copyNonAttributePropertiesFromElement(const Element&) OVERRIDE;
@@ -442,7 +442,7 @@ private:
 #if ENABLE(TOUCH_EVENTS)
     bool m_hasTouchEventHandler : 1;
 #endif
-    OwnPtr<InputType> m_inputType;
+    std::unique_ptr<InputType> m_inputType;
     // The ImageLoader must be owned by this element because the loader code assumes
     // that it lives as long as its owning element lives. If we move the loader into
     // the ImageInput object we may delete the loader while this element lives on.

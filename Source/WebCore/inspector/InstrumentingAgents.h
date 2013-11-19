@@ -51,7 +51,6 @@ class InspectorDebuggerAgent;
 class InspectorHeapProfilerAgent;
 class InspectorLayerTreeAgent;
 class InspectorPageAgent;
-class InspectorProbeAgent;
 class InspectorProfilerAgent;
 class InspectorResourceAgent;
 class InspectorRecordingsAgent;
@@ -125,9 +124,6 @@ public:
     InspectorDebuggerAgent* inspectorDebuggerAgent() const { return m_inspectorDebuggerAgent; }
     void setInspectorDebuggerAgent(InspectorDebuggerAgent* agent) { m_inspectorDebuggerAgent = agent; }
 
-    InspectorProbeAgent* inspectorProbeAgent() const { return m_inspectorProbeAgent; }
-    void setInspectorProbeAgent(InspectorProbeAgent* agent) { m_inspectorProbeAgent = agent; }
-
     PageDebuggerAgent* pageDebuggerAgent() const { return m_pageDebuggerAgent; }
     void setPageDebuggerAgent(PageDebuggerAgent* agent) { m_pageDebuggerAgent = agent; }
 
@@ -180,7 +176,6 @@ private:
     InspectorApplicationCacheAgent* m_inspectorApplicationCacheAgent;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     InspectorDebuggerAgent* m_inspectorDebuggerAgent;
-    InspectorProbeAgent* m_inspectorProbeAgent;
     PageDebuggerAgent* m_pageDebuggerAgent;
     InspectorDOMDebuggerAgent* m_inspectorDOMDebuggerAgent;
     InspectorProfilerAgent* m_inspectorProfilerAgent;

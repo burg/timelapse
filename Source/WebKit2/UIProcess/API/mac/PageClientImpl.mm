@@ -140,28 +140,22 @@ std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy()
 
 void PageClientImpl::setViewNeedsDisplay(const WebCore::IntRect& rect)
 {
-    [m_wkView setNeedsDisplayInRect:rect];
+    ASSERT_NOT_REACHED();
 }
 
 void PageClientImpl::displayView()
 {
-    [m_wkView displayIfNeeded];
+    ASSERT_NOT_REACHED();
 }
 
 bool PageClientImpl::canScrollView()
 {
-    // -scrollRect:by: does nothing in layer-backed views <rdar://problem/12961719>.
-    return ![m_wkView layer];
+    return false;
 }
 
 void PageClientImpl::scrollView(const IntRect& scrollRect, const IntSize& scrollOffset)
 {
-    NSRect clippedScrollRect = NSIntersectionRect(scrollRect, NSOffsetRect(scrollRect, -scrollOffset.width(), -scrollOffset.height()));
-
-    [m_wkView _cacheWindowBottomCornerRect];
-
-    [m_wkView translateRectsNeedingDisplayInRect:clippedScrollRect by:scrollOffset];
-    [m_wkView scrollRect:clippedScrollRect by:scrollOffset];
+    ASSERT_NOT_REACHED();
 }
 
 IntSize PageClientImpl::viewSize()
@@ -445,22 +439,6 @@ void PageClientImpl::pluginFocusOrWindowFocusChanged(uint64_t pluginComplexTextI
 void PageClientImpl::setPluginComplexTextInputState(uint64_t pluginComplexTextInputIdentifier, PluginComplexTextInputState pluginComplexTextInputState)
 {
     [m_wkView _setPluginComplexTextInputState:pluginComplexTextInputState pluginComplexTextInputIdentifier:pluginComplexTextInputIdentifier];
-}
-
-CGContextRef PageClientImpl::containingWindowGraphicsContext()
-{
-    NSWindow *window = [m_wkView window];
-
-    // Don't try to get the graphics context if the NSWindow doesn't have a window device.
-    if ([window windowNumber] <= 0)
-        return 0;
-
-    return static_cast<CGContextRef>([[window graphicsContext] graphicsPort]);
-}
-
-void PageClientImpl::flashBackingStoreUpdates(const Vector<IntRect>&)
-{
-    notImplemented();
 }
 
 void PageClientImpl::didPerformDictionaryLookup(const AttributedString& text, const DictionaryPopupInfo& dictionaryPopupInfo)

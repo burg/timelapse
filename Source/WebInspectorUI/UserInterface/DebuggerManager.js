@@ -30,9 +30,8 @@ WebInspector.DebuggerManager = function()
     DebuggerAgent.enable();
 
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisplayLocationDidChange, this._breakpointDisplayLocationDidChange, this);
-    WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisabledStateDidChange, this._breakpointDisabledStateDidChange, this);
+    WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.ModeDidChange, this._breakpointModeDidChange, this);
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.ConditionDidChange, this._breakpointEditablePropertyDidChange, this);
-    WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.AutoContinueDidChange, this._breakpointEditablePropertyDidChange, this);
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.ActionsDidChange, this._breakpointEditablePropertyDidChange, this);
 
     window.addEventListener("pagehide", this._inspectorClosing.bind(this));
@@ -62,11 +61,17 @@ WebInspector.DebuggerManager = function()
 
     this._updateBreakOnExceptionsState();
 
-    var savedBreakpoints = this._breakpointsSetting.value;
-    for (var i = 0; i < savedBreakpoints.length; ++i) {
-        var breakpoint = new WebInspector.Breakpoint(savedBreakpoints[i]);
-        this.addBreakpoint(breakpoint, true);
+    function restoreBreakpoints() {
+        var savedBreakpoints = this._breakpointsSetting.value;
+        for (var i = 0; i < savedBreakpoints.length; ++i) {
+            var breakpoint = new WebInspector.Breakpoint(savedBreakpoints[i]);
+            this.addBreakpoint(breakpoint);
+        }
     }
+
+    // Ensure that all managers learn about restored breakpoints,
+    // regardless of their initialization order.
+    setTimeout(restoreBreakpoints.bind(this), 0);
 };
 
 WebInspector.DebuggerManager.Event = {
@@ -279,6 +284,10 @@ WebInspector.DebuggerManager.prototype = {
             }
         }
 
+        // First disable it, so removing probe actions doesn't re-add the breakpoint.
+        breakpoint.mode = WebInspector.Breakpoint.Mode.Disabled;
+        breakpoint.clearActions();
+
         this.dispatchEventToListeners(WebInspector.DebuggerManager.Event.BreakpointRemoved, {breakpoint: breakpoint});
     },
 
@@ -480,6 +489,8 @@ WebInspector.DebuggerManager.prototype = {
             return DebuggerAgent.BreakpointActionType.Evaluate;
         case WebInspector.BreakpointAction.Type.Sound:
             return DebuggerAgent.BreakpointActionType.Sound;
+        case WebInspector.BreakpointAction.Type.Probe:
+            return DebuggerAgent.BreakpointActionType.Probe;
         default:
             console.assert(false);
             return DebuggerAgent.BreakpointActionType.Log;
@@ -590,7 +601,7 @@ WebInspector.DebuggerManager.prototype = {
         }
     },
 
-    _breakpointDisabledStateDidChange: function(event)
+    _breakpointModeDidChange: function(event)
     {
         var breakpoint = event.target;
 
@@ -606,29 +617,29 @@ WebInspector.DebuggerManager.prototype = {
             return;
         }
 
-        if (breakpoint.disabled)
-            this._removeBreakpoint(breakpoint);
-        else
-            this._setBreakpoint(breakpoint);
+        // Cause the breakpoint to be removed and possibly re-added.
+        this._breakpointEditablePropertyDidChange(event);
     },
 
     _breakpointEditablePropertyDidChange: function(event)
     {
         var breakpoint = event.target;
-        if (breakpoint.disabled)
-            return;
 
         console.assert(this.isBreakpointEditable(breakpoint));
         if (!this.isBreakpointEditable(breakpoint))
             return;
 
-        // Remove the breakpoint with its old id.
-        this._removeBreakpoint(breakpoint, breakpointRemoved.bind(this));
+        // If the breakpoint exists in the backend, remove it.
+        if (breakpoint.id)
+            this._removeBreakpoint(breakpoint, setNewBreakpoint.bind(this));
+        else
+            setNewBreakpoint.call(this);
 
-        function breakpointRemoved()
+        function setNewBreakpoint()
         {
             // Add the breakpoint with its new condition and get a new id.
-            this._setBreakpoint(breakpoint);
+            if (!breakpoint.disabled)
+                this._setBreakpoint(breakpoint);
         }
     },
 

@@ -60,7 +60,6 @@ class Frame;
 class InspectorObject;
 class InspectorController;
 class InspectorFrontend;
-class InspectorCompositeState;
 class InstrumentingAgents;
 class Node;
 class Page;
@@ -73,9 +72,9 @@ typedef String ErrorString;
     , public InspectorBackendDispatcher::ReplayCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorReplayAgent);
 public:
-    static PassOwnPtr<InspectorReplayAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page)
+    static PassOwnPtr<InspectorReplayAgent> create(InstrumentingAgents* instrumentingAgents, Page* page)
     {
-        return adoptPtr(new InspectorReplayAgent(instrumentingAgents, state, page));
+        return adoptPtr(new InspectorReplayAgent(instrumentingAgents, page));
     }
 
     ~InspectorReplayAgent();
@@ -126,7 +125,7 @@ public:
     void unloadRecording(ErrorString*, bool*);
 
 private:
-    InspectorReplayAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
+    InspectorReplayAgent(InstrumentingAgents*, Page*);
     PositionMark createMark();
     PositionMark reuseMark() const;
 

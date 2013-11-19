@@ -35,7 +35,7 @@ class RenderSVGInlineText;
 
 class RenderSVGText FINAL : public RenderSVGBlock {
 public:
-    explicit RenderSVGText(SVGTextElement&);
+    RenderSVGText(SVGTextElement&, PassRef<RenderStyle>);
     virtual ~RenderSVGText();
 
     SVGTextElement& textElement() const;
@@ -90,7 +90,7 @@ private:
 
     virtual const AffineTransform& localToParentTransform() const { return m_localTransform; }
     virtual AffineTransform localTransform() const { return m_localTransform; }
-    virtual RootInlineBox* createRootInlineBox();
+    virtual std::unique_ptr<RootInlineBox> createRootInlineBox() OVERRIDE;
 
     virtual RenderBlock* firstLineBlock() const;
     virtual void updateFirstLetter();

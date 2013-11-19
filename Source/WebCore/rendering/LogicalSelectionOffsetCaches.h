@@ -27,7 +27,7 @@ namespace WebCore {
 
 static inline bool isContainingBlockCandidateForAbsolutelyPositionedObject(RenderElement& object)
 {
-    return object.style()->position() != StaticPosition
+    return object.style().position() != StaticPosition
         || (object.hasTransform() && object.isRenderBlock())
 #if ENABLE(SVG)
         || object.isSVGForeignObject()
@@ -135,7 +135,11 @@ public:
 
     explicit LogicalSelectionOffsetCaches(RenderBlock& rootBlock)
     {
+#if ENABLE(TEXT_SELECTION)
+        // FIXME: We should either move this assertion to the caller (if applicable) or structure the code
+        // such that we can remove this assertion.
         ASSERT(rootBlock.isSelectionRoot());
+#endif
         auto parent = rootBlock.parent();
 
         // LogicalSelectionOffsetCaches should not be used on an orphaned tree.
@@ -159,7 +163,7 @@ public:
 
     const ContainingBlockInfo& containingBlockInfo(RenderBlock& block) const
     {
-        EPosition position = block.style()->position();
+        EPosition position = block.style().position();
         if (position == FixedPosition) {
             ASSERT(block.containingBlock() == m_containingBlockForFixedPosition.block());
             return m_containingBlockForFixedPosition;

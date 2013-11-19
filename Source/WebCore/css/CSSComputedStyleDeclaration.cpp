@@ -190,13 +190,16 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyTextAlign,
     CSSPropertyTextDecoration,
 #if ENABLE(CSS3_TEXT)
+    CSSPropertyWebkitTextAlignLast,
+    CSSPropertyWebkitTextJustify,
+#endif // CSS3_TEXT
+#if ENABLE(CSS3_TEXT_DECORATION)
     CSSPropertyWebkitTextDecorationLine,
     CSSPropertyWebkitTextDecorationStyle,
     CSSPropertyWebkitTextDecorationColor,
-    CSSPropertyWebkitTextAlignLast,
-    CSSPropertyWebkitTextJustify,
+    CSSPropertyWebkitTextDecorationSkip,
     CSSPropertyWebkitTextUnderlinePosition,
-#endif // CSS3_TEXT
+#endif // CSS3_TEXT_DECORATION
     CSSPropertyTextIndent,
     CSSPropertyTextRendering,
     CSSPropertyTextShadow,
@@ -736,12 +739,12 @@ static PassRefPtr<CSSValueList> getBorderRadiusShorthandValue(const RenderStyle*
 {
     RefPtr<CSSValueList> list = CSSValueList::createSlashSeparated();
     bool showHorizontalBottomLeft = style->borderTopRightRadius().width() != style->borderBottomLeftRadius().width();
-    bool showHorizontalBottomRight = style->borderBottomRightRadius().width() != style->borderTopLeftRadius().width();
-    bool showHorizontalTopRight = style->borderTopRightRadius().width() != style->borderTopLeftRadius().width();
+    bool showHorizontalBottomRight = showHorizontalBottomLeft || (style->borderBottomRightRadius().width() != style->borderTopLeftRadius().width());
+    bool showHorizontalTopRight = showHorizontalBottomRight || (style->borderTopRightRadius().width() != style->borderTopLeftRadius().width());
 
     bool showVerticalBottomLeft = style->borderTopRightRadius().height() != style->borderBottomLeftRadius().height();
-    bool showVerticalBottomRight = (style->borderBottomRightRadius().height() != style->borderTopLeftRadius().height()) || showVerticalBottomLeft;
-    bool showVerticalTopRight = (style->borderTopRightRadius().height() != style->borderTopLeftRadius().height()) || showVerticalBottomRight;
+    bool showVerticalBottomRight = showVerticalBottomLeft || (style->borderBottomRightRadius().height() != style->borderTopLeftRadius().height());
+    bool showVerticalTopRight = showVerticalBottomRight || (style->borderTopRightRadius().height() != style->borderTopLeftRadius().height());
     bool showVerticalTopLeft = (style->borderTopLeftRadius().width() != style->borderTopLeftRadius().height());
 
     RefPtr<CSSValueList> topLeftRadius = getBorderRadiusCornerValues(style->borderTopLeftRadius(), style, renderView);
@@ -780,7 +783,7 @@ static LayoutRect sizingBox(RenderObject* renderer)
         return LayoutRect();
 
     RenderBox* box = toRenderBox(renderer);
-    return box->style()->boxSizing() == BORDER_BOX ? box->borderBoxRect() : box->computedCSSContentBoxRect();
+    return box->style().boxSizing() == BORDER_BOX ? box->borderBoxRect() : box->computedCSSContentBoxRect();
 }
 
 static PassRefPtr<WebKitCSSTransformValue> matrixTransformValue(const TransformationMatrix& transform, const RenderStyle* style)
@@ -1165,6 +1168,9 @@ static PassRefPtr<CSSValue> valueForGridPosition(const GridPosition& position)
     if (position.isAuto())
         return cssValuePool().createIdentifierValue(CSSValueAuto);
 
+    if (position.isNamedGridArea())
+        return cssValuePool().createValue(position.namedGridLine(), CSSPrimitiveValue::CSS_STRING);
+
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
     if (position.isSpan()) {
         list->append(cssValuePool().createIdentifierValue(CSSValueSpan));
@@ -1410,13 +1416,17 @@ static PassRefPtr<CSSValue> renderTextDecorationFlagsToCSSValue(int textDecorati
         list->append(cssValuePool().createIdentifierValue(CSSValueOverline));
     if (textDecoration & TextDecorationLineThrough)
         list->append(cssValuePool().createIdentifierValue(CSSValueLineThrough));
+#if ENABLE(LETTERPRESS)
+    if (textDecoration & TextDecorationLetterpress)
+        list->append(cssValuePool().createIdentifierValue(CSSValueWebkitLetterpress));
+#endif
 
     if (!list->length())
         return cssValuePool().createIdentifierValue(CSSValueNone);
     return list.release();
 }
 
-#if ENABLE(CSS3_TEXT)
+#if ENABLE(CSS3_TEXT_DECORATION)
 static PassRefPtr<CSSValue> renderTextDecorationStyleFlagsToCSSValue(TextDecorationStyle textDecorationStyle)
 {
     switch (textDecorationStyle) {
@@ -1435,7 +1445,20 @@ static PassRefPtr<CSSValue> renderTextDecorationStyleFlagsToCSSValue(TextDecorat
     ASSERT_NOT_REACHED();
     return cssValuePool().createExplicitInitialValue();
 }
-#endif // CSS3_TEXT
+
+static PassRefPtr<CSSValue> renderTextDecorationSkipFlagsToCSSValue(TextDecorationSkip textDecorationSkip)
+{
+    switch (textDecorationSkip) {
+    case TextDecorationSkipNone:
+        return cssValuePool().createExplicitInitialValue();
+    case TextDecorationSkipInk:
+        return cssValuePool().createIdentifierValue(CSSValueInk);
+    }
+
+    ASSERT_NOT_REACHED();
+    return cssValuePool().createExplicitInitialValue();
+}
+#endif // CSS3_TEXT_DECORATION
 
 static PassRefPtr<CSSValue> fillRepeatToCSSValue(EFillRepeat xRepeat, EFillRepeat yRepeat)
 {
@@ -1547,7 +1570,7 @@ static PassRefPtr<CSSPrimitiveValue> lineHeightFromStyle(RenderStyle* style, Ren
         // On the other hand, since font-size doesn't include the zoom factor, we really can't do
         // that here either.
         return zoomAdjustedPixelValue(static_cast<int>(length.percent() * style->fontDescription().specifiedSize()) / 100, style);
-    return zoomAdjustedPixelValue(valueForLength(length, 0, renderView), style);
+    return zoomAdjustedPixelValue(floatValueForLength(length, 0, renderView), style);
 }
 
 static PassRefPtr<CSSPrimitiveValue> fontSizeFromStyle(RenderStyle* style)
@@ -2121,8 +2144,7 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propert
             RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
             for (unsigned i = 0; i < featureSettings->size(); ++i) {
                 const FontFeature& feature = featureSettings->at(i);
-                RefPtr<CSSFontFeatureValue> featureValue = CSSFontFeatureValue::create(feature.tag(), feature.value());
-                list->append(featureValue.release());
+                list->append(CSSFontFeatureValue::create(feature.tag(), feature.value()));
             }
             return list.release();
         }
@@ -2341,6 +2363,12 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propert
         case CSSPropertyTextDecoration:
             return renderTextDecorationFlagsToCSSValue(style->textDecoration());
 #if ENABLE(CSS3_TEXT)
+        case CSSPropertyWebkitTextAlignLast:
+            return cssValuePool().createValue(style->textAlignLast());
+        case CSSPropertyWebkitTextJustify:
+            return cssValuePool().createValue(style->textJustify());
+#endif // CSS3_TEXT
+#if ENABLE(CSS3_TEXT_DECORATION)
         case CSSPropertyWebkitTextDecoration:
             return getCSSPropertyValuesForShorthandProperties(webkitTextDecorationShorthand());
         case CSSPropertyWebkitTextDecorationLine:
@@ -2349,13 +2377,11 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propert
             return renderTextDecorationStyleFlagsToCSSValue(style->textDecorationStyle());
         case CSSPropertyWebkitTextDecorationColor:
             return currentColorOrValidColor(style.get(), style->textDecorationColor());
-        case CSSPropertyWebkitTextAlignLast:
-            return cssValuePool().createValue(style->textAlignLast());
-        case CSSPropertyWebkitTextJustify:
-            return cssValuePool().createValue(style->textJustify());
+        case CSSPropertyWebkitTextDecorationSkip:
+            return renderTextDecorationSkipFlagsToCSSValue(style->textDecorationSkip());
         case CSSPropertyWebkitTextUnderlinePosition:
             return cssValuePool().createValue(style->textUnderlinePosition());
-#endif // CSS3_TEXT
+#endif
         case CSSPropertyWebkitTextDecorationsInEffect:
             return renderTextDecorationFlagsToCSSValue(style->textDecorationsInEffect());
         case CSSPropertyWebkitTextFillColor:

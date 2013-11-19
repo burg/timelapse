@@ -24,7 +24,6 @@
 #include "HTMLFormControlsCollection.h"
 
 #include "HTMLFieldSetElement.h"
-#include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLNames.h"
@@ -36,13 +35,15 @@ using namespace HTMLNames;
 // Since the collections are to be "live", we have to do the
 // calculation every time if anything has changed.
 
-HTMLFormControlsCollection::HTMLFormControlsCollection(Node& ownerNode)
-    : HTMLCollection(ownerNode, FormControls, OverridesItemAfter)
+HTMLFormControlsCollection::HTMLFormControlsCollection(ContainerNode& ownerNode)
+    : HTMLCollection(ownerNode, FormControls, CustomForwardOnlyTraversal)
+    , m_cachedElement(nullptr)
+    , m_cachedElementOffsetInArray(0)
 {
     ASSERT(isHTMLFormElement(ownerNode) || isHTMLFieldSetElement(ownerNode));
 }
 
-PassRefPtr<HTMLFormControlsCollection> HTMLFormControlsCollection::create(Node& ownerNode, CollectionType)
+PassRefPtr<HTMLFormControlsCollection> HTMLFormControlsCollection::create(ContainerNode& ownerNode, CollectionType)
 {
     return adoptRef(new HTMLFormControlsCollection(ownerNode));
 }
@@ -65,16 +66,34 @@ const Vector<HTMLImageElement*>& HTMLFormControlsCollection::formImageElements()
     return toHTMLFormElement(ownerNode()).imageElements();
 }
 
-Element* HTMLFormControlsCollection::virtualItemAfter(unsigned& offset, Element* previousItem) const
+static unsigned findFormAssociatedElement(const Vector<FormAssociatedElement*>& elements, const Element& element)
 {
-    const Vector<FormAssociatedElement*>& elementsArray = formControlElements();
-    if (previousItem)
-        offset++;
-    while (offset < elementsArray.size()) {
-        FormAssociatedElement& element = *elementsArray[offset];
-        if (element.isEnumeratable())
+    for (unsigned i = 0; i < elements.size(); ++i) {
+        auto& associatedElement = *elements[i];
+        if (associatedElement.isEnumeratable() && &associatedElement.asHTMLElement() == &element)
+            return i;
+    }
+    return elements.size();
+}
+
+Element* HTMLFormControlsCollection::customElementAfter(Element* current) const
+{
+    const Vector<FormAssociatedElement*>& elements = formControlElements();
+    unsigned start;
+    if (!current)
+        start = 0;
+    else if (m_cachedElement == current)
+        start = m_cachedElementOffsetInArray + 1;
+    else
+        start = findFormAssociatedElement(elements, *current) + 1;
+
+    for (unsigned i = start; i < elements.size(); ++i) {
+        FormAssociatedElement& element = *elements[i];
+        if (element.isEnumeratable()) {
+            m_cachedElement = &element.asHTMLElement();
+            m_cachedElementOffsetInArray = i;
             return &element.asHTMLElement();
-        offset++;
+        }
     }
     return nullptr;
 }
@@ -156,6 +175,13 @@ void HTMLFormControlsCollection::updateNameCache() const
     }
 
     setHasNameCache();
+}
+
+void HTMLFormControlsCollection::invalidateCache() const
+{
+    HTMLCollection::invalidateCache();
+    m_cachedElement = nullptr;
+    m_cachedElementOffsetInArray = 0;
 }
 
 }

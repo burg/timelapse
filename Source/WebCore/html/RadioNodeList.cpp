@@ -37,7 +37,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RadioNodeList::RadioNodeList(Node& rootNode, const AtomicString& name)
+RadioNodeList::RadioNodeList(ContainerNode& rootNode, const AtomicString& name)
     : LiveNodeList(rootNode, RadioNodeListType, InvalidateForFormControls, isHTMLFormElement(rootNode) ? NodeListIsRootedAtDocument : NodeListIsRootedAtNode)
     , m_name(name)
 {
@@ -45,7 +45,7 @@ RadioNodeList::RadioNodeList(Node& rootNode, const AtomicString& name)
 
 RadioNodeList::~RadioNodeList()
 {
-    ownerNode().nodeLists()->removeCacheWithAtomicName(this, RadioNodeListType, m_name);
+    ownerNode().nodeLists()->removeCacheWithAtomicName(this, m_name);
 }
 
 static inline HTMLInputElement* toRadioButtonInputElement(Node* node)
