@@ -116,10 +116,14 @@ bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& b
     case ScriptBreakpointActionTypeProbe:
         JSValue exception;
         JSValue result = debuggerCallFrame->evaluate(breakpointAction.data, exception);
-        if (exception)
-            reportException(debuggerCallFrame->exec(), exception);
+        if (exception) {
+            Interpreter::ErrorHandlingMode mode(debuggerCallFrame->exec());
+            //RefPtr<ScriptCallStack> callStack(createScriptCallStackFromException(exec, exception, ScriptCallStack::maxCallStackSizeToCapture));
+            debuggerCallFrame->exec()->clearException();
+            debuggerCallFrame->exec()->clearSupplementaryExceptionInfo();
+        }
         JSC::ExecState* state = debuggerCallFrame->scope()->globalObject()->globalExec();
-        ScriptValue wrappedResult = ScriptValue(state->vm(), result);
+        ScriptValue wrappedResult = ScriptValue(state->vm(), exception ? exception : result);
         dispatchDidSampleProbe(state, breakpointAction.identifier, wrappedResult);
         break;
     }
