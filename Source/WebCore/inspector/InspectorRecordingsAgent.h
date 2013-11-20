@@ -37,9 +37,9 @@
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
 
-#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
