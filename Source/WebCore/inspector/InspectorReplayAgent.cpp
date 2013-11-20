@@ -40,6 +40,7 @@
 #include "InspectorController.h"
 #include "InspectorDebuggerAgent.h"
 #include "InspectorFrontend.h"
+#include "InspectorPageAgent.h"
 #include "InspectorRecordingsAgent.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
@@ -66,43 +67,56 @@ using namespace WTF;
 
 namespace WebCore {
 
-InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, Page* inspectedPage)
-: InspectorBaseAgent<InspectorReplayAgent>("Replay", instrumentingAgents)
-, m_instrumentingAgents(instrumentingAgents)
-, m_inspectedPage(inspectedPage)
+InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent)
+: InspectorBaseAgent(ASCIILiteral("Replay"), instrumentingAgents)
+, m_pageAgent(pageAgent)
+, m_page(nullptr)
 , m_nextMarkIndex(0)
 , m_lastHitMarkIndex(numeric_limits<unsigned>::max())
-, m_inputLocked(false) {}
+, m_inputLocked(false)
+{
+}
 
 InspectorReplayAgent::~InspectorReplayAgent()
 {
-    // if destroying replayAgent, then stop instrumenting for marks (if we are)
+    reset();
+}
+
+void InspectorReplayAgent::didCreateFrontendAndBackend(InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
+{
+    m_frontendDispatcher = std::make_unique<InspectorReplayFrontendDispatcher>(frontendChannel);
+    m_backendDispatcher = InspectorReplayBackendDispatcher::create(backendDispatcher, this);
+
+    // TODO: set up frontend-specific state.
+    m_instrumentingAgents->setInspectorReplayAgent(this);
+    m_page = m_pageAgent->page();
+}
+
+void InspectorReplayAgent::willDestroyFrontendAndBackend()
+{
+    m_frontendDispatcher = nullptr;
+    m_backendDispatcher.clear();
+
+    // TODO: clear frontend-specific state.
     m_instrumentingAgents->setInspectorReplayAgent(nullptr);
-    m_instrumentingAgents = nullptr;
-    m_inspectedPage = nullptr;
+    reset();
 }
 
-void InspectorReplayAgent::setFrontend(InspectorFrontend* frontend)
+void InspectorReplayAgent::reset()
 {
-    m_frontend = frontend->replay();
-}
-
-void InspectorReplayAgent::clearFrontend()
-{
-    //TODO: stop instrumenting, stop capturing, etc. see InspectorTimelineAgent::clearFrontend
-    m_frontend = nullptr;
+    // TODO: release resources, such as recording objects.
 }
 
 void InspectorReplayAgent::willDispatchEvent(const Event& event, Frame* frame)
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController().willDispatchEvent(event, frame, reuseMark());
+        m_page->replayController().willDispatchEvent(event, frame, reuseMark());
 }
 
 void InspectorReplayAgent::frameNavigated(DocumentLoader* loader)
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController().frameNavigated(loader);
+        m_page->replayController().frameNavigated(loader);
 }
 
 #ifndef NDEBUG
@@ -120,9 +134,9 @@ void InspectorReplayAgent::recordingUnloaded()
 {
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
 
-    if (m_frontend) {
-        m_frontend->recordingUnloaded();
-        m_frontend->inputUnlocked();
+    if (m_frontendDispatcher) {
+        m_frontendDispatcher->recordingUnloaded();
+        m_frontendDispatcher->inputUnlocked();
     }
 }
 
@@ -130,15 +144,15 @@ void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecord
 {
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
 
-    if (m_frontend)
-        m_frontend->recordingLoaded(prpRecording->uid());
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->recordingLoaded(prpRecording->uid());
 }
 
 void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecording)
 {
     // Automatically load the created recording if nothing else is loaded.
     if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded)) {
-        m_inspectedPage->replayController().loadRecording(prpRecording);
+        m_page->replayController().loadRecording(prpRecording);
     }
 }
 
@@ -151,14 +165,14 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
     PositionMark newMark = createMark();
     input->setMark(newMark);
 
-    if (!m_frontend)
+    if (!m_frontendDispatcher)
         return;
     if (!input->isUserVisible())
         return;
 
     RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = JSONCoder::serializeInput(input, newMark.index());
     if (serializedInput)
-        m_frontend->capturedInput(serializedInput.release());
+        m_frontendDispatcher->capturedInput(serializedInput.release());
 }
 
 void InspectorReplayAgent::captureStarted()
@@ -167,9 +181,9 @@ void InspectorReplayAgent::captureStarted()
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::Capturing);
     m_inputLocked = false;
-    if (m_frontend) {
-        m_frontend->captureStarted();
-        m_frontend->inputUnlocked();
+    if (m_frontendDispatcher) {
+        m_frontendDispatcher->captureStarted();
+        m_frontendDispatcher->inputUnlocked();
     }
 }
 
@@ -179,8 +193,8 @@ void InspectorReplayAgent::captureFinished()
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
 
-    if (m_frontend)
-        m_frontend->captureStopped();
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->captureStopped();
 }
 
 void InspectorReplayAgent::playbackStarted()
@@ -189,9 +203,9 @@ void InspectorReplayAgent::playbackStarted()
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::Replaying);
     m_inputLocked = true;
-    if (m_frontend) {
-        m_frontend->playbackStarted();
-        m_frontend->inputLocked();
+    if (m_frontendDispatcher) {
+        m_frontendDispatcher->playbackStarted();
+        m_frontendDispatcher->inputLocked();
     }
 }
 
@@ -200,8 +214,8 @@ void InspectorReplayAgent::playbackPaused(PositionMarkIndex index)
     LOG(DeterministicReplay, "-----REPLAY PAUSED-----");
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::ReplayPaused);
-    if (m_frontend)
-        m_frontend->playbackPaused(index);
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->playbackPaused(index);
 }
 
 void InspectorReplayAgent::playbackHitMark(PositionMarkIndex index)
@@ -210,8 +224,8 @@ void InspectorReplayAgent::playbackHitMark(PositionMarkIndex index)
         return;
     m_lastHitMarkIndex = index;
 
-    if (m_frontend)
-        m_frontend->playbackHitMark(index);
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->playbackHitMark(index);
 }
 
 void InspectorReplayAgent::playbackFinished()
@@ -219,30 +233,30 @@ void InspectorReplayAgent::playbackFinished()
     LOG(DeterministicReplay, "-----REPLAY STOP-----");
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
-    if (m_frontend)
-        m_frontend->playbackFinished();
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->playbackFinished();
 }
 
 void InspectorReplayAgent::playbackCancelled()
 {
     m_inputLocked = false;
 
-    if (m_frontend)
-        m_frontend->inputUnlocked();
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->inputUnlocked();
 }
 
 void InspectorReplayAgent::playbackError(bool isFatal, const String& errorString)
 {
     // NB. if instead you would like to debug the failure,
     // this is a decent breakpoint location.
-    if (m_frontend)
-        m_frontend->playbackError(isFatal, errorString);
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->playbackError(isFatal, errorString);
 }
 
 void InspectorReplayAgent::imageCaptured(const String& imageDataUri)
 {
-    if (m_frontend)
-        m_frontend->imageCaptured(imageDataUri);
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->imageCaptured(imageDataUri);
 }
 
 PositionMark InspectorReplayAgent::createMark()
@@ -279,8 +293,8 @@ void InspectorReplayAgent::enable(ErrorString*)
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
     m_instrumentingAgents->setInspectorReplayAgent(this);
 
-    if (m_frontend)
-        m_frontend->replayEnabled();
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->replayEnabled();
 }
 
 void InspectorReplayAgent::disable(ErrorString*)
@@ -291,8 +305,8 @@ void InspectorReplayAgent::disable(ErrorString*)
     m_stateMachine.advanceTo(ReplayAgentStateMachine::Disabled);
     m_instrumentingAgents->setInspectorReplayAgent(0);
 
-    if (m_frontend)
-        m_frontend->replayDisabled();
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->replayDisabled();
 }
 
 void InspectorReplayAgent::startCapture(ErrorString*)
@@ -301,53 +315,53 @@ void InspectorReplayAgent::startCapture(ErrorString*)
     m_nextMarkIndex = 0;
 
     createMark();
-    m_inspectedPage->replayController().beginCapturing();
+    m_page->replayController().beginCapturing();
 }
 
 void InspectorReplayAgent::stopCapture(ErrorString*, bool* wasAllowed)
 {
     createMark();
-    *wasAllowed = m_inspectedPage->replayController().endCapturing();
+    *wasAllowed = m_page->replayController().endCapturing();
 }
 
 void InspectorReplayAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool fastReplay)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER) && !defined(NDEBUG)
-    // cannot start replay from within debugger event loop.
+    // Cannot start replay from within debugger event loop.
     InspectorDebuggerAgent* debuggerAgent = m_instrumentingAgents->inspectorDebuggerAgent();
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForReplay);
-    m_inspectedPage->replayController().replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
+    m_page->replayController().replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
 }
 
 void InspectorReplayAgent::replayToCompletion(ErrorString*, bool fastReplay)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER) && !defined(NDEBUG)
-    // cannot start replay from within debugger event loop.
+    // Cannot start replay from within debugger event loop.
     InspectorDebuggerAgent* debuggerAgent = m_instrumentingAgents->inspectorDebuggerAgent();
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForReplay);
-    m_inspectedPage->replayController().replayToCompletion((fastReplay) ? FullSpeed : Realtime);
+    m_page->replayController().replayToCompletion((fastReplay) ? FullSpeed : Realtime);
 }
 
 void InspectorReplayAgent::pausePlayback(ErrorString*)
 {
     // this will fire InspectorInstrumentation::playbackPaused, and our
     // listener for that will change state machine and tell frontend.
-    m_inspectedPage->replayController().pauseAtNextMark();
+    m_page->replayController().pauseAtNextMark();
 }
 
 void InspectorReplayAgent::stopPlayback(ErrorString*, bool shouldUnlock)
 {
     m_inputLocked = !shouldUnlock;
-    m_inspectedPage->replayController().cancelPlayback();
+    m_page->replayController().cancelPlayback();
 }
 
 void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
 {
-    m_inspectedPage->replayController().setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
+    m_page->replayController().setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
 }
 
 void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool* wasAllowed)
@@ -359,18 +373,18 @@ void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool
         return;
     }
 
-    *wasAllowed = m_inspectedPage->replayController().loadRecording(recording);
+    *wasAllowed = m_page->replayController().loadRecording(recording);
 }
 
 void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAllowed)
 {
-    if (!m_inspectedPage->replayController().loadedRecording().get()) {
+    if (!m_page->replayController().loadedRecording().get()) {
         *wasAllowed = false;
         *errorString = "Tried to unload but no recording is currently loaded.";
         return;
     }
 
-    *wasAllowed = m_inspectedPage->replayController().unloadRecording();
+    *wasAllowed = m_page->replayController().unloadRecording();
 }
 
 }; // namespace WebCore

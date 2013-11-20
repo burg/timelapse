@@ -76,6 +76,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/text"
     "${WEBCORE_DIR}/plugins"
     "${WEBCORE_DIR}/rendering"
+    "${WEBCORE_DIR}/rendering/line"
     "${WEBCORE_DIR}/rendering/mathml"
     "${WEBCORE_DIR}/rendering/shapes"
     "${WEBCORE_DIR}/rendering/style"
@@ -281,6 +282,7 @@ set(WebCore_IDL_FILES
     Modules/websockets/WebSocket.idl
 
     crypto/CryptoKey.idl
+    crypto/CryptoKeyPair.idl
     crypto/SubtleCrypto.idl
 
     css/CSSCharsetRule.idl
@@ -743,6 +745,31 @@ list(APPEND WebCore_IDL_FILES
     ${WebCore_SVG_IDL_FILES}
 )
 
+set(WebCore_INSPECTOR_DOMAINS
+    inspector/protocol/ApplicationCache.json
+    inspector/protocol/CSS.json
+    inspector/protocol/Canvas.json
+    inspector/protocol/Console.json
+    inspector/protocol/DOM.json
+    inspector/protocol/DOMDebugger.json
+    inspector/protocol/DOMStorage.json
+    inspector/protocol/Database.json
+    inspector/protocol/Debugger.json
+    inspector/protocol/FileSystem.json
+    inspector/protocol/HeapProfiler.json
+    inspector/protocol/IndexedDB.json
+    inspector/protocol/Input.json
+    inspector/protocol/InspectorDomain.json
+    inspector/protocol/LayerTree.json
+    inspector/protocol/Memory.json
+    inspector/protocol/Network.json
+    inspector/protocol/Page.json
+    inspector/protocol/Profiler.json
+    inspector/protocol/Runtime.json
+    inspector/protocol/Timeline.json
+    inspector/protocol/Worker.json
+)
+
 set(WebCore_SOURCES
     Modules/battery/BatteryController.cpp
     Modules/battery/BatteryManager.cpp
@@ -762,6 +789,7 @@ set(WebCore_SOURCES
     Modules/indexeddb/IDBAny.cpp
     Modules/indexeddb/IDBCursor.cpp
     Modules/indexeddb/IDBCursorBackend.cpp
+    Modules/indexeddb/IDBCursorBackendOperations.cpp
     Modules/indexeddb/IDBCursorWithValue.cpp
     Modules/indexeddb/IDBDatabase.cpp
     Modules/indexeddb/IDBDatabaseBackend.cpp
@@ -771,7 +799,6 @@ set(WebCore_SOURCES
     Modules/indexeddb/IDBFactory.cpp
     Modules/indexeddb/IDBFactoryBackendInterface.cpp
     Modules/indexeddb/IDBIndex.cpp
-    Modules/indexeddb/IDBIndexWriter.cpp
     Modules/indexeddb/IDBKey.cpp
     Modules/indexeddb/IDBKeyPath.cpp
     Modules/indexeddb/IDBKeyRange.cpp
@@ -791,7 +818,9 @@ set(WebCore_SOURCES
     Modules/indexeddb/leveldb/IDBBackingStoreLevelDB.cpp
     Modules/indexeddb/leveldb/IDBBackingStoreTransactionLevelDB.cpp
     Modules/indexeddb/leveldb/IDBFactoryBackendLevelDB.cpp
+    Modules/indexeddb/leveldb/IDBIndexWriterLevelDB.cpp
     Modules/indexeddb/leveldb/IDBLevelDBCoding.cpp
+    Modules/indexeddb/leveldb/IDBServerConnectionLevelDB.cpp
 
     Modules/mediasource/MediaSource.cpp
     Modules/mediasource/MediaSourceRegistry.cpp
@@ -1542,8 +1571,9 @@ set(WebCore_SOURCES
     inspector/InjectedScriptManager.cpp
     inspector/InjectedScriptModule.cpp
     inspector/InspectorAgent.cpp
+    inspector/InspectorAgentRegistry.cpp
     inspector/InspectorApplicationCacheAgent.cpp
-    inspector/InspectorBaseAgent.cpp
+    inspector/InspectorBackendDispatcher.cpp
     inspector/InspectorCSSAgent.cpp
     inspector/InspectorCanvasAgent.cpp
     inspector/InspectorClient.cpp
@@ -1565,6 +1595,7 @@ set(WebCore_SOURCES
     inspector/InspectorInstrumentation.cpp
     inspector/InspectorLayerTreeAgent.cpp
     inspector/InspectorMemoryAgent.cpp
+    inspector/InspectorNodeFinder.cpp
     inspector/InspectorOverlay.cpp
     inspector/InspectorPageAgent.cpp
     inspector/InspectorProfilerAgent.cpp
@@ -1783,7 +1814,6 @@ set(WebCore_SOURCES
     platform/NotImplemented.cpp
     platform/PlatformEvent.cpp
     platform/PlatformStrategies.cpp
-    platform/RunLoop.cpp
     platform/RuntimeApplicationChecks.cpp
     platform/SchemeRegistry.cpp
     platform/ScrollAnimator.cpp
@@ -2181,6 +2211,9 @@ set(WebCore_SOURCES
     rendering/TextPaintStyle.cpp
     rendering/TextPainter.cpp
     rendering/break_lines.cpp
+
+    rendering/line/LineBreaker.cpp
+    rendering/line/LineInfo.cpp
 
     rendering/mathml/RenderMathMLBlock.cpp
     rendering/mathml/RenderMathMLFenced.cpp
@@ -2987,14 +3020,23 @@ add_custom_command(
     WORKING_DIRECTORY ${DERIVED_SOURCES_WEBCORE_DIR}
     VERBATIM)
 
+
+# Generate Inspector.json
+add_custom_command(
+    OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/Inspector.json
+    MAIN_DEPENDENCY ${WEBCORE_DIR}/inspector/Scripts/generate-combined-inspector-json.py
+    DEPENDS ${WebCore_INSPECTOR_DOMAINS}
+    COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/inspector/Scripts/generate-combined-inspector-json.py ${WEBCORE_DIR}/inspector/protocol > ${DERIVED_SOURCES_WEBCORE_DIR}/Inspector.json
+    VERBATIM)
+
 # All Web Inspector generated files are created with this one call to CodeGeneratorInspector.pm
 add_custom_command(
-    OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatcher.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatcher.h ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.h ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.h
-    MAIN_DEPENDENCY inspector/Inspector.json
+    OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatchers.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatchers.h ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.h ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.h
+    MAIN_DEPENDENCY ${DERIVED_SOURCES_WEBCORE_DIR}/Inspector.json
     DEPENDS ${WEBCORE_DIR}/inspector/CodeGeneratorInspector.py ${WEBCORE_DIR}/inspector/CodeGeneratorInspectorStrings.py
-    COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/inspector/CodeGeneratorInspector.py ${WEBCORE_DIR}/inspector/Inspector.json --output_h_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --output_cpp_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --output_js_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --write_always
+    COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/inspector/CodeGeneratorInspector.py ${DERIVED_SOURCES_WEBCORE_DIR}/Inspector.json --output_h_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --output_cpp_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --output_js_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --write_always
     VERBATIM)
-list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatcher.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.cpp)
+list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatchers.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.cpp)
 
 
 # Generate InspectorOverlayPage.h

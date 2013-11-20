@@ -99,6 +99,7 @@ typedef OptionRange optionRange;
     v(bool, forceDFGCodeBlockLiveness, false) \
     \
     v(bool, dumpGeneratedBytecodes, false) \
+    v(bool, dumpBytecodeLivenessResults, false) \
     \
     /* showDisassembly implies showDFGDisassembly. */ \
     v(bool, showDisassembly, false) \
@@ -125,6 +126,7 @@ typedef OptionRange optionRange;
     v(bool, enableLLVMFastISel, false) \
     v(bool, useLLVMSmallCodeModel, false) \
     v(bool, dumpLLVMIR, false) \
+    v(bool, validateFTLOSRExitLiveness, false) \
     v(bool, llvmAlwaysFailsBeforeCompile, false) \
     v(bool, llvmAlwaysFailsBeforeLink, false) \
     v(bool, llvmSimpleOpt, true) \

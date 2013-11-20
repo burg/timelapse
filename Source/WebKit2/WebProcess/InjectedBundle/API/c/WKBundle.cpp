@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WKBundle.h"
 
-#include "ImmutableArray.h"
+#include "APIArray.h"
 #include "InjectedBundle.h"
 #include "WKAPICast.h"
 #include "WKBundleAPICast.h"
@@ -52,7 +52,7 @@ void WKBundlePostMessage(WKBundleRef bundleRef, WKStringRef messageNameRef, WKTy
 
 void WKBundlePostSynchronousMessage(WKBundleRef bundleRef, WKStringRef messageNameRef, WKTypeRef messageBodyRef, WKTypeRef* returnDataRef)
 {
-    RefPtr<APIObject> returnData;
+    RefPtr<API::Object> returnData;
     toImpl(bundleRef)->postSynchronousMessage(toWTFString(messageNameRef), toImpl(messageBodyRef), returnData);
     if (returnDataRef)
         *returnDataRef = toAPI(returnData.release().leakRef());
@@ -260,7 +260,7 @@ void WKBundleResetApplicationCacheOriginQuota(WKBundleRef bundleRef, WKStringRef
 
 WKArrayRef WKBundleCopyOriginsWithApplicationCache(WKBundleRef bundleRef)
 {
-    RefPtr<ImmutableArray> origins = toImpl(bundleRef)->originsWithApplicationCache();
+    RefPtr<API::Array> origins = toImpl(bundleRef)->originsWithApplicationCache();
     return toAPI(origins.release().leakRef());
 }
 

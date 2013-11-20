@@ -66,7 +66,6 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-using namespace std;
 
 FocusNavigationScope::FocusNavigationScope(TreeScope* treeScope)
     : m_rootTreeScope(treeScope)

@@ -971,7 +971,7 @@ void RenderTheme::paintSliderTicks(RenderObject* o, const PaintInfo& paintInfo, 
     if (!input)
         return;
 
-    HTMLDataListElement* dataList = static_cast<HTMLDataListElement*>(input->list());
+    HTMLDataListElement* dataList = toHTMLDataListElement(input->list());
     if (!dataList)
         return;
 
@@ -1265,11 +1265,6 @@ String RenderTheme::fileListNameForWidth(const FileList* fileList, const Font& f
         return StringTruncator::rightTruncate(multipleFileUploadText(fileList->length()), width, font, StringTruncator::EnableRoundingHacks);
 
     return StringTruncator::centerTruncate(string, width, font, StringTruncator::EnableRoundingHacks);
-}
-
-bool RenderTheme::shouldOpenPickerWithF4Key() const
-{
-    return false;
 }
 
 } // namespace WebCore

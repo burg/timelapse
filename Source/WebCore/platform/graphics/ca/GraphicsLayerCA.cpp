@@ -56,8 +56,6 @@
 #include "PlatformCALayerWin.h"
 #endif
 
-using namespace std;
-
 namespace WebCore {
 
 // The threshold width or height above which a tiled layer will be used. This should be
@@ -71,6 +69,20 @@ static const int cMaxLayerTreeDepth = 250;
 // If we send a duration of 0 to CA, then it will use the default duration
 // of 250ms. So send a very small value instead.
 static const float cAnimationAlmostZeroDuration = 1e-3f;
+
+static inline bool isIntegral(float value)
+{
+    return static_cast<int>(value) == value;
+}
+
+static float clampedContentsScaleForScale(float scale)
+{
+    // Define some limits as a sanity check for the incoming scale value
+    // those too small to see.
+    const float maxScale = 10.0f;
+    const float minScale = 0.01f;
+    return std::max(minScale, std::min(scale, maxScale));
+}
 
 static bool isTransformTypeTransformationMatrix(TransformOperation::OperationType transformType)
 {
@@ -653,7 +665,7 @@ void GraphicsLayerCA::setBackfaceVisibility(bool visible)
 
 void GraphicsLayerCA::setOpacity(float opacity)
 {
-    float clampedOpacity = max(0.0f, min(opacity, 1.0f));
+    float clampedOpacity = std::max(0.0f, std::min(opacity, 1.0f));
 
     if (clampedOpacity == m_opacity)
         return;
@@ -688,8 +700,8 @@ bool GraphicsLayerCA::setFilters(const FilterOperations& filterOperations)
 
 void GraphicsLayerCA::setNeedsDisplay()
 {
-    FloatRect hugeRect(-numeric_limits<float>::max() / 2, -numeric_limits<float>::max() / 2,
-                       numeric_limits<float>::max(), numeric_limits<float>::max());
+    FloatRect hugeRect(-std::numeric_limits<float>::max() / 2, -std::numeric_limits<float>::max() / 2,
+                       std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 
     setNeedsDisplayInRect(hugeRect);
 }
@@ -1120,7 +1132,7 @@ void GraphicsLayerCA::updateRootRelativeScale(TransformationMatrix* transformFro
     
     if (rootRelativeScaleFactor != m_rootRelativeScaleFactor) {
         m_rootRelativeScaleFactor = rootRelativeScaleFactor;
-        m_uncommittedChanges |= ContentsScaleChanged;
+        m_uncommittedChanges |= ContentsScaleChanged | ContentsOpaqueChanged;
     }
 }
 
@@ -1303,8 +1315,9 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     if (m_uncommittedChanges & ContentsVisibilityChanged)
         updateContentsVisibility();
 
+    // Note that contentsScale can affect whether the layer can be opaque.
     if (m_uncommittedChanges & ContentsOpaqueChanged)
-        updateContentsOpaque();
+        updateContentsOpaque(pageScaleFactor);
 
     if (m_uncommittedChanges & BackfaceVisibilityChanged)
         updateBackfaceVisibility();
@@ -1567,14 +1580,21 @@ void GraphicsLayerCA::updateContentsVisibility()
     }
 }
 
-void GraphicsLayerCA::updateContentsOpaque()
+void GraphicsLayerCA::updateContentsOpaque(float pageScaleFactor)
 {
-    m_layer->setOpaque(m_contentsOpaque);
+    bool contentsOpaque = m_contentsOpaque;
+    if (contentsOpaque) {
+        float contentsScale = clampedContentsScaleForScale(m_rootRelativeScaleFactor * pageScaleFactor * deviceScaleFactor());
+        if (!isIntegral(contentsScale))
+            contentsOpaque = false;
+    }
+    
+    m_layer->setOpaque(contentsOpaque);
 
     if (LayerMap* layerCloneMap = m_layerClones.get()) {
         LayerMap::const_iterator end = layerCloneMap->end();
         for (LayerMap::const_iterator it = layerCloneMap->begin(); it != end; ++it)
-            it->value->setOpaque(m_contentsOpaque);
+            it->value->setOpaque(contentsOpaque);
     }
 }
 
@@ -2305,12 +2325,12 @@ bool GraphicsLayerCA::getTransformFromAnimationsWithMaxScaleImpact(const Transfo
                 const Vector<TransformationMatrix>& matrices = it->value;
                 
                 for (size_t i = 0; i < matrices.size(); ++i) {
-                    TransformationMatrix roootRelativeTransformWithAnimation = parentTransformFromRoot;
+                    TransformationMatrix rootRelativeTransformWithAnimation = parentTransformFromRoot;
                     TransformationMatrix layerTransformWithAnimation = layerTransform(m_position, &matrices[i]);
 
-                    roootRelativeTransformWithAnimation.multiply(layerTransformWithAnimation);
+                    rootRelativeTransformWithAnimation.multiply(layerTransformWithAnimation);
                     
-                    float rootRelativeScale = maxScaleFromTransform(roootRelativeTransformWithAnimation);
+                    float rootRelativeScale = maxScaleFromTransform(rootRelativeTransformWithAnimation);
                     if (rootRelativeScale > maxScale) {
                         maxScale = rootRelativeScale;
                         maxScaleTransform = matrices[i];
@@ -2455,7 +2475,7 @@ void GraphicsLayerCA::setupAnimation(PlatformCAAnimation* propertyAnim, const An
 
     float repeatCount = anim->iterationCount();
     if (repeatCount == Animation::IterationCountInfinite)
-        repeatCount = numeric_limits<float>::max();
+        repeatCount = std::numeric_limits<float>::max();
     else if (anim->direction() == Animation::AnimationDirectionAlternate || anim->direction() == Animation::AnimationDirectionAlternateReverse)
         repeatCount /= 2;
 
@@ -2813,15 +2833,6 @@ PlatformCALayer* GraphicsLayerCA::animatedLayer(AnimatedPropertyID property) con
 GraphicsLayerCA::LayerMap* GraphicsLayerCA::animatedLayerClones(AnimatedPropertyID property) const
 {
     return (property == AnimatedPropertyBackgroundColor) ? m_contentsLayerClones.get() : primaryLayerClones();
-}
-
-static float clampedContentsScaleForScale(float scale)
-{
-    // Define some limits as a sanity check for the incoming scale value
-    // those too small to see.
-    const float maxScale = 10.0f;
-    const float minScale = 0.01f;
-    return max(minScale, min(scale, maxScale));
 }
 
 void GraphicsLayerCA::updateContentsScale(float pageScaleFactor)
@@ -3274,12 +3285,7 @@ void GraphicsLayerCA::deviceOrPageScaleFactorChanged()
 
 void GraphicsLayerCA::noteChangesForScaleSensitiveProperties()
 {
-    noteLayerPropertyChanged(GeometryChanged | ContentsScaleChanged);
-}
-
-static inline bool isIntegral(float value)
-{
-    return static_cast<int>(value) == value;
+    noteLayerPropertyChanged(GeometryChanged | ContentsScaleChanged | ContentsOpaqueChanged);
 }
 
 void GraphicsLayerCA::computePixelAlignment(float pageScaleFactor, const FloatPoint& positionRelativeToBase,

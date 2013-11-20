@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebCookieManagerProxy.h"
 
+#include "APIArray.h"
 #include "SecurityOriginData.h"
 #include "WebContext.h"
 #include "WebCookieManagerMessages.h"
@@ -90,12 +91,12 @@ bool WebCookieManagerProxy::shouldTerminate(WebProcessProxy*) const
 
 void WebCookieManagerProxy::refWebContextSupplement()
 {
-    APIObject::ref();
+    API::Object::ref();
 }
 
 void WebCookieManagerProxy::derefWebContextSupplement()
 {
-    APIObject::deref();
+    API::Object::deref();
 }
 
 void WebCookieManagerProxy::getHostnamesWithCookies(PassRefPtr<ArrayCallback> prpCallback)
@@ -107,7 +108,7 @@ void WebCookieManagerProxy::getHostnamesWithCookies(PassRefPtr<ArrayCallback> pr
     context()->sendToNetworkingProcessRelaunchingIfNecessary(Messages::WebCookieManager::GetHostnamesWithCookies(callbackID));
 }
     
-void WebCookieManagerProxy::didGetHostnamesWithCookies(const Vector<String>& hostnameList, uint64_t callbackID)
+void WebCookieManagerProxy::didGetHostnamesWithCookies(const Vector<String>& hostnames, uint64_t callbackID)
 {
     RefPtr<ArrayCallback> callback = m_arrayCallbacks.take(callbackID);
     if (!callback) {
@@ -115,13 +116,7 @@ void WebCookieManagerProxy::didGetHostnamesWithCookies(const Vector<String>& hos
         return;
     }
 
-    size_t hostnameCount = hostnameList.size();
-    Vector<RefPtr<APIObject>> hostnames(hostnameCount);
-
-    for (size_t i = 0; i < hostnameCount; ++i)
-        hostnames[i] = WebString::create(hostnameList[i]);
-
-    callback->performCallbackWithReturnValue(ImmutableArray::adopt(hostnames).get());
+    callback->performCallbackWithReturnValue(API::Array::createStringArray(hostnames).get());
 }
 
 void WebCookieManagerProxy::deleteCookiesForHostname(const String& hostname)

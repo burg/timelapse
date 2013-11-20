@@ -352,7 +352,8 @@ webkit.org/b/122234 svg/masking/mask-type-not-set.svg  [ ImageOnlyFailure ]
 webkit.org/b/122234 svg/filters/feSpecularLight-premultiplied.svg [ ImageOnlyFailure ]
 webkit.org/b/122234 svg/filters/filter-cycle.html [ ImageOnlyFailure ]
 webkit.org/b/122234 css3/filters/null-effect-check.html [ ImageOnlyFailure ]
-webkit.org/b/122234 fast/images/pdf-as-image-with-annotations.html [ ImageOnlyFailure ]
+webkit.org/b/122234 fast/images/pdf-as-image-with-annotations.html [ Pass ImageOnlyFailure ]
+webkit.org/b/122234 fast/images/pdf-as-image-crop-box.html [ Pass ImageOnlyFailure ]
 webkit.org/b/122234 css3/filters/custom/composited/custom-filter-blend-modes.html [ Pass ImageOnlyFailure ]
 webkit.org/b/122234 css3/filters/custom/custom-filter-a-tex-coord-optional.html [ Pass ImageOnlyFailure ]
 webkit.org/b/122234 css3/filters/custom/custom-filter-array-uniform-indirect-index.html [ Pass ImageOnlyFailure ]
@@ -381,6 +382,12 @@ webkit.org/b/122237 [ Debug ] fast/table/crash-section-logical-height-changed-ne
 webkit.org/b/122238 fast/layers/no-clipping-overflow-hidden-added-after-transform.html [ ImageOnlyFailure ]
 
 webkit.org/b/122456 css3/images/cross-fade-svg-with-opacity.html [ ImageOnlyFailure ]
+
+webkit.org/b/124425 fast/dom/Geolocation/notimer-after-unload.html [ Pass Crash Failure ]
+
+webkit.org/b/124437 editing/selection/5057506.html [ Pass Timeout ]
+
+webkit.org/b/124476 platform/mac-wk2/plugins/slow/asynchronous-plugin-initialization-multiple.html [ Pass Failure ]
 
 ### END OF (1) Classified failures with bug reports
 ########################################
@@ -471,6 +478,9 @@ plugins/unavailable-plugin-indicator-obscurity.html [ Pass ]
 
 # Color input is enabled on Mac WK2 but not on WK1.
 fast/forms/color/input-color-onchange-event.html [ Pass ]
+
+# This test times out in WebKit1 only.
+fullscreen/anonymous-block-merge-crash.html [ Pass ]
 
 ### END OF (5) Features that are not supported in WebKit1, so skipped in mac/TestExpectations then re-enabled here
 ########################################

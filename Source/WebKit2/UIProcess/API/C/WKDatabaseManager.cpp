@@ -29,10 +29,6 @@
 #include "WebDatabaseManagerProxy.h"
 #include "WKAPICast.h"
 
-#ifdef __BLOCKS__
-#include <Block.h>
-#endif
-
 using namespace WebKit;
 
 WKTypeID WKDatabaseManagerGetTypeID()
@@ -130,6 +126,9 @@ void WKDatabaseManagerSetClient(WKDatabaseManagerRef databaseManagerRef, const W
     if (wkClient && wkClient->version)
         return;
     toImpl(databaseManagerRef)->initializeClient(wkClient);
+#else
+    UNUSED_PARAM(databaseManagerRef);
+    UNUSED_PARAM(wkClient);
 #endif
 }
 
@@ -137,56 +136,32 @@ void WKDatabaseManagerGetDatabasesByOrigin(WKDatabaseManagerRef databaseManagerR
 {
 #if ENABLE(SQL_DATABASE)
     toImpl(databaseManagerRef)->getDatabasesByOrigin(ArrayCallback::create(context, callback));
+#else
+    UNUSED_PARAM(databaseManagerRef);
+    UNUSED_PARAM(context);
+    UNUSED_PARAM(callback);
 #endif
 }
-
-#ifdef __BLOCKS__
-static void callGetDatabasesByOriginBlockAndDispose(WKArrayRef resultValue, WKErrorRef errorRef, void* context)
-{
-#if ENABLE(SQL_DATABASE)
-    WKDatabaseManagerGetDatabasesByOriginBlock block = (WKDatabaseManagerGetDatabasesByOriginBlock)context;
-    block(resultValue, errorRef);
-    Block_release(block);
-#endif
-}
-
-void WKDatabaseManagerGetDatabasesByOrigin_b(WKDatabaseManagerRef databaseManagerRef, WKDatabaseManagerGetDatabasesByOriginBlock block)
-{
-#if ENABLE(SQL_DATABASE)
-    WKDatabaseManagerGetDatabasesByOrigin(databaseManagerRef, Block_copy(block), callGetDatabasesByOriginBlockAndDispose);
-#endif
-}
-#endif // __BLOCKS__
 
 void WKDatabaseManagerGetDatabaseOrigins(WKDatabaseManagerRef databaseManagerRef, void* context, WKDatabaseManagerGetDatabaseOriginsFunction callback)
 {
 #if ENABLE(SQL_DATABASE)
     toImpl(databaseManagerRef)->getDatabaseOrigins(ArrayCallback::create(context, callback));
+#else
+    UNUSED_PARAM(databaseManagerRef);
+    UNUSED_PARAM(context);
+    UNUSED_PARAM(callback);
 #endif
 }
-
-#ifdef __BLOCKS__
-static void callGetDatabaseOriginsBlockBlockAndDispose(WKArrayRef resultValue, WKErrorRef errorRef, void* context)
-{
-#if ENABLE(SQL_DATABASE)
-    WKDatabaseManagerGetDatabaseOriginsBlock block = (WKDatabaseManagerGetDatabaseOriginsBlock)context;
-    block(resultValue, errorRef);
-    Block_release(block);
-#endif
-}
-
-void WKDatabaseManagerGetDatabaseOrigins_b(WKDatabaseManagerRef databaseManagerRef, WKDatabaseManagerGetDatabaseOriginsBlock block)
-{
-#if ENABLE(SQL_DATABASE)
-    WKDatabaseManagerGetDatabaseOrigins(databaseManagerRef, Block_copy(block), callGetDatabaseOriginsBlockBlockAndDispose);
-#endif
-}
-#endif // __BLOCKS__
 
 void WKDatabaseManagerDeleteDatabasesWithNameForOrigin(WKDatabaseManagerRef databaseManagerRef, WKStringRef databaseNameRef, WKSecurityOriginRef originRef)
 {
 #if ENABLE(SQL_DATABASE)
     toImpl(databaseManagerRef)->deleteDatabaseWithNameForOrigin(toWTFString(databaseNameRef), toImpl(originRef));
+#else
+    UNUSED_PARAM(databaseManagerRef);
+    UNUSED_PARAM(databaseNameRef);
+    UNUSED_PARAM(originRef);
 #endif
 }
 
@@ -194,6 +169,9 @@ void WKDatabaseManagerDeleteDatabasesForOrigin(WKDatabaseManagerRef databaseMana
 {
 #if ENABLE(SQL_DATABASE)
     toImpl(databaseManagerRef)->deleteDatabasesForOrigin(toImpl(originRef));
+#else
+    UNUSED_PARAM(databaseManagerRef);
+    UNUSED_PARAM(originRef);
 #endif
 }
 
@@ -201,6 +179,8 @@ void WKDatabaseManagerDeleteAllDatabases(WKDatabaseManagerRef databaseManagerRef
 {
 #if ENABLE(SQL_DATABASE)
     toImpl(databaseManagerRef)->deleteAllDatabases();
+#else
+    UNUSED_PARAM(databaseManagerRef);
 #endif
 }
 
@@ -208,5 +188,9 @@ void WKDatabaseManagerSetQuotaForOrigin(WKDatabaseManagerRef databaseManagerRef,
 {
 #if ENABLE(SQL_DATABASE)
     toImpl(databaseManagerRef)->setQuotaForOrigin(toImpl(originRef), quota);
+#else
+    UNUSED_PARAM(databaseManagerRef);
+    UNUSED_PARAM(originRef);
+    UNUSED_PARAM(quota);
 #endif
 }

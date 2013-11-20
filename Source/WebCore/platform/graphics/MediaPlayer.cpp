@@ -61,7 +61,7 @@
 #elif OS(WINCE)
 #include "MediaPlayerPrivateWinCE.h"
 #define PlatformMediaEngineClassName MediaPlayerPrivate
-#elif PLATFORM(WIN)
+#elif PLATFORM(WIN) && !USE(GSTREAMER)
 #include "MediaPlayerPrivateQuickTimeVisualContext.h"
 #define PlatformMediaEngineClassName MediaPlayerPrivateQuickTimeVisualContext
 #if USE(AVFOUNDATION)
@@ -538,6 +538,11 @@ double MediaPlayer::currentTime() const
     return m_private->currentTimeDouble();
 }
 
+void MediaPlayer::seekWithTolerance(double time, double negativeTolerance, double positiveTolerance)
+{
+    m_private->seekWithTolerance(time, negativeTolerance, positiveTolerance);
+}
+
 void MediaPlayer::seek(double time)
 {
     m_private->seekDouble(time);
@@ -744,6 +749,11 @@ void MediaPlayer::paintCurrentFrameInContext(GraphicsContext* p, const IntRect& 
 bool MediaPlayer::copyVideoTextureToPlatformTexture(GraphicsContext3D* context, Platform3DObject texture, GC3Dint level, GC3Denum type, GC3Denum internalFormat, bool premultiplyAlpha, bool flipY)
 {
     return m_private->copyVideoTextureToPlatformTexture(context, texture, level, type, internalFormat, premultiplyAlpha, flipY);
+}
+
+PassNativeImagePtr MediaPlayer::nativeImageForCurrentTime()
+{
+    return m_private->nativeImageForCurrentTime();
 }
 
 MediaPlayer::SupportsType MediaPlayer::supportsType(const MediaEngineSupportParameters& parameters, const MediaPlayerSupportsTypeClient* client)

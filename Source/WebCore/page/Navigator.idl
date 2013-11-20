@@ -19,7 +19,6 @@
 
 [
     GenerateIsReachable=ImplFrame,
-    OperationsNotDeletable
 ] interface Navigator {
     [Nondeterministic] readonly attribute DOMString appCodeName;
      [Nondeterministic] readonly attribute DOMString appName;

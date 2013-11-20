@@ -79,6 +79,7 @@ public:
 
     virtual void seek(float) { }
     virtual void seekDouble(double time) { seek(time); }
+    virtual void seekWithTolerance(double time, double, double) { seek(time); }
 
     virtual bool seeking() const = 0;
 
@@ -120,6 +121,7 @@ public:
 
     virtual void paintCurrentFrameInContext(GraphicsContext* c, const IntRect& r) { paint(c, r); }
     virtual bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject, GC3Dint, GC3Denum, GC3Denum, bool, bool) { return false; }
+    virtual PassNativeImagePtr nativeImageForCurrentTime() { return 0; }
 
     virtual void setPreload(MediaPlayer::Preload) { }
 

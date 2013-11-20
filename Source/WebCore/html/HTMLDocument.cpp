@@ -161,7 +161,7 @@ bool HTMLDocument::hasFocus()
 String HTMLDocument::bgColor()
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (!bodyElement)
         return String();
@@ -171,7 +171,7 @@ String HTMLDocument::bgColor()
 void HTMLDocument::setBgColor(const String& value)
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (bodyElement)
         bodyElement->setBgColor(value);
@@ -180,7 +180,7 @@ void HTMLDocument::setBgColor(const String& value)
 String HTMLDocument::fgColor()
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (!bodyElement)
         return String();
@@ -190,7 +190,7 @@ String HTMLDocument::fgColor()
 void HTMLDocument::setFgColor(const String& value)
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (bodyElement)
         bodyElement->setText(value);
@@ -199,7 +199,7 @@ void HTMLDocument::setFgColor(const String& value)
 String HTMLDocument::alinkColor()
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (!bodyElement)
         return String();
@@ -209,7 +209,7 @@ String HTMLDocument::alinkColor()
 void HTMLDocument::setAlinkColor(const String& value)
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (bodyElement) {
         // This check is a bit silly, but some benchmarks like to set the
@@ -223,7 +223,7 @@ void HTMLDocument::setAlinkColor(const String& value)
 String HTMLDocument::linkColor()
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (!bodyElement)
         return String();
@@ -233,7 +233,7 @@ String HTMLDocument::linkColor()
 void HTMLDocument::setLinkColor(const String& value)
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (bodyElement) {
         // This check is a bit silly, but some benchmarks like to set the
@@ -247,7 +247,7 @@ void HTMLDocument::setLinkColor(const String& value)
 String HTMLDocument::vlinkColor()
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (!bodyElement)
         return String();
@@ -257,7 +257,7 @@ String HTMLDocument::vlinkColor()
 void HTMLDocument::setVlinkColor(const String& value)
 {
     HTMLElement* b = body();
-    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? static_cast<HTMLBodyElement*>(b) : 0;
+    HTMLBodyElement* bodyElement = (b && b->hasTagName(bodyTag)) ? toHTMLBodyElement(b) : 0;
 
     if (bodyElement) {
         // This check is a bit silly, but some benchmarks like to set the
@@ -357,7 +357,7 @@ static HashSet<AtomicStringImpl*>* createHtmlCaseInsensitiveAttributesSet()
 
 void HTMLDocument::addDocumentNamedItem(const AtomicStringImpl& name, Element& item)
 {
-    m_documentNamedItem.add(name, item);
+    m_documentNamedItem.add(name, item, *this);
 }
 
 void HTMLDocument::removeDocumentNamedItem(const AtomicStringImpl& name, Element& item)
@@ -367,7 +367,7 @@ void HTMLDocument::removeDocumentNamedItem(const AtomicStringImpl& name, Element
 
 void HTMLDocument::addWindowNamedItem(const AtomicStringImpl& name, Element& item)
 {
-    m_windowNamedItem.add(name, item);
+    m_windowNamedItem.add(name, item, *this);
 }
 
 void HTMLDocument::removeWindowNamedItem(const AtomicStringImpl& name, Element& item)

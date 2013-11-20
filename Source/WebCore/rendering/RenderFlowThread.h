@@ -200,7 +200,7 @@ public:
 #endif
     virtual bool collectsGraphicsLayersUnderRegions() const;
 
-    void pushFlowThreadLayoutState(const RenderObject*);
+    void pushFlowThreadLayoutState(const RenderObject&);
     void popFlowThreadLayoutState();
     LayoutUnit offsetFromLogicalTopOfFirstRegion(const RenderBlock*) const;
     void clearRenderBoxRegionInfoAndCustomStyle(const RenderBox*, const RenderRegion*, const RenderRegion*, const RenderRegion*, const RenderRegion*);
@@ -369,12 +369,8 @@ private:
     RenderFlowThread* m_previousRenderFlowThread;
 };
 
-// These structures are used by PODIntervalTree for debugging.
+// This structure is used by PODIntervalTree for debugging.
 #ifndef NDEBUG
-template <> struct ValueToString<LayoutUnit> {
-    static String string(const LayoutUnit value) { return String::number(value.toFloat()); }
-};
-
 template <> struct ValueToString<RenderRegion*> {
     static String string(const RenderRegion* value) { return String::format("%p", value); }
 };

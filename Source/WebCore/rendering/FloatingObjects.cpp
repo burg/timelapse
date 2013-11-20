@@ -28,7 +28,6 @@
 #include "RenderBox.h"
 #include "RenderView.h"
 
-using namespace std;
 using namespace WTF;
 
 namespace WebCore {
@@ -100,7 +99,7 @@ std::unique_ptr<FloatingObject> FloatingObject::unsafeClone() const
     return cloneObject;
 }
 
-inline static bool rangesIntersect(int floatTop, int floatBottom, int objectTop, int objectBottom)
+inline static bool rangesIntersect(LayoutUnit floatTop, LayoutUnit floatBottom, LayoutUnit objectTop, LayoutUnit objectBottom)
 {
     if (objectTop >= floatBottom || objectBottom < floatTop)
         return false;
@@ -127,15 +126,15 @@ public:
 
     ComputeFloatOffsetAdapter(const RenderBlockFlow& renderer, LayoutUnit lineTop, LayoutUnit lineBottom, LayoutUnit offset)
         : m_renderer(renderer)
-        , m_lineTop(roundToInt(lineTop))
-        , m_lineBottom(roundToInt(lineBottom))
+        , m_lineTop(lineTop)
+        , m_lineBottom(lineBottom)
         , m_offset(offset)
         , m_outermostFloat(0)
     {
     }
 
-    int lowValue() const { return m_lineTop; }
-    int highValue() const { return m_lineBottom; }
+    LayoutUnit lowValue() const { return m_lineTop; }
+    LayoutUnit highValue() const { return m_lineBottom; }
     void collectIfNeeded(const IntervalType&);
 
     LayoutUnit offset() const { return m_offset; }
@@ -146,8 +145,8 @@ private:
     bool updateOffsetIfNeeded(const FloatingObject*);
 
     const RenderBlockFlow& m_renderer;
-    int m_lineTop;
-    int m_lineBottom;
+    LayoutUnit m_lineTop;
+    LayoutUnit m_lineBottom;
     LayoutUnit m_offset;
     const FloatingObject* m_outermostFloat;
 };
@@ -158,15 +157,15 @@ public:
 
     FindNextFloatLogicalBottomAdapter(const RenderBlockFlow& renderer, LayoutUnit belowLogicalHeight)
         : m_renderer(renderer)
-        , m_belowLogicalHeight(floorToInt(belowLogicalHeight))
-        , m_aboveLogicalHeight(roundToInt(LayoutUnit::max()))
+        , m_belowLogicalHeight(belowLogicalHeight)
+        , m_aboveLogicalHeight(LayoutUnit::max())
         , m_nextLogicalBottom(LayoutUnit::max())
         , m_nextShapeLogicalBottom(LayoutUnit::max())
     {
     }
 
-    int lowValue() const { return m_belowLogicalHeight; }
-    int highValue() const { return m_aboveLogicalHeight; }
+    LayoutUnit lowValue() const { return m_belowLogicalHeight; }
+    LayoutUnit highValue() const { return m_aboveLogicalHeight; }
     void collectIfNeeded(const IntervalType&);
 
     LayoutUnit nextLogicalBottom() { return m_nextLogicalBottom == LayoutUnit::max() ? LayoutUnit() : m_nextLogicalBottom; }
@@ -174,8 +173,8 @@ public:
 
 private:
     const RenderBlockFlow& m_renderer;
-    int m_belowLogicalHeight;
-    int m_aboveLogicalHeight;
+    LayoutUnit m_belowLogicalHeight;
+    LayoutUnit m_aboveLogicalHeight;
     LayoutUnit m_nextLogicalBottom;
     LayoutUnit m_nextShapeLogicalBottom;
 };
@@ -188,7 +187,7 @@ inline void FindNextFloatLogicalBottomAdapter::collectIfNeeded(const IntervalTyp
 
     // All the objects returned from the tree should be already placed.
     ASSERT(floatingObject->isPlaced());
-    ASSERT(rangesIntersect(m_renderer.pixelSnappedLogicalTopForFloat(floatingObject), m_renderer.pixelSnappedLogicalBottomForFloat(floatingObject), m_belowLogicalHeight, m_aboveLogicalHeight));
+    ASSERT(rangesIntersect(m_renderer.logicalTopForFloat(floatingObject), m_renderer.logicalBottomForFloat(floatingObject), m_belowLogicalHeight, m_aboveLogicalHeight));
 
     LayoutUnit floatBottom = m_renderer.logicalBottomForFloat(floatingObject);
     if (m_nextLogicalBottom < floatBottom)
@@ -198,7 +197,7 @@ inline void FindNextFloatLogicalBottomAdapter::collectIfNeeded(const IntervalTyp
     if (ShapeOutsideInfo* shapeOutside = floatingObject->renderer().shapeOutsideInfo()) {
         LayoutUnit shapeBottom = m_renderer.logicalTopForFloat(floatingObject) + m_renderer.marginBeforeForChild(floatingObject->renderer()) + shapeOutside->shapeLogicalBottom();
         // Use the shapeBottom unless it extends outside of the margin box, in which case it is clipped.
-        m_nextShapeLogicalBottom = min(shapeBottom, floatBottom);
+        m_nextShapeLogicalBottom = std::min(shapeBottom, floatBottom);
     } else
         m_nextShapeLogicalBottom = floatBottom;
 #endif
@@ -411,7 +410,7 @@ LayoutUnit FloatingObjects::logicalRightOffsetForPositioningFloat(LayoutUnit fix
     if (heightRemaining)
         *heightRemaining = adapter.heightRemaining();
 
-    return min(fixedOffset, adapter.offset());
+    return std::min(fixedOffset, adapter.offset());
 }
 
 LayoutUnit FloatingObjects::logicalLeftOffset(LayoutUnit fixedOffset, LayoutUnit logicalTop, LayoutUnit logicalHeight)
@@ -427,7 +426,7 @@ LayoutUnit FloatingObjects::logicalRightOffset(LayoutUnit fixedOffset, LayoutUni
     ComputeFloatOffsetAdapter<FloatingObject::FloatRight> adapter(m_renderer, logicalTop, logicalTop + logicalHeight, fixedOffset);
     placedFloatsTree().allOverlapsWithAdapter(adapter);
 
-    return min(fixedOffset, adapter.shapeOffset());
+    return std::min(fixedOffset, adapter.shapeOffset());
 }
 
 template<>
@@ -461,7 +460,7 @@ inline void ComputeFloatOffsetAdapter<FloatTypeValue>::collectIfNeeded(const Int
 
     // All the objects returned from the tree should be already placed.
     ASSERT(floatingObject->isPlaced());
-    ASSERT(rangesIntersect(m_renderer.pixelSnappedLogicalTopForFloat(floatingObject), m_renderer.pixelSnappedLogicalBottomForFloat(floatingObject), m_lineTop, m_lineBottom));
+    ASSERT(rangesIntersect(m_renderer.logicalTopForFloat(floatingObject), m_renderer.logicalBottomForFloat(floatingObject), m_lineTop, m_lineBottom));
 
     bool floatIsNewExtreme = updateOffsetIfNeeded(floatingObject);
     if (floatIsNewExtreme)
@@ -473,19 +472,5 @@ LayoutUnit ComputeFloatOffsetAdapter<FloatTypeValue>::heightRemaining() const
 {
     return m_outermostFloat ? m_renderer.logicalBottomForFloat(m_outermostFloat) - m_lineTop : LayoutUnit(1);
 }
-
-#ifndef NDEBUG
-// These helpers are only used by the PODIntervalTree for debugging purposes.
-String ValueToString<int>::string(const int value)
-{
-    return String::number(value);
-}
-
-String ValueToString<FloatingObject*>::string(const FloatingObject* floatingObject)
-{
-    return String::format("%p (%ix%i %ix%i)", floatingObject, floatingObject->frameRect().x().toInt(), floatingObject->frameRect().y().toInt(), floatingObject->frameRect().maxX().toInt(), floatingObject->frameRect().maxY().toInt());
-}
-#endif
-
 
 } // namespace WebCore

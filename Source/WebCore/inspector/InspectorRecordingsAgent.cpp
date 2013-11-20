@@ -41,26 +41,37 @@
 namespace WebCore {
 
 InspectorRecordingsAgent::InspectorRecordingsAgent(InstrumentingAgents* instrumentingAgents)
-: InspectorBaseAgent<InspectorRecordingsAgent>("Recordings", instrumentingAgents)
-, m_instrumentingAgents(instrumentingAgents)
+: InspectorBaseAgent(ASCIILiteral("Recordings"), instrumentingAgents)
 {
-    m_instrumentingAgents->setInspectorRecordingsAgent(this);
 }
 
 InspectorRecordingsAgent::~InspectorRecordingsAgent()
 {
-    m_instrumentingAgents->setInspectorRecordingsAgent(nullptr);
-    m_instrumentingAgents = nullptr;
+    reset();
 }
 
-void InspectorRecordingsAgent::setFrontend(InspectorFrontend* frontend)
+void InspectorRecordingsAgent::didCreateFrontendAndBackend(InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
 {
-    m_frontend = frontend->recordings();
+    m_frontendDispatcher = std::make_unique<InspectorRecordingsFrontendDispatcher>(frontendChannel);
+    m_backendDispatcher = InspectorRecordingsBackendDispatcher::create(backendDispatcher, this);
+
+    // TODO: set up frontend-specific state.
+    m_instrumentingAgents->setInspectorRecordingsAgent(this);
 }
 
-void InspectorRecordingsAgent::clearFrontend()
+void InspectorRecordingsAgent::willDestroyFrontendAndBackend()
 {
-    m_frontend = nullptr;
+    m_frontendDispatcher = nullptr;
+    m_backendDispatcher.clear();
+
+    // TODO: clear frontend-specific state.
+    m_instrumentingAgents->setInspectorReplayAgent(nullptr);
+    reset();
+}
+
+void InspectorRecordingsAgent::reset()
+{
+    // TODO: release resources, such as recording objects.
 }
 
 PassRefPtr<ReplayRecording> InspectorRecordingsAgent::findRecording(ErrorString* errorString, int uid)
@@ -79,7 +90,7 @@ PassRefPtr<ReplayRecording> InspectorRecordingsAgent::findRecording(ErrorString*
 void InspectorRecordingsAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
-    // in case we didn't know about the loaded recording, add here.
+    // In case we didn't know about the loaded recording, add here.
     m_recordingsMap.add(recording->uid(), recording);
 }
 
@@ -87,11 +98,11 @@ void InspectorRecordingsAgent::recordingCreated(PassRefPtr<ReplayRecording> prpR
 {
     RefPtr<ReplayRecording> recording = prpRecording;
     RecordingsMap::AddResult result = m_recordingsMap.add(recording->uid(), recording);
-    // can't have two recordings with same uid
+    // Can't have two recordings with same uid.
     ASSERT_UNUSED(result, result.isNewEntry);
 
-    if (m_frontend)
-        m_frontend->recordingAdded(recording->uid());
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->recordingAdded(recording->uid());
 }
 
 void InspectorRecordingsAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<TypeBuilder::Recordings::ReplayRecording>& serializedObject)

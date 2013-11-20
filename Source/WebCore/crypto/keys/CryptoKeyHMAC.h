@@ -35,7 +35,7 @@ namespace WebCore {
 
 class CryptoKeyHMAC FINAL : public CryptoKey {
 public:
-    static PassRefPtr<CryptoKeyHMAC> create(const Vector<char>& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsage usage)
+    static PassRefPtr<CryptoKeyHMAC> create(const Vector<uint8_t>& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsage usage)
     {
         return adoptRef(new CryptoKeyHMAC(key, hash, extractable, usage));
     }
@@ -46,30 +46,26 @@ public:
 
     virtual CryptoKeyClass keyClass() const OVERRIDE { return CryptoKeyClass::HMAC; }
 
-    const Vector<char>& key() const { return m_key; }
+    const Vector<uint8_t>& key() const { return m_key; }
 
-    virtual void buildAlgorithmDescription(CryptoAlgorithmDescriptionBuilder&) const OVERRIDE;
+    CryptoAlgorithmIdentifier hashAlgorithmIdentifier() const { return m_hash; }
 
 private:
-    CryptoKeyHMAC(const Vector<char>& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsage);
+    CryptoKeyHMAC(const Vector<uint8_t>& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsage);
+
+    virtual void buildAlgorithmDescription(CryptoAlgorithmDescriptionBuilder&) const OVERRIDE;
+    virtual std::unique_ptr<CryptoKeyData> exportData() const OVERRIDE;
 
     CryptoAlgorithmIdentifier m_hash;
-    Vector<char> m_key;
+    Vector<uint8_t> m_key;
 };
 
-inline const CryptoKeyHMAC* asCryptoKeyHMAC(const CryptoKey& key)
+inline bool isCryptoKeyHMAC(const CryptoKey& key)
 {
-    if (key.keyClass() != CryptoKeyClass::HMAC)
-        return nullptr;
-    return static_cast<const CryptoKeyHMAC*>(&key);
+    return key.keyClass() == CryptoKeyClass::HMAC;
 }
 
-inline CryptoKeyHMAC* asCryptoKeyHMAC(CryptoKey& key)
-{
-    if (key.keyClass() != CryptoKeyClass::HMAC)
-        return nullptr;
-    return static_cast<CryptoKeyHMAC*>(&key);
-}
+CRYPTO_KEY_TYPE_CASTS(CryptoKeyHMAC)
 
 } // namespace WebCore
 

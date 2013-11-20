@@ -1309,6 +1309,8 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
         [tempArray addObject:(NSString *)kAXColumnHeaderUIElementsAttribute];
         [tempArray addObject:NSAccessibilityRowHeaderUIElementsAttribute];
         [tempArray addObject:NSAccessibilityHeaderAttribute];
+        [tempArray addObject:NSAccessibilityColumnCountAttribute];
+        [tempArray addObject:NSAccessibilityRowCountAttribute];
         tableAttrs = [[NSArray alloc] initWithArray:tempArray];
         [tempArray release];
     }
@@ -2351,11 +2353,15 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     }
     
     if (m_object->isAccessibilityTable()) {
-        // TODO: distinguish between visible and non-visible rows
-        if ([attributeName isEqualToString:NSAccessibilityRowsAttribute] ||
-            [attributeName isEqualToString:NSAccessibilityVisibleRowsAttribute]) {
+        if ([attributeName isEqualToString:NSAccessibilityRowsAttribute])
             return convertToNSArray(toAccessibilityTable(m_object)->rows());
+        
+        if ([attributeName isEqualToString:NSAccessibilityVisibleRowsAttribute]) {
+            AccessibilityObject::AccessibilityChildrenVector visibleRows;
+            toAccessibilityTable(m_object)->visibleRows(visibleRows);
+            return convertToNSArray(visibleRows);
         }
+        
         // TODO: distinguish between visible and non-visible columns
         if ([attributeName isEqualToString:NSAccessibilityColumnsAttribute] ||
             [attributeName isEqualToString:NSAccessibilityVisibleColumnsAttribute]) {
@@ -2397,6 +2403,12 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             toAccessibilityTable(m_object)->cells(cells);
             return convertToNSArray(cells);
         }
+        
+        if ([attributeName isEqualToString:NSAccessibilityColumnCountAttribute])
+            return @(toAccessibilityTable(m_object)->columnCount());
+        
+        if ([attributeName isEqualToString:NSAccessibilityRowCountAttribute])
+            return @(toAccessibilityTable(m_object)->rowCount());
     }
     
     if (m_object->isTableColumn()) {
@@ -2479,7 +2491,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             return convertToNSArray(rowsCopy);
         } else if (m_object->isARIATreeGridRow()) {
             AccessibilityObject::AccessibilityChildrenVector rowsCopy;
-            static_cast<AccessibilityARIAGridRow*>(m_object)->disclosedRows(rowsCopy);
+            toAccessibilityARIAGridRow(m_object)->disclosedRows(rowsCopy);
             return convertToNSArray(rowsCopy);
         }
     }
@@ -2498,7 +2510,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             }
             return nil;
         } else if (m_object->isARIATreeGridRow()) {
-            AccessibilityObject* row = static_cast<AccessibilityARIAGridRow*>(m_object)->disclosedByRow();
+            AccessibilityObject* row = toAccessibilityARIAGridRow(m_object)->disclosedByRow();
             if (!row)
                 return nil;
             return row->wrapper();
@@ -3069,7 +3081,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             return;
         AccessibilityObject::AccessibilityChildrenVector selectedChildren;
         convertToVector(array, selectedChildren);
-        static_cast<AccessibilityListBox*>(m_object)->setSelectedChildren(selectedChildren);
+        toAccessibilityListBox(m_object)->setSelectedChildren(selectedChildren);
     } else if (m_object->isTextControl()) {
         if ([attributeName isEqualToString: NSAccessibilitySelectedTextAttribute]) {
             m_object->setSelectedText(string);

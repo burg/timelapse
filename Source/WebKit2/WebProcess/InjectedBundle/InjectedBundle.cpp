@@ -26,8 +26,8 @@
 #include "config.h"
 #include "InjectedBundle.h"
 
+#include "APIArray.h"
 #include "Arguments.h"
-#include "ImmutableArray.h"
 #include "InjectedBundleScriptWorld.h"
 #include "InjectedBundleUserMessageCoders.h"
 #include "LayerTreeHost.h"
@@ -99,7 +99,7 @@ void InjectedBundle::initializeClient(WKBundleClient* client)
     m_client.initialize(client);
 }
 
-void InjectedBundle::postMessage(const String& messageName, APIObject* messageBody)
+void InjectedBundle::postMessage(const String& messageName, API::Object* messageBody)
 {
     auto encoder = std::make_unique<CoreIPC::MessageEncoder>(WebContextLegacyMessages::messageReceiverName(), WebContextLegacyMessages::postMessageMessageName(), 0);
     encoder->encode(messageName);
@@ -108,7 +108,7 @@ void InjectedBundle::postMessage(const String& messageName, APIObject* messageBo
     WebProcess::shared().parentProcessConnection()->sendMessage(std::move(encoder));
 }
 
-void InjectedBundle::postSynchronousMessage(const String& messageName, APIObject* messageBody, RefPtr<APIObject>& returnData)
+void InjectedBundle::postSynchronousMessage(const String& messageName, API::Object* messageBody, RefPtr<API::Object>& returnData)
 {
     InjectedBundleUserMessageDecoder messageDecoder(returnData);
 
@@ -366,6 +366,8 @@ void InjectedBundle::setDatabaseQuota(uint64_t quota)
     // Historically, we've used the following (somewhat non-sensical) string
     // for the databaseIdentifier of local files.
     WebProcess::shared().supplement<WebDatabaseManager>()->setQuotaForOrigin("file__0", quota);
+#else
+    UNUSED_PARAM(quota);
 #endif
 }
 
@@ -403,18 +405,18 @@ void InjectedBundle::resetApplicationCacheOriginQuota(const String& originString
     cacheStorage().storeUpdatedQuotaForOrigin(origin.get(), cacheStorage().defaultOriginQuota());
 }
 
-PassRefPtr<ImmutableArray> InjectedBundle::originsWithApplicationCache()
+PassRefPtr<API::Array> InjectedBundle::originsWithApplicationCache()
 {
     HashSet<RefPtr<SecurityOrigin>> origins;
     cacheStorage().getOriginsWithCache(origins);
-    Vector< RefPtr<APIObject>> originsVector;
 
-    HashSet<RefPtr<SecurityOrigin>>::iterator it = origins.begin();
-    HashSet<RefPtr<SecurityOrigin>>::iterator end = origins.end();
-    for ( ; it != end; ++it)
-        originsVector.append(WebString::create((*it)->databaseIdentifier()));
+    Vector<RefPtr<API::Object>> originIdentifiers;
+    originIdentifiers.reserveInitialCapacity(origins.size());
 
-    return ImmutableArray::adopt(originsVector);
+    for (const auto& origin : origins)
+        originIdentifiers.uncheckedAppend(WebString::create(origin->databaseIdentifier()));
+
+    return API::Array::create(std::move(originIdentifiers));
 }
 
 int InjectedBundle::numberOfPages(WebFrame* frame, double pageWidthInPixels, double pageHeightInPixels)
@@ -471,7 +473,7 @@ bool InjectedBundle::isProcessingUserGesture()
     return ScriptController::processingUserGesture();
 }
 
-static Vector<String> toStringVector(ImmutableArray* patterns)
+static Vector<String> toStringVector(API::Array* patterns)
 {
     Vector<String> patternsVector;
 
@@ -491,13 +493,13 @@ static Vector<String> toStringVector(ImmutableArray* patterns)
     return patternsVector;
 }
 
-void InjectedBundle::addUserScript(WebPageGroupProxy* pageGroup, InjectedBundleScriptWorld* scriptWorld, const String& source, const String& url, ImmutableArray* whitelist, ImmutableArray* blacklist, WebCore::UserScriptInjectionTime injectionTime, WebCore::UserContentInjectedFrames injectedFrames)
+void InjectedBundle::addUserScript(WebPageGroupProxy* pageGroup, InjectedBundleScriptWorld* scriptWorld, const String& source, const String& url, API::Array* whitelist, API::Array* blacklist, WebCore::UserScriptInjectionTime injectionTime, WebCore::UserContentInjectedFrames injectedFrames)
 {
     // url is not from URL::string(), i.e. it has not already been parsed by URL, so we have to use the relative URL constructor for URL instead of the ParsedURLStringTag version.
     PageGroup::pageGroup(pageGroup->identifier())->addUserScriptToWorld(scriptWorld->coreWorld(), source, URL(URL(), url), toStringVector(whitelist), toStringVector(blacklist), injectionTime, injectedFrames);
 }
 
-void InjectedBundle::addUserStyleSheet(WebPageGroupProxy* pageGroup, InjectedBundleScriptWorld* scriptWorld, const String& source, const String& url, ImmutableArray* whitelist, ImmutableArray* blacklist, WebCore::UserContentInjectedFrames injectedFrames)
+void InjectedBundle::addUserStyleSheet(WebPageGroupProxy* pageGroup, InjectedBundleScriptWorld* scriptWorld, const String& source, const String& url, API::Array* whitelist, API::Array* blacklist, WebCore::UserContentInjectedFrames injectedFrames)
 {
     // url is not from URL::string(), i.e. it has not already been parsed by URL, so we have to use the relative URL constructor for URL instead of the ParsedURLStringTag version.
     PageGroup::pageGroup(pageGroup->identifier())->addUserStyleSheetToWorld(scriptWorld->coreWorld(), source, URL(URL(), url), toStringVector(whitelist), toStringVector(blacklist), injectedFrames);
@@ -576,12 +578,12 @@ void InjectedBundle::didInitializePageGroup(WebPageGroupProxy* pageGroup)
     m_client.didInitializePageGroup(this, pageGroup);
 }
 
-void InjectedBundle::didReceiveMessage(const String& messageName, APIObject* messageBody)
+void InjectedBundle::didReceiveMessage(const String& messageName, API::Object* messageBody)
 {
     m_client.didReceiveMessage(this, messageName, messageBody);
 }
 
-void InjectedBundle::didReceiveMessageToPage(WebPage* page, const String& messageName, APIObject* messageBody)
+void InjectedBundle::didReceiveMessageToPage(WebPage* page, const String& messageName, API::Object* messageBody)
 {
     m_client.didReceiveMessageToPage(this, page, messageName, messageBody);
 }

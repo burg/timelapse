@@ -29,13 +29,12 @@
     ConstructorCallWith=ScriptExecutionContext,
     JSGenerateToJSObject,
     EventTarget,
-    OperationsNotDeletable
 ] interface MediaController {
     readonly attribute TimeRanges buffered;
     readonly attribute TimeRanges seekable;
 
     readonly attribute double duration;
-    [SetterRaisesException] attribute double currentTime;
+    attribute double currentTime;
 
     readonly attribute boolean paused;
     readonly attribute TimeRanges played;

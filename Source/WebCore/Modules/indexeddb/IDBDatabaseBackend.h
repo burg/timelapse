@@ -26,11 +26,12 @@
 #ifndef IDBDatabaseBackend_h
 #define IDBDatabaseBackend_h
 
-#include "IDBDatabaseBackend.h"
 #include "IDBDatabaseCallbacks.h"
+#include "IDBKeyRange.h"
 #include "IDBMetadata.h"
 #include "IDBPendingDeleteCall.h"
 #include "IDBPendingOpenCall.h"
+
 #include <stdint.h>
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
@@ -40,12 +41,11 @@
 
 namespace WebCore {
 
-class IDBBackingStoreInterface;
 class IDBDatabase;
 class IDBFactoryBackendInterface;
 class IDBKey;
 class IDBKeyPath;
-class IDBKeyRange;
+class IDBServerConnection;
 class IDBTransactionBackend;
 class IDBTransactionCoordinator;
 class SharedBuffer;
@@ -59,10 +59,10 @@ typedef int ExceptionCode;
 
 class IDBDatabaseBackend : public RefCounted<IDBDatabaseBackend> {
 public:
-    static PassRefPtr<IDBDatabaseBackend> create(const String& name, IDBBackingStoreInterface*, IDBFactoryBackendInterface*, const String& uniqueIdentifier);
+    static PassRefPtr<IDBDatabaseBackend> create(const String& name, const String& uniqueIdentifier, IDBFactoryBackendInterface*, IDBServerConnection&);
     ~IDBDatabaseBackend();
 
-    IDBBackingStoreInterface* backingStore() const;
+    IDBServerConnection& serverConnection() { return m_serverConnection.get(); }
 
     static const int64_t InvalidId = 0;
     int64_t id() const { return m_metadata.id; }
@@ -113,12 +113,10 @@ public:
     void openCursor(int64_t transactionId, int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, IndexedDB::CursorDirection, bool keyOnly, TaskType, PassRefPtr<IDBCallbacks>);
     void count(int64_t transactionId, int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>);
     void deleteRange(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>);
-    void clear(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBCallbacks>);
+    void clearObjectStore(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBCallbacks>);
 
     const IDBDatabaseMetadata& metadata() const { return m_metadata; }
     void setCurrentVersion(uint64_t version) { m_metadata.version = version; }
-
-    bool isIDBDatabaseBackend() { return true; }
 
     bool hasPendingSecondHalfOpen() { return m_pendingSecondHalfOpen; }
     void setPendingSecondHalfOpen(PassOwnPtr<IDBPendingOpenCall> pendingOpenCall) { m_pendingSecondHalfOpen = pendingOpenCall; }
@@ -129,7 +127,7 @@ public:
     class VersionChangeAbortOperation;
 
 private:
-    IDBDatabaseBackend(const String& name, IDBBackingStoreInterface*, IDBFactoryBackendInterface*, const String& uniqueIdentifier);
+    IDBDatabaseBackend(const String& name, const String& uniqueIdentifier, IDBFactoryBackendInterface*, IDBServerConnection&);
 
     void openConnectionInternal(PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>, int64_t transactionId, uint64_t version);
 
@@ -144,12 +142,12 @@ private:
     bool isDeleteDatabaseBlocked();
     void deleteDatabaseAsync(PassRefPtr<IDBCallbacks>);
 
-    RefPtr<IDBBackingStoreInterface> m_backingStore;
     IDBDatabaseMetadata m_metadata;
 
     String m_identifier;
-    // This might not need to be a RefPtr since the factory's lifetime is that of the page group, but it's better to be conservative than sorry.
+
     RefPtr<IDBFactoryBackendInterface> m_factory;
+    Ref<IDBServerConnection> m_serverConnection;
 
     OwnPtr<IDBTransactionCoordinator> m_transactionCoordinator;
     RefPtr<IDBTransactionBackend> m_runningVersionChangeTransaction;

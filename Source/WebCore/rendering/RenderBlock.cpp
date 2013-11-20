@@ -46,6 +46,7 @@
 #include "OverflowEvent.h"
 #include "Page.h"
 #include "PaintInfo.h"
+#include "RenderBlockFlow.h"
 #include "RenderBoxRegionInfo.h"
 #include "RenderCombineText.h"
 #include "RenderDeprecatedFlexibleBox.h"
@@ -54,6 +55,7 @@
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderMarquee.h"
+#include "RenderNamedFlowFragment.h"
 #include "RenderNamedFlowThread.h"
 #include "RenderRegion.h"
 #include "RenderTableCell.h"
@@ -76,7 +78,6 @@
 #include "HTMLElement.h"
 #endif
 
-using namespace std;
 using namespace WTF;
 using namespace Unicode;
 
@@ -85,7 +86,6 @@ namespace WebCore {
 using namespace HTMLNames;
 
 struct SameSizeAsRenderBlock : public RenderBox {
-    void* pointers[1];
     uint32_t bitfields;
 };
 
@@ -107,6 +107,28 @@ static int gDelayUpdateScrollInfo = 0;
 static DelayedUpdateScrollInfoSet* gDelayedUpdateScrollInfoSet = 0;
 
 static bool gColumnFlowSplitEnabled = true;
+
+// Allocated only when some of these fields have non-default values
+
+struct RenderBlockRareData {
+    WTF_MAKE_NONCOPYABLE(RenderBlockRareData); WTF_MAKE_FAST_ALLOCATED;
+public:
+    RenderBlockRareData() 
+        : m_paginationStrut(0)
+        , m_pageLogicalOffset(0)
+    { 
+    }
+
+    LayoutUnit m_paginationStrut;
+    LayoutUnit m_pageLogicalOffset;
+
+#if ENABLE(CSS_SHAPES)
+    OwnPtr<ShapeInsideInfo> m_shapeInsideInfo;
+#endif
+};
+
+typedef HashMap<const RenderBlock*, std::unique_ptr<RenderBlockRareData>> RenderBlockRareDataMap;
+static RenderBlockRareDataMap* gRareDataMap = 0;
 
 // This class helps dispatching the 'overflow' event on layout change. overflow can be set on RenderBoxes, yet the existing code
 // only works on RenderBlocks. If this change, this class should be shared with other RenderBoxes.
@@ -200,10 +222,17 @@ RenderBlock::~RenderBlock()
 {
     if (hasColumns())
         gColumnInfoMap->take(this);
+    if (gRareDataMap)
+        gRareDataMap->remove(this);
     if (gPercentHeightDescendantsMap)
         removeBlockFromDescendantAndContainerMaps(this, gPercentHeightDescendantsMap, gPercentHeightContainerMap);
     if (gPositionedDescendantsMap)
         removeBlockFromDescendantAndContainerMaps(this, gPositionedDescendantsMap, gPositionedContainerMap);
+}
+
+bool RenderBlock::hasRareData() const
+{
+    return gRareDataMap ? gRareDataMap->contains(this) : false;
 }
 
 void RenderBlock::willBeDestroyed()
@@ -1301,6 +1330,22 @@ void RenderBlock::layout()
     invalidateBackgroundObscurationStatus();
 }
 
+static RenderBlockRareData* getRareData(const RenderBlock* block)
+{
+    return gRareDataMap ? gRareDataMap->get(block) : 0;
+}
+
+static RenderBlockRareData& ensureRareData(const RenderBlock* block)
+{
+    if (!gRareDataMap)
+        gRareDataMap = new RenderBlockRareDataMap;
+    
+    auto& rareData = gRareDataMap->add(block, nullptr).iterator->value;
+    if (!rareData)
+        rareData = std::make_unique<RenderBlockRareData>();
+    return *rareData.get();
+}
+
 #if ENABLE(CSS_SHAPES)
 void RenderBlock::relayoutShapeDescendantIfMoved(RenderBlock* child, LayoutSize offset)
 {
@@ -1374,18 +1419,39 @@ void RenderBlock::updateShapeInsideInfoAfterStyleChange(const ShapeValue* shapeI
     if (shapeInside) {
         ShapeInsideInfo* shapeInsideInfo = ensureShapeInsideInfo();
         shapeInsideInfo->dirtyShapeSize();
-    } else {
+    } else
         setShapeInsideInfo(nullptr);
-        markShapeInsideDescendantsForLayout();
-    }
+    markShapeInsideDescendantsForLayout();
 }
 
+ShapeInsideInfo* RenderBlock::ensureShapeInsideInfo()
+{
+    RenderBlockRareData& rareData = ensureRareData(this);
+    if (!rareData.m_shapeInsideInfo)
+        setShapeInsideInfo(ShapeInsideInfo::createInfo(this));
+    return rareData.m_shapeInsideInfo.get();
+}
+
+ShapeInsideInfo* RenderBlock::shapeInsideInfo() const
+{
+    RenderBlockRareData* rareData = getRareData(this);
+    if (!rareData || !rareData->m_shapeInsideInfo)
+        return 0;
+    return ShapeInsideInfo::isEnabledFor(this) ? rareData->m_shapeInsideInfo.get() : 0;
+}
+
+void RenderBlock::setShapeInsideInfo(PassOwnPtr<ShapeInsideInfo> value)
+{
+    ensureRareData(this).m_shapeInsideInfo = value;
+}
+    
 void RenderBlock::markShapeInsideDescendantsForLayout()
 {
     if (!everHadLayout())
         return;
     if (childrenInline()) {
         setNeedsLayout();
+        invalidateLineLayoutPath();
         return;
     }
 
@@ -1574,9 +1640,9 @@ void RenderBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool)
         LayoutRect clientRect(clientBoxRect());
         LayoutRect rectToApply;
         if (isHorizontalWritingMode())
-            rectToApply = LayoutRect(clientRect.x(), clientRect.y(), 1, max<LayoutUnit>(0, oldClientAfterEdge - clientRect.y()));
+            rectToApply = LayoutRect(clientRect.x(), clientRect.y(), 1, std::max<LayoutUnit>(0, oldClientAfterEdge - clientRect.y()));
         else
-            rectToApply = LayoutRect(clientRect.x(), clientRect.y(), max<LayoutUnit>(0, oldClientAfterEdge - clientRect.x()), 1);
+            rectToApply = LayoutRect(clientRect.x(), clientRect.y(), std::max<LayoutUnit>(0, oldClientAfterEdge - clientRect.x()), 1);
         addLayoutOverflow(rectToApply);
         if (hasRenderOverflow())
             m_overflow->setLayoutClientAfterEdge(oldClientAfterEdge);
@@ -1801,14 +1867,14 @@ LayoutUnit RenderBlock::computeStartPositionDeltaForChildAvoidingFloats(const Re
 
     LayoutUnit blockOffset = logicalTopForChild(child);
     if (region)
-        blockOffset = max(blockOffset, blockOffset + (region->logicalTopForFlowThreadContent() - offsetFromLogicalTopOfFirstPage()));
+        blockOffset = std::max(blockOffset, blockOffset + (region->logicalTopForFlowThreadContent() - offsetFromLogicalTopOfFirstPage()));
 
     LayoutUnit startOff = startOffsetForLineInRegion(blockOffset, false, region, logicalHeightForChild(child));
 
     if (style().textAlign() != WEBKIT_CENTER && !child.style().marginStartUsing(&style()).isAuto()) {
         if (childMarginStart < 0)
             startOff += childMarginStart;
-        newPosition = max(newPosition, startOff); // Let the float sit in the child's margin if it can fit.
+        newPosition = std::max(newPosition, startOff); // Let the float sit in the child's margin if it can fit.
     } else if (startOff != startPosition)
         newPosition = startOff + childMarginStart;
 
@@ -1937,7 +2003,7 @@ bool RenderBlock::simplifiedLayout()
     if ((!posChildNeedsLayout() && !needsSimplifiedNormalFlowLayout()) || normalChildNeedsLayout() || selfNeedsLayout())
         return false;
 
-    LayoutStateMaintainer statePusher(&view(), this, locationOffset(), hasColumns() || hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasColumns() || hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
     
     if (needsPositionedMovementLayout() && !tryLayoutDoingPositionedMovementOnly())
         return false;
@@ -2368,7 +2434,7 @@ bool RenderBlock::paintChild(RenderBox& child, PaintInfo& paintInfo, const Layou
     if (checkAfterAlways
         && (absoluteChildY + child.height()) > paintInfo.rect.y()
         && (absoluteChildY + child.height()) < paintInfo.rect.maxY()) {
-        view().setBestTruncatedAt(absoluteChildY + child.height() + max<LayoutUnit>(0, child.collapsedMarginAfter()), this, true);
+        view().setBestTruncatedAt(absoluteChildY + child.height() + std::max<LayoutUnit>(0, child.collapsedMarginAfter()), this, true);
         return false;
     }
 
@@ -2808,8 +2874,8 @@ LayoutRect RenderBlock::blockSelectionGap(RenderBlock& rootBlock, const LayoutPo
         return LayoutRect();
 
     // Get the selection offsets for the bottom of the gap
-    LayoutUnit logicalLeft = max(lastLogicalLeft, logicalLeftSelectionOffset(rootBlock, logicalBottom, cache));
-    LayoutUnit logicalRight = min(lastLogicalRight, logicalRightSelectionOffset(rootBlock, logicalBottom, cache));
+    LayoutUnit logicalLeft = std::max(lastLogicalLeft, logicalLeftSelectionOffset(rootBlock, logicalBottom, cache));
+    LayoutUnit logicalRight = std::min(lastLogicalRight, logicalRightSelectionOffset(rootBlock, logicalBottom, cache));
     LayoutUnit logicalWidth = logicalRight - logicalLeft;
     if (logicalWidth <= 0)
         return LayoutRect();
@@ -2824,9 +2890,9 @@ LayoutRect RenderBlock::logicalLeftSelectionGap(RenderBlock& rootBlock, const La
     RenderObject* selObj, LayoutUnit logicalLeft, LayoutUnit logicalTop, LayoutUnit logicalHeight, const LogicalSelectionOffsetCaches& cache, const PaintInfo* paintInfo)
 {
     LayoutUnit rootBlockLogicalTop = blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalTop;
-    LayoutUnit rootBlockLogicalLeft = max(logicalLeftSelectionOffset(rootBlock, logicalTop, cache), logicalLeftSelectionOffset(rootBlock, logicalTop + logicalHeight, cache));
-    LayoutUnit rootBlockLogicalRight = min(inlineDirectionOffset(rootBlock, offsetFromRootBlock) + floorToInt(logicalLeft),
-        min(logicalRightSelectionOffset(rootBlock, logicalTop, cache), logicalRightSelectionOffset(rootBlock, logicalTop + logicalHeight, cache)));
+    LayoutUnit rootBlockLogicalLeft = std::max(logicalLeftSelectionOffset(rootBlock, logicalTop, cache), logicalLeftSelectionOffset(rootBlock, logicalTop + logicalHeight, cache));
+    LayoutUnit rootBlockLogicalRight = std::min(inlineDirectionOffset(rootBlock, offsetFromRootBlock) + floorToInt(logicalLeft),
+        std::min(logicalRightSelectionOffset(rootBlock, logicalTop, cache), logicalRightSelectionOffset(rootBlock, logicalTop + logicalHeight, cache)));
     LayoutUnit rootBlockLogicalWidth = rootBlockLogicalRight - rootBlockLogicalLeft;
     if (rootBlockLogicalWidth <= 0)
         return LayoutRect();
@@ -2841,9 +2907,9 @@ LayoutRect RenderBlock::logicalRightSelectionGap(RenderBlock& rootBlock, const L
     RenderObject* selObj, LayoutUnit logicalRight, LayoutUnit logicalTop, LayoutUnit logicalHeight, const LogicalSelectionOffsetCaches& cache, const PaintInfo* paintInfo)
 {
     LayoutUnit rootBlockLogicalTop = blockDirectionOffset(rootBlock, offsetFromRootBlock) + logicalTop;
-    LayoutUnit rootBlockLogicalLeft = max(inlineDirectionOffset(rootBlock, offsetFromRootBlock) + floorToInt(logicalRight),
-        max(logicalLeftSelectionOffset(rootBlock, logicalTop, cache), logicalLeftSelectionOffset(rootBlock, logicalTop + logicalHeight, cache)));
-    LayoutUnit rootBlockLogicalRight = min(logicalRightSelectionOffset(rootBlock, logicalTop, cache), logicalRightSelectionOffset(rootBlock, logicalTop + logicalHeight, cache));
+    LayoutUnit rootBlockLogicalLeft = std::max(inlineDirectionOffset(rootBlock, offsetFromRootBlock) + floorToInt(logicalRight),
+        std::max(logicalLeftSelectionOffset(rootBlock, logicalTop, cache), logicalLeftSelectionOffset(rootBlock, logicalTop + logicalHeight, cache)));
+    LayoutUnit rootBlockLogicalRight = std::min(logicalRightSelectionOffset(rootBlock, logicalTop, cache), logicalRightSelectionOffset(rootBlock, logicalTop + logicalHeight, cache));
     LayoutUnit rootBlockLogicalWidth = rootBlockLogicalRight - rootBlockLogicalLeft;
     if (rootBlockLogicalWidth <= 0)
         return LayoutRect();
@@ -3465,9 +3531,20 @@ VisiblePosition RenderBlock::positionForPointWithInlineChildren(const LayoutPoin
     return VisiblePosition();
 }
 
-static inline bool isChildHitTestCandidate(RenderBox& box)
+static inline bool isChildHitTestCandidate(const RenderBox& box)
 {
     return box.height() && box.style().visibility() == VISIBLE && !box.isFloatingOrOutOfFlowPositioned();
+}
+
+// Valid candidates in a FlowThread must be rendered by the region.
+static inline bool isChildHitTestCandidate(const RenderBox& box, RenderRegion* region, const LayoutPoint& point)
+{
+    if (!isChildHitTestCandidate(box))
+        return false;
+    if (!region)
+        return true;
+    const RenderBlock& block = box.isRenderBlock() ? toRenderBlock(box) : *box.containingBlock();
+    return block.regionAtBlockOffset(point.y()) == region;
 }
 
 VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point)
@@ -3495,8 +3572,9 @@ VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point)
     if (childrenInline())
         return positionForPointWithInlineChildren(pointInLogicalContents);
 
+    RenderRegion* region = regionAtBlockOffset(pointInLogicalContents.y());
     RenderBox* lastCandidateBox = lastChildBox();
-    while (lastCandidateBox && !isChildHitTestCandidate(*lastCandidateBox))
+    while (lastCandidateBox && !isChildHitTestCandidate(*lastCandidateBox, region, pointInLogicalContents))
         lastCandidateBox = lastCandidateBox->previousSiblingBox();
 
     bool blocksAreFlipped = style().isFlippedBlocksWritingMode();
@@ -3506,11 +3584,11 @@ VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point)
             return positionForPointRespectingEditingBoundaries(*this, *lastCandidateBox, pointInContents);
 
         for (auto childBox = firstChildBox(); childBox; childBox = childBox->nextSiblingBox()) {
-            if (!isChildHitTestCandidate(*childBox))
+            if (!isChildHitTestCandidate(*childBox, region, pointInLogicalContents))
                 continue;
             LayoutUnit childLogicalBottom = logicalTopForChild(*childBox) + logicalHeightForChild(*childBox);
             // We hit child if our click is above the bottom of its padding box (like IE6/7 and FF3).
-            if (isChildHitTestCandidate(*childBox) && (pointInLogicalContents.y() < childLogicalBottom
+            if (isChildHitTestCandidate(*childBox, region, pointInLogicalContents) && (pointInLogicalContents.y() < childLogicalBottom
                 || (blocksAreFlipped && pointInLogicalContents.y() == childLogicalBottom)))
                 return positionForPointRespectingEditingBoundaries(*this, *childBox, pointInContents);
         }
@@ -3566,17 +3644,17 @@ void RenderBlock::calcColumnWidth()
         
     LayoutUnit availWidth = desiredColumnWidth;
     LayoutUnit colGap = columnGap();
-    LayoutUnit colWidth = max<LayoutUnit>(1, LayoutUnit(style().columnWidth()));
-    int colCount = max<int>(1, style().columnCount());
+    LayoutUnit colWidth = std::max<LayoutUnit>(1, LayoutUnit(style().columnWidth()));
+    int colCount = std::max<int>(1, style().columnCount());
 
     if (style().hasAutoColumnWidth() && !style().hasAutoColumnCount()) {
         desiredColumnCount = colCount;
-        desiredColumnWidth = max<LayoutUnit>(0, (availWidth - ((desiredColumnCount - 1) * colGap)) / desiredColumnCount);
+        desiredColumnWidth = std::max<LayoutUnit>(0, (availWidth - ((desiredColumnCount - 1) * colGap)) / desiredColumnCount);
     } else if (!style().hasAutoColumnWidth() && style().hasAutoColumnCount()) {
-        desiredColumnCount = max<LayoutUnit>(1, (availWidth + colGap) / (colWidth + colGap));
+        desiredColumnCount = std::max<LayoutUnit>(1, (availWidth + colGap) / (colWidth + colGap));
         desiredColumnWidth = ((availWidth + colGap) / desiredColumnCount) - colGap;
     } else {
-        desiredColumnCount = max<LayoutUnit>(min<LayoutUnit>(colCount, (availWidth + colGap) / (colWidth + colGap)), 1);
+        desiredColumnCount = std::max<LayoutUnit>(std::min<LayoutUnit>(colCount, (availWidth + colGap) / (colWidth + colGap)), 1);
         desiredColumnWidth = ((availWidth + colGap) / desiredColumnCount) - colGap;
     }
     setDesiredColumnCountAndWidth(desiredColumnCount, desiredColumnWidth);
@@ -3810,8 +3888,8 @@ void RenderBlock::adjustRectForColumns(LayoutRect& r) const
     if (!colHeight)
         return;
 
-    LayoutUnit startOffset = max(isHorizontal ? r.y() : r.x(), beforeBorderPadding);
-    LayoutUnit endOffset = max(min<LayoutUnit>(isHorizontal ? r.maxY() : r.maxX(), beforeBorderPadding + colCount * colHeight), beforeBorderPadding);
+    LayoutUnit startOffset = std::max(isHorizontal ? r.y() : r.x(), beforeBorderPadding);
+    LayoutUnit endOffset = std::max(std::min<LayoutUnit>(isHorizontal ? r.maxY() : r.maxX(), beforeBorderPadding + colCount * colHeight), beforeBorderPadding);
 
     // FIXME: Can overflow on fast/block/float/float-not-removed-from-next-sibling4.html, see https://bugs.webkit.org/show_bug.cgi?id=68744
     unsigned startColumn = (startOffset - beforeBorderPadding) / colHeight;
@@ -3925,7 +4003,7 @@ void RenderBlock::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Lay
     } else
         computeBlockPreferredLogicalWidths(minLogicalWidth, maxLogicalWidth);
 
-    maxLogicalWidth = max(minLogicalWidth, maxLogicalWidth);
+    maxLogicalWidth = std::max(minLogicalWidth, maxLogicalWidth);
 
     adjustIntrinsicLogicalWidthsForColumns(minLogicalWidth, maxLogicalWidth);
 
@@ -3938,7 +4016,7 @@ void RenderBlock::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Lay
     if (isTableCell()) {
         Length tableCellWidth = toRenderTableCell(this)->styleOrColLogicalWidth();
         if (tableCellWidth.isFixed() && tableCellWidth.value() > 0)
-            maxLogicalWidth = max(minLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(tableCellWidth.value()));
+            maxLogicalWidth = std::max(minLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(tableCellWidth.value()));
     }
 
     int scrollbarWidth = instrinsicScrollbarLogicalWidth();
@@ -3963,13 +4041,13 @@ void RenderBlock::computePreferredLogicalWidths()
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
     
     if (styleToUse.logicalMinWidth().isFixed() && styleToUse.logicalMinWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
-        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
+        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
+        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
     }
     
     if (styleToUse.logicalMaxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
-        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
+        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
+        m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
     }
     
     // Table layout uses integers, ceil the preferred widths to ensure that they can contain the contents.
@@ -4001,14 +4079,14 @@ void RenderBlock::adjustIntrinsicLogicalWidthsForColumns(LayoutUnit& minLogicalW
             minLogicalWidth = minLogicalWidth * columnCount + gapExtra;
         else {
             columnWidth = style().columnWidth();
-            minLogicalWidth = min(minLogicalWidth, columnWidth);
+            minLogicalWidth = std::min(minLogicalWidth, columnWidth);
         }
         // FIXME: If column-count is auto here, we should resolve it to calculate the maximum
         // intrinsic width, instead of pretending that it's 1. The only way to do that is by
         // performing a layout pass, but this is not an appropriate time or place for layout. The
         // good news is that if height is unconstrained and there are no explicit breaks, the
         // resolved column-count really should be 1.
-        maxLogicalWidth = max(maxLogicalWidth, columnWidth) * columnCount + gapExtra;
+        maxLogicalWidth = std::max(maxLogicalWidth, columnWidth) * columnCount + gapExtra;
     }
 }
 
@@ -4113,7 +4191,7 @@ static inline void stripTrailingSpace(float& inlineMax, float& inlineMin,
 static inline void updatePreferredWidth(LayoutUnit& preferredWidth, float& result)
 {
     LayoutUnit snappedResult = ceiledLayoutUnit(result);
-    preferredWidth = max(snappedResult, preferredWidth);
+    preferredWidth = std::max(snappedResult, preferredWidth);
 }
 
 // With sub-pixel enabled: When converting between floating point and LayoutUnits
@@ -4285,7 +4363,7 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
                 }
 
                 // Add our width to the max.
-                inlineMax += max<float>(0, childMax);
+                inlineMax += std::max<float>(0, childMax);
 
                 if (!autoWrap || !canBreakReplacedElement || (isPrevChildInlineFlow && !shouldBreakLineAfterText)) {
                     if (child->isFloating())
@@ -4406,7 +4484,7 @@ void RenderBlock::computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidt
                     inlineMax = endMax;
                     addedTextIndent = true;
                 } else
-                    inlineMax += max<float>(0, childMax);
+                    inlineMax += std::max<float>(0, childMax);
             }
 
             // Ignore spaces after a list marker.
@@ -4455,11 +4533,11 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
         if (child->isFloating() || (child->isBox() && toRenderBox(child)->avoidsFloats())) {
             LayoutUnit floatTotalWidth = floatLeftWidth + floatRightWidth;
             if (childStyle.clear() & CLEFT) {
-                maxLogicalWidth = max(floatTotalWidth, maxLogicalWidth);
+                maxLogicalWidth = std::max(floatTotalWidth, maxLogicalWidth);
                 floatLeftWidth = 0;
             }
             if (childStyle.clear() & CRIGHT) {
-                maxLogicalWidth = max(floatTotalWidth, maxLogicalWidth);
+                maxLogicalWidth = std::max(floatTotalWidth, maxLogicalWidth);
                 floatRightWidth = 0;
             }
         }
@@ -4490,11 +4568,11 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
         }
 
         LayoutUnit w = childMinPreferredLogicalWidth + margin;
-        minLogicalWidth = max(w, minLogicalWidth);
+        minLogicalWidth = std::max(w, minLogicalWidth);
         
         // IE ignores tables for calculation of nowrap. Makes some sense.
         if (nowrap && !child->isTable())
-            maxLogicalWidth = max(w, maxLogicalWidth);
+            maxLogicalWidth = std::max(w, maxLogicalWidth);
 
         w = childMaxPreferredLogicalWidth + margin;
 
@@ -4506,13 +4584,13 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
                 bool ltr = containingBlock ? containingBlock->style().isLeftToRightDirection() : styleToUse.isLeftToRightDirection();
                 LayoutUnit marginLogicalLeft = ltr ? marginStart : marginEnd;
                 LayoutUnit marginLogicalRight = ltr ? marginEnd : marginStart;
-                LayoutUnit maxLeft = marginLogicalLeft > 0 ? max(floatLeftWidth, marginLogicalLeft) : floatLeftWidth + marginLogicalLeft;
-                LayoutUnit maxRight = marginLogicalRight > 0 ? max(floatRightWidth, marginLogicalRight) : floatRightWidth + marginLogicalRight;
+                LayoutUnit maxLeft = marginLogicalLeft > 0 ? std::max(floatLeftWidth, marginLogicalLeft) : floatLeftWidth + marginLogicalLeft;
+                LayoutUnit maxRight = marginLogicalRight > 0 ? std::max(floatRightWidth, marginLogicalRight) : floatRightWidth + marginLogicalRight;
                 w = childMaxPreferredLogicalWidth + maxLeft + maxRight;
-                w = max(w, floatLeftWidth + floatRightWidth);
+                w = std::max(w, floatLeftWidth + floatRightWidth);
             }
             else
-                maxLogicalWidth = max(floatLeftWidth + floatRightWidth, maxLogicalWidth);
+                maxLogicalWidth = std::max(floatLeftWidth + floatRightWidth, maxLogicalWidth);
             floatLeftWidth = floatRightWidth = 0;
         }
         
@@ -4522,16 +4600,16 @@ void RenderBlock::computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth
             else
                 floatRightWidth += w;
         } else
-            maxLogicalWidth = max(w, maxLogicalWidth);
+            maxLogicalWidth = std::max(w, maxLogicalWidth);
         
         child = child->nextSibling();
     }
 
     // Always make sure these values are non-negative.
-    minLogicalWidth = max<LayoutUnit>(0, minLogicalWidth);
-    maxLogicalWidth = max<LayoutUnit>(0, maxLogicalWidth);
+    minLogicalWidth = std::max<LayoutUnit>(0, minLogicalWidth);
+    maxLogicalWidth = std::max<LayoutUnit>(0, maxLogicalWidth);
 
-    maxLogicalWidth = max(floatLeftWidth + floatRightWidth, maxLogicalWidth);
+    maxLogicalWidth = std::max(floatLeftWidth + floatRightWidth, maxLogicalWidth);
 }
 
 bool RenderBlock::hasLineIfEmpty() const
@@ -4917,24 +4995,38 @@ void RenderBlock::updateFirstLetter()
     createFirstLetterRenderer(firstLetterBlock, toRenderText(descendant));
 }
 
+LayoutUnit RenderBlock::paginationStrut() const
+{
+    RenderBlockRareData* rareData = getRareData(this);
+    return rareData ? rareData->m_paginationStrut : LayoutUnit();
+}
+
+LayoutUnit RenderBlock::pageLogicalOffset() const
+{
+    RenderBlockRareData* rareData = getRareData(this);
+    return rareData ? rareData->m_pageLogicalOffset : LayoutUnit();
+}
+
 void RenderBlock::setPaginationStrut(LayoutUnit strut)
 {
-    if (!m_rareData) {
+    RenderBlockRareData* rareData = getRareData(this);
+    if (!rareData) {
         if (!strut)
             return;
-        m_rareData = adoptPtr(new RenderBlockRareData());
+        rareData = &ensureRareData(this);
     }
-    m_rareData->m_paginationStrut = strut;
+    rareData->m_paginationStrut = strut;
 }
 
 void RenderBlock::setPageLogicalOffset(LayoutUnit logicalOffset)
 {
-    if (!m_rareData) {
+    RenderBlockRareData* rareData = getRareData(this);
+    if (!rareData) {
         if (!logicalOffset)
             return;
-        m_rareData = adoptPtr(new RenderBlockRareData());
+        rareData = &ensureRareData(this);
     }
-    m_rareData->m_pageLogicalOffset = logicalOffset;
+    rareData->m_pageLogicalOffset = logicalOffset;
 }
 
 void RenderBlock::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const

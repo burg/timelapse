@@ -1,0 +1,159 @@
+{
+    "domain": "Replay",
+    "description": "Controls per-page deterministic record/replay. In capture mode, nondeterministic inputs are captured into a log (aka recording). In replaying mode, the captured execution is replicated by reusing nondeterministic inputs.",
+    "commands": [
+        {
+            "name": "enable"
+        },
+        {
+            "name": "disable"
+        },
+        {
+            "name": "isEnabled",
+            "returns": [
+                { "name": "state", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "startCapture",
+            "description": "Starts capture of a program execution."
+        },
+        {
+            "name": "stopCapture",
+            "description": "Stops capture of a program execution.",
+            "returns": [
+                { "name": "wasAllowed", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "replayUpToMarkIndex",
+            "description": "Replays the program up to a specific point, called a mark.  command will bring the replay execution up to the point before the first input with the specified mark is used.",
+            "parameters": [
+                { "name": "markIndex", "$ref": "Recordings.MarkIndex" },
+                { "name": "fastReplay", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "replayToCompletion",
+            "description": "Replays the program completely.",
+            "parameters": [
+                { "name": "fastReplay", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "pausePlayback",
+            "description": "Pauses the current replay action. Can be resumed by using a replay command."
+            },
+        {
+            "name": "stopPlayback",
+            "description": "Stops the current playback. Further replaying will start from the beginning. Optionally, unlock user input.",
+            "parameters": [
+                { "name": "unlock", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "setPauseOnError",
+            "description": "Changes the actions taken by the replay backend when a playback error is encountered.",
+            "parameters": [
+                { "name": "shouldPause", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "loadRecording",
+            "description": "Loads the specified recording",
+            "parameters": [
+                { "name": "uid", "$ref": "Recordings.RecordingId" }
+            ],
+            "returns": [
+                { "name": "wasAllowed", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "unloadRecording",
+            "description": "Unloads the currently loaded recording, if any is loaded.",
+            "returns": [
+                { "name": "wasAllowed", "type": "boolean" }
+            ]
+        }
+    ],
+
+    "events": [
+        {
+            "name": "replayEnabled"
+        },
+        {
+            "name": "replayDisabled"
+        },
+        {
+            "name": "captureStarted",
+            "description": "Fired when capture has started."
+        },
+        {
+            "name": "captureStopped",
+            "description": "Fired when capture has stopped."
+        },
+        {
+            "name": "capturedInput",
+            "description": "A new (event loop) input was captured.",
+            "parameters": [
+                { "name": "input", "$ref": "Recordings.ReplayInput", "description": "Data for the captured (event loop) input." }
+            ]
+        },
+        {
+            "name": "playbackHitMark",
+            "description": "A mark was reached during the replay.",
+            "parameters": [
+                { "name": "mark", "$ref": "Recordings.MarkIndex", "description": "The mark that was hit." }
+            ]
+        },
+        {
+            "name": "playbackStarted",
+            "description": "Fired when replaying has started."
+        },
+        {
+            "name": "playbackPaused",
+            "description": "Fired when replaying has paused, but not finished.",
+            "parameters": [
+                { "name": "mark", "$ref": "Recordings.MarkIndex", "description": "The mark of the input at which we paused, but has not yet been executed." }
+            ]
+        },
+        {
+            "name": "playbackFinished",
+            "description": "Fired when replaying has stopped."
+        },
+        {
+            "name": "playbackError",
+            "description": "Fired when playback encounters an internal (divergence) error.",
+            "parameters": [
+                { "name": "isFatal", "type": "boolean", "description": "Whether the error causes immediate abortion of replay state." },
+                { "name": "error", "type": "string", "description": "A description of the error." }
+            ]
+        },
+        {
+            "name": "inputLocked",
+            "description": "Fired when user input has become locked (will be ignored)."
+        },
+        {
+            "name": "inputUnlocked",
+            "description": "Fired when user input has been unlocked (will no longer be ignored)."
+        },
+        {
+            "name": "recordingLoaded",
+            "description": "Fired when a recording is loaded.",
+            "parameters": [
+                { "name": "uid", "$ref": "Recordings.RecordingId", "description": "Id for the loaded recording." }
+            ]
+        },
+        {
+            "name": "recordingUnloaded",
+            "description": "Fired when a recording is unloaded."
+        },
+        {
+            "name": "imageCaptured",
+            "description": "Fired when an image of a DOM node is captured.",
+            "parameters": [
+                { "name": "image", "type": "string", "description": "A data URI encoding the captured image." }
+            ]
+        }
+    ]
+}

@@ -73,7 +73,10 @@ public:
     }
     static unsigned toIndex(FPRReg reg)
     {
-        return (unsigned)reg;
+        unsigned result = (unsigned)reg;
+        if (result >= numberOfRegisters)
+            return InvalidIndex;
+        return result;
     }
     
     static FPRReg toArgumentRegister(unsigned index)
@@ -101,6 +104,8 @@ public:
 #endif
         return nameForRegister[reg];
     }
+    
+    static const unsigned InvalidIndex = 0xffffffff;
 };
 
 #endif
@@ -163,6 +168,8 @@ public:
         };
         return nameForRegister[reg];
     }
+
+    static const unsigned InvalidIndex = 0xffffffff;
 };
 
 #endif
@@ -250,7 +257,6 @@ public:
         return nameForRegister[reg];
     }
 
-private:
     static const unsigned InvalidIndex = 0xffffffff;
 };
 
@@ -317,7 +323,6 @@ public:
         };
         return nameForRegister[reg];
     }
-private:
 
     static const unsigned InvalidIndex = 0xffffffff;
 };
@@ -381,7 +386,6 @@ public:
         return nameForRegister[reg];
     }
 
-private:
     static const unsigned InvalidIndex = 0xffffffff;
 };
 

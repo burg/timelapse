@@ -159,7 +159,7 @@ public:
 
 // playback state
     virtual double currentTime() const OVERRIDE;
-    virtual void setCurrentTime(double, ExceptionCode&) OVERRIDE;
+    virtual void setCurrentTime(double) OVERRIDE;
     virtual double duration() const OVERRIDE;
     virtual bool paused() const OVERRIDE;
     virtual double defaultPlaybackRate() const OVERRIDE;
@@ -178,6 +178,7 @@ public:
     void setLoop(bool b);
     virtual void play() OVERRIDE;
     virtual void pause() OVERRIDE;
+    void fastSeek(double);
 
 // captions
     bool webkitHasClosedCaptions() const;
@@ -441,7 +442,7 @@ private:
     virtual bool supportsFocus() const OVERRIDE;
     virtual bool isMouseFocusable() const OVERRIDE;
     virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE;
-    virtual bool childShouldCreateRenderer(const Node*) const OVERRIDE;
+    virtual bool childShouldCreateRenderer(const Node&) const OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
     virtual void removedFrom(ContainerNode&) OVERRIDE;
     virtual void didRecalcStyle(Style::Change) OVERRIDE;
@@ -535,7 +536,8 @@ private:
     void startProgressEventTimer();
     void stopPeriodicTimers();
 
-    void seek(double time, ExceptionCode&);
+    void seek(double time);
+    void seekWithTolerance(double time, double negativeTolerance, double positiveTolerance);
     void finishSeek();
     void checkIfSeekNeeded();
     void addPlayedRange(double start, double end);
@@ -799,15 +801,7 @@ private:
 
 #if ENABLE(VIDEO_TRACK)
 #ifndef NDEBUG
-// Template specializations required by PodIntervalTree in debug mode.
-template <>
-struct ValueToString<double> {
-    static String string(const double value)
-    {
-        return String::number(value);
-    }
-};
-
+// Template specialization required by PodIntervalTree in debug mode.
 template <>
 struct ValueToString<TextTrackCue*> {
     static String string(TextTrackCue* const& cue)

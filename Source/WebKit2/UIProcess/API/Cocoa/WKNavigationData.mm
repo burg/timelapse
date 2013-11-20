@@ -28,47 +28,48 @@
 
 #if WK_API_ENABLED
 
+#import "WKNSURLExtras.h"
 #import <WebCore/ResourceRequest.h>
 #import <WebCore/ResourceResponse.h>
 
 using namespace WebKit;
 
 @implementation WKNavigationData {
-    std::aligned_storage<sizeof(WebNavigationData), std::alignment_of<WebNavigationData>::value>::type _data;
+    std::aligned_storage<sizeof(API::NavigationData), std::alignment_of<API::NavigationData>::value>::type _data;
 }
 
 - (void)dealloc
 {
-    reinterpret_cast<WebNavigationData*>(&_data)->~WebNavigationData();
+    reinterpret_cast<API::NavigationData*>(&_data)->~NavigationData();
 
     [super dealloc];
 }
 
 - (NSString *)title
 {
-    return reinterpret_cast<WebNavigationData*>(&_data)->title();
+    return reinterpret_cast<API::NavigationData*>(&_data)->title();
 }
 
 - (NSURLRequest *)originalRequest
 {
-    return reinterpret_cast<WebNavigationData*>(&_data)->originalRequest().nsURLRequest(WebCore::DoNotUpdateHTTPBody);
+    return reinterpret_cast<API::NavigationData*>(&_data)->originalRequest().nsURLRequest(WebCore::DoNotUpdateHTTPBody);
 }
 
 - (NSURL *)destinationURL
 {
-    return [NSURL URLWithString:reinterpret_cast<WebNavigationData*>(&_data)->url()];
+    return [NSURL _web_URLWithWTFString:reinterpret_cast<API::NavigationData*>(&_data)->url() relativeToURL:nil];
 }
 
 - (NSURLResponse *)response
 {
-    return reinterpret_cast<WebNavigationData*>(&_data)->response().nsURLResponse();
+    return reinterpret_cast<API::NavigationData*>(&_data)->response().nsURLResponse();
 }
 
 #pragma mark WKObject protocol implementation
 
-- (APIObject&)_apiObject
+- (API::Object&)_apiObject
 {
-    return *reinterpret_cast<APIObject*>(&_data);
+    return *reinterpret_cast<API::Object*>(&_data);
 }
 
 @end

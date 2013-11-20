@@ -59,28 +59,26 @@ class EventContext;
 class Frame;
 class InspectorObject;
 class InspectorController;
-class InspectorFrontend;
 class InstrumentingAgents;
+class InspectorPageAgent;
 class Node;
 class Page;
 class ReplayRecording;
 
 typedef String ErrorString;
 
- class InspectorReplayAgent
-    : public InspectorBaseAgent<InspectorReplayAgent>
-    , public InspectorBackendDispatcher::ReplayCommandHandler {
+ class InspectorReplayAgent : public InspectorBaseAgent, public InspectorReplayBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorReplayAgent);
 public:
-    static PassOwnPtr<InspectorReplayAgent> create(InstrumentingAgents* instrumentingAgents, Page* page)
+    static PassOwnPtr<InspectorReplayAgent> create(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent)
     {
-        return adoptPtr(new InspectorReplayAgent(instrumentingAgents, page));
+        return adoptPtr(new InspectorReplayAgent(instrumentingAgents, pageAgent));
     }
 
     ~InspectorReplayAgent();
 
-    void setFrontend(InspectorFrontend*);
-    void clearFrontend();
+    virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) OVERRIDE;
+    virtual void willDestroyFrontendAndBackend() OVERRIDE;
 
     // Callbacks from InspectorInstrumentation.
     void willDispatchEvent(const Event&, Frame*);
@@ -125,13 +123,15 @@ public:
     void unloadRecording(ErrorString*, bool*);
 
 private:
-    InspectorReplayAgent(InstrumentingAgents*, Page*);
+    InspectorReplayAgent(InstrumentingAgents*, InspectorPageAgent*);
     PositionMark createMark();
     PositionMark reuseMark() const;
+    void reset();
 
-    InstrumentingAgents *m_instrumentingAgents;
-    InspectorFrontend::Replay* m_frontend;
-    Page *m_inspectedPage;
+    std::unique_ptr<InspectorReplayFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<InspectorReplayBackendDispatcher> m_backendDispatcher;
+    InspectorPageAgent* m_pageAgent;
+    Page* m_page;
     ReplayAgentStateMachine m_stateMachine;
     unsigned m_nextMarkIndex;
     unsigned m_lastHitMarkIndex;

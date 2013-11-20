@@ -160,6 +160,10 @@ static void fixFunctionBasedOnStackMaps(
         for (unsigned i = 0; i < state.jitCode->osrExit.size(); ++i) {
             OSRExitCompilationInfo& info = state.finalizer->osrExit[i];
             OSRExit& exit = jitCode->osrExit[i];
+            
+            if (Options::verboseCompilation())
+                dataLog("Handling OSR stackmap #", exit.m_stackmapID, "\n");
+            
             StackMaps::RecordMap::iterator iter = recordMap.find(exit.m_stackmapID);
             if (iter == recordMap.end()) {
                 // It was optimized out.
@@ -180,6 +184,9 @@ static void fixFunctionBasedOnStackMaps(
         for (unsigned i = state.getByIds.size(); i--;) {
             GetByIdDescriptor& getById = state.getByIds[i];
             
+            if (Options::verboseCompilation())
+                dataLog("Handling GetById stackmap #", getById.stackmapID(), "\n");
+            
             StackMaps::RecordMap::iterator iter = recordMap.find(getById.stackmapID());
             if (iter == recordMap.end()) {
                 // It was optimized out.
@@ -188,14 +195,12 @@ static void fixFunctionBasedOnStackMaps(
             
             StackMaps::Record& record = iter->value;
             
-            UNUSED_PARAM(record); // FIXME: use AnyRegs.
-
             // FIXME: LLVM should tell us which registers are live.
             RegisterSet usedRegisters = RegisterSet::allRegisters();
             
-            GPRReg callFrameRegister = GPRInfo::argumentGPR0;
-            GPRReg base = GPRInfo::argumentGPR1;
-            GPRReg result = GPRInfo::returnValueGPR;
+            GPRReg result = record.locations[0].directGPR();
+            GPRReg callFrameRegister = record.locations[1].directGPR();
+            GPRReg base = record.locations[2].directGPR();
             
             JITGetByIdGenerator gen(
                 codeBlock, getById.codeOrigin(), usedRegisters, callFrameRegister,
@@ -216,6 +221,9 @@ static void fixFunctionBasedOnStackMaps(
         for (unsigned i = state.putByIds.size(); i--;) {
             PutByIdDescriptor& putById = state.putByIds[i];
             
+            if (Options::verboseCompilation())
+                dataLog("Handling PutById stackmap #", putById.stackmapID(), "\n");
+            
             StackMaps::RecordMap::iterator iter = recordMap.find(putById.stackmapID());
             if (iter == recordMap.end()) {
                 // It was optimized out.
@@ -224,19 +232,17 @@ static void fixFunctionBasedOnStackMaps(
             
             StackMaps::Record& record = iter->value;
             
-            UNUSED_PARAM(record); // FIXME: use AnyRegs.
-
             // FIXME: LLVM should tell us which registers are live.
             RegisterSet usedRegisters = RegisterSet::allRegisters();
             
-            GPRReg callFrameRegister = GPRInfo::argumentGPR0;
-            GPRReg base = GPRInfo::argumentGPR1;
-            GPRReg value = GPRInfo::argumentGPR2;
+            GPRReg callFrameRegister = record.locations[0].directGPR();
+            GPRReg base = record.locations[1].directGPR();
+            GPRReg value = record.locations[2].directGPR();
             
             JITPutByIdGenerator gen(
                 codeBlock, putById.codeOrigin(), usedRegisters, callFrameRegister,
-                JSValueRegs(base), JSValueRegs(value), GPRInfo::argumentGPR3, false,
-                putById.ecmaMode(), putById.putKind());
+                JSValueRegs(base), JSValueRegs(value), MacroAssembler::scratchRegister,
+                false, putById.ecmaMode(), putById.putKind());
             
             MacroAssembler::Label begin = slowPathJIT.label();
             

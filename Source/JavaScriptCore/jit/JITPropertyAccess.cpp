@@ -637,7 +637,7 @@ void JIT::emitVarInjectionCheck(bool needsVarInjectionChecks)
 {
     if (!needsVarInjectionChecks)
         return;
-    addSlowCase(branchTest8(NonZero, AbsoluteAddress(m_codeBlock->globalObject()->varInjectionWatchpoint()->addressOfIsInvalidated())));
+    addSlowCase(branch8(Equal, AbsoluteAddress(m_codeBlock->globalObject()->varInjectionWatchpoint()->addressOfState()), TrustedImm32(IsInvalidated)));
 }
 
 void JIT::emitResolveClosure(int dst, bool needsVarInjectionChecks, unsigned depth)
@@ -675,7 +675,6 @@ void JIT::emit_op_resolve_scope(Instruction* currentInstruction)
         emitResolveClosure(dst, needsVarInjectionChecks(resolveType), depth);
         break;
     case Dynamic:
-        killLastResultRegister();
         addSlowCase(jump());
         break;
     }
@@ -744,7 +743,6 @@ void JIT::emit_op_get_from_scope(Instruction* currentInstruction)
         emitGetClosureVar(scope, *operandSlot);
         break;
     case Dynamic:
-        killLastResultRegister();
         addSlowCase(jump());
         break;
     }
@@ -812,7 +810,6 @@ void JIT::emit_op_put_to_scope(Instruction* currentInstruction)
         emitPutClosureVar(scope, *operandSlot, value);
         break;
     case Dynamic:
-        killLastResultRegister();
         addSlowCase(jump());
         break;
     }

@@ -29,7 +29,6 @@
     GenerateIsReachable=ImplFrame,
     CustomDeleteProperty,
     CustomEnumerateProperty,
-    OperationsNotDeletable
 ] interface History {
     [Nondeterministic] readonly attribute unsigned long length;
     [CachedAttribute, Custom, Nondeterministic] readonly attribute SerializedScriptValue state;

@@ -38,7 +38,7 @@
 #include "WebProcessConnection.h"
 #include <WebCore/MemoryPressureHandler.h>
 #include <WebCore/NotImplemented.h>
-#include <WebCore/RunLoop.h>
+#include <wtf/RunLoop.h>
 
 #if PLATFORM(MAC)
 #include <crt_externs.h>
@@ -149,7 +149,7 @@ void PluginProcess::didClose(CoreIPC::Connection*)
 {
     // The UI process has crashed, just go ahead and quit.
     // FIXME: If the plug-in is spinning in the main loop, we'll never get this message.
-    RunLoop::current()->stop();
+    stopRunLoop();
 }
 
 void PluginProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference, CoreIPC::StringReference)

@@ -44,8 +44,11 @@ public:
     public:
         explicit Run(const Iterator&);
 
+        unsigned start() const;
+        unsigned end() const;
+
         LayoutRect rect() const;
-        LayoutPoint baseline() const;
+        FloatPoint baseline() const;
         String text() const;
 
         unsigned lineIndex() const;
@@ -125,30 +128,40 @@ inline RunResolver::Run::Run(const Iterator& iterator)
 {
 }
 
+inline unsigned RunResolver::Run::start() const
+{
+    return m_iterator.simpleRun().start;
+}
+
+inline unsigned RunResolver::Run::end() const
+{
+    return m_iterator.simpleRun().end;
+}
+
 inline LayoutRect RunResolver::Run::rect() const
 {
     auto& resolver = m_iterator.resolver();
     auto& run = m_iterator.simpleRun();
 
-    LayoutPoint linePosition(run.left, resolver.m_lineHeight * m_iterator.lineIndex() + resolver.m_baseline - resolver.m_ascent);
-    LayoutSize lineSize(run.right - run.left, resolver.m_ascent + resolver.m_descent);
+    LayoutPoint linePosition(floor(run.left), resolver.m_lineHeight * m_iterator.lineIndex() + resolver.m_baseline - resolver.m_ascent);
+    LayoutSize lineSize(ceil(run.right) - floor(run.left), resolver.m_ascent + resolver.m_descent);
     return LayoutRect(linePosition + resolver.m_contentOffset, lineSize);
 }
 
-inline LayoutPoint RunResolver::Run::baseline() const
+inline FloatPoint RunResolver::Run::baseline() const
 {
     auto& resolver = m_iterator.resolver();
     auto& run = m_iterator.simpleRun();
 
     float baselineY = resolver.m_lineHeight * m_iterator.lineIndex() + resolver.m_baseline;
-    return LayoutPoint(run.left, baselineY) + resolver.m_contentOffset;
+    return FloatPoint(run.left, baselineY) + resolver.m_contentOffset;
 }
 
 inline String RunResolver::Run::text() const
 {
     auto& resolver = m_iterator.resolver();
     auto& run = m_iterator.simpleRun();
-    return resolver.m_string.substringSharingImpl(run.textOffset, run.textLength);
+    return resolver.m_string.substringSharingImpl(run.start, run.end - run.start);
 }
 
 inline unsigned RunResolver::Run::lineIndex() const

@@ -33,6 +33,7 @@
 
 #if ENABLE(INSPECTOR)
 
+#include "InspectorAgentRegistry.h"
 #include "InspectorBaseAgent.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -48,12 +49,10 @@ class InjectedScriptManager;
 class InspectorAgent;
 class InspectorApplicationCacheAgent;
 class InspectorBackendDispatcher;
-class InspectorBaseAgentInterface;
 class InspectorClient;
 class InspectorDOMAgent;
 class InspectorDOMDebuggerAgent;
 class InspectorDebuggerAgent;
-class InspectorFrontend;
 class InspectorFrontendChannel;
 class InspectorFrontendClient;
 class InspectorMemoryAgent;
@@ -92,7 +91,7 @@ public:
 
     void dispatchMessageFromFrontend(const String& message);
 
-    bool hasFrontend() const { return m_inspectorFrontend; }
+    bool hasFrontend() const { return !!m_inspectorFrontendChannel; }
     void connectFrontend(InspectorFrontendChannel*);
     void disconnectFrontend();
     void setProcessId(long);
@@ -149,7 +148,7 @@ private:
 
     RefPtr<InspectorBackendDispatcher> m_inspectorBackendDispatcher;
     OwnPtr<InspectorFrontendClient> m_inspectorFrontendClient;
-    OwnPtr<InspectorFrontend> m_inspectorFrontend;
+    InspectorFrontendChannel* m_inspectorFrontendChannel;
     Page* m_page;
     InspectorClient* m_inspectorClient;
     InspectorAgentRegistry m_agents;

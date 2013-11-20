@@ -28,7 +28,6 @@
 
 #include "APIObject.h"
 #include "GenericCallback.h"
-#include "ImmutableArray.h"
 #include "MessageReceiver.h"
 #include "WKOriginDataManager.h"
 #include "WebContextSupplement.h"
@@ -48,7 +47,7 @@ struct SecurityOriginData;
 
 typedef GenericCallback<WKArrayRef> ArrayCallback;
 
-class WebOriginDataManagerProxy : public TypedAPIObject<APIObject::TypeOriginDataManager>, public WebContextSupplement, private CoreIPC::MessageReceiver {
+class WebOriginDataManagerProxy : public API::TypedObject<API::Object::Type::OriginDataManager>, public WebContextSupplement, private CoreIPC::MessageReceiver {
 public:
     static const char* supplementName();
 
@@ -63,8 +62,8 @@ public:
     void stopObservingChanges(WKOriginDataTypes);
     void setChangeClient(const WKOriginDataManagerChangeClient*);
 
-    using APIObject::ref;
-    using APIObject::deref;
+    using API::Object::ref;
+    using API::Object::deref;
 
 private:
     explicit WebOriginDataManagerProxy(WebContext*);

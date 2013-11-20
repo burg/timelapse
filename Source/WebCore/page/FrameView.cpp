@@ -174,6 +174,7 @@ FrameView::FrameView(Frame& frame)
     , m_canHaveScrollbars(true)
     , m_layoutTimer(this, &FrameView::layoutTimerFired)
     , m_layoutRoot(0)
+    , m_layoutPhase(OutsideLayout)
     , m_inSynchronousPostLayout(false)
     , m_postLayoutTasksTimer(this, &FrameView::postLayoutTimerFired)
     , m_isTransparent(false)
@@ -260,8 +261,7 @@ void FrameView::reset()
     m_delayedLayout = false;
     m_needsFullRepaint = true;
     m_layoutSchedulingEnabled = true;
-    m_inLayout = false;
-    m_doingPreLayoutStyleUpdate = false;
+    m_layoutPhase = OutsideLayout;
     m_inSynchronousPostLayout = false;
     m_layoutCount = 0;
     m_nestedLayoutCount = 0;
@@ -732,7 +732,7 @@ void FrameView::updateCompositingLayersAfterStyleChange()
         return;
 
     // If we expect to update compositing after an incipient layout, don't do so here.
-    if (m_doingPreLayoutStyleUpdate || layoutPending() || renderView->needsLayout())
+    if (inPreLayoutStyleUpdate() || layoutPending() || renderView->needsLayout())
         return;
 
     RenderLayerCompositor& compositor = renderView->compositor();
@@ -1066,8 +1066,12 @@ inline void FrameView::forceLayoutParentViewIfNeeded()
 
 void FrameView::layout(bool allowSubtree)
 {
-    if (m_inLayout)
+    if (isInLayout())
         return;
+
+    // Many of the tasks performed during layout can cause this function to be re-entered,
+    // so save the layout phase now and restore it on exit.
+    TemporaryChange<LayoutPhase> layoutPhaseRestorer(m_layoutPhase, InPreLayout);
 
     // Protect the view from being deleted during layout (in recalcStyle)
     Ref<FrameView> protect(*this);
@@ -1078,7 +1082,9 @@ void FrameView::layout(bool allowSubtree)
     bool inChildFrameLayoutWithFrameFlattening = isInChildFrameWithFrameFlattening();
 
     if (inChildFrameLayoutWithFrameFlattening) {
-        if (doLayoutWithFrameFlattening(allowSubtree))
+        startLayoutAtMainFrameViewIfNeeded(allowSubtree);
+        RenderElement* root = m_layoutRoot ? m_layoutRoot : frame().document()->renderView();
+        if (!root->needsLayout())
             return;
     }
 
@@ -1113,10 +1119,11 @@ void FrameView::layout(bool allowSubtree)
         if (!m_nestedLayoutCount && !m_inSynchronousPostLayout && m_postLayoutTasksTimer.isActive() && !inChildFrameLayoutWithFrameFlattening) {
             // This is a new top-level layout. If there are any remaining tasks from the previous
             // layout, finish them now.
-            m_inSynchronousPostLayout = true;
+            TemporaryChange<bool> inSynchronousPostLayoutChange(m_inSynchronousPostLayout, true);
             performPostLayoutTasks();
-            m_inSynchronousPostLayout = false;
         }
+
+        m_layoutPhase = InPreLayoutStyleUpdate;
 
         // Viewport-dependent media queries may cause us to need completely different style information.
         StyleResolver* styleResolver = document.styleResolverIfExists();
@@ -1133,8 +1140,8 @@ void FrameView::layout(bool allowSubtree)
 
         // Always ensure our style info is up-to-date. This can happen in situations where
         // the layout beats any sort of style recalc update that needs to occur.
-        TemporaryChange<bool> changeDoingPreLayoutStyleUpdate(m_doingPreLayoutStyleUpdate, true);
         document.updateStyleIfNeeded();
+        m_layoutPhase = InPreLayout;
 
         subtree = m_layoutRoot;
 
@@ -1198,6 +1205,7 @@ void FrameView::layout(bool allowSubtree)
                         m_lastViewportSize = fixedLayoutSize();
                     else
                         m_lastViewportSize = visibleContentRect(IncludeScrollbars).size();
+
                     m_lastZoomFactor = root->style().zoom();
 
                     // Set the initial vMode to AlwaysOn if we're auto.
@@ -1228,6 +1236,8 @@ void FrameView::layout(bool allowSubtree)
                         rootRenderer->setChildNeedsLayout();
                 }
             }
+
+            m_layoutPhase = InPreLayout;
         }
 
         layer = root->enclosingLayer();
@@ -1237,13 +1247,18 @@ void FrameView::layout(bool allowSubtree)
         bool disableLayoutState = false;
         if (subtree) {
             disableLayoutState = root->view().shouldDisableLayoutStateForSubtree(root);
-            root->view().pushLayoutState(root);
+            root->view().pushLayoutState(*root);
         }
         LayoutStateDisabler layoutStateDisabler(disableLayoutState ? &root->view() : 0);
 
-        m_inLayout = true;
+        ASSERT(m_layoutPhase == InPreLayout);
+        m_layoutPhase = InLayout;
+
         beginDeferredRepaints();
         forceLayoutParentViewIfNeeded();
+
+        ASSERT(m_layoutPhase == InLayout);
+
         root->layout();
 #if ENABLE(IOS_TEXT_AUTOSIZING)
         float minZoomFontSize = frame().settings().minimumZoomFontSize();
@@ -1260,20 +1275,25 @@ void FrameView::layout(bool allowSubtree)
             root->layout();
 #endif
         endDeferredRepaints();
-        m_inLayout = false;
+
+        ASSERT(m_layoutPhase == InLayout);
 
         if (subtree)
-            root->view().popLayoutState(root);
+            root->view().popLayoutState(*root);
 
         m_layoutRoot = 0;
 
         // Close block here to end the scope of changeSchedulingEnabled and layoutStateDisabler.
     }
 
+    m_layoutPhase = InViewSizeAdjust;
+
     bool neededFullRepaint = m_needsFullRepaint;
 
     if (!subtree && !toRenderView(*root).printing())
         adjustViewSize();
+
+    m_layoutPhase = InPostLayout;
 
     m_needsFullRepaint = neededFullRepaint;
 
@@ -1315,9 +1335,8 @@ void FrameView::layout(bool allowSubtree)
             if (inChildFrameLayoutWithFrameFlattening)
                 updateWidgetPositions();
             else {
-                m_inSynchronousPostLayout = true;
+                TemporaryChange<bool> inSynchronousPostLayoutChange(m_inSynchronousPostLayout, true);
                 performPostLayoutTasks(); // Calls resumeScheduledEvents().
-                m_inSynchronousPostLayout = false;
             }
         }
 
@@ -1544,16 +1563,22 @@ LayoutRect FrameView::viewportConstrainedVisibleContentRect() const
     return viewportRect;
 }
 
-IntSize FrameView::scrollOffsetForFixedPosition(const IntRect& visibleContentRect, const IntSize& totalContentsSize, const IntPoint& scrollPosition, const IntPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, int headerHeight, int footerHeight)
+IntSize FrameView::scrollOffsetForFixedPosition(const IntRect& visibleContentRect, const IntSize& totalContentsSize, const IntPoint& scrollPosition, const IntPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, ScrollBehaviorForFixedElements behaviorForFixed, int headerHeight, int footerHeight)
 {
-    IntPoint constrainedPosition = ScrollableArea::constrainScrollPositionForOverhang(visibleContentRect, totalContentsSize, scrollPosition, scrollOrigin, headerHeight, footerHeight);
+    IntPoint position;
+    if (behaviorForFixed == StickToDocumentBounds)
+        position = ScrollableArea::constrainScrollPositionForOverhang(visibleContentRect, totalContentsSize, scrollPosition, scrollOrigin, headerHeight, footerHeight);
+    else {
+        position = scrollPosition;
+        position.setY(position.y() - headerHeight);
+    }
 
     IntSize maxSize = totalContentsSize - visibleContentRect.size();
 
     float dragFactorX = (fixedElementsLayoutRelativeToFrame || !maxSize.width()) ? 1 : (totalContentsSize.width() - visibleContentRect.width() * frameScaleFactor) / maxSize.width();
     float dragFactorY = (fixedElementsLayoutRelativeToFrame || !maxSize.height()) ? 1 : (totalContentsSize.height() - visibleContentRect.height() * frameScaleFactor) / maxSize.height();
 
-    return IntSize(constrainedPosition.x() * dragFactorX / frameScaleFactor, constrainedPosition.y() * dragFactorY / frameScaleFactor);
+    return IntSize(position.x() * dragFactorX / frameScaleFactor, position.y() * dragFactorY / frameScaleFactor);
 }
 
 IntSize FrameView::scrollOffsetForFixedPosition() const
@@ -1563,7 +1588,8 @@ IntSize FrameView::scrollOffsetForFixedPosition() const
     IntPoint scrollPosition = this->scrollPosition();
     IntPoint scrollOrigin = this->scrollOrigin();
     float frameScaleFactor = frame().frameScaleFactor();
-    return scrollOffsetForFixedPosition(visibleContentRect, totalContentsSize, scrollPosition, scrollOrigin, frameScaleFactor, fixedElementsLayoutRelativeToFrame(), headerHeight(), footerHeight());
+    ScrollBehaviorForFixedElements behaviorForFixed = scrollBehaviorForFixedElements();
+    return scrollOffsetForFixedPosition(visibleContentRect, totalContentsSize, scrollPosition, scrollOrigin, frameScaleFactor, fixedElementsLayoutRelativeToFrame(), behaviorForFixed, headerHeight(), footerHeight());
 }
 
 IntPoint FrameView::minimumScrollPosition() const
@@ -1902,9 +1928,9 @@ void FrameView::setFixedVisibleContentRect(const IntRect& visibleContentRect)
     IntSize offset = scrollOffset();
     ScrollView::setFixedVisibleContentRect(visibleContentRect);
     if (offset != scrollOffset()) {
-        repaintFixedElementsAfterScrolling();
+        updateLayerPositionsAfterScrolling();
         if (frame().page()->settings().acceleratedCompositingForFixedPositionEnabled())
-            updateFixedElementsAfterScrolling();
+            updateCompositingLayersAfterScrolling();
         scrollAnimator()->setCurrentPosition(scrollPosition());
         scrollPositionChanged();
     }
@@ -1926,8 +1952,8 @@ void FrameView::setViewportConstrainedObjectsNeedLayout()
 
 void FrameView::scrollPositionChangedViaPlatformWidget()
 {
-    repaintFixedElementsAfterScrolling();
-    updateFixedElementsAfterScrolling();
+    updateLayerPositionsAfterScrolling();
+    updateCompositingLayersAfterScrolling();
     repaintSlowRepaintObjects();
     scrollPositionChanged();
 }
@@ -1945,11 +1971,12 @@ void FrameView::scrollPositionChanged()
 #endif
 }
 
-// FIXME: this function is misnamed; its primary purpose is to update RenderLayer positions.
-void FrameView::repaintFixedElementsAfterScrolling()
+void FrameView::updateLayerPositionsAfterScrolling()
 {
-    // For fixed position elements, update widget positions and compositing layers after scrolling,
-    // but only if we're not inside of layout.
+    // If we're scrolling as a result of updating the view size after layout, we'll update widgets and layer positions soon anyway.
+    if (m_layoutPhase == InViewSizeAdjust)
+        return;
+
     if (m_nestedLayoutCount <= 1 && hasViewportConstrainedObjects()) {
         if (RenderView* renderView = this->renderView()) {
             updateWidgetPositions();
@@ -1958,7 +1985,7 @@ void FrameView::repaintFixedElementsAfterScrolling()
     }
 }
 
-bool FrameView::shouldUpdateFixedElementsAfterScrolling()
+bool FrameView::shouldUpdateCompositingLayersAfterScrolling() const
 {
 #if ENABLE(THREADED_SCROLLING)
     // If the scrolling thread is updating the fixed elements, then the FrameView should not update them as well.
@@ -1988,10 +2015,10 @@ bool FrameView::shouldUpdateFixedElementsAfterScrolling()
     return true;
 }
 
-void FrameView::updateFixedElementsAfterScrolling()
+void FrameView::updateCompositingLayersAfterScrolling()
 {
 #if USE(ACCELERATED_COMPOSITING)
-    if (!shouldUpdateFixedElementsAfterScrolling())
+    if (!shouldUpdateCompositingLayersAfterScrolling())
         return;
 
     if (m_nestedLayoutCount <= 1 && hasViewportConstrainedObjects()) {
@@ -3344,21 +3371,22 @@ bool FrameView::isInChildFrameWithFrameFlattening() const
     return false;
 }
 
-bool FrameView::doLayoutWithFrameFlattening(bool allowSubtree)
+void FrameView::startLayoutAtMainFrameViewIfNeeded(bool allowSubtree)
 {
-    // Try initiating layout from the topmost parent.
+    // When we start a layout at the child level as opposed to the topmost frame view and this child
+    // frame requires flattening, we need to re-initiate the layout at the topmost view. Layout
+    // will hit this view eventually.
     FrameView* parentView = parentFrameView();
-
     if (!parentView)
-        return false;
+        return;
 
     // In the middle of parent layout, no need to restart from topmost.
     if (parentView->m_nestedLayoutCount)
-        return false;
+        return;
 
     // Parent tree is clean. Starting layout from it would have no effect.
     if (!parentView->needsLayout())
-        return false;
+        return;
 
     while (parentView->parentFrameView())
         parentView = parentView->parentFrameView();
@@ -3367,8 +3395,6 @@ bool FrameView::doLayoutWithFrameFlattening(bool allowSubtree)
 
     RenderElement* root = m_layoutRoot ? m_layoutRoot : frame().document()->renderView();
     ASSERT_UNUSED(root, !root->needsLayout());
-
-    return true;
 }
 
 void FrameView::updateControlTints()
@@ -3584,9 +3610,6 @@ void FrameView::paintOverhangAreas(GraphicsContext* context, const IntRect& hori
         return;
 
     if (frame().document()->printing())
-        return;
-
-    if (frame().isMainFrame() && frame().page()->chrome().client().paintCustomOverhangArea(context, horizontalOverhangArea, verticalOverhangArea, dirtyRect))
         return;
 
     ScrollView::paintOverhangAreas(context, horizontalOverhangArea, verticalOverhangArea, dirtyRect);
@@ -4156,6 +4179,12 @@ void FrameView::setScrollPinningBehavior(ScrollPinningBehavior pinning)
         scrollingCoordinator->setScrollPinningBehavior(pinning);
 
     updateScrollbars(scrollOffset());
+}
+
+ScrollBehaviorForFixedElements FrameView::scrollBehaviorForFixedElements() const
+{
+    // FIXME: Implement. This should consult a setting that does not yet exist.
+    return StickToDocumentBounds;
 }
 
 RenderView* FrameView::renderView() const

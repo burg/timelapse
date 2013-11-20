@@ -50,8 +50,6 @@
 #include <IOSurface/IOSurface.h>
 #endif
 
-using namespace std;
-
 namespace WebCore {
 
 #if USE(IOSURFACE_CANVAS_BACKING_STORE)
@@ -412,7 +410,7 @@ static String CGImageToDataURL(CGImageRef image, const String& mimeType, const d
         return "data:,";
 
     Vector<char> base64Data;
-    base64Encode(reinterpret_cast<const char*>(CFDataGetBytePtr(data.get())), CFDataGetLength(data.get()), base64Data);
+    base64Encode(CFDataGetBytePtr(data.get()), CFDataGetLength(data.get()), base64Data);
 
     return "data:" + mimeType + ";base64," + base64Data;
 }

@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WebResourceCacheManagerProxy.h"
 
-#include "ImmutableArray.h"
 #include "ImmutableDictionary.h"
 #include "SecurityOriginData.h"
 #include "WebContext.h"
@@ -81,12 +80,12 @@ bool WebResourceCacheManagerProxy::shouldTerminate(WebProcessProxy*) const
 
 void WebResourceCacheManagerProxy::refWebContextSupplement()
 {
-    APIObject::ref();
+    API::Object::ref();
 }
 
 void WebResourceCacheManagerProxy::derefWebContextSupplement()
 {
-    APIObject::deref();
+    API::Object::deref();
 }
 
 void WebResourceCacheManagerProxy::getCacheOrigins(PassRefPtr<ArrayCallback> prpCallback)

@@ -33,6 +33,7 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WORKERS)
 
+#include "InspectorAgentRegistry.h"
 #include "InspectorBaseAgent.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
@@ -44,7 +45,6 @@ namespace WebCore {
 
 class InjectedScriptManager;
 class InspectorBackendDispatcher;
-class InspectorFrontend;
 class InspectorFrontendChannel;
 class InspectorInstrumentation;
 class InspectorRuntimeAgent;
@@ -58,7 +58,7 @@ public:
     WorkerInspectorController(WorkerGlobalScope*);
     ~WorkerInspectorController();
 
-    bool hasFrontend() const { return m_frontend; }
+    bool hasFrontend() const { return m_frontendChannel; }
     void connectFrontend();
     void disconnectFrontend();
     void dispatchMessageFromFrontend(const String&);
@@ -75,7 +75,6 @@ private:
     InspectorRuntimeAgent* m_runtimeAgent;
     InspectorAgentRegistry m_agents;
     OwnPtr<InspectorFrontendChannel> m_frontendChannel;
-    OwnPtr<InspectorFrontend> m_frontend;
     RefPtr<InspectorBackendDispatcher> m_backendDispatcher;
 };
 

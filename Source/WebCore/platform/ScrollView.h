@@ -380,8 +380,8 @@ private:
     IntRect rectToCopyOnScroll() const;
 
     // Called when the scroll position within this view changes.  FrameView overrides this to generate repaint invalidations.
-    virtual void repaintFixedElementsAfterScrolling() { }
-    virtual void updateFixedElementsAfterScrolling() { }
+    virtual void updateLayerPositionsAfterScrolling() { }
+    virtual void updateCompositingLayersAfterScrolling() { }
 
     void platformAddChild(Widget*);
     void platformRemoveChild(Widget*);
@@ -415,20 +415,7 @@ private:
 #endif
 }; // class ScrollView
 
-inline ScrollView* toScrollView(Widget* widget)
-{
-    ASSERT(!widget || widget->isScrollView());
-    return static_cast<ScrollView*>(widget);
-}
-
-inline const ScrollView* toScrollView(const Widget* widget)
-{
-    ASSERT(!widget || widget->isScrollView());
-    return static_cast<const ScrollView*>(widget);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toScrollView(const ScrollView*);
+WIDGET_TYPE_CASTS(ScrollView, isScrollView());
 
 } // namespace WebCore
 

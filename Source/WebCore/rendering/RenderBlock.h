@@ -24,7 +24,6 @@
 #define RenderBlock_h
 
 #include "ColumnInfo.h"
-#include "FloatingObjects.h"
 #include "GapRects.h"
 #include "PODIntervalTree.h"
 #include "RenderBox.h"
@@ -90,10 +89,6 @@ typedef unsigned TextRunFlags;
 class RenderBlock : public RenderBox {
 public:
     friend class LineLayoutState;
-#ifndef NDEBUG
-    // Used by the PODIntervalTree for debugging the FloatingObject.
-    template <class> friend struct ValueToString;
-#endif
 
 protected:
     RenderBlock(Element&, PassRef<RenderStyle>, unsigned baseTypeFlags);
@@ -299,12 +294,12 @@ public:
     unsigned columnCount(ColumnInfo*) const;
     LayoutRect columnRectAt(ColumnInfo*, unsigned) const;
 
-    LayoutUnit paginationStrut() const { return m_rareData ? m_rareData->m_paginationStrut : LayoutUnit(); }
+    LayoutUnit paginationStrut() const;
     void setPaginationStrut(LayoutUnit);
 
     // The page logical offset is the object's offset from the top of the page in the page progression
     // direction (so an x-offset in vertical text and a y-offset for horizontal text).
-    LayoutUnit pageLogicalOffset() const { return m_rareData ? m_rareData->m_pageLogicalOffset : LayoutUnit(); }
+    LayoutUnit pageLogicalOffset() const;
     void setPageLogicalOffset(LayoutUnit);
 
     // Accessors for logical width/height and margins in the containing block's block-flow direction.
@@ -391,25 +386,10 @@ public:
 #endif
 
 #if ENABLE(CSS_SHAPES)
-    ShapeInsideInfo* ensureShapeInsideInfo()
-    {
-        if (!m_rareData || !m_rareData->m_shapeInsideInfo)
-            setShapeInsideInfo(ShapeInsideInfo::createInfo(this));
-        return m_rareData->m_shapeInsideInfo.get();
-    }
-
-    ShapeInsideInfo* shapeInsideInfo() const
-    {
-        if (!m_rareData || !m_rareData->m_shapeInsideInfo)
-            return 0;
-        return ShapeInsideInfo::isEnabledFor(this) ? m_rareData->m_shapeInsideInfo.get() : 0;
-    }
-    void setShapeInsideInfo(PassOwnPtr<ShapeInsideInfo> value)
-    {
-        if (!m_rareData)
-            m_rareData = adoptPtr(new RenderBlockRareData());
-        m_rareData->m_shapeInsideInfo = value;
-    }
+    ShapeInsideInfo* ensureShapeInsideInfo();
+    ShapeInsideInfo* shapeInsideInfo() const;
+    void setShapeInsideInfo(PassOwnPtr<ShapeInsideInfo> value);
+    
     void markShapeInsideDescendantsForLayout();
     ShapeInsideInfo* layoutShapeInsideInfo() const;
     bool allowsShapeInsideInfoSharing() const { return !isInline() && !isFloating(); }
@@ -636,6 +616,9 @@ private:
     void moveRunInUnderSiblingBlockIfNeeded(RenderObject& runIn);
     void moveRunInToOriginalPosition(RenderObject& runIn);
 
+private:
+    bool hasRareData() const;
+    
 protected:
     void dirtyForLayoutFromPercentageHeightDescendants();
     
@@ -662,28 +645,6 @@ public:
     friend class RenderBlockFlow;
     // FIXME-BLOCKFLOW: Remove this when the line layout stuff has all moved out of RenderBlock
     friend class LineBreaker;
-
-public:
-    // Allocated only when some of these fields have non-default values
-    struct RenderBlockRareData {
-        WTF_MAKE_NONCOPYABLE(RenderBlockRareData); WTF_MAKE_FAST_ALLOCATED;
-    public:
-        RenderBlockRareData() 
-            : m_paginationStrut(0)
-            , m_pageLogicalOffset(0)
-        { 
-        }
-
-        LayoutUnit m_paginationStrut;
-        LayoutUnit m_pageLogicalOffset;
-
-#if ENABLE(CSS_SHAPES)
-        OwnPtr<ShapeInsideInfo> m_shapeInsideInfo;
-#endif
-     };
-
-protected:
-    OwnPtr<RenderBlockRareData> m_rareData;
 
     mutable signed m_lineHeight : 25;
     unsigned m_hasMarginBeforeQuirk : 1; // Note these quirk values can't be put in RenderBlockRareData since they are set too frequently.

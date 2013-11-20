@@ -26,6 +26,8 @@
 #include "config.h"
 #include "NetworkConnectionToWebProcess.h"
 
+#if ENABLE(NETWORK_PROCESS)
+
 #include "BlobRegistrationData.h"
 #include "ConnectionStack.h"
 #include "NetworkBlobRegistry.h"
@@ -39,9 +41,7 @@
 #include <WebCore/PlatformCookieJar.h>
 #include <WebCore/ResourceLoaderOptions.h>
 #include <WebCore/ResourceRequest.h>
-#include <WebCore/RunLoop.h>
-
-#if ENABLE(NETWORK_PROCESS)
+#include <wtf/RunLoop.h>
 
 using namespace WebCore;
 

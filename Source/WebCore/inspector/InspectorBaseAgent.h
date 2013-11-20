@@ -31,64 +31,31 @@
 #ifndef InspectorBaseAgent_h
 #define InspectorBaseAgent_h
 
-#include "InspectorBackendDispatcher.h"
-#include <wtf/Forward.h>
-#include <wtf/PassOwnPtr.h>
-#include <wtf/Vector.h>
+#include "InspectorBackendDispatchers.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class InspectorFrontend;
+class InspectorFrontendChannel;
 class InstrumentingAgents;
 
-class InspectorBaseAgentInterface {
-public:
-    InspectorBaseAgentInterface(const String&, InstrumentingAgents*);
-    virtual ~InspectorBaseAgentInterface();
-
-    virtual void setFrontend(InspectorFrontend*) { }
-    virtual void clearFrontend() { }
-    virtual void registerInDispatcher(InspectorBackendDispatcher*) = 0;
-    virtual void discardAgent() { }
-
-    String name() const { return m_name; }
-
-protected:
-    InstrumentingAgents* m_instrumentingAgents;
-
-private:
-    String m_name;
-};
-
-class InspectorAgentRegistry {
-public:
-    void append(PassOwnPtr<InspectorBaseAgentInterface>);
-
-    void setFrontend(InspectorFrontend*);
-    void clearFrontend();
-    void registerInDispatcher(InspectorBackendDispatcher*);
-    void discardAgents();
-
-private:
-    Vector<OwnPtr<InspectorBaseAgentInterface>> m_agents;
-};
-
-template<typename T>
-class InspectorBaseAgent : public InspectorBaseAgentInterface {
+class InspectorBaseAgent {
 public:
     virtual ~InspectorBaseAgent() { }
 
-    virtual void registerInDispatcher(InspectorBackendDispatcher* dispatcher)
-    {
-        dispatcher->registerAgent(static_cast<T*>(this));
-    }
+    virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) = 0;
+    virtual void willDestroyFrontendAndBackend() = 0;
+    virtual void discardAgent() { }
 
 protected:
     InspectorBaseAgent(const String& name, InstrumentingAgents* instrumentingAgents)
-        : InspectorBaseAgentInterface(name, instrumentingAgents)
+        : m_instrumentingAgents(instrumentingAgents)
+        , m_name(name)
     {
     }
+
+    InstrumentingAgents* m_instrumentingAgents;
+    String m_name;
 };
 
 } // namespace WebCore

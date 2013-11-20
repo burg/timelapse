@@ -56,6 +56,9 @@ unsigned findTextCaretMinimumOffset(const RenderText&, const Layout&);
 unsigned findTextCaretMaximumOffset(const RenderText&, const Layout&);
 IntRect computeTextBoundingBox(const RenderText&, const Layout&);
 
+Vector<IntRect> collectTextAbsoluteRects(const RenderText&, const Layout&, const LayoutPoint& accumulatedOffset);
+Vector<FloatQuad> collectTextAbsoluteQuads(const RenderText&, const Layout&, bool* wasFixed);
+
 LayoutUnit lineHeightFromFlow(const RenderBlockFlow&);
 LayoutUnit baselineFromFlow(const RenderBlockFlow&);
 
@@ -84,7 +87,7 @@ inline unsigned findTextCaretMinimumOffset(const RenderText&, const Layout& layo
 {
     if (!layout.runCount())
         return 0;
-    return layout.runAt(0).textOffset;
+    return layout.runAt(0).start;
 }
 
 inline unsigned findTextCaretMaximumOffset(const RenderText& renderer, const Layout& layout)
@@ -92,16 +95,16 @@ inline unsigned findTextCaretMaximumOffset(const RenderText& renderer, const Lay
     if (!layout.runCount())
         return renderer.textLength();
     auto& last = layout.runAt(layout.runCount() - 1);
-    return last.textOffset + last.textLength;
+    return last.end;
 }
 
 inline bool containsTextCaretOffset(const RenderText&, const Layout& layout, unsigned offset)
 {
     for (unsigned i = 0; i < layout.runCount(); ++i) {
         auto& run = layout.runAt(i);
-        if (offset < run.textOffset)
+        if (offset < run.start)
             return false;
-        if (offset <= run.textOffset + run.textLength)
+        if (offset <= run.end)
             return true;
     }
     return false;
@@ -110,7 +113,8 @@ inline bool containsTextCaretOffset(const RenderText&, const Layout& layout, uns
 inline bool isTextRendered(const RenderText&, const Layout& layout)
 {
     for (unsigned i = 0; i < layout.runCount(); ++i) {
-        if (layout.runAt(i).textLength)
+        auto& run = layout.runAt(i);
+        if (run.end > run.start)
             return true;
     }
     return false;

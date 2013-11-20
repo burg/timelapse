@@ -58,11 +58,13 @@
 #include <WebCore/UserContentTypes.h>
 #include <WebCore/UserScriptTypes.h>
 
+namespace API {
+class Array;
+}
+
 namespace WebKit {
 
-class ImmutableArray;
 class ImmutableDictionary;
-class MutableArray;
 class MutableDictionary;
 class ObjCObjectGraph;
 class WebArchive;
@@ -89,7 +91,7 @@ template<typename ImplType> struct ImplTypeInfo { };
     template<> struct APITypeInfo<TheAPIType> { typedef TheImplType* ImplType; }; \
     template<> struct ImplTypeInfo<TheImplType*> { typedef TheAPIType APIType; };
 
-WK_ADD_API_MAPPING(WKArrayRef, ImmutableArray)
+WK_ADD_API_MAPPING(WKArrayRef, API::Array)
 WK_ADD_API_MAPPING(WKBooleanRef, WebBoolean)
 WK_ADD_API_MAPPING(WKCertificateInfoRef, WebCertificateInfo)
 WK_ADD_API_MAPPING(WKConnectionRef, WebConnection)
@@ -100,7 +102,6 @@ WK_ADD_API_MAPPING(WKDoubleRef, WebDouble)
 WK_ADD_API_MAPPING(WKErrorRef, WebError)
 WK_ADD_API_MAPPING(WKGraphicsContextRef, WebGraphicsContext)
 WK_ADD_API_MAPPING(WKImageRef, WebImage)
-WK_ADD_API_MAPPING(WKMutableArrayRef, MutableArray)
 WK_ADD_API_MAPPING(WKMutableDictionaryRef, MutableDictionary)
 WK_ADD_API_MAPPING(WKPointRef, WebPoint)
 WK_ADD_API_MAPPING(WKRectRef, WebRect)
@@ -108,12 +109,14 @@ WK_ADD_API_MAPPING(WKSecurityOriginRef, WebSecurityOrigin)
 WK_ADD_API_MAPPING(WKSerializedScriptValueRef, WebSerializedScriptValue)
 WK_ADD_API_MAPPING(WKSizeRef, WebSize)
 WK_ADD_API_MAPPING(WKStringRef, WebString)
-WK_ADD_API_MAPPING(WKTypeRef, APIObject)
+WK_ADD_API_MAPPING(WKTypeRef, API::Object)
 WK_ADD_API_MAPPING(WKUInt64Ref, WebUInt64)
 WK_ADD_API_MAPPING(WKURLRef, WebURL)
 WK_ADD_API_MAPPING(WKURLRequestRef, WebURLRequest)
 WK_ADD_API_MAPPING(WKURLResponseRef, WebURLResponse)
 WK_ADD_API_MAPPING(WKUserContentURLPatternRef, WebUserContentURLPattern)
+
+template<> struct APITypeInfo<WKMutableArrayRef> { typedef API::Array* ImplType; };
 
 #if PLATFORM(MAC)
 WK_ADD_API_MAPPING(WKWebArchiveRef, WebArchive)
@@ -141,7 +144,7 @@ template<typename T>
 inline typename APITypeInfo<T>::ImplType toImpl(T t)
 {
     // An example of the conversions that take place:
-    // const struct OpaqueWKArray* -> const struct OpaqueWKArray -> struct OpaqueWKArray -> struct OpaqueWKArray* -> ImmutableArray*
+    // const struct OpaqueWKArray* -> const struct OpaqueWKArray -> struct OpaqueWKArray -> struct OpaqueWKArray* -> API::Array*
     
     typedef typename std::remove_pointer<T>::type PotentiallyConstValueType;
     typedef typename std::remove_const<PotentiallyConstValueType>::type NonConstValueType;
@@ -281,7 +284,7 @@ inline WKPoint toAPI(const WebCore::IntPoint& point)
 
 /* Enum conversions */
 
-inline WKTypeID toAPI(APIObject::Type type)
+inline WKTypeID toAPI(API::Object::Type type)
 {
     return static_cast<WKTypeID>(type);
 }

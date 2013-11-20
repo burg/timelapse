@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO)
+#if ENABLE(VIDEO) && !USE(GSTREAMER)
 
 #include "FullscreenVideoController.h"
 
@@ -360,10 +360,8 @@ float FullscreenVideoController::currentTime() const
 
 void FullscreenVideoController::setCurrentTime(float value)
 {
-    if (m_mediaElement) {
-        ExceptionCode ec;
-        m_mediaElement->setCurrentTime(value, ec);
-    }
+    if (m_mediaElement)
+        m_mediaElement->setCurrentTime(value);
 }
 
 float FullscreenVideoController::duration() const

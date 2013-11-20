@@ -28,7 +28,6 @@
 
 #include "APIObject.h"
 #include "GenericCallback.h"
-#include "ImmutableArray.h"
 #include "MessageReceiver.h"
 #include "WebContextSupplement.h"
 #include <wtf/PassRefPtr.h>
@@ -39,7 +38,7 @@ namespace WebKit {
 
 typedef GenericCallback<WKArrayRef> ArrayCallback;
 
-class WebKeyValueStorageManager : public TypedAPIObject<APIObject::TypeKeyValueStorageManager>, public WebContextSupplement {
+class WebKeyValueStorageManager : public API::TypedObject<API::Object::Type::KeyValueStorageManager>, public WebContextSupplement {
 public:
     static const char* supplementName();
 
@@ -50,8 +49,8 @@ public:
     void deleteEntriesForOrigin(WebSecurityOrigin*);
     void deleteAllEntries();
 
-    using APIObject::ref;
-    using APIObject::deref;
+    using API::Object::ref;
+    using API::Object::deref;
 
 private:
     explicit WebKeyValueStorageManager(WebContext*);

@@ -29,6 +29,10 @@
 #include "config.h"
 #include "SymbolTable.h"
 
+#include "JSCellInlines.h"
+#include "JSDestructibleObject.h"
+#include "SlotVisitorInlines.h"
+
 namespace JSC {
 
 const ClassInfo SharedSymbolTable::s_info = { "SharedSymbolTable", 0, 0, 0, CREATE_METHOD_TABLE(SharedSymbolTable) };
@@ -68,13 +72,7 @@ void SymbolTableEntry::attemptToWatch()
 {
     FatEntry* entry = inflate();
     if (!entry->m_watchpoints)
-        entry->m_watchpoints = adoptRef(new WatchpointSet(InitializedWatching));
-}
-
-bool* SymbolTableEntry::addressOfIsWatched()
-{
-    ASSERT(couldBeWatched());
-    return fatEntry()->m_watchpoints->addressOfIsWatched();
+        entry->m_watchpoints = adoptRef(new WatchpointSet(IsWatched));
 }
 
 void SymbolTableEntry::addWatchpoint(Watchpoint* watchpoint)
@@ -88,7 +86,7 @@ void SymbolTableEntry::notifyWriteSlow()
     WatchpointSet* watchpoints = fatEntry()->m_watchpoints.get();
     if (!watchpoints)
         return;
-    watchpoints->notifyWrite();
+    watchpoints->fireAll();
 }
 
 SymbolTableEntry::FatEntry* SymbolTableEntry::inflateSlow()

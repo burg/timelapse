@@ -38,7 +38,6 @@
     ReplaceableConstructor,
     JSLegacyParent=JSDOMWindowBase,
     InterfaceName=Window,
-    OperationsNotDeletable
 ] interface DOMWindow {
     // DOM Level 0
     [Replaceable] readonly attribute Screen screen;
@@ -122,7 +121,7 @@
     attribute DOMString defaultStatus;
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
     // This attribute is an alias of defaultStatus and is necessary for legacy uses.
-    attribute DOMString defaultstatus;
+    [ImplementedAs=defaultStatus] attribute DOMString defaultstatus;
 #endif
 
     // Self referential attributes

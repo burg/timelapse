@@ -281,16 +281,17 @@
     [[self window] display];    
 }
 
+static void dumpSource(WKStringRef source, WKErrorRef error, void* context)
+{
+    if (!source)
+        return;
+
+    LOG(@"Main frame source\n \"%@\"", CFBridgingRelease(WKStringCopyCFString(0, source)));
+}
+
 - (IBAction)dumpSourceToConsole:(id)sender
 {
-    WKPageGetSourceForFrame_b(_webView.pageRef, WKPageGetMainFrame(_webView.pageRef), ^(WKStringRef result, WKErrorRef error) {
-        if (!result)
-            return;
-
-        CFStringRef cfResult = WKStringCopyCFString(0, result);
-        LOG(@"Main frame source\n \"%@\"", (NSString *)cfResult);
-        CFRelease(cfResult);
-    });
+    WKPageGetSourceForFrame(_webView.pageRef, WKPageGetMainFrame(_webView.pageRef), NULL, dumpSource);
 }
 
 // MARK: Loader Client Callbacks
@@ -413,7 +414,7 @@ static void didChangeBackForwardList(WKPageRef page, WKBackForwardListItemRef ad
 
 // MARK: Policy Client Callbacks
 
-static void decidePolicyForNavigationAction(WKPageRef page, WKFrameRef frame, WKFrameNavigationType navigationType, WKEventModifiers modifiers, WKEventMouseButton mouseButton, WKURLRequestRef request, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo)
+static void decidePolicyForNavigationAction(WKPageRef page, WKFrameRef frame, WKFrameNavigationType navigationType, WKEventModifiers modifiers, WKEventMouseButton mouseButton, WKFrameRef originatingFrame, WKURLRequestRef request, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo)
 {
     LOG(@"decidePolicyForNavigationAction");
     WKFramePolicyListenerUse(listener);
@@ -425,7 +426,7 @@ static void decidePolicyForNewWindowAction(WKPageRef page, WKFrameRef frame, WKF
     WKFramePolicyListenerUse(listener);
 }
 
-static void decidePolicyForResponse(WKPageRef page, WKFrameRef frame, WKURLResponseRef response, WKURLRequestRef request, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo)
+static void decidePolicyForResponse(WKPageRef page, WKFrameRef frame, WKURLResponseRef response, WKURLRequestRef request, bool canShowMIMEType, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo)
 {
     WKFramePolicyListenerUse(listener);
 }
@@ -669,10 +670,12 @@ static void runOpenPanel(WKPageRef page, WKFrameRef frame, WKOpenPanelParameters
     WKPagePolicyClient policyClient = {
         kWKPagePolicyClientCurrentVersion,
         self,       /* clientInfo */
-        decidePolicyForNavigationAction,
+        0,          /* decidePolicyForNavigationAction_deprecatedForUseWithV0 */
         decidePolicyForNewWindowAction,
+        0,          /* decidePolicyForResponse_deprecatedForUseWithV */
+        0,          /* unableToImplementPolicy */
+        decidePolicyForNavigationAction,
         decidePolicyForResponse,
-        0           /* unableToImplementPolicy */
     };
     WKPageSetPagePolicyClient(_webView.pageRef, &policyClient);
 

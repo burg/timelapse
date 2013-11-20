@@ -79,7 +79,6 @@
 #import <WebCore/PlatformEventFactoryMac.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/Region.h>
-#import <WebCore/RunLoop.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/WebCoreNSStringExtras.h>
@@ -90,6 +89,7 @@
 #import <sys/stat.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/RunLoop.h>
 
 /* API internals. */
 #import "WKBrowsingContextControllerInternal.h"
@@ -3239,6 +3239,14 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 #else
     return nil;
 #endif
+}
+
+- (BOOL)isUsingUISideCompositing
+{
+    if (DrawingAreaProxy* drawingArea = _data->_page->drawingArea())
+        return drawingArea->type() == DrawingAreaTypeRemoteLayerTree;
+
+    return NO;
 }
 
 @end

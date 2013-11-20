@@ -27,6 +27,7 @@
 #include "WKPage.h"
 #include "WKPagePrivate.h"
 
+#include "APIArray.h"
 #include "PrintInfo.h"
 #include "WKAPICast.h"
 #include "WKPluginInformation.h"
@@ -689,57 +690,15 @@ void WKPageRenderTreeExternalRepresentation(WKPageRef pageRef, void* context, WK
     toImpl(pageRef)->getRenderTreeExternalRepresentation(StringCallback::create(context, callback));
 }
 
-#ifdef __BLOCKS__
-static void callRenderTreeExternalRepresentationBlockAndDispose(WKStringRef resultValue, WKErrorRef error, void* context)
-{
-    WKPageRenderTreeExternalRepresentationBlock block = (WKPageRenderTreeExternalRepresentationBlock)context;
-    block(resultValue, error);
-    Block_release(block);
-}
-
-void WKPageRenderTreeExternalRepresentation_b(WKPageRef pageRef, WKPageRenderTreeExternalRepresentationBlock block)
-{
-    WKPageRenderTreeExternalRepresentation(pageRef, Block_copy(block), callRenderTreeExternalRepresentationBlockAndDispose);
-}
-#endif
-
 void WKPageGetSourceForFrame(WKPageRef pageRef, WKFrameRef frameRef, void* context, WKPageGetSourceForFrameFunction callback)
 {
     toImpl(pageRef)->getSourceForFrame(toImpl(frameRef), StringCallback::create(context, callback));
 }
 
-#ifdef __BLOCKS__
-static void callGetSourceForFrameBlockBlockAndDispose(WKStringRef resultValue, WKErrorRef error, void* context)
-{
-    WKPageGetSourceForFrameBlock block = (WKPageGetSourceForFrameBlock)context;
-    block(resultValue, error);
-    Block_release(block);
-}
-
-void WKPageGetSourceForFrame_b(WKPageRef pageRef, WKFrameRef frameRef, WKPageGetSourceForFrameBlock block)
-{
-    WKPageGetSourceForFrame(pageRef, frameRef, Block_copy(block), callGetSourceForFrameBlockBlockAndDispose);
-}
-#endif
-
 void WKPageGetContentsAsString(WKPageRef pageRef, void* context, WKPageGetContentsAsStringFunction callback)
 {
     toImpl(pageRef)->getContentsAsString(StringCallback::create(context, callback));
 }
-
-#ifdef __BLOCKS__
-static void callContentsAsStringBlockBlockAndDispose(WKStringRef resultValue, WKErrorRef error, void* context)
-{
-    WKPageGetContentsAsStringBlock block = (WKPageGetContentsAsStringBlock)context;
-    block(resultValue, error);
-    Block_release(block);
-}
-
-void WKPageGetContentsAsString_b(WKPageRef pageRef, WKPageGetSourceForFrameBlock block)
-{
-    WKPageGetContentsAsString(pageRef, Block_copy(block), callContentsAsStringBlockBlockAndDispose);
-}
-#endif
 
 void WKPageGetSelectionAsWebArchiveData(WKPageRef pageRef, void* context, WKPageGetSelectionAsWebArchiveDataFunction callback)
 {
@@ -765,9 +724,12 @@ void WKPageForceRepaint(WKPageRef pageRef, void* context, WKPageForceRepaintFunc
 
 WK_EXPORT WKURLRef WKPageCopyPendingAPIRequestURL(WKPageRef pageRef)
 {
-    if (toImpl(pageRef)->pendingAPIRequestURL().isNull())
-        return 0;
-    return toCopiedURLAPI(toImpl(pageRef)->pendingAPIRequestURL());
+    const String& pendingAPIRequestURL = toImpl(pageRef)->pageLoadState().pendingAPIRequestURL();
+
+    if (pendingAPIRequestURL.isNull())
+        return nullptr;
+
+    return toCopiedURLAPI(pendingAPIRequestURL);
 }
 
 WKURLRef WKPageCopyActiveURL(WKPageRef pageRef)

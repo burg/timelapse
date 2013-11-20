@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebRenderObject.h"
 
+#include "APIArray.h"
 #include "WebPage.h"
 #include "WebString.h"
 #include <WebCore/Frame.h>
@@ -55,6 +56,11 @@ PassRefPtr<WebRenderObject> WebRenderObject::create(WebPage* page)
     return adoptRef(new WebRenderObject(contentRenderer, true));
 }
 
+PassRefPtr<WebRenderObject> WebRenderObject::create(const String& name, const String& elementTagName, const String& elementID, PassRefPtr<API::Array> elementClassNames, WebCore::IntPoint absolutePosition, WebCore::IntRect frameRect, PassRefPtr<API::Array> children)
+{
+    return adoptRef(new WebRenderObject(name, elementTagName, elementID, elementClassNames, absolutePosition, frameRect, children));
+}
+
 WebRenderObject::WebRenderObject(RenderObject* renderer, bool shouldIncludeDescendants)
 {
     m_name = renderer->renderName();
@@ -64,12 +70,15 @@ WebRenderObject::WebRenderObject(RenderObject* renderer, bool shouldIncludeDesce
             Element* element = toElement(node);
             m_elementTagName = element->tagName();
             m_elementID = element->getIdAttribute();
+            
             if (element->isStyledElement() && element->hasClass()) {
-                if (size_t classNameCount = element->classNames().size()) {
-                    m_elementClassNames = MutableArray::create();
-                    for (size_t i = 0; i < classNameCount; ++i)
-                        m_elementClassNames->append(WebString::create(element->classNames()[i]).get());
-                }
+                Vector<RefPtr<API::Object>> classNames;
+                classNames.reserveInitialCapacity(element->classNames().size());
+
+                for (size_t i = 0, size = element->classNames().size(); i < size; ++i)
+                    classNames.append(WebString::create(element->classNames()[i]));
+
+                m_elementClassNames = API::Array::create(std::move(classNames));
             }
         }
     }
@@ -89,24 +98,42 @@ WebRenderObject::WebRenderObject(RenderObject* renderer, bool shouldIncludeDesce
     if (!shouldIncludeDescendants)
         return;
 
-    m_children = MutableArray::create();
+    Vector<RefPtr<API::Object>> children;
+
     for (RenderObject* coreChild = renderer->firstChildSlow(); coreChild; coreChild = coreChild->nextSibling()) {
         RefPtr<WebRenderObject> child = adoptRef(new WebRenderObject(coreChild, shouldIncludeDescendants));
-        m_children->append(child.get());
+        children.append(std::move(child));
     }
 
-    if (!renderer->isWidget())
-        return;
+    if (renderer->isWidget()) {
+        if (Widget* widget = toRenderWidget(renderer)->widget()) {
+            if (widget->isFrameView()) {
+                FrameView* frameView = toFrameView(widget);
+                if (RenderView* coreContentRenderer = frameView->frame().contentRenderer()) {
+                    RefPtr<WebRenderObject> contentRenderer = adoptRef(new WebRenderObject(coreContentRenderer, shouldIncludeDescendants));
 
-    Widget* widget = toRenderWidget(renderer)->widget();
-    if (!widget || !widget->isFrameView())
-        return;
-
-    FrameView* frameView = toFrameView(widget);
-    if (RenderView* coreContentRenderer = frameView->frame().contentRenderer()) {
-        RefPtr<WebRenderObject> contentRenderer = adoptRef(new WebRenderObject(coreContentRenderer, shouldIncludeDescendants));
-        m_children->append(contentRenderer.get());
+                    children.append(std::move(contentRenderer));
+                }
+            }
+        }
     }
+
+    m_children = API::Array::create(std::move(children));
+}
+
+WebRenderObject::WebRenderObject(const String& name, const String& elementTagName, const String& elementID, PassRefPtr<API::Array> elementClassNames, WebCore::IntPoint absolutePosition, WebCore::IntRect frameRect, PassRefPtr<API::Array> children)
+    : m_children(children)
+    , m_name(name)
+    , m_elementTagName(elementTagName)
+    , m_elementID(elementID)
+    , m_elementClassNames(elementClassNames)
+    , m_absolutePosition(absolutePosition)
+    , m_frameRect(frameRect)
+{
+}
+
+WebRenderObject::~WebRenderObject()
+{
 }
 
 } // namespace WebKit

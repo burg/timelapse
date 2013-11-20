@@ -20,11 +20,13 @@
 #include "config.h"
 #include "AccessibilityNotificationHandlerAtk.h"
 
+#if HAVE(ACCESSIBILITY)
+
 #include "AccessibilityCallbacks.h"
 
 AccessibilityNotificationHandler::AccessibilityNotificationHandler(void)
-    : m_platformElement(0)
-    , m_notificationFunctionCallback(0)
+    : m_platformElement(nullptr)
+    , m_notificationFunctionCallback(nullptr)
 {
 }
 
@@ -49,3 +51,5 @@ void AccessibilityNotificationHandler::setNotificationFunctionCallback(JSObjectR
     connectAccessibilityCallbacks();
     addAccessibilityNotificationHandler(this);
 }
+
+#endif // HAVE(ACCESSIBILITY)

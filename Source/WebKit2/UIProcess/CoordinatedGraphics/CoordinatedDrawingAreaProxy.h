@@ -32,8 +32,8 @@
 #include "BackingStore.h"
 #include "DrawingAreaProxy.h"
 #include "LayerTreeContext.h"
-#include <WebCore/RunLoop.h>
 #include <wtf/OwnPtr.h>
+#include <wtf/RunLoop.h>
 
 namespace WebCore {
 class Region;
@@ -53,10 +53,19 @@ public:
 #if USE(ACCELERATED_COMPOSITING)
     bool isInAcceleratedCompositingMode() const { return !m_layerTreeContext.isEmpty(); }
     void visibilityDidChange();
+
+    void setVisibleContentsRect(const WebCore::FloatRect& visibleContentsRect, const WebCore::FloatPoint& trajectory);
 #endif
 
     bool hasReceivedFirstUpdate() const { return m_hasReceivedFirstUpdate; }
 
+    CoordinatedLayerTreeHostProxy& coordinatedLayerTreeHostProxy() const { return *m_coordinatedLayerTreeHostProxy.get(); }
+
+    WebCore::IntRect viewportVisibleRect() const { return contentsRect(); }
+    WebCore::IntRect contentsRect() const;
+    void updateViewport();
+
+    WebPageProxy* page() { return m_webPageProxy; }
 private:
     // DrawingAreaProxy
     virtual void sizeDidChange();
@@ -84,13 +93,14 @@ private:
     void enterAcceleratedCompositingMode(const LayerTreeContext&);
     void exitAcceleratedCompositingMode();
     void updateAcceleratedCompositingMode(const LayerTreeContext&);
-    virtual void setVisibleContentsRect(const WebCore::FloatRect& visibleContentsRect, const WebCore::FloatPoint& trajectory) OVERRIDE;
 #else
     bool isInAcceleratedCompositingMode() const { return false; }
 #endif
 
     void discardBackingStoreSoon();
     void discardBackingStore();
+
+    OwnPtr<CoordinatedLayerTreeHostProxy> m_coordinatedLayerTreeHostProxy;
 
     // The state ID corresponding to our current backing store. Updated whenever we allocate
     // a new backing store. Any messages received that correspond to an earlier state are ignored,
@@ -116,7 +126,7 @@ private:
     bool m_isBackingStoreDiscardable;
     std::unique_ptr<BackingStore> m_backingStore;
 
-    WebCore::RunLoop::Timer<CoordinatedDrawingAreaProxy> m_discardBackingStoreTimer;
+    RunLoop::Timer<CoordinatedDrawingAreaProxy> m_discardBackingStoreTimer;
 };
 
 } // namespace WebKit

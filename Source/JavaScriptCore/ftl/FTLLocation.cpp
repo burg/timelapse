@@ -35,7 +35,7 @@
 
 namespace JSC { namespace FTL {
 
-Location Location::forStackmaps(const StackMaps& stackmaps, const StackMaps::Location& location)
+Location Location::forStackmaps(const StackMaps* stackmaps, const StackMaps::Location& location)
 {
     switch (location.kind) {
     case StackMaps::Location::Unprocessed:
@@ -53,7 +53,8 @@ Location Location::forStackmaps(const StackMaps& stackmaps, const StackMaps::Loc
         return forConstant(location.offset);
         
     case StackMaps::Location::ConstantIndex:
-        return forConstant(stackmaps.constants[location.offset].integer);
+        ASSERT(stackmaps);
+        return forConstant(stackmaps->constants[location.offset].integer);
     }
     
     RELEASE_ASSERT_NOT_REACHED();
@@ -91,7 +92,7 @@ GPRReg Location::gpr() const
     // for example, the architecture encodes CX as 1 and DX as 2 while Dwarf does the
     // opposite. Hence we need the switch.
     
-    ASSERT(involvesGPR());
+    RELEASE_ASSERT(involvesGPR());
     
     switch (dwarfRegNum()) {
     case 0:
@@ -124,7 +125,7 @@ bool Location::isFPR() const
 
 FPRReg Location::fpr() const
 {
-    ASSERT(isFPR());
+    RELEASE_ASSERT(isFPR());
     return static_cast<FPRReg>(dwarfRegNum() - 17);
 }
 
@@ -199,7 +200,7 @@ void Location::restoreInto(MacroAssembler& jit, char* savedRegisters, GPRReg res
 
 GPRReg Location::directGPR() const
 {
-    ASSERT(!addend());
+    RELEASE_ASSERT(!addend());
     return gpr();
 }
 

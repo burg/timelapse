@@ -195,8 +195,9 @@ void ImageLoader::updateFromElement()
             clearFailedLoadURL();
     } else if (!attr.isNull()) {
         // Fire an error event if the url is empty.
-        // FIXME: Should we fire this event asynchronoulsy via eventSender()?
-        m_element->dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+        m_failedLoadURL = attr;
+        m_hasPendingErrorEvent = true;
+        eventSender().dispatchEventSoon(this, eventNames().errorEvent);
     }
 
     CachedImage* oldImage = m_image.get();

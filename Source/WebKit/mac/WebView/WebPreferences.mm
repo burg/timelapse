@@ -43,10 +43,10 @@
 #import <WebCore/ApplicationCacheStorage.h>
 #import <WebCore/NetworkStorageSession.h>
 #import <WebCore/ResourceHandle.h>
-#import <WebCore/RunLoop.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/MainThread.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/RunLoop.h>
 
 using namespace WebCore;
 
@@ -306,7 +306,7 @@ public:
 {
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
-    WebCore::RunLoop::initializeMainRunLoop();
+    RunLoop::initializeMainRunLoop();
 
     NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:
         @"Times",                       WebKitStandardFontPreferenceKey,
@@ -425,6 +425,9 @@ public:
         [NSNumber numberWithBool:NO], WebKitHiddenPageDOMTimerThrottlingEnabledPreferenceKey,
         [NSNumber numberWithBool:NO], WebKitHiddenPageCSSAnimationSuspensionEnabledPreferenceKey,
         [NSNumber numberWithBool:NO], WebKitLowPowerVideoAudioBufferSizeEnabledPreferenceKey,
+        
+        [NSNumber numberWithBool:NO], WebKitUseLegacyTextAlignPositionedElementBehaviorPreferenceKey,
+        
 #if !PLATFORM(IOS)
         [NSNumber numberWithBool:NO],   WebKitVideoPluginProxyEnabledKey,
 #endif
@@ -1931,6 +1934,16 @@ static bool needsScreenFontsEnabledQuirk()
 - (void)setLowPowerVideoAudioBufferSizeEnabled:(BOOL)enabled
 {
     [self _setBoolValue:enabled forKey:WebKitLowPowerVideoAudioBufferSizeEnabledPreferenceKey];
+}
+
+- (BOOL)useLegacyTextAlignPositionedElementBehavior
+{
+    return [self _boolValueForKey:WebKitUseLegacyTextAlignPositionedElementBehaviorPreferenceKey];
+}
+
+- (void)setUseLegacyTextAlignPositionedElementBehavior:(BOOL)enabled
+{
+    [self _setBoolValue:enabled forKey:WebKitUseLegacyTextAlignPositionedElementBehaviorPreferenceKey];
 }
 
 @end

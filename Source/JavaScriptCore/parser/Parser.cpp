@@ -37,22 +37,15 @@
 #include <wtf/StringPrintStream.h>
 #include <wtf/WTFThreadData.h>
 
+
 #define updateErrorMessage(shouldPrintToken, ...) do {\
-    ASSERT(!hasError());\
-    StringPrintStream stream;\
-    if (shouldPrintToken) {\
-        printUnexpectedTokenText(stream); \
-        stream.print(". "); \
-    }\
-    stream.print(__VA_ARGS__);\
-    stream.print(".");\
-    setErrorMessage(stream.toString());\
+    logError(shouldPrintToken, __VA_ARGS__); \
 } while (0)
 
 #define propagateError() do { if (hasError()) return 0; } while (0)
-#define internalFailWithMessage(shouldPrintToken, ...) do { if (!hasError()) updateErrorMessage(shouldPrintToken, __VA_ARGS__); return 0; } while (0)
+#define internalFailWithMessage(shouldPrintToken, ...) do { updateErrorMessage(shouldPrintToken, __VA_ARGS__); return 0; } while (0)
 #define handleErrorToken() do { if (m_token.m_type == EOFTOK || m_token.m_type & ErrorTokenFlag) { failDueToUnexpectedToken(); } } while (0)
-#define failWithMessage(...) do { if (!hasError()) { handleErrorToken(); updateErrorMessage(true, __VA_ARGS__); } return 0; } while (0)
+#define failWithMessage(...) do { { handleErrorToken(); updateErrorMessage(true, __VA_ARGS__); } return 0; } while (0)
 #define failWithStackOverflow() do { updateErrorMessage(false, "Stack exhausted"); m_hasStackOverflow = true; return 0; } while (0)
 #define failIfFalse(cond, ...) do { if (!(cond)) { handleErrorToken(); internalFailWithMessage(true, __VA_ARGS__); } } while (0)
 #define failIfTrue(cond, ...) do { if ((cond)) { handleErrorToken(); internalFailWithMessage(true, __VA_ARGS__); } } while (0)
@@ -65,13 +58,9 @@
 #define semanticFail(...) do { internalFailWithMessage(false, __VA_ARGS__); } while (0)
 #define semanticFailIfTrue(cond, ...) do { if ((cond)) internalFailWithMessage(false, __VA_ARGS__); } while (0)
 #define semanticFailIfFalse(cond, ...) do { if (!(cond)) internalFailWithMessage(false, __VA_ARGS__); } while (0)
-#define regexFail(failure) do { if (!hasError()) setErrorMessage(failure); return 0; } while (0)
+#define regexFail(failure) do { setErrorMessage(failure); return 0; } while (0)
 #define failDueToUnexpectedToken() do {\
-    if (!hasError()) {\
-        StringPrintStream stream;\
-        printUnexpectedTokenText(stream); \
-        setErrorMessage(stream.toString());\
-    }\
+        logError(true);\
     return 0;\
 } while (0)
 
@@ -91,6 +80,114 @@
 using namespace std;
 
 namespace JSC {
+
+template <typename LexerType>
+void Parser<LexerType>::logError(bool)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    printUnexpectedTokenText(stream);
+    setErrorMessage(stream.toString());
+}
+
+template <typename LexerType> template <typename A>
+void Parser<LexerType>::logError(bool shouldPrintToken, const A& value1)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    if (shouldPrintToken) {
+        printUnexpectedTokenText(stream);
+        stream.print(". ");
+    }
+    stream.print(value1, ".");
+    setErrorMessage(stream.toString());
+}
+
+template <typename LexerType> template <typename A, typename B>
+void Parser<LexerType>::logError(bool shouldPrintToken, const A& value1, const B& value2)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    if (shouldPrintToken) {
+        printUnexpectedTokenText(stream);
+        stream.print(". ");
+    }
+    stream.print(value1, value2, ".");
+    setErrorMessage(stream.toString());
+}
+
+template <typename LexerType> template <typename A, typename B, typename C>
+void Parser<LexerType>::logError(bool shouldPrintToken, const A& value1, const B& value2, const C& value3)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    if (shouldPrintToken) {
+        printUnexpectedTokenText(stream);
+        stream.print(". ");
+    }
+    stream.print(value1, value2, value3, ".");
+    setErrorMessage(stream.toString());
+}
+
+template <typename LexerType> template <typename A, typename B, typename C, typename D>
+void Parser<LexerType>::logError(bool shouldPrintToken, const A& value1, const B& value2, const C& value3, const D& value4)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    if (shouldPrintToken) {
+        printUnexpectedTokenText(stream);
+        stream.print(". ");
+    }
+    stream.print(value1, value2, value3, value4, ".");
+    setErrorMessage(stream.toString());
+}
+
+template <typename LexerType> template <typename A, typename B, typename C, typename D, typename E>
+void Parser<LexerType>::logError(bool shouldPrintToken, const A& value1, const B& value2, const C& value3, const D& value4, const E& value5)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    if (shouldPrintToken) {
+        printUnexpectedTokenText(stream);
+        stream.print(". ");
+    }
+    stream.print(value1, value2, value3, value4, value5, ".");
+    setErrorMessage(stream.toString());
+}
+
+template <typename LexerType> template <typename A, typename B, typename C, typename D, typename E, typename F>
+void Parser<LexerType>::logError(bool shouldPrintToken, const A& value1, const B& value2, const C& value3, const D& value4, const E& value5, const F& value6)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    if (shouldPrintToken) {
+        printUnexpectedTokenText(stream);
+        stream.print(". ");
+    }
+    stream.print(value1, value2, value3, value4, value5, value6, ".");
+    setErrorMessage(stream.toString());
+}
+
+template <typename LexerType> template <typename A, typename B, typename C, typename D, typename E, typename F, typename G>
+void Parser<LexerType>::logError(bool shouldPrintToken, const A& value1, const B& value2, const C& value3, const D& value4, const E& value5, const F& value6, const G& value7)
+{
+    if (hasError())
+        return;
+    StringPrintStream stream;
+    if (shouldPrintToken) {
+        printUnexpectedTokenText(stream);
+        stream.print(". ");
+    }
+    stream.print(value1, value2, value3, value4, value5, value6, value7, ".");
+    setErrorMessage(stream.toString());
+}
 
 template <typename LexerType>
 Parser<LexerType>::Parser(VM* vm, const SourceCode& source, FunctionParameters* parameters, const Identifier& name, JSParserStrictness strictness, JSParserMode parserMode)
@@ -400,7 +497,8 @@ template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern 
                 semanticFail("Cannot deconstruct to a parameter named '", name.impl(), "'");
             }
         }
-        context.addVar(&name, kind == DeconstructToParameters ? 0 : DeclarationStacks::HasInitializer);
+        if (kind != DeconstructToExpressions)
+            context.addVar(&name, kind == DeconstructToParameters ? 0 : DeclarationStacks::HasInitializer);
     } else {
         if (kind == DeconstructToVariables) {
             failIfFalseIfStrict(declareVariable(&name), "Cannot declare a variable named '", name.impl(), "' in strict mode");
@@ -424,6 +522,12 @@ template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern 
 }
 
 template <typename LexerType>
+template <class TreeBuilder> TreeDeconstructionPattern Parser<LexerType>::tryParseDeconstructionPatternExpression(TreeBuilder& context)
+{
+    return parseDeconstructionPattern<DeconstructToExpressions>(context);
+}
+
+template <typename LexerType>
 template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern Parser<LexerType>::parseDeconstructionPattern(TreeBuilder& context, int depth)
 {
     failIfStackOverflow();
@@ -433,6 +537,8 @@ template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern 
     case OPENBRACKET: {
         auto arrayPattern = context.createArrayPattern(m_token.m_location);
         next();
+        if (kind == DeconstructToExpressions && match(CLOSEBRACKET))
+            return 0;
         failIfTrue(match(CLOSEBRACKET), "There must be at least one bound property in an array deconstruction pattern");
         do {
             while (match(COMMA)) {
@@ -442,15 +548,25 @@ template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern 
             propagateError();
             JSTokenLocation location = m_token.m_location;
             auto innerPattern = parseDeconstructionPattern<kind>(context, depth + 1);
+            if (kind == DeconstructToExpressions && !innerPattern)
+                return 0;
             failIfFalse(innerPattern, "Cannot parse this deconstruction pattern");
             context.appendArrayPatternEntry(arrayPattern, location, innerPattern);
         } while (consume(COMMA));
+        
+        if (kind == DeconstructToExpressions && !match(CLOSEBRACKET))
+            return 0;
+
         consumeOrFail(CLOSEBRACKET, "Expected either a closing ']' or a ',' following an element deconstruction pattern");
         pattern = arrayPattern;
         break;
     }
     case OPENBRACE: {
         next();
+        
+        if (kind == DeconstructToExpressions && match(CLOSEBRACE))
+            return 0;
+
         failIfTrue(match(CLOSEBRACE), "There must be at least one bound property in an object deconstruction pattern");
         auto objectPattern = context.createObjectPattern(m_token.m_location);
         bool wasString = false;
@@ -476,13 +592,18 @@ template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern 
                     wasString = true;
                     break;
                 default:
-                    if (m_token.m_type != RESERVED && m_token.m_type != RESERVED_IF_STRICT && !(m_token.m_type & KeywordTokenFlag))
+                    if (m_token.m_type != RESERVED && m_token.m_type != RESERVED_IF_STRICT && !(m_token.m_type & KeywordTokenFlag)) {
+                        if (kind == DeconstructToExpressions)
+                            return 0;
                         failWithMessage("Expected a property name");
+                    }
                     propertyName = *m_token.m_data.ident;
                     break;
                 }
                 next();
                 if (!consume(COLON)) {
+                    if (kind == DeconstructToExpressions)
+                        return 0;
                     semanticFailIfTrue(tokenType == RESERVED, "Cannot use abbreviated deconstruction syntax for reserved name '", propertyName.impl(), "'");
                     semanticFailIfTrue(tokenType == RESERVED_IF_STRICT, "Cannot use abbreviated deconstruction syntax for reserved name '", propertyName.impl(), "' in strict mode");
                     semanticFailIfTrue(tokenType & KeywordTokenFlag, "Cannot use abbreviated deconstruction syntax for keyword '", propertyName.impl(), "'");
@@ -491,9 +612,13 @@ template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern 
                 }
                 innerPattern = parseDeconstructionPattern<kind>(context, depth + 1);
             }
+            if (kind == DeconstructToExpressions && !innerPattern)
+                return 0;
             failIfFalse(innerPattern, "Cannot parse this deconstruction pattern");
             context.appendObjectPatternEntry(objectPattern, location, wasString, propertyName, innerPattern);
         } while (consume(COMMA));
+        if (kind == DeconstructToExpressions && !match(CLOSEBRACE))
+            return 0;
         consumeOrFail(CLOSEBRACE, "Expected either a closing '}' or an ',' after a property deconstruction pattern");
         pattern = objectPattern;
         break;
@@ -501,6 +626,8 @@ template <DeconstructionKind kind, class TreeBuilder> TreeDeconstructionPattern 
 
     default: {
         if (!match(IDENT)) {
+            if (kind == DeconstructToExpressions)
+                return 0;
             semanticFailureDueToKeyword("variable name");
             failWithMessage("Expected a parameter pattern or a ')' in parameter list");
         }
@@ -554,6 +681,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
     JSTextPosition declsStart;
     JSTextPosition declsEnd;
     TreeExpression decls = 0;
+    TreeDeconstructionPattern pattern = 0;
     if (match(VAR)) {
         /*
          for (var IDENT in expression) statement
@@ -603,6 +731,16 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
     }
     
     if (!match(SEMICOLON)) {
+        if (match(OPENBRACE) || match(OPENBRACKET)) {
+            SavePoint savePoint = createSavePoint();
+            declsStart = tokenStartPosition();
+            pattern = tryParseDeconstructionPatternExpression(context);
+            declsEnd = lastTokenEndPosition();
+            if (pattern && (match(INTOKEN) || (match(IDENT) && *m_token.m_data.ident == m_vm->propertyNames->of)))
+                goto enumerationLoop;
+            pattern = 0;
+            restoreSavePoint(savePoint);
+        }
         m_allowsIn = false;
         declsStart = tokenStartPosition();
         decls = parseExpression(context);
@@ -639,6 +777,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
     }
     
     // For-in loop
+enumerationLoop:
     failIfFalse(nonLHSCount == m_nonLHSCount, "Expected a reference on the left hand side of an enumeration statement");
     bool isOfEnumeration = false;
     if (!consume(INTOKEN)) {
@@ -657,6 +796,12 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
     TreeStatement statement = parseStatement(context, unused);
     endLoop();
     failIfFalse(statement, "Expected a statement as the body of a for-", isOfEnumeration ? "of" : "in", "loop");
+    if (pattern) {
+        ASSERT(!decls);
+        if (isOfEnumeration)
+            return context.createForOfLoop(location, pattern, expr, statement, declsStart, declsEnd, exprEnd, startLine, endLine);
+        return context.createForInLoop(location, pattern, expr, statement, declsStart, declsEnd, exprEnd, startLine, endLine);
+    }
     if (isOfEnumeration)
         return context.createForOfLoop(location, decls, expr, statement, declsStart, declsEnd, exprEnd, startLine, endLine);
     return context.createForInLoop(location, decls, expr, statement, declsStart, declsEnd, exprEnd, startLine, endLine);
@@ -1017,13 +1162,16 @@ template <class TreeBuilder> TreeFunctionBody Parser<LexerType>::parseFunctionBo
     unsigned startColumn = tokenColumn();
     next();
 
-    if (match(CLOSEBRACE))
-        return context.createFunctionBody(startLocation, tokenLocation(), startColumn, strictMode());
+    if (match(CLOSEBRACE)) {
+        unsigned endColumn = tokenColumn();
+        return context.createFunctionBody(startLocation, tokenLocation(), startColumn, endColumn, strictMode());
+    }
     DepthManager statementDepth(&m_statementDepth);
     m_statementDepth = 0;
     typename TreeBuilder::FunctionBodyBuilder bodyBuilder(const_cast<VM*>(m_vm), m_lexer.get());
     failIfFalse(parseSourceElements<CheckForStrictMode>(bodyBuilder), "Cannot parse body of this function");
-    return context.createFunctionBody(startLocation, tokenLocation(), startColumn, strictMode());
+    unsigned endColumn = tokenColumn();
+    return context.createFunctionBody(startLocation, tokenLocation(), startColumn, endColumn, strictMode());
 }
 
 static const char* stringForFunctionMode(FunctionParseMode mode)
@@ -1045,7 +1193,7 @@ template <FunctionRequirements requirements, FunctionParseMode mode, bool nameIs
 {
     AutoPopScopeRef functionScope(this, pushScope());
     functionScope->setIsFunction();
-    int functionStart = m_token.m_location.startOffset;
+    int functionNameStart = m_token.m_location.startOffset;
     const Identifier* lastFunctionName = m_lastFunctionName;
     m_lastFunctionName = nullptr;
     if (match(IDENT)) {
@@ -1086,16 +1234,21 @@ template <FunctionRequirements requirements, FunctionParseMode mode, bool nameIs
         endLocation.line = cachedInfo->closeBraceLine;
         endLocation.startOffset = cachedInfo->closeBraceOffset;
         endLocation.lineStartOffset = cachedInfo->closeBraceLineStartOffset;
-        ASSERT(endLocation.startOffset >= endLocation.lineStartOffset);
 
-        body = context.createFunctionBody(startLocation, endLocation, bodyStartColumn, cachedInfo->strictMode);
+        bool endColumnIsOnStartLine = (endLocation.line == bodyStartLine);
+        ASSERT(endLocation.startOffset >= endLocation.lineStartOffset);
+        unsigned bodyEndColumn = endColumnIsOnStartLine ?
+            endLocation.startOffset - m_token.m_data.lineStartOffset :
+            endLocation.startOffset - endLocation.lineStartOffset;
+
+        body = context.createFunctionBody(startLocation, endLocation, bodyStartColumn, bodyEndColumn, cachedInfo->strictMode);
         
         functionScope->restoreFromSourceProviderCache(cachedInfo);
         failIfFalse(popScope(functionScope, TreeBuilder::NeedsFreeVariableInfo), "Parser error");
         
         closeBraceOffset = cachedInfo->closeBraceOffset;
 
-        context.setFunctionStart(body, functionStart);
+        context.setFunctionNameStart(body, functionNameStart);
         m_token = cachedInfo->closeBraceToken();
 
         m_lexer->setOffset(m_token.m_location.endOffset, m_token.m_location.lineStartOffset);
@@ -1125,7 +1278,7 @@ template <FunctionRequirements requirements, FunctionParseMode mode, bool nameIs
     int functionLength = closeBraceOffset - openBraceOffset;
     if (TreeBuilder::CanUseFunctionCache && m_functionCache && functionLength > minimumFunctionLengthToCache) {
         SourceProviderCacheItemCreationParameters parameters;
-        parameters.functionStart = functionStart;
+        parameters.functionNameStart = functionNameStart;
         parameters.closeBraceLine = closeBraceLine;
         parameters.closeBraceOffset = closeBraceOffset;
         parameters.closeBraceLineStartOffset = closeBraceLineStartOffset;
@@ -1133,7 +1286,7 @@ template <FunctionRequirements requirements, FunctionParseMode mode, bool nameIs
         newInfo = SourceProviderCacheItem::create(parameters);
 
     }
-    context.setFunctionStart(body, functionStart);
+    context.setFunctionNameStart(body, functionNameStart);
     
     failIfFalse(popScope(functionScope, TreeBuilder::NeedsFreeVariableInfo), "Parser error");
     matchOrFail(CLOSEBRACE, "Expected a closing '}' after a ", stringForFunctionMode(mode), " body");
@@ -1368,6 +1521,16 @@ template <typename TreeBuilder> TreeExpression Parser<LexerType>::parseAssignmen
     JSTokenLocation location(tokenLocation());
     int initialAssignmentCount = m_assignmentCount;
     int initialNonLHSCount = m_nonLHSCount;
+    if (match(OPENBRACE) || match(OPENBRACKET)) {
+        SavePoint savePoint = createSavePoint();
+        auto pattern = tryParseDeconstructionPatternExpression(context);
+        if (pattern && consume(EQUAL)) {
+            auto rhs = parseAssignmentExpression(context);
+            if (rhs)
+                return context.createDeconstructingAssignment(location, pattern, rhs);
+        }
+        restoreSavePoint(savePoint);
+    }
     TreeExpression lhs = parseConditionalExpression(context);
     failIfFalse(lhs, "Cannot parse expression");
     if (initialNonLHSCount != m_nonLHSCount) {

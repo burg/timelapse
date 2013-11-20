@@ -38,8 +38,6 @@
 #include "RenderStyle.h"
 #include "StyleResolver.h"
 
-using namespace std;
-
 namespace WebCore {
 
 KeyframeAnimation::KeyframeAnimation(const Animation& animation, RenderElement* renderer, int index, CompositeAnimation* compAnim, RenderStyle* unanimatedStyle)
@@ -85,7 +83,7 @@ void KeyframeAnimation::fetchIntervalEndpointsForProperty(CSSPropertyID property
     // Find the first key
     double elapsedTime = getElapsedTime();
     if (m_animation->duration() && m_animation->iterationCount() != Animation::IterationCountInfinite)
-        elapsedTime = min(elapsedTime, m_animation->duration() * m_animation->iterationCount());
+        elapsedTime = std::min(elapsedTime, m_animation->duration() * m_animation->iterationCount());
 
     const double fractionalTime = this->fractionalTime(1, elapsedTime, 0);
 
@@ -185,8 +183,8 @@ void KeyframeAnimation::animate(CompositeAnimation* compositeAnimation, RenderEl
         double progress = 0.0;
         fetchIntervalEndpointsForProperty(*it, fromStyle, toStyle, progress);
 
-        bool needsAnim = CSSPropertyAnimation::blendProperties(this, *it, animatedStyle.get(), fromStyle, toStyle, progress);
 #if USE(ACCELERATED_COMPOSITING)
+        bool needsAnim = CSSPropertyAnimation::blendProperties(this, *it, animatedStyle.get(), fromStyle, toStyle, progress);
         if (!needsAnim)
             // If we are running an accelerated animation, set a flag in the style
             // to indicate it. This can be used to make sure we get an updated

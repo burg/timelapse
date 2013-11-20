@@ -27,6 +27,7 @@
 #include "WKBundlePage.h"
 #include "WKBundlePagePrivate.h"
 
+#include "APIArray.h"
 #include "InjectedBundleBackForwardList.h"
 #include "InjectedBundleNodeHandle.h"
 #include "PageBanner.h"
@@ -165,20 +166,27 @@ void WKBundlePageClickMenuItem(WKBundlePageRef pageRef, WKContextMenuItemRef ite
 #endif
 }
 
+static PassRefPtr<API::Array> contextMenuItems(const WebContextMenu& contextMenu)
+{
+    auto items = contextMenu.items();
+
+    Vector<RefPtr<API::Object>> menuItems;
+    menuItems.reserveInitialCapacity(items.size());
+
+    for (const auto& item : items)
+        menuItems.uncheckedAppend(WebContextMenuItem::create(item));
+
+    return API::Array::create(std::move(menuItems));
+}
+
 WKArrayRef WKBundlePageCopyContextMenuItems(WKBundlePageRef pageRef)
 {
 #if ENABLE(CONTEXT_MENUS)
     WebContextMenu* contextMenu = toImpl(pageRef)->contextMenu();
-    const Vector<WebContextMenuItemData>& items = contextMenu->items();
-    size_t arrayLength = items.size();
 
-    auto wkItems = std::make_unique<WKTypeRef[]>(arrayLength);
-    for (size_t i = 0; i < arrayLength; ++i)
-        wkItems[i] = toAPI(WebContextMenuItem::create(items[i]).leakRef());
-
-    return WKArrayCreate(wkItems.get(), arrayLength);
+    return toAPI(contextMenuItems(*contextMenu).leakRef());
 #else
-    return 0;
+    return nullptr;
 #endif
 }
 
@@ -187,19 +195,11 @@ WKArrayRef WKBundlePageCopyContextMenuAtPointInWindow(WKBundlePageRef pageRef, W
 #if ENABLE(CONTEXT_MENUS)
     WebContextMenu* contextMenu = toImpl(pageRef)->contextMenuAtPointInWindow(toIntPoint(point));
     if (!contextMenu)
-        return 0;
+        return nullptr;
 
-    const Vector<WebContextMenuItemData>& items = contextMenu->items();
-    size_t arrayLength = items.size();
-
-    RefPtr<MutableArray> menuArray = MutableArray::create();
-    menuArray->reserveCapacity(arrayLength);
-    for (unsigned i = 0; i < arrayLength; ++i)
-        menuArray->append(WebContextMenuItem::create(items[i]).get());
-    
-    return toAPI(menuArray.release().leakRef());
+    return toAPI(contextMenuItems(*contextMenu).leakRef());
 #else
-    return 0;
+    return nullptr;
 #endif
 }
 

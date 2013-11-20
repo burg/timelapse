@@ -44,8 +44,6 @@
 #include <wtf/replay/NondeterministicInput.h>
 #endif
 
-using namespace std;
-
 namespace WebCore {
 
 static const int maxIntervalForUserGestureForwarding = 1000; // One second matches Gecko.
@@ -170,7 +168,6 @@ void DOMTimer::start(int interval, bool singleShot)
     } while (!scriptExecutionContext()->addTimeout(m_timeoutId, this));
 
     double intervalMilliseconds = intervalClampedToMinimum(interval, scriptExecutionContext()->minimumTimerInterval());
-
     if (singleShot)
         startOneShot(intervalMilliseconds);
     else
@@ -294,7 +291,7 @@ void DOMTimer::adjustMinimumTimerInterval(double oldMinimumTimerInterval)
 
 double DOMTimer::intervalClampedToMinimum(int timeout, double minimumTimerInterval) const
 {
-    double intervalMilliseconds = max(oneMillisecond, timeout * oneMillisecond);
+    double intervalMilliseconds = std::max(oneMillisecond, timeout * oneMillisecond);
 
     if (intervalMilliseconds < minimumTimerInterval && m_nestingLevel >= maxTimerNestingLevel)
         intervalMilliseconds = minimumTimerInterval;

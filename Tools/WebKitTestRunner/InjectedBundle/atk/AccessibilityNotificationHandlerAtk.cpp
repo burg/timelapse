@@ -20,6 +20,8 @@
 #include "config.h"
 #include "AccessibilityNotificationHandlerAtk.h"
 
+#if HAVE(ACCESSIBILITY)
+
 #include "InjectedBundle.h"
 #include "InjectedBundlePage.h"
 #include "JSWrapper.h"
@@ -45,7 +47,7 @@ unsigned propertyChangedListenerId = 0;
 unsigned visibleDataChangedListenerId = 0;
 unsigned loadCompleteListenerId = 0;
 NotificationHandlersMap notificationHandlers;
-AccessibilityNotificationHandler* globalNotificationHandler = 0;
+AccessibilityNotificationHandler* globalNotificationHandler = nullptr;
 bool loggingAccessibilityEvents = false;
 
 void printAccessibilityEvent(AtkObject* accessible, const char* signalName, const char* signalValue)
@@ -83,7 +85,7 @@ gboolean axObjectEventListener(GSignalInvocationHint* signalHint, unsigned numPa
     GSignalQuery signalQuery;
     GOwnPtr<char> signalName;
     GOwnPtr<char> signalValue;
-    const char* notificationName = 0;
+    const char* notificationName = nullptr;
 
     g_signal_query(signalHint->signal_id, &signalQuery);
 
@@ -119,7 +121,7 @@ gboolean axObjectEventListener(GSignalInvocationHint* signalHint, unsigned numPa
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     JSContextRef jsContext = WKBundleFrameGetJavaScriptContext(mainFrame);
 #else
-    JSContextRef jsContext = 0;
+    JSContextRef jsContext = nullptr;
 #endif
     if (!jsContext)
         return true;
@@ -180,7 +182,7 @@ void AccessibilityNotificationHandler::setNotificationFunctionCallback(JSValueRe
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     JSContextRef jsContext = WKBundleFrameGetJavaScriptContext(mainFrame);
 #else
-    JSContextRef jsContext = 0;
+    JSContextRef jsContext = nullptr;
 #endif
     if (!jsContext)
         return;
@@ -211,14 +213,14 @@ void AccessibilityNotificationHandler::removeAccessibilityNotificationHandler()
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     JSContextRef jsContext = WKBundleFrameGetJavaScriptContext(mainFrame);
 #else
-    JSContextRef jsContext = 0;
+    JSContextRef jsContext = nullptr;
 #endif
     if (!jsContext)
         return;
 
     if (globalNotificationHandler == this) {
         JSValueUnprotect(jsContext, globalNotificationHandler->notificationFunctionCallback());
-        globalNotificationHandler = 0;
+        globalNotificationHandler = nullptr;
     } else if (m_platformElement.get()) {
         NotificationHandlersMap::iterator removeNotificationHandler = notificationHandlers.find(m_platformElement.get());
         if (removeNotificationHandler != notificationHandlers.end()) {
@@ -283,3 +285,5 @@ bool AccessibilityNotificationHandler::disconnectAccessibilityCallbacks()
 }
 
 } // namespace WTR
+
+#endif // HAVE(ACCESSIBILITY)

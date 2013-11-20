@@ -2254,8 +2254,8 @@ void FunctionBodyNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
     // If there is no return we must automatically insert one.
     if (!returnNode) {
         RegisterID* r0 = generator.isConstructor() ? generator.thisRegister() : generator.emitLoad(0, jsUndefined());
-        ASSERT((startOffset() -  1) >= lineStartOffset());
-        generator.emitDebugHook(WillLeaveCallFrame, lastLine(), startOffset() - 1, lineStartOffset());
+        ASSERT(startOffset() >= lineStartOffset());
+        generator.emitDebugHook(WillLeaveCallFrame, lastLine(), startOffset(), lineStartOffset());
         generator.emitReturn(r0);
         return;
     }
@@ -2333,11 +2333,17 @@ RegisterID* ArrayPatternNode::emitDirectBinding(BytecodeGenerator& generator, Re
             generator.emitGetArgumentByVal(temp.get(), generator.uncheckedRegisterForArguments(), temp.get());
             target->bindValue(generator, temp.get());
         }
-        return generator.emitLoad(generator.finalDestination(dst), jsUndefined());
+        if (dst == generator.ignoredResult() || !dst)
+            return generator.emitLoad(generator.finalDestination(dst), jsUndefined());
+        Local local = generator.local(generator.vm()->propertyNames->arguments);
+        return generator.moveToDestinationIfNeeded(dst, local.get());
     }
     if (!rhs->isSimpleArray())
         return 0;
 
+    RefPtr<RegisterID> resultRegister;
+    if (dst && dst != generator.ignoredResult())
+        resultRegister = generator.emitNewArray(generator.newTemporary(), 0, 0);
     ElementNode* elementNodes = static_cast<ArrayNode*>(rhs)->elements();
     Vector<ExpressionNode*> elements;
     for (; elementNodes; elementNodes = elementNodes->next())
@@ -2349,13 +2355,16 @@ RegisterID* ArrayPatternNode::emitDirectBinding(BytecodeGenerator& generator, Re
     for (size_t i = 0; i < m_targetPatterns.size(); i++) {
         registers.uncheckedAppend(generator.newTemporary());
         generator.emitNode(registers.last().get(), elements[i]);
+        if (resultRegister)
+            generator.emitPutByIndex(resultRegister.get(), i, registers.last().get());
     }
     
     for (size_t i = 0; i < m_targetPatterns.size(); i++) {
         if (m_targetPatterns[i])
             m_targetPatterns[i]->bindValue(generator, registers[i].get());
     }
-
+    if (resultRegister)
+        return generator.moveToDestinationIfNeeded(dst, resultRegister.get());
     return generator.emitLoad(generator.finalDestination(dst), jsUndefined());
 }
 

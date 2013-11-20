@@ -1,3 +1,75 @@
+2013-11-19  Mark Lam  <mark.lam@apple.com>
+
+        Add tracking of endColumn for Executables.
+        https://bugs.webkit.org/show_bug.cgi?id=124245.
+
+        Reviewed by Geoffrey Garen.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+        - Added an exported symbol to make the Win32 build happy. The Win64 symbol
+          is currently a copy of the Win32 one. It'll need to be updated if the
+          mangled symbol is different for Win64.
+
+2013-11-18  Mark Rowe  <mrowe@apple.com>
+
+        Use hw.activecpu for determining how many processes to spawn.
+
+        It's documented as the preferred way to determine the number of threads
+        or processes to create in a SMP aware application.
+
+        Rubber-stamped by Tim Horton.
+
+        * WebKit.xcodeproj/project.pbxproj:
+
+2013-11-18  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Add EWebKitConfig.cmake and EWebKit2Config.cmake
+        https://bugs.webkit.org/show_bug.cgi?id=124478
+
+        Reviewed by Gyuyoung Kim.
+
+        EWebKit is built using CMake but applications use *.pc to use it.
+        This patch provides EWebKitConfig.cmake and EWebKit2Config.cmake
+        for applications which use EWebkit and is compiled by CMake.
+
+        * PlatformEfl.cmake:
+        Configure and install EWebKitConfig.cmake and EWebKitConfigVersion.cmake
+
+2013-11-13  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Unreviewed rollout of r159271, broke Mountain Lion build.
+
+        * WebKit.xcodeproj/project.pbxproj:
+
+2013-11-13  Anders Carlsson  <andersca@apple.com>
+
+        Deprecate WebHistory methods that use NSCalendarDate
+        https://bugs.webkit.org/show_bug.cgi?id=124329
+        <rdar://problem/15441122>
+
+        Reviewed by Mark Rowe.
+
+        * WebKit.xcodeproj/project.pbxproj:
+        Add a shell script phase that uses unifdef to remove the __NSd_10_9 #define from
+        WebHistory on Mavericks.
+
+2013-11-11  Alex Christensen  <achristensen@webkit.org>
+
+        Unreviewed build fix for Win64.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+        Fixed 64-bit linker symbols.
+
+2013-11-11  Dan Bernstein  <mitz@apple.com>
+
+        [Mac] .exp files are not source code
+        https://bugs.webkit.org/show_bug.cgi?id=124154
+
+        Reviewed by Andy Estes.
+
+        * WebKit.xcodeproj/project.pbxproj: Removed WebKit.iOS.exp from the Compile Sources build
+        phase.
+
 2013-11-07  Roger Fong  <roger_fong@apple.com>
 
         Unreviewed. Windows WebKit makefile fixes.

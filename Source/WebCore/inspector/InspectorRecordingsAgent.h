@@ -44,14 +44,11 @@
 namespace WebCore {
 
 class InspectorController;
-class InspectorFrontend;
 class ReplayRecording;
 
 typedef String ErrorString;
 
- class InspectorRecordingsAgent
-    : public InspectorBaseAgent<InspectorRecordingsAgent>
-    , public InspectorBackendDispatcher::RecordingsCommandHandler {
+ class InspectorRecordingsAgent : public InspectorBaseAgent, public InspectorRecordingsBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorRecordingsAgent);
 public:
     static PassOwnPtr<InspectorRecordingsAgent> create(InstrumentingAgents* instrumentingAgents)
@@ -64,8 +61,8 @@ public:
     // helper method that's also shared with InspectorReplayAgent
     PassRefPtr<ReplayRecording> findRecording(ErrorString*, int uid);
 
-    void setFrontend(InspectorFrontend*);
-    void clearFrontend();
+    virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) OVERRIDE;
+    virtual void willDestroyFrontendAndBackend() OVERRIDE;
 
     // Calls from WebKit (InspectorInstrumentation/InstrumentingAgents)
     void recordingLoaded(PassRefPtr<ReplayRecording>);
@@ -77,9 +74,10 @@ public:
 
 private:
     InspectorRecordingsAgent(InstrumentingAgents*);
+    void reset();
 
-    InstrumentingAgents *m_instrumentingAgents;
-    InspectorFrontend::Recordings* m_frontend;
+    std::unique_ptr<InspectorRecordingsFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<InspectorRecordingsBackendDispatcher> m_backendDispatcher;
     typedef HashMap<int, RefPtr<ReplayRecording>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > RecordingsMap;
     RecordingsMap m_recordingsMap;
 };

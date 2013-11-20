@@ -107,7 +107,7 @@ void HTMLFormControlElement::updateAncestorDisabledState() const
         if (!legendAncestor && ancestor->hasTagName(legendTag))
             legendAncestor = ancestor;
         if (ancestor->hasTagName(fieldsetTag)) {
-            fieldSetAncestor = static_cast<HTMLFieldSetElement*>(ancestor);
+            fieldSetAncestor = toHTMLFieldSetElement(ancestor);
             break;
         }
     }
@@ -448,7 +448,7 @@ void HTMLFormControlElement::setCustomValidity(const String& error)
     setNeedsValidityCheck();
 }
 
-bool HTMLFormControlElement::validationMessageShadowTreeContains(const Node* node) const
+bool HTMLFormControlElement::validationMessageShadowTreeContains(const Node& node) const
 {
     return m_validationMessage && m_validationMessage->shadowTreeContains(node);
 }
@@ -473,7 +473,7 @@ HTMLFormControlElement* HTMLFormControlElement::enclosingFormControlElement(Node
 {
     for (; node; node = node->parentNode()) {
         if (node->isElementNode() && toElement(node)->isFormControlElement())
-            return static_cast<HTMLFormControlElement*>(node);
+            return toHTMLFormControlElement(node);
     }
     return 0;
 }

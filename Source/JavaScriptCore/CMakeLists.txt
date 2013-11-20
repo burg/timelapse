@@ -46,6 +46,8 @@ set(JavaScriptCore_SOURCES
 
     bytecode/ArrayAllocationProfile.cpp
     bytecode/ArrayProfile.cpp
+    bytecode/BytecodeBasicBlock.cpp
+    bytecode/BytecodeLivenessAnalysis.cpp
     bytecode/CallLinkInfo.cpp
     bytecode/CallLinkStatus.cpp
     bytecode/CodeBlock.cpp
@@ -89,6 +91,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGArgumentsSimplificationPhase.cpp
     dfg/DFGArrayMode.cpp
     dfg/DFGAtTailAbstractState.cpp
+    dfg/DFGAvailability.cpp
     dfg/DFGBackwardsPropagationPhase.cpp
     dfg/DFGBasicBlock.cpp
     dfg/DFGBinarySwitch.cpp
@@ -156,6 +159,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGPlan.cpp
     dfg/DFGPredictionInjectionPhase.cpp
     dfg/DFGPredictionPropagationPhase.cpp
+    dfg/DFGResurrectionForValidationPhase.cpp
     dfg/DFGSSAConversionPhase.cpp
     dfg/DFGSpeculativeJIT.cpp
     dfg/DFGSpeculativeJIT32_64.cpp
@@ -203,7 +207,6 @@ set(JavaScriptCore_SOURCES
     heap/MarkedSpace.cpp
     heap/SlotVisitor.cpp
     heap/SuperRegion.cpp
-    heap/VTableSpectrum.cpp
     heap/Weak.cpp
     heap/WeakBlock.cpp
     heap/WeakHandleOwner.cpp
@@ -328,7 +331,6 @@ set(JavaScriptCore_SOURCES
     runtime/JSBoundFunction.cpp
     runtime/JSCJSValue.cpp
     runtime/JSCell.cpp
-    runtime/JSChunk.cpp
     runtime/JSDataView.cpp
     runtime/JSDataViewPrototype.cpp
     runtime/JSDateMath.cpp
@@ -337,6 +339,7 @@ set(JavaScriptCore_SOURCES
     runtime/JSGlobalObjectFunctions.cpp
     runtime/JSLock.cpp
     runtime/JSMap.cpp
+    runtime/JSMapIterator.cpp
     runtime/JSNameScope.cpp
     runtime/JSNotAnObject.cpp
     runtime/JSONObject.cpp
@@ -353,6 +356,7 @@ set(JavaScriptCore_SOURCES
     runtime/JSScope.cpp
     runtime/JSSegmentedVariableObject.cpp
     runtime/JSSet.cpp
+    runtime/JSSetIterator.cpp
     runtime/JSStaticScopeObject.cpp
     runtime/JSString.cpp
     runtime/JSStringJoiner.cpp
@@ -368,6 +372,8 @@ set(JavaScriptCore_SOURCES
     runtime/Lookup.cpp
     runtime/MapConstructor.cpp
     runtime/MapData.cpp
+    runtime/MapIteratorConstructor.cpp
+    runtime/MapIteratorPrototype.cpp
     runtime/MapPrototype.cpp
     runtime/MathObject.cpp
     runtime/MemoryStatistics.cpp
@@ -397,6 +403,8 @@ set(JavaScriptCore_SOURCES
     runtime/RegExpPrototype.cpp
     runtime/SamplingCounter.cpp
     runtime/SetConstructor.cpp
+    runtime/SetIteratorConstructor.cpp
+    runtime/SetIteratorPrototype.cpp
     runtime/SetPrototype.cpp
     runtime/SimpleTypedArrayController.cpp
     runtime/SmallStrings.cpp

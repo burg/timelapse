@@ -33,6 +33,7 @@
 #include "ArrayProfile.h"
 #include "ByValInfo.h"
 #include "BytecodeConventions.h"
+#include "BytecodeLivenessAnalysis.h"
 #include "CallLinkInfo.h"
 #include "CallReturnOffsetToBytecodeOffset.h"
 #include "CodeBlockHash.h"
@@ -95,6 +96,7 @@ enum ReoptimizationMode { DontCountReoptimization, CountReoptimization };
 
 class CodeBlock : public ThreadSafeRefCounted<CodeBlock>, public UnconditionalFinalizer, public WeakReferenceHarvester {
     WTF_MAKE_FAST_ALLOCATED;
+    friend class BytecodeLivenessAnalysis;
     friend class JIT;
     friend class LLIntOffsetsExtractor;
 public:
@@ -351,6 +353,27 @@ public:
     bool needsActivation() const
     {
         return m_needsActivation;
+    }
+    
+    unsigned captureCount() const
+    {
+        if (!symbolTable())
+            return 0;
+        return symbolTable()->captureCount();
+    }
+    
+    int captureStart() const
+    {
+        if (!symbolTable())
+            return 0;
+        return symbolTable()->captureStart();
+    }
+    
+    int captureEnd() const
+    {
+        if (!symbolTable())
+            return 0;
+        return symbolTable()->captureEnd();
     }
 
     bool isCaptured(VirtualRegister operand, InlineCallFrame* = 0) const;
@@ -676,6 +699,13 @@ public:
     JSGlobalObject* globalObject() { return m_globalObject.get(); }
 
     JSGlobalObject* globalObjectFor(CodeOrigin);
+
+    BytecodeLivenessAnalysis& livenessAnalysis()
+    {
+        if (!m_livenessAnalysis)
+            m_livenessAnalysis = std::make_unique<BytecodeLivenessAnalysis>(this);
+        return *m_livenessAnalysis;
+    }
 
     // Jump Tables
 
@@ -1044,13 +1074,13 @@ private:
 #endif
 #if ENABLE(VALUE_PROFILER)
     Vector<ValueProfile> m_argumentValueProfiles;
-    SegmentedVector<ValueProfile, 8> m_valueProfiles;
+    Vector<ValueProfile> m_valueProfiles;
     SegmentedVector<RareCaseProfile, 8> m_rareCaseProfiles;
     SegmentedVector<RareCaseProfile, 8> m_specialFastCaseProfiles;
-    SegmentedVector<ArrayAllocationProfile, 8> m_arrayAllocationProfiles;
+    Vector<ArrayAllocationProfile> m_arrayAllocationProfiles;
     ArrayProfileVector m_arrayProfiles;
 #endif
-    SegmentedVector<ObjectAllocationProfile, 8> m_objectAllocationProfiles;
+    Vector<ObjectAllocationProfile> m_objectAllocationProfiles;
 
     // Constant Pool
     Vector<Identifier> m_additionalIdentifiers;
@@ -1072,6 +1102,8 @@ private:
     uint16_t m_reoptimizationRetryCounter;
     
     mutable CodeBlockHash m_hash;
+
+    std::unique_ptr<BytecodeLivenessAnalysis> m_livenessAnalysis;
 
     struct RareData {
         WTF_MAKE_FAST_ALLOCATED;

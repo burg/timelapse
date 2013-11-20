@@ -26,7 +26,6 @@
 #ifndef IDBBackingStoreTransactionLevelDB_h
 #define IDBBackingStoreTransactionLevelDB_h
 
-#include "IDBBackingStoreTransactionInterface.h"
 #include "LevelDBTransaction.h"
 
 #if ENABLE(INDEXED_DATABASE)
@@ -34,28 +33,34 @@
 
 namespace WebCore {
 
-class IDBBackingStoreInterface;
+class IDBBackingStoreLevelDB;
 
-class IDBBackingStoreTransactionLevelDB FINAL : public IDBBackingStoreTransactionInterface {
+class IDBBackingStoreTransactionLevelDB : public RefCounted<IDBBackingStoreTransactionLevelDB> {
 public:
-    explicit IDBBackingStoreTransactionLevelDB(IDBBackingStoreInterface*);
-
-    virtual void begin() OVERRIDE;
-    virtual bool commit() OVERRIDE;
-    virtual void rollback() OVERRIDE;
-    virtual void resetTransaction() OVERRIDE
+    static PassRefPtr<IDBBackingStoreTransactionLevelDB> create(int64_t transactionID, IDBBackingStoreLevelDB* backingStore)
     {
-        m_backingStore = 0;
-        m_transaction = 0;
+        return adoptRef(new IDBBackingStoreTransactionLevelDB(transactionID, backingStore));
     }
 
-    static LevelDBTransaction* levelDBTransactionFrom(IDBBackingStoreTransactionInterface& transaction)
+    ~IDBBackingStoreTransactionLevelDB();
+
+    void begin();
+    bool commit();
+    void rollback();
+    void resetTransaction();
+
+    static LevelDBTransaction* levelDBTransactionFrom(IDBBackingStoreTransactionLevelDB& transaction)
     {
         return static_cast<IDBBackingStoreTransactionLevelDB&>(transaction).m_transaction.get();
     }
 
+    int64_t transactionID() { return m_transactionID; }
+
 private:
-    IDBBackingStoreInterface* m_backingStore;
+    IDBBackingStoreTransactionLevelDB(int64_t transactionID, IDBBackingStoreLevelDB*);
+
+    int64_t m_transactionID;
+    IDBBackingStoreLevelDB* m_backingStore;
     RefPtr<LevelDBTransaction> m_transaction;
 };
 

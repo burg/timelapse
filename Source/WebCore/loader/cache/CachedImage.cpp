@@ -274,6 +274,8 @@ LayoutSize CachedImage::imageSizeForRenderer(const RenderObject* renderer, float
     else if (m_image->isSVGImage() && sizeType == UsedSize) {
         imageSize = m_svgImageCache->imageSizeForRenderer(renderer);
     }
+#else
+    UNUSED_PARAM(sizeType);
 #endif
 
     if (multiplier == 1.0f)
@@ -330,7 +332,7 @@ inline void CachedImage::createImage()
 #if ENABLE(SVG)
     else if (m_response.mimeType() == "image/svg+xml") {
         RefPtr<SVGImage> svgImage = SVGImage::create(this);
-        m_svgImageCache = SVGImageCache::create(svgImage.get());
+        m_svgImageCache = std::make_unique<SVGImageCache>(svgImage.get());
         m_image = svgImage.release();
     }
 #endif

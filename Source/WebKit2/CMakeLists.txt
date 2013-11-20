@@ -5,6 +5,7 @@ set(WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/NetworkProcess/FileAPI"
     "${WEBKIT2_DIR}/Platform"
     "${WEBKIT2_DIR}/Platform/CoreIPC"
+    "${WEBKIT2_DIR}/Platform/IPC"
     "${WEBKIT2_DIR}/PluginProcess"
     "${WEBKIT2_DIR}/Shared"
     "${WEBKIT2_DIR}/Shared/API"
@@ -163,18 +164,20 @@ set(WebKit2_SOURCES
     Platform/CoreIPC/ArgumentEncoder.cpp
     Platform/CoreIPC/Attachment.cpp
     Platform/CoreIPC/Connection.cpp
-    Platform/CoreIPC/DataReference.cpp
     Platform/CoreIPC/MessageDecoder.cpp
     Platform/CoreIPC/MessageEncoder.cpp
     Platform/CoreIPC/MessageReceiverMap.cpp
     Platform/CoreIPC/MessageSender.cpp
-    Platform/CoreIPC/StringReference.cpp
+
+    Platform/IPC/DataReference.cpp
+    Platform/IPC/StringReference.cpp
 
     PluginProcess/PluginControllerProxy.cpp
     PluginProcess/PluginCreationParameters.cpp
     PluginProcess/PluginProcess.cpp
     PluginProcess/WebProcessConnection.cpp
 
+    Shared/APIArray.cpp
     Shared/APIClientTraits.cpp
     Shared/APIObject.cpp
     Shared/ActivityAssertion.cpp
@@ -185,9 +188,7 @@ set(WebKit2_SOURCES
     Shared/DictionaryPopupInfo.cpp
     Shared/EditorState.cpp
     Shared/FontInfo.cpp
-    Shared/ImmutableArray.cpp
     Shared/ImmutableDictionary.cpp
-    Shared/MutableArray.cpp
     Shared/MutableDictionary.cpp
     Shared/OriginAndDatabases.cpp
     Shared/PlatformPopupMenuData.cpp
@@ -210,7 +211,6 @@ set(WebKit2_SOURCES
     Shared/WebEvent.cpp
     Shared/WebEventConversion.cpp
     Shared/WebGeolocationPosition.cpp
-    Shared/WebGraphicsContext.cpp
     Shared/WebHitTestResult.cpp
     Shared/WebImage.cpp
     Shared/WebKeyboardEvent.cpp
@@ -238,10 +238,10 @@ set(WebKit2_SOURCES
     Shared/API/c/WKConnectionRef.cpp
     Shared/API/c/WKContextMenuItem.cpp
     Shared/API/c/WKData.cpp
+    Shared/API/c/WKDeprecatedFunctions.cpp
     Shared/API/c/WKDictionary.cpp
     Shared/API/c/WKError.cpp
     Shared/API/c/WKGeometry.cpp
-    Shared/API/c/WKGraphicsContext.cpp
     Shared/API/c/WKImage.cpp
     Shared/API/c/WKMutableArray.cpp
     Shared/API/c/WKMutableDictionary.cpp
@@ -285,11 +285,14 @@ set(WebKit2_SOURCES
     Shared/Plugins/Netscape/NetscapePluginModuleNone.cpp
     Shared/Plugins/Netscape/PluginInformation.cpp
 
+    UIProcess/APINavigationData.cpp
     UIProcess/BackingStore.cpp
     UIProcess/DrawingAreaProxy.cpp
     UIProcess/FindIndicator.cpp
+    UIProcess/FrameLoadState.cpp
     UIProcess/GeolocationPermissionRequestManagerProxy.cpp
     UIProcess/GeolocationPermissionRequestProxy.cpp
+    UIProcess/PageLoadState.cpp
     UIProcess/ResponsivenessTimer.cpp
     UIProcess/StatisticsRequest.cpp
     UIProcess/TextCheckerCompletion.cpp
@@ -329,7 +332,6 @@ set(WebKit2_SOURCES
     UIProcess/WebKeyValueStorageManager.cpp
     UIProcess/WebLoaderClient.cpp
     UIProcess/WebMediaCacheManagerProxy.cpp
-    UIProcess/WebNavigationData.cpp
     UIProcess/WebNetworkInfoManagerProxy.cpp
     UIProcess/WebNetworkInfoProvider.cpp
     UIProcess/WebOpenPanelResultListenerProxy.cpp

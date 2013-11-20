@@ -21,6 +21,7 @@
 #include "config.h"
 #include "MarkedSpace.h"
 
+#include "DelayedReleaseScope.h"
 #include "IncrementalSweeper.h"
 #include "JSGlobalObject.h"
 #include "JSLock.h"
@@ -81,6 +82,7 @@ MarkedSpace::MarkedSpace(Heap* heap)
     : m_heap(heap)
     , m_capacity(0)
     , m_isIterating(false)
+    , m_currentDelayedReleaseScope(nullptr)
 {
     for (size_t cellSize = preciseStep; cellSize <= preciseCutoff; cellSize += preciseStep) {
         allocatorFor(cellSize).init(heap, this, cellSize, MarkedBlock::None);
@@ -111,6 +113,7 @@ struct LastChanceToFinalize : MarkedBlock::VoidFunctor {
 
 void MarkedSpace::lastChanceToFinalize()
 {
+    DelayedReleaseScope delayedReleaseScope(*this);
     stopAllocating();
     forEachBlock<LastChanceToFinalize>();
 }
@@ -195,6 +198,7 @@ struct ResumeAllocatingFunctor {
 void MarkedSpace::resumeAllocating()
 {
     ASSERT(isIterating());
+    DelayedReleaseScope scope(*this);
     forEachAllocator<ResumeAllocatingFunctor>();
 }
 

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebFrame.h"
 
+#include "APIArray.h"
 #include "DownloadManager.h"
 #include "InjectedBundleHitTestResult.h"
 #include "InjectedBundleNodeHandle.h"
@@ -412,16 +413,16 @@ WebFrame* WebFrame::parentFrame() const
     return webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
 }
 
-PassRefPtr<ImmutableArray> WebFrame::childFrames()
+PassRefPtr<API::Array> WebFrame::childFrames()
 {
     if (!m_coreFrame)
-        return ImmutableArray::create();
+        return API::Array::create();
 
     size_t size = m_coreFrame->tree().childCount();
     if (!size)
-        return ImmutableArray::create();
+        return API::Array::create();
 
-    Vector<RefPtr<APIObject>> vector;
+    Vector<RefPtr<API::Object>> vector;
     vector.reserveInitialCapacity(size);
 
     for (Frame* child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
@@ -431,7 +432,7 @@ PassRefPtr<ImmutableArray> WebFrame::childFrames()
         vector.uncheckedAppend(webFrame);
     }
 
-    return ImmutableArray::adopt(vector);
+    return API::Array::create(std::move(vector));
 }
 
 String WebFrame::layerTreeAsText() const
@@ -734,46 +735,23 @@ void WebFrame::setTextDirection(const String& direction)
 }
 
 #if PLATFORM(MAC)
-
-class WebFrameFilter : public FrameFilter {
-public:
-    WebFrameFilter(WebFrame*, WebFrame::FrameFilterFunction, void* context);
-        
-private:
-    virtual bool shouldIncludeSubframe(Frame*) const OVERRIDE;
-
-    WebFrame* m_topLevelWebFrame;
-    WebFrame::FrameFilterFunction m_callback;
-    void* m_context;
-};
-
-WebFrameFilter::WebFrameFilter(WebFrame* topLevelWebFrame, WebFrame::FrameFilterFunction callback, void* context)
-    : m_topLevelWebFrame(topLevelWebFrame)
-    , m_callback(callback)
-    , m_context(context)
-{
-}
-
-bool WebFrameFilter::shouldIncludeSubframe(Frame* frame) const
-{
-    if (!m_callback)
-        return true;
-
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
-    WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
-    ASSERT(webFrame);
-
-    return m_callback(toAPI(m_topLevelWebFrame), toAPI(webFrame), m_context);
-}
-
 RetainPtr<CFDataRef> WebFrame::webArchiveData(FrameFilterFunction callback, void* context)
 {
-    WebFrameFilter filter(this, callback, context);
+    RefPtr<LegacyWebArchive> archive = LegacyWebArchive::create(coreFrame()->document(), [this, callback, context](Frame& frame) -> bool {
+        if (!callback)
+            return true;
 
-    if (RefPtr<LegacyWebArchive> archive = LegacyWebArchive::create(coreFrame()->document(), &filter))
-        return archive->rawDataRepresentation();
-    
-    return 0;
+        WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame.loader().client());
+        WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
+        ASSERT(webFrame);
+
+        return callback(toAPI(this), toAPI(webFrame), context);
+    });
+
+    if (!archive)
+        return nullptr;
+
+    return archive->rawDataRepresentation();
 }
 #endif
     

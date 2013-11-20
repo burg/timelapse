@@ -42,12 +42,6 @@ class MacroAssemblerARM : public AbstractMacroAssembler<ARMAssembler> {
 public:
     typedef ARMRegisters::FPRegisterID FPRegisterID;
 
-    static RegisterID firstRegister() { return ARMRegisters::r0; }
-    static RegisterID lastRegister() { return ARMRegisters::r15; }
-
-    static FPRegisterID firstFPRegister() { return ARMRegisters::d0; }
-    static FPRegisterID lastFPRegister() { return ARMRegisters::d31; }
-
     enum RelationalCondition {
         Equal = ARMAssembler::EQ,
         NotEqual = ARMAssembler::NE,
@@ -573,6 +567,13 @@ public:
     {
         ASSERT(!(right.m_value & 0xFFFFFF00));
         load8(left, ARMRegisters::S1);
+        return branch32(cond, ARMRegisters::S1, right);
+    }
+
+    Jump branch8(RelationalCondition cond, AbsoluteAddress left, TrustedImm32 right)
+    {
+        move(TrustedImmPtr(left.m_ptr), ARMRegisters::S1);
+        load8(Address(ARMRegisters::S1), ARMRegisters::S1);
         return branch32(cond, ARMRegisters::S1, right);
     }
 
