@@ -96,7 +96,6 @@
 #import <WebCore/Frame.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameSelection.h>
-#import <WebCore/FrameSnapshottingMac.h>
 #import <WebCore/FrameView.h>
 #import <WebCore/HTMLConverter.h>
 #import <WebCore/HTMLNames.h>
