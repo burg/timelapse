@@ -299,7 +299,7 @@ WebInspector.TimelineManager.prototype = {
             this._loadEventTime = timestamp;
     },
 
-    objectForCookie: function(cookie)
+    representedObjectForCookie: function(cookie)
     {
         return this.timelines;
     },

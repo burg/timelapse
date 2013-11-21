@@ -24,15 +24,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.BackForwardEntry = function(contentView, cookie)
+WebInspector.BackForwardEntry = function(contentView, viewStateCookie)
 {
     WebInspector.Object.call(this);
-    this._contentView = contentView;
-    // Cookies are compared with Object.shallowEqual, so should not store objects or arrays.
-    this._cookie = cookie || {};
-    this._scrollPositions = [];
 
-    contentView.saveToCookie(this._cookie);
+    this._contentView = contentView;
+    this._scrollPositions = [];
+    // Cookies are compared with Object.shallowEqual, so should not store objects or arrays.
+    console.assert(viewStateCookie);
+    this._viewStateCookie = viewStateCookie;
+    // Serialize view state to cookie immediately, since it could be accessed without
+    // this entry ever being shown or hidden (i.e., when checking for duplicate entries).
+    this.contentView.saveViewStateToCookie(this._viewStateCookie);
 };
 
 WebInspector.BackForwardEntry.prototype = {
@@ -46,15 +49,15 @@ WebInspector.BackForwardEntry.prototype = {
         return this._contentView;
     },
 
-    get cookie()
+    get viewStateCookie()
     {
         // Cookies are immutable; they represent a specific navigation action.
-        return Object.shallowCopy(this._cookie);
+        return Object.shallowCopy(this._viewStateCookie);
     },
 
     prepareToShow: function()
     {
-        this._restoreFromCookie();
+        this._restoreViewStateFromCookie();
 
         this.contentView.visible = true;
         this.contentView.shown();
@@ -66,15 +69,16 @@ WebInspector.BackForwardEntry.prototype = {
         this.contentView.visible = false;
         this.contentView.hidden();
 
+        this.contentView.saveViewStateToCookie(this._viewStateCookie);
         this._saveScrollPositions();
     },
 
     // Private
 
-    _restoreFromCookie: function()
+    _restoreViewStateFromCookie: function()
     {
         this._restoreScrollPositions();
-        this.contentView.restoreFromCookie(this.cookie);
+        this.contentView.restoreViewStateFromCookie(this.viewStateCookie);
     },
 
     _restoreScrollPositions: function()

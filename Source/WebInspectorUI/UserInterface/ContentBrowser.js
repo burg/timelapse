@@ -152,15 +152,15 @@ WebInspector.ContentBrowser.prototype = {
         this._contentViewContainer.updateLayout();
     },
 
-    showContentViewForRepresentedObject: function(representedObject, cookie)
+    showContentViewForRepresentedObject: function(representedObject)
     {
         var contentView = this.contentViewForRepresentedObject(representedObject);
-        return this._contentViewContainer.showContentView(contentView, cookie);
+        return this._contentViewContainer.showContentView(contentView);
     },
 
-    showContentView: function(contentView, cookie)
+    showContentView: function(contentView, viewStateCookie)
     {
-        return this._contentViewContainer.showContentView(contentView, cookie);
+        return this._contentViewContainer.showContentView(contentView, viewStateCookie);
     },
 
     contentViewForRepresentedObject: function(representedObject, onlyExisting)

@@ -335,13 +335,13 @@ WebInspector.TimelinesContentView.prototype = {
             this._currentDataGrid.hidden();
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.Timelines;
+        cookie.type = WebInspector.RepresentedObjectCookieType.Timelines;
         cookie.timeline = this._currentRecordTypeSetting.value;
     },
 
-    restoreFromCookie: function(cookie)
+    restoreViewStateFromCookie: function(cookie)
     {
         this.showTimelineForRecordType(cookie.timeline);
     },

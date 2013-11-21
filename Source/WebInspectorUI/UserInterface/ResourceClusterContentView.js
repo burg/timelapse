@@ -140,14 +140,14 @@ WebInspector.ResourceClusterContentView.prototype = {
         this._shownInitialContent = false;
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.Resource;
+        cookie.type = WebInspector.RepresentedObjectCookieType.Resource;
         cookie.url = this.representedObject.url;
         cookie.subview = this._currentContentViewSetting.value;
     },
 
-    restoreFromCookie: function(cookie)
+    restoreViewStateFromCookie: function(cookie)
     {
         if ("lineNumber" in cookie && "columnNumber" in cookie)
             return this.showResponse(new WebInspector.SourceCodePosition(cookie.lineNumber, cookie.columnNumber));

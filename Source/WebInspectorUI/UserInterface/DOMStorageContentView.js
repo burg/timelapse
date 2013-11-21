@@ -45,9 +45,9 @@ WebInspector.DOMStorageContentView.prototype = {
         this.representedObject.getEntries(this._showDOMStorageEntries.bind(this));
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.DOMStorage;
+        cookie.type = WebInspector.RepresentedObjectCookieType.DOMStorage;
         cookie.isLocalStorage = this.representedObject.isLocalStorage();
         cookie.host = this.representedObject.host;
     },

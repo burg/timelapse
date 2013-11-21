@@ -59,9 +59,9 @@ WebInspector.CookieStorageContentView.prototype = {
             this._dataGrid.updateLayout();
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.CookieStorage;
+        cookie.type = WebInspector.RepresentedObjectCookieType.CookieStorage;
         cookie.host = this.representedObject.host;
     },
 

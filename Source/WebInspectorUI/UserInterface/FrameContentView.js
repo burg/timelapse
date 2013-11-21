@@ -95,15 +95,15 @@ WebInspector.FrameContentView.prototype = {
         this._shownInitialContent = false;
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.Resource;
+        cookie.type = WebInspector.RepresentedObjectCookieType.Resource;
         cookie.subview = this._currentContentViewSetting.value;
         if (!this.representedObject.isMainFrame())
             cookie.url = this.representedObject.url;
     },
 
-    restoreFromCookie: function(cookie)
+    restoreViewStateFromCookie: function(cookie)
     {
         var shownView = this._showContentViewForIdentifier(cookie.subview);
         if ("lineNumber" in cookie && "columnNumber" in cookie)

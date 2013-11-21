@@ -50,9 +50,9 @@ WebInspector.DatabaseTableContentView.prototype = {
             this._dataGrid.updateLayout();
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.DatabaseTable;
+        cookie.type = WebInspector.RepresentedObjectCookieType.DatabaseTable;
         cookie.host = this.representedObject.host;
         cookie.name = this.representedObject.name;
         cookie.database = this.representedObject.database.name;

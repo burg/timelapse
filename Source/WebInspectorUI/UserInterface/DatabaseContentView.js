@@ -69,9 +69,9 @@ WebInspector.DatabaseContentView.prototype = {
         }
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.Database;
+        cookie.type = WebInspector.RepresentedObjectCookieType.Database;
         cookie.host = this.representedObject.host;
         cookie.name = this.representedObject.name;
     },

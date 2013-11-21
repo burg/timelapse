@@ -133,7 +133,7 @@ WebInspector.ContentViewContainer.prototype = {
         return contentView;
     },
 
-    showContentView: function(contentView, cookie)
+    showContentView: function(contentView, viewStateCookie)
     {
         console.assert(contentView instanceof WebInspector.ContentView);
         if (!(contentView instanceof WebInspector.ContentView))
@@ -146,9 +146,10 @@ WebInspector.ContentViewContainer.prototype = {
             return null;
 
         var currentEntry = this.currentBackForwardEntry;
-        var provisionalEntry = new WebInspector.BackForwardEntry(contentView, cookie);
+        viewStateCookie = viewStateCookie || {};
+        var provisionalEntry = new WebInspector.BackForwardEntry(contentView, viewStateCookie);
         // Don't do anything if we would have added an identical back/forward list entry.
-        if (currentEntry && currentEntry.contentView === contentView && Object.shallowEqual(provisionalEntry.cookie, currentEntry.cookie))
+        if (currentEntry && currentEntry.contentView === contentView && Object.shallowEqual(provisionalEntry.viewStateCookie, currentEntry.viewStateCookie))
             return currentEntry.contentView;
 
         // Showing a content view will truncate the back/forward list after the current index and insert the content view

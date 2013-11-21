@@ -147,7 +147,7 @@ WebInspector.StorageManager.prototype = {
         this.dispatchEventToListeners(WebInspector.StorageManager.Event.DOMStorageObjectWasInspected, {domStorage: domStorage});
     },
 
-    objectForCookie: function(cookie, matchOnTypeAlone)
+    representedObjectForCookie: function(cookie, matchOnTypeAlone)
     {
         console.assert(cookie.type);
 
@@ -159,7 +159,7 @@ WebInspector.StorageManager.prototype = {
             return matchOnTypeAlone && array.length ? array[0] : null;
         };
 
-        if (cookie.type === WebInspector.ContentViewCookieType.CookieStorage) {
+        if (cookie.type === WebInspector.RepresentedObjectCookieType.CookieStorage) {
             if (this._cookieStorageObjects[cookie.host])
                 return this._cookieStorageObjects[cookie.host];
 
@@ -173,13 +173,13 @@ WebInspector.StorageManager.prototype = {
             return null;
         }
 
-        if (cookie.type === WebInspector.ContentViewCookieType.DOMStorage) {
+        if (cookie.type === WebInspector.RepresentedObjectCookieType.DOMStorage) {
             return findMatchingObjectInArray(this._domStorageObjects, function(object) {
                 return object.host === cookie.host && object.isLocalStorage() === cookie.isLocalStorage;
             });
         }
 
-        if (cookie.type === WebInspector.ContentViewCookieType.Database) {
+        if (cookie.type === WebInspector.RepresentedObjectCookieType.Database) {
             return findMatchingObjectInArray(this._databaseObjects, function(object) {
                 return object.host === cookie.host && object.name === cookie.name;
             });
@@ -188,7 +188,7 @@ WebInspector.StorageManager.prototype = {
         // FIXME: This isn't easy to implement like the others since DatabaseTreeElement
         // creates database table objects, and they aren't known by StorageManager. Just
         // display the database instead.
-        if (cookie.type === WebInspector.ContentViewCookieType.DatabaseTable) {
+        if (cookie.type === WebInspector.RepresentedObjectCookieType.DatabaseTable) {
             return findMatchingObjectInArray(this._databaseObjects, function(object) {
                 return object.host === cookie.host && object.database === cookie.name;
             });

@@ -81,7 +81,7 @@ WebInspector.FrameResourceManager.prototype = {
     },
 
 
-    objectForCookie: function(cookie)
+    representedObjectForCookie: function(cookie)
     {
         var representedObject = cookie.url ? this.resourceForURL(cookie.url) : this.mainFrame;
 

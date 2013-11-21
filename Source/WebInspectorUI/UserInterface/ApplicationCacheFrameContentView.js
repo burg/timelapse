@@ -73,9 +73,9 @@ WebInspector.ApplicationCacheFrameContentView.prototype = {
             this.dataGrid.updateLayout();
     },
 
-    saveToCookie: function(cookie)
+    saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.ContentViewCookieType.ApplicationCache;
+        cookie.type = WebInspector.RepresentedObjectCookieType.ApplicationCache;
         cookie.frame = this.representedObject.frame.url;
         cookie.manifest = this.representedObject.manifest.manifestURL;
     },
