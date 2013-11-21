@@ -848,10 +848,6 @@ TreeElement.prototype.expand = function()
     if (this.treeOutline)
         this.treeOutline._treeElementsExpandedState[this.identifier] = true;
 
-    // If there are no children, return. We will be expanded once we have children.
-    if (!this.hasChildren)
-        return;
-
     if (this.treeOutline && (!this._childrenListNode || this._shouldRefreshChildren)) {
         if (this._childrenListNode && this._childrenListNode.parentNode)
             this._childrenListNode.parentNode.removeChild(this._childrenListNode);
