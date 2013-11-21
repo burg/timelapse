@@ -312,7 +312,7 @@ WebInspector.ContentViewContainer.prototype = {
         // Hide and disassociate with all the content views.
         for (var i = 0; i < this._backForwardList.length; ++i) {
             var entry = this._backForwardList[i];
-            if (i === this._currentIndex)
+            if (i === this._currentIndex || entry.contentView.visible)
                 this._hideEntry(entry);
             this._disassociateFromContentView(entry.contentView);
         }
