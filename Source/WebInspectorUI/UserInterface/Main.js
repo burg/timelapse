@@ -117,10 +117,12 @@ WebInspector.loaded = function()
     this.frameResourceManager.addEventListener(WebInspector.FrameResourceManager.Event.MainFrameDidChange, this._mainFrameDidChange, this);
 
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._mainResourceDidChange, this);
+    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.ProvisionalLoadCommitted, this._provisionalLoadCommitted, this);
 
     // These listeners are for events that could resolve a pending content view cookie.
     this.applicationCacheManager.addEventListener(WebInspector.ApplicationCacheManager.Event.FrameManifestAdded, this._resolveAndShowPendingContentViewStateCookie, this);
     this.frameResourceManager.addEventListener(WebInspector.FrameResourceManager.Event.MainFrameDidChange, this._resolveAndShowPendingContentViewStateCookie, this);
+    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._resolveAndShowPendingContentViewStateCookie, this);
     this.storageManager.addEventListener(WebInspector.StorageManager.Event.DatabaseWasAdded, this._resolveAndShowPendingContentViewStateCookie, this);
     this.storageManager.addEventListener(WebInspector.StorageManager.Event.CookieStorageObjectWasAdded, this._resolveAndShowPendingContentViewStateCookie, this);
     this.storageManager.addEventListener(WebInspector.StorageManager.Event.DOMStorageObjectWasAdded, this._resolveAndShowPendingContentViewStateCookie, this);
@@ -152,6 +154,9 @@ WebInspector.loaded = function()
 
     this._lastContentViewResponsibleSidebarPanelSetting = new WebInspector.Setting("last-content-view-responsible-sidebar-panel", "resource");
     this._lastContentViewStateCookieSetting = new WebInspector.Setting("last-content-view-state-cookie", {});
+
+    this._beforeNavigationResponsibleSidebarPanelSetting = new WebInspector.Setting("last-navigation-responsible-sidebar-panel", "resource");
+    this._beforeNavigationContentViewStateCookieSetting = new WebInspector.Setting("last-navigation-content-view-state-cookie", {});
 
     this._toolbarDockedRightDisplayModeSetting = new WebInspector.Setting("toolbar-docked-right-display-mode", WebInspector.Toolbar.DisplayMode.IconAndLabelVertical);
     this._toolbarDockedRightSizeModeSetting = new WebInspector.Setting("toolbar-docked-right-size-mode",WebInspector.Toolbar.SizeMode.Normal);
@@ -744,7 +749,21 @@ WebInspector._mainResourceDidChange = function(event)
     if (!event.target.isMainFrame())
         return;
 
+    setTimeout(function() {
+        var cookie = this._beforeNavigationContentViewStateCookieSetting.value;
+        this.navigationSidebar.selectedSidebarPanel = this._beforeNavigationResponsibleSidebarPanelSetting.value;
+        this._restoreContentViewStateFromCookie(cookie);
+    }.bind(this), 300);
+
     this.updateWindowTitle();
+}
+
+WebInspector._provisionalLoadCommitted = function(event)
+{
+    if (!event.target.isMainFrame())
+        return;
+
+    this._beforeNavigationContentViewStateCookieSetting.value = this._lastContentViewStateCookieSetting.value;
 }
 
 WebInspector._windowFocused = function(event)
