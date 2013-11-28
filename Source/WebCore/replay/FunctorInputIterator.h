@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,12 +33,11 @@
 #if ENABLE(WEB_REPLAY)
 
 #include "InputStorage.h"
-
 #include <wtf/Assertions.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Vector.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -48,7 +45,7 @@ class FunctorInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(FunctorInputIterator);
 public:
     FunctorInputIterator(InputStorage*);
-    virtual ~FunctorInputIterator() {}
+    virtual ~FunctorInputIterator() { }
 
     // InputIterator
     virtual bool isCapturing() const { return false; }
@@ -59,7 +56,6 @@ public:
     virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
 
     template<typename Functor> typename Functor::ReturnType forEachInputInQueue(NondeterministicInput::QueueType, Functor&);
-
 private:
     InputStorage* m_storage;
 };
@@ -68,15 +64,14 @@ template<typename Functor> inline typename Functor::ReturnType FunctorInputItera
 {
     ASSERT(queue < NondeterministicInput::QueueTypeLength);
 
-    for (size_t i = 0; i < m_storage->m_queues[queue]->size(); i++) {
+    for (size_t i = 0; i < m_storage->m_queues[queue]->size(); i++)
         functor(i, m_storage->m_queues[queue]->at(i).get());
-    }
 
     return functor.returnValue();
 }
 
 inline FunctorInputIterator::FunctorInputIterator(InputStorage* storage)
-: m_storage(storage)
+    : m_storage(storage)
 {
 }
 
@@ -88,13 +83,13 @@ inline void FunctorInputIterator::storeInput(std::unique_ptr<NondeterministicInp
 inline NondeterministicInput* FunctorInputIterator::loadInput(NondeterministicInput::QueueType, const AtomicString&)
 {
     ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 inline NondeterministicInput* FunctorInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType)
 {
     ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 } // namespace WebCore

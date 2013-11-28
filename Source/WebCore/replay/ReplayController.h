@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011-2013, Brian Burg.
- *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,107 +34,107 @@
 
 #include "EventLoopInputDispatcher.h"
 #include "ReplayProxy.h"
-#include <wtf/Vector.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Vector.h>
 
 namespace WTF {
-    class InputIterator;
+class InputIterator;
 }
 
 namespace WebCore {
-    class CacheController;
-    class Document;
-    class DocumentLoader;
-    class DOMWindow;
-    class Element;
-    class Event;
-    class EventLoopInput;
-    class Node;
-    class Page;
-    class ReplayRecording;
 
-    enum ReplayStatus {
-        CannotReplay,
-        ReplayToStart,
-        ReplayUpToMarkIndex,
-        ReplayToCompletion,
-        PlaybackUninitialized,
-        PlaybackResetting,
-        PlaybackPaused,
-        PlaybackFinished
-    };
+class CacheController;
+class DOMWindow;
+class Document;
+class DocumentLoader;
+class Element;
+class Event;
+class EventLoopInput;
+class Node;
+class Page;
+class ReplayRecording;
 
-    enum ErrorStrategy {
-        PauseOnError,
-        ContinueOnError,
-    };
+enum ReplayStatus {
+    CannotReplay,
+    ReplayToStart,
+    ReplayUpToMarkIndex,
+    ReplayToCompletion,
+    PlaybackUninitialized,
+    PlaybackResetting,
+    PlaybackPaused,
+    PlaybackFinished
+};
 
-    class ReplayController : public EventLoopInputDispatcherClient {
-        WTF_MAKE_NONCOPYABLE(ReplayController);
-    public:
-        ReplayController(Page&);
-        ~ReplayController();
+enum ErrorStrategy {
+    PauseOnError,
+    ContinueOnError,
+};
 
-        // Main API
-        void beginCapturing();
-        bool endCapturing();
-        void pauseAtNextMark();
-        void replayUpToMarkIndex(PositionMarkIndex, ReplayMode mode = FullSpeed);
-        void replayToCompletion(ReplayMode mode = FullSpeed);
-        void cancelPlayback();
+class ReplayController : public EventLoopInputDispatcherClient {
+    WTF_MAKE_NONCOPYABLE(ReplayController);
+public:
+    ReplayController(Page&);
+    ~ReplayController();
 
-        // Callbacks from InspectorReplayAgent.
-        void willDispatchEvent(const Event&, Frame*, const PositionMark&);
-        void frameNavigated(DocumentLoader*);
+    // Main API
+    void beginCapturing();
+    bool endCapturing();
+    void pauseAtNextMark();
+    void replayUpToMarkIndex(PositionMarkIndex, ReplayMode = FullSpeed);
+    void replayToCompletion(ReplayMode = FullSpeed);
+    void cancelPlayback();
 
-        // EventLoopInputDispatcherClient
-        virtual void playbackError(bool isFatal, const String& errorMessage) OVERRIDE;
-        virtual void willDispatchInput(const EventLoopInput&) OVERRIDE;
-        virtual void didDispatchInput(const EventLoopInput&) OVERRIDE;
-        virtual void didDispatchFinalInput() OVERRIDE;
+    // Callbacks from InspectorReplayAgent.
+    void willDispatchEvent(const Event&, Frame*, const PositionMark&);
+    void frameNavigated(DocumentLoader*);
 
-        // FrameCamera API
-        void imageCaptured(const String& imageDataUri);
+    // EventLoopInputDispatcherClient
+    virtual void playbackError(bool isFatal, const String& errorMessage) OVERRIDE;
+    virtual void willDispatchInput(const EventLoopInput&) OVERRIDE;
+    virtual void didDispatchInput(const EventLoopInput&) OVERRIDE;
+    virtual void didDispatchFinalInput() OVERRIDE;
 
-        WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
+    // FrameCamera API
+    void imageCaptured(const String& imageDataUri);
 
-        ErrorStrategy errorStrategy() const { return m_errorStrategy; }
-        void setErrorStrategy(ErrorStrategy mode) { m_errorStrategy = mode; }
+    WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
 
-        Page& page() const { return m_page; }
-        CacheController& cacheController() const;
-        PassRefPtr<ReplayRecording> loadedRecording() const;
+    ErrorStrategy errorStrategy() const { return m_errorStrategy; }
+    void setErrorStrategy(ErrorStrategy mode) { m_errorStrategy = mode; }
 
-        bool loadRecording(PassRefPtr<ReplayRecording>, bool suppressNotifications = false);
-        bool unloadRecording(bool suppressNotifications = false);
+    Page& page() const { return m_page; }
+    CacheController& cacheController() const;
+    PassRefPtr<ReplayRecording> loadedRecording() const;
 
-    private:
-        void resetReplayState();
-        void pauseReplay();
-        void finishReplay();
-        void changeProxyMode(ReplayProxy::ProxyMode);
+    bool loadRecording(PassRefPtr<ReplayRecording>, bool suppressNotifications = false);
+    bool unloadRecording(bool suppressNotifications = false);
 
-        // private accessor-- only cares if *some* JSDOMWindow in this Page is capturing/replaying
-        // TODO: remove
-        bool capturing() const;
-        bool replaying() const;
+private:
+    void resetReplayState();
+    void pauseReplay();
+    void finishReplay();
+    void changeProxyMode(ReplayProxy::ProxyMode);
 
-        EventLoopInputDispatcher& dispatcher() const;
+    // private accessor-- only cares if *some* JSDOMWindow in this Page is capturing/replaying
+    // TODO: remove
+    bool capturing() const;
+    bool replaying() const;
 
-        Page& m_page;
+    EventLoopInputDispatcher& dispatcher() const;
 
-        int m_nextRecordingId;
-        RefPtr<ReplayRecording> m_loadedRecording;
-        std::unique_ptr<WTF::InputIterator> m_activeIterator;
-        const std::unique_ptr<CacheController> m_cacheController;
-        PositionMarkIndex m_stopBeforeMarkIndex;
-        ReplayStatus m_status;
-        ErrorStrategy m_errorStrategy;
-    };
+    Page& m_page;
+
+    int m_nextRecordingId;
+    RefPtr<ReplayRecording> m_loadedRecording;
+    std::unique_ptr<WTF::InputIterator> m_activeIterator;
+    const std::unique_ptr<CacheController> m_cacheController;
+    PositionMarkIndex m_stopBeforeMarkIndex;
+    ReplayStatus m_status;
+    ErrorStrategy m_errorStrategy;
+};
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 
 #endif // ReplayController_h
-

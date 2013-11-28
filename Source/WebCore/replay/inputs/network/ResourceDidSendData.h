@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +21,7 @@
  * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
  * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS unsigned longERRUPTION) HOWEVER CAUSED AND ON ANY
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -45,7 +43,7 @@ class ReplayController;
 class ResourceDidSendData : public EventLoopInput, public ResourceCallback {
 public:
     ResourceDidSendData(unsigned long identifier, int frameIndex, unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
-    virtual ~ResourceDidSendData() {}
+    virtual ~ResourceDidSendData() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -64,8 +62,8 @@ private:
 };
 
 template<> struct InputCoder<ResourceDidSendData> {
-    static void encode(EncoderContext& encoder, const ResourceDidSendData& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidSendData>& input);
+    static void encode(EncoderContext&, const ResourceDidSendData& input);
+    static bool decode(DecoderContext&, std::unique_ptr<ResourceDidSendData>& input);
 };
 
 } // namespace Webcore

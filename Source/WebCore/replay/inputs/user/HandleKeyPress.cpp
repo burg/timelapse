@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +28,12 @@
  */
 
 #include "config.h"
+#include "HandleKeyPress.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "HandleKeyPress.h"
-
-#include "Document.h"
-#include "FrameCamera.h"
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
 #include "Logging.h"
 #include "Page.h"
@@ -64,10 +60,14 @@ static String keyTypeToString(PlatformKeyboardEvent::Type ty)
 }
 
 HandleKeyPress::HandleKeyPress(const PlatformKeyboardEvent& event)
-: m_platformEvent(event) {}
+    : m_platformEvent(event)
+{
+}
 
 HandleKeyPress::HandleKeyPress(std::unique_ptr<PlatformKeyboardEvent> event)
-: m_platformEvent(*event) {}
+    : m_platformEvent(*event)
+{
+}
 
 HandleKeyPress::~HandleKeyPress()
 {

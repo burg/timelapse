@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,14 +30,20 @@
 #include "config.h"
 #include "GetCurrentTime.h"
 
+#if ENABLE(WEB_REPLAY)
+
 #include <wtf/text/StringConcatenate.h>
 
 namespace JSC {
 
 GetCurrentTime::GetCurrentTime(double currentTime)
-    : m_currentTime(currentTime) {}
+    : m_currentTime(currentTime)
+{
+}
 
-GetCurrentTime::~GetCurrentTime() {}
+GetCurrentTime::~GetCurrentTime()
+{
+}
 
 const AtomicString& GetCurrentTime::type() const
 {
@@ -53,3 +57,4 @@ String GetCurrentTime::toString() const {
 
 } //namespace JSC
 
+#endif // ENABLE(WEB_REPLAY)

@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011-2013 Brian Burg.
- *  Copyright (C) 2011-2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,10 +36,9 @@
 #include "Logging.h"
 #include "Page.h"
 #include "ReplayInputIterator.h"
-
 #include <wtf/TemporaryChange.h>
-#include <wtf/text/CString.h>
 #include <wtf/replay/NondeterministicInput.h>
+#include <wtf/text/CString.h>
 
 namespace WebCore {
 
@@ -57,7 +54,9 @@ EventLoopInputDispatcher::EventLoopInputDispatcher(Page* page, ReplayInputIterat
     , m_mode(FullSpeed)
     , m_currentMark(0)
     , m_previousDispatchStartTime(0.0)
-    , m_previousMarkTime(0.0) { }
+    , m_previousMarkTime(0.0)
+{
+}
 
 EventLoopInputDispatcher::~EventLoopInputDispatcher()
 {
@@ -120,7 +119,7 @@ void EventLoopInputDispatcher::dispatchInputSoon()
 
     switch (m_mode) {
     case FullSpeed:
-        // delay 1ms so will happen after 0ms delay timers fire
+        // Delay 1ms so will happen after 0ms delay timers fire.
         m_timer.startOneShot(1.0 * 0.001);
         break;
 
@@ -131,7 +130,7 @@ void EventLoopInputDispatcher::dispatchInputSoon()
         // time (until next dispatch) will equal the observed delay between the
         // previous and current input.
 
-        // sometimes, the previous mark time isn't set for some reason.
+        // FIXME: sometimes, the previous mark time isn't set for some reason.
         if (m_previousMarkTime == 0.0)
             m_previousMarkTime = m_runningInput->mark().time();
 
@@ -148,8 +147,7 @@ void EventLoopInputDispatcher::dispatchInputSoon()
         LOG(DeterministicReplay, "%-20s (WAIT: %.3f ms)", "ReplayEvents", waitInterval * 1000.0);
 
         if (waitInterval > 1000.0) {
-            LOG_ERROR("%-20s ERROR: tried to wait for over 1000 seconds; this is probably a bug.",
-                      "ReplayEvents");
+            LOG_ERROR("%-20s ERROR: tried to wait for over 1000 seconds; this is probably a bug.", "ReplayEvents");
             waitInterval = 1.0 * 0.001;
         }
 
@@ -210,6 +208,6 @@ void EventLoopInputDispatcher::dispatchInput()
     dispatchInputSoon();
 }
 
-}; // namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)

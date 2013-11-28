@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,7 +56,7 @@ public:
 
     ~InspectorRecordingsAgent();
 
-    // helper method that's also shared with InspectorReplayAgent
+    // Helper method that's also shared with InspectorReplayAgent.
     PassRefPtr<ReplayRecording> findRecording(ErrorString*, int uid);
 
     virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) OVERRIDE;
@@ -68,7 +66,7 @@ public:
     void recordingLoaded(PassRefPtr<ReplayRecording>);
     void recordingCreated(PassRefPtr<ReplayRecording>);
 
-    // Calls from the frontend
+    // Calls from the frontend.
     virtual void getSerializedRecording(ErrorString*, int, RefPtr<TypeBuilder::Recordings::ReplayRecording>&) OVERRIDE;
     virtual void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&) OVERRIDE;
 
@@ -85,4 +83,5 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
+
 #endif // InspectorRecordingsAgent_h

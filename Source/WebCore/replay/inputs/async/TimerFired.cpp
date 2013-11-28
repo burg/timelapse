@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,21 +32,22 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "Document.h"
 #include "DOMTimer.h"
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
-
+#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
 TimerFired::TimerFired(int timerId, int frameIndex)
-: m_timerId(timerId)
-, m_frameIndex(frameIndex) {}
+    : m_timerId(timerId)
+    , m_frameIndex(frameIndex)
+{
+}
 
 const AtomicString& TimerFired::type() const
 {
@@ -63,15 +62,11 @@ String TimerFired::toString() const
 void TimerFired::dispatch(ReplayController& controller)
 {
     Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
-
-    //get the timer from SEC and fire it.
     DOMTimer* timer = document->findTimeout(m_timerId);
     if (timer)
         timer->fired();
-    else {
-        LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find and fire timer %d/%d.\n",
-                  "[ReplayController]", m_frameIndex, m_timerId);
-    }
+    else
+        LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find and fire timer %d/%d.\n", "[ReplayController]", m_frameIndex, m_timerId);
 }
 
 void InputCoder<TimerFired>::encode(EncoderContext& encoder, const TimerFired& input)

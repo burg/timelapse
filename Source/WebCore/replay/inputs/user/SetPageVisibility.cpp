@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013, University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,16 +28,15 @@
  */
 
 #include "config.h"
+#include "SetPageVisibility.h"
 
 #if ENABLE(WEB_REPLAY) && ENABLE(PAGE_VISIBILITY_API)
 
-#include "SetPageVisibility.h"
-
 #include "DecoderContext.h"
 #include "EncoderContext.h"
+#include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "Page.h"
 #include <wtf/Assertions.h>
 #include <wtf/replay/InputIterator.h>
 
@@ -46,10 +45,10 @@ namespace WebCore {
 static const char* pageVisibilityStateToString(PageVisibilityState state)
 {
     switch (state) {
-        case PageVisibilityStateVisible: return "Visible";
-        case PageVisibilityStateHidden: return "Hidden";
-        case PageVisibilityStatePrerender: return "Prerender";
-        case PageVisibilityStateUnloaded: return "Unloaded";
+    case PageVisibilityStateVisible: return "Visible";
+    case PageVisibilityStateHidden: return "Hidden";
+    case PageVisibilityStatePrerender: return "Prerender";
+    case PageVisibilityStateUnloaded: return "Unloaded";
     }
 
     ASSERT_NOT_REACHED();

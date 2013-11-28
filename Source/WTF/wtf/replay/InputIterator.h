@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, 2012, Brian Burg.
- *  Copyright (C) 2011, 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +27,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InputIterator_h
-#define InputIterator_h
+#ifndef WTF_InputIterator_h
+#define WTF_InputIterator_h
+
+#if ENABLE(WEB_REPLAY)
 
 #include "NondeterministicInput.h"
 #include <wtf/Forward.h>
@@ -41,8 +41,8 @@ namespace WTF {
 class InputIterator {
     WTF_MAKE_NONCOPYABLE(InputIterator);
 public:
-    InputIterator() {}
-    virtual ~InputIterator() {}
+    InputIterator() { }
+    virtual ~InputIterator() { }
 
     virtual bool isCapturing() const =0;
     virtual bool isReplaying() const =0;
@@ -57,4 +57,6 @@ public:
 
 using WTF::InputIterator;
 
-#endif // InputIterator_h
+#endif // ENABLE(WEB_REPLAY)
+
+#endif // WTF_InputIterator_h

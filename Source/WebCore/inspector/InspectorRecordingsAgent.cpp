@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011-2013, Brian Burg.
- *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +39,7 @@
 namespace WebCore {
 
 InspectorRecordingsAgent::InspectorRecordingsAgent(InstrumentingAgents* instrumentingAgents)
-: InspectorBaseAgent(ASCIILiteral("Recordings"), instrumentingAgents)
+    : InspectorBaseAgent(ASCIILiteral("Recordings"), instrumentingAgents)
 {
 }
 
@@ -55,7 +53,7 @@ void InspectorRecordingsAgent::didCreateFrontendAndBackend(InspectorFrontendChan
     m_frontendDispatcher = std::make_unique<InspectorRecordingsFrontendDispatcher>(frontendChannel);
     m_backendDispatcher = InspectorRecordingsBackendDispatcher::create(backendDispatcher, this);
 
-    // TODO: set up frontend-specific state.
+    // FIXME: set up frontend-specific state.
     m_instrumentingAgents->setInspectorRecordingsAgent(this);
 }
 
@@ -64,14 +62,14 @@ void InspectorRecordingsAgent::willDestroyFrontendAndBackend()
     m_frontendDispatcher = nullptr;
     m_backendDispatcher.clear();
 
-    // TODO: clear frontend-specific state.
+    // FIXME: clear frontend-specific state.
     m_instrumentingAgents->setInspectorReplayAgent(nullptr);
     reset();
 }
 
 void InspectorRecordingsAgent::reset()
 {
-    // TODO: release resources, such as recording objects.
+    // FIXME: release resources, such as recording objects.
 }
 
 PassRefPtr<ReplayRecording> InspectorRecordingsAgent::findRecording(ErrorString* errorString, int uid)
@@ -81,7 +79,7 @@ PassRefPtr<ReplayRecording> InspectorRecordingsAgent::findRecording(ErrorString*
     RecordingsMap::iterator it = m_recordingsMap.find(uid);
     if (it == m_recordingsMap.end()) {
         *errorString = "Couldn't find recording with specified uid";
-        return 0;
+        return nullptr;
     }
 
     return it->value;

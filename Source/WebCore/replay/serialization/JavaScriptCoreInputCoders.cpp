@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013 Brian Burg.
- *  Copyright (C) 2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +30,8 @@
 #include "config.h"
 #include "JavaScriptCoreInputCoders.h"
 
+#if ENABLE(WEB_REPLAY)
+
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include <replay/GetCurrentTime.h>
@@ -44,13 +44,13 @@ void InputCoder<JSC::GetCurrentTime>::encode(EncoderContext& encoder, const JSC:
     encoder.put("currentTime", input.currentTime());
 }
 
-bool InputCoder<JSC::GetCurrentTime>::decode(DecoderContext& decoder, OwnPtr<JSC::GetCurrentTime>& input)
+bool InputCoder<JSC::GetCurrentTime>::decode(DecoderContext& decoder, std::unique_ptr<JSC::GetCurrentTime>& input)
 {
     double currentTime;
     if (!decoder.get("currentTime", currentTime))
         return false;
 
-    input = adoptPtr(new JSC::GetCurrentTime(currentTime));
+    input = std::make_unique<JSC::GetCurrentTime>(currentTime);
     return true;
 }
 
@@ -59,14 +59,16 @@ void InputCoder<JSC::SetRandomSeed>::encode(EncoderContext& encoder, const JSC::
     encoder.put("randomSeed", input.randomSeed());
 }
 
-bool InputCoder<JSC::SetRandomSeed>::decode(DecoderContext& decoder, OwnPtr<JSC::SetRandomSeed>& input)
+bool InputCoder<JSC::SetRandomSeed>::decode(DecoderContext& decoder, std::unique_ptr<JSC::SetRandomSeed>& input)
 {
     double randomSeed;
     if (!decoder.get("randomSeed", randomSeed))
         return false;
 
-    input = adoptPtr(new JSC::SetRandomSeed(randomSeed));
+    input = std::make_unique<JSC::SetRandomSeed>(randomSeed);
     return true;
 }
+
+#endif // ENABLE(WEB_REPLAY)
 
 }; // namespace WebCore

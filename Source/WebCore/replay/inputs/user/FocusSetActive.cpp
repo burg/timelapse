@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,16 +28,15 @@
  */
 
 #include "config.h"
+#include "FocusSetActive.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "FocusSetActive.h"
-
 #include "DecoderContext.h"
 #include "EncoderContext.h"
+#include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "Page.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -51,10 +48,7 @@ const AtomicString& FocusSetActive::type() const
 
 String FocusSetActive::toString() const
 {
-    if (m_toState)
-        return "FocusSetActive(to=active)";
-    else
-        return "FocusSetActive(to=inactive)";
+    return m_toState ? "FocusSetActive(to=active)" : "FocusSetActive(to=inactive)";
 }
 
 void FocusSetActive::dispatch(ReplayController& controller)

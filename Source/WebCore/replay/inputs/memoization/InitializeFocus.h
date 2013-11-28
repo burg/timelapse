@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,11 +44,11 @@ class InitializeFocus : public EventLoopInput {
 
 public:
     InitializeFocus(int frameIndex, bool isFocused, bool isActive)
-    : m_focus(isFocused)
-    , m_active(isActive)
-    , m_frameIndex(frameIndex) {}
+        : m_focus(isFocused)
+        , m_active(isActive)
+        , m_frameIndex(frameIndex) { }
 
-    virtual ~InitializeFocus() {}
+    virtual ~InitializeFocus() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -65,7 +63,6 @@ public:
     bool isActive() const { return m_active; }
     int frameIndex() const { return m_frameIndex; }
     static std::unique_ptr<InitializeFocus> createFromPage(const Page&);
-
 private:
     bool m_focus;
     bool m_active;
@@ -73,11 +70,11 @@ private:
 };
 
 template<> struct InputCoder<InitializeFocus> {
-    static void encode(EncoderContext& encoder, const InitializeFocus& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<InitializeFocus>& input);
+    static void encode(EncoderContext&, const InitializeFocus& input);
+    static bool decode(DecoderContext&, std::unique_ptr<InitializeFocus>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

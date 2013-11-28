@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011-2013, Brian Burg.
- *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,9 +48,7 @@
 #include "ReplayAgentStateMachine.h"
 #include "ReplayController.h"
 #include "ReplayRecording.h"
-#include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
@@ -68,12 +64,12 @@ using namespace WTF;
 namespace WebCore {
 
 InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent)
-: InspectorBaseAgent(ASCIILiteral("Replay"), instrumentingAgents)
-, m_pageAgent(pageAgent)
-, m_page(nullptr)
-, m_nextMarkIndex(0)
-, m_lastHitMarkIndex(numeric_limits<unsigned>::max())
-, m_inputLocked(false)
+    : InspectorBaseAgent(ASCIILiteral("Replay"), instrumentingAgents)
+    , m_pageAgent(pageAgent)
+    , m_page(nullptr)
+    , m_nextMarkIndex(0)
+    , m_lastHitMarkIndex(numeric_limits<unsigned>::max())
+    , m_inputLocked(false)
 {
 }
 
@@ -87,7 +83,7 @@ void InspectorReplayAgent::didCreateFrontendAndBackend(InspectorFrontendChannel*
     m_frontendDispatcher = std::make_unique<InspectorReplayFrontendDispatcher>(frontendChannel);
     m_backendDispatcher = InspectorReplayBackendDispatcher::create(backendDispatcher, this);
 
-    // TODO: set up frontend-specific state.
+    // FIXME: set up frontend-specific state.
     m_instrumentingAgents->setInspectorReplayAgent(this);
     m_page = m_pageAgent->page();
 }
@@ -97,14 +93,14 @@ void InspectorReplayAgent::willDestroyFrontendAndBackend()
     m_frontendDispatcher = nullptr;
     m_backendDispatcher.clear();
 
-    // TODO: clear frontend-specific state.
+    // FIXME: clear frontend-specific state.
     m_instrumentingAgents->setInspectorReplayAgent(nullptr);
     reset();
 }
 
 void InspectorReplayAgent::reset()
 {
-    // TODO: release resources, such as recording objects.
+    // FIXME: release resources, such as recording objects.
 }
 
 void InspectorReplayAgent::willDispatchEvent(const Event& event, Frame* frame)
@@ -151,9 +147,8 @@ void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecord
 void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecording)
 {
     // Automatically load the created recording if nothing else is loaded.
-    if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded)) {
+    if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded))
         m_page->replayController().loadRecording(prpRecording);
-    }
 }
 
 void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
@@ -261,7 +256,7 @@ void InspectorReplayAgent::imageCaptured(const String& imageDataUri)
 
 PositionMark InspectorReplayAgent::createMark()
 {
-    return  PositionMark(m_nextMarkIndex++);
+    return PositionMark(m_nextMarkIndex++);
 }
 
 PositionMark InspectorReplayAgent::reuseMark() const
@@ -271,13 +266,13 @@ PositionMark InspectorReplayAgent::reuseMark() const
 
 void InspectorReplayAgent::stop()
 {
-  ErrorString dummy;
-  bool dummy2;
+    ErrorString dummy;
+    bool dummy2;
 
-  if (capturing())
-      stopCapture(&dummy, &dummy2);
-  else if (replaying())
-      stopPlayback(&dummy, true);
+    if (capturing())
+        stopCapture(&dummy, &dummy2);
+    else if (replaying())
+        stopPlayback(&dummy, true);
 }
 
 void InspectorReplayAgent::isEnabled(ErrorString*, bool* result)
@@ -348,7 +343,7 @@ void InspectorReplayAgent::replayToCompletion(ErrorString*, bool fastReplay)
 
 void InspectorReplayAgent::pausePlayback(ErrorString*)
 {
-    // this will fire InspectorInstrumentation::playbackPaused, and our
+    // This will fire InspectorInstrumentation::playbackPaused, and our
     // listener for that will change state machine and tell frontend.
     m_page->replayController().pauseAtNextMark();
 }

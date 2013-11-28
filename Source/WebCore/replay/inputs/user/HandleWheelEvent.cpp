@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "HandleWheelEvent.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "HandleWheelEvent.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -51,7 +48,6 @@ static String wheelEventGranularityToString(PlatformWheelEventGranularity ty)
     switch (ty) {
     case ScrollByPageWheelEvent:  return "ScrollByPage";
     case ScrollByPixelWheelEvent: return "ScrollByPixel";
-
     default:
         ASSERT_NOT_REACHED();
         return String();
@@ -68,7 +64,6 @@ static String wheelEventPhaseToString(PlatformWheelEventPhase ty)
     case PlatformWheelEventPhaseChanged:    return "Changed";
     case PlatformWheelEventPhaseEnded:      return "Ended";
     case PlatformWheelEventPhaseCancelled:  return "Cancelled";
-
     default:
         ASSERT_NOT_REACHED();
         return String();
@@ -86,21 +81,21 @@ String HandleWheelEvent::toString() const
     StringBuilder sb;
     sb.append("HandleWheelEvent(");
     sb.append(makeString("pagePos=[",
-                         String::number(m_platformEvent.position().x()),
-                         ",",
-                         String::number(m_platformEvent.position().y()),
-                         "];"));
+        String::number(m_platformEvent.position().x()),
+        ",",
+        String::number(m_platformEvent.position().y()),
+        "];"));
     sb.append(makeString(" globalPos=[",
-                         String::number(m_platformEvent.globalPosition().x()),
-                         ",",
-                         String::number(m_platformEvent.globalPosition().y()),
-                         "];"));
+        String::number(m_platformEvent.globalPosition().x()),
+        ",",
+        String::number(m_platformEvent.globalPosition().y()),
+        "];"));
 
     sb.append(makeString(" delta=[",
-                         String::number(m_platformEvent.deltaX()),
-                         ",",
-                         String::number(m_platformEvent.deltaY()),
-                         "];"));
+        String::number(m_platformEvent.deltaX()),
+        ",",
+        String::number(m_platformEvent.deltaY()),
+        "];"));
 
 
     sb.append(makeString(" wheelTicksX=", String::number(m_platformEvent.wheelTicksX()), ";"));
@@ -260,12 +255,12 @@ bool InputCoder<PlatformWheelEvent>::decode(DecoderContext& decoder, std::unique
 #endif
 
     input = std::make_unique<PlatformWheelEvent>(IntPoint(positionX, positionY), IntPoint(globalPositionX, globalPositionY),
-                     deltaX, deltaY, wheelTicksX, wheelTicksY, (PlatformWheelEventGranularity)granularity,
-                     shiftKey, ctrlKey, altKey, metaKey, directionInvertedFromDevice
+        deltaX, deltaY, wheelTicksX, wheelTicksY, (PlatformWheelEventGranularity)granularity,
+        shiftKey, ctrlKey, altKey, metaKey, directionInvertedFromDevice
 #if PLATFORM(MAC)
-                     , hasPreciseScrollingDeltas,
-                     (PlatformWheelEventPhase)phase, (PlatformWheelEventPhase)momentumPhase, timestamp,
-                     unacceleratedScrollingDeltaX, unacceleratedScrollingDeltaY
+        , hasPreciseScrollingDeltas,
+        (PlatformWheelEventPhase)phase, (PlatformWheelEventPhase)momentumPhase, timestamp,
+        unacceleratedScrollingDeltaX, unacceleratedScrollingDeltaY
 #endif
         );
     return true;

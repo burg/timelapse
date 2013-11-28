@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ *  Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ResourceLoaderCreated.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ResourceLoaderCreated.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -41,20 +38,25 @@
 #include "ReplayInputTypes.h"
 #include "ResourceRequest.h"
 #include "SerializationMethods.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 ResourceLoaderCreated::ResourceLoaderCreated(unsigned long identifier, const ResourceRequest& request)
     : m_identifier(identifier)
-    , m_request(ResourceRequest::adopt(request.copyData())) {}
+    , m_request(ResourceRequest::adopt(request.copyData()))
+{
+}
 
 ResourceLoaderCreated::ResourceLoaderCreated(unsigned long identifier, std::unique_ptr<ResourceRequest> request)
     : m_identifier(identifier)
-    , m_request(adoptPtr(request.release())) {}
+    , m_request(adoptPtr(request.release()))
+{
+}
 
 ResourceLoaderCreated::~ResourceLoaderCreated()
 {
-    m_request = 0;
+    m_request = nullptr;
 }
 
 // NondeterministicInput API
@@ -66,16 +68,18 @@ const AtomicString& ResourceLoaderCreated::type() const
 
 String ResourceLoaderCreated::toString() const
 {
-    return makeString("ResourceLoaderCreated(identifier=",
-                      String::number(m_identifier),
-                      "; url=",
-                      m_request->url().string(),
-                      ")");
+    StringBuilder builder;
+    builder.appendLiteral("ResourceLoaderCreated(identifier=");
+    builder.appendNumber(m_identifier);
+    builder.appendLiteral("; url=");
+    builder.append(m_request->url().string());
+    builder.appendLiteral(")");
+    return builder.toString();
 }
 
 size_t ResourceLoaderCreated::memorySize() const
 {
-    // see ResourceResponse::memoryUsage();
+    // Copied from ResourceResponse::memoryUsage().
     return sizeof(ResourceLoaderCreated) + 1280 + 256;
 }
 

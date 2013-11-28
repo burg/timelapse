@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013 Brian Burg.
- *  Copyright (C) 2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,24 +27,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if ENABLE(WEB_REPLAY)
-
 #include "config.h"
-
 #include "CaptureInputIterator.h"
+
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputStorage.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "Page.h"
-#include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>
+#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
 EventLoopInputExtent::EventLoopInputExtent(InputIterator* iterator)
-: m_iterator(iterator)
+    : m_iterator(iterator)
 {
     if (!m_iterator || !m_iterator->isCapturing())
         return;
@@ -65,7 +62,7 @@ EventLoopInputExtent::~EventLoopInputExtent()
 CaptureInputIterator::CaptureInputIterator(InputStorage* storage, Page* page)
 : m_storage(storage)
 , m_page(page)
-, m_previousEventLoopInput(0)
+, m_previousEventLoopInput(nullptr)
 , m_elapsedTicks(0)
 , m_isActive(true)
 , m_withinInputExtent(false)
@@ -92,7 +89,7 @@ void CaptureInputIterator::incrementExecutionTicks()
 
 void CaptureInputIterator::storeInput(std::unique_ptr<NondeterministicInput> input)
 {
-    ASSERT_ARG(input, input != NULL);
+    ASSERT_ARG(input, input);
     ASSERT(m_isActive);
 
     if (input->queue() == NondeterministicInput::EventLoopInputQueue) {
@@ -110,14 +107,14 @@ NondeterministicInput* CaptureInputIterator::loadInput(NondeterministicInput::Qu
 {
     // Can't load inputs from capturing iterator.
     ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 NondeterministicInput* CaptureInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType)
 {
     // Can't load inputs from capturing iterator.
     ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 void CaptureInputIterator::setIsActive(bool state)

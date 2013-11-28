@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +28,12 @@
  */
 
 #include "config.h"
+#include "DispatchFakeMouseMove.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "DispatchFakeMouseMove.h"
-
-#include "Document.h"
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
 #include "Frame.h"
 #include "Page.h"
@@ -47,7 +44,9 @@ namespace WebCore {
 
 DispatchFakeMouseMove::DispatchFakeMouseMove(const PlatformMouseEvent& event, int frameIndex)
     : HandleMouseBase(event)
-    , m_frameIndex(frameIndex) { }
+    , m_frameIndex(frameIndex)
+{
+}
 
 void DispatchFakeMouseMove::dispatch(ReplayController& controller)
 {

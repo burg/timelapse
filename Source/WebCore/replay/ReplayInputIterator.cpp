@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013 Brian Burg.
- *  Copyright (C) 2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,40 +28,39 @@
  */
 
 #include "config.h"
+#include "ReplayInputIterator.h"
 
 #if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInputDispatcher.h"
 #include "InputStorage.h"
-#include "ReplayInputIterator.h"
-#include <wtf/replay/NondeterministicInput.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
-#include <wtf/Vector.h>
 
-static const char* queueTypeToString(NondeterministicInput::QueueType queue) {
+static const char* queueTypeToString(NondeterministicInput::QueueType queue)
+{
     switch (queue) {
-        case NondeterministicInput::EventLoopInputQueue:        return "EventLoopInputQueue";
-        case NondeterministicInput::LoaderMemoizedDataQueue:    return "LoaderMemoizedDataQueue";
-        case NondeterministicInput::ScriptMemoizedDataQueue:    return "ScriptMemoizedDataQueue";
-        case NondeterministicInput::QueueTypeLength:            return "QueueTypeLength (error)";
+    case NondeterministicInput::EventLoopInputQueue:        return "EventLoopInputQueue";
+    case NondeterministicInput::LoaderMemoizedDataQueue:    return "LoaderMemoizedDataQueue";
+    case NondeterministicInput::ScriptMemoizedDataQueue:    return "ScriptMemoizedDataQueue";
+    case NondeterministicInput::QueueTypeLength:            return "QueueTypeLength (error)";
     }
 }
 
 namespace WebCore {
 
 ReplayInputIterator::ReplayInputIterator(InputStorage* storage, Page* page, EventLoopInputDispatcherClient* client)
-: m_storage(storage)
-, m_isActive(true)
-, m_dispatcher(std::make_unique<EventLoopInputDispatcher>(page, this, client))
-, m_positions(Vector<size_t>()) {
+    : m_storage(storage)
+    , m_isActive(true)
+    , m_dispatcher(std::make_unique<EventLoopInputDispatcher>(page, this, client))
+    , m_positions(Vector<size_t>())
+{
     ASSERT(m_storage->isReadOnly());
 
     m_errorData.error = NoReplayError;
-    for (size_t i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
+    for (size_t i = 0; i < NondeterministicInput::QueueTypeLength; i++)
         m_positions.append(0);
-    }
 }
 
 ReplayInputIterator::~ReplayInputIterator()
@@ -77,31 +74,30 @@ void ReplayInputIterator::incrementExecutionTicks()
 
 void ReplayInputIterator::storeInput(std::unique_ptr<NondeterministicInput>)
 {
-    // cannot store inputs from replay iterator
+    // Cannot store inputs from replay iterator.
     ASSERT_NOT_REACHED();
 }
 
 NondeterministicInput* ReplayInputIterator::loadInput(NondeterministicInput::QueueType queue, const AtomicString& type)
 {
     if (hasError()) {
-        LOG_ERROR("%-30s prior memoized value retrieval failed, so not consulting log and instead propagating error condition.",
-                  "ReplayInputIterator::loadInput");
-        return 0;
+        LOG_ERROR("%-30s prior memoized value retrieval failed, so not consulting log and instead propagating error condition.", "ReplayInputIterator::loadInput");
+        return nullptr;
     }
 
     NondeterministicInput* input = uncheckedLoadInput(queue);
 
     if (input->type() != type) {
         LOG_ERROR("%-25s ERROR: Expected replay input of type %s, but got type %s (%s)\n",
-                  "[ReplayInputIterator]",
-                  type.string().ascii().data(),
-                  input->type().string().ascii().data(),
-                  input->toString().ascii().data());
+            "[ReplayInputIterator]",
+            type.string().ascii().data(),
+            input->type().string().ascii().data(),
+            input->toString().ascii().data());
 
         m_errorData.error = ErrorUnexpectedInputType;
         m_errorData.queue = queue;
         m_errorData.expectedInput = type;
-        return 0;
+        return nullptr;
     }
 
     return input;
@@ -110,18 +106,18 @@ NondeterministicInput* ReplayInputIterator::loadInput(NondeterministicInput::Que
 NondeterministicInput* ReplayInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType queue)
 {
     ASSERT(m_isActive);
-    // callers should check for errors before requesting inputs.
-    // if an error exists, the caller should call reset() or clearError()
+    // Callers should check for errors before requesting inputs.
+    // If an error exists, the caller should call reset() or clearError().
     ASSERT(!hasError());
     ASSERT(queue < NondeterministicInput::QueueTypeLength);
 
     if (m_positions[queue] >= m_storage->queueSize(queue)) {
         LOG_ERROR("%-30s ERROR No more inputs remain for determinism queue %s, but one was requested.",
-                  "[ReplayInputIterator]",
-                  queueTypeToString(queue));
+            "[ReplayInputIterator]",
+            queueTypeToString(queue));
         m_errorData.error = ErrorExhaustedQueue;
         m_errorData.queue = queue;
-        return 0;
+        return nullptr;
     }
 
     return m_storage->load(queue, m_positions[queue]++);

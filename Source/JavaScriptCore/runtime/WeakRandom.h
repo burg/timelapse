@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Apple Inc. All rights reserved.
- * Copyright (C) 2013 Brian Burg (burg@cs.washington.edu)
+ * Copyright (C) 2013 University of Washington.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,22 +51,27 @@
 #ifndef WeakRandom_h
 #define WeakRandom_h
 
-#include "SetRandomSeed.h"
 #include <wtf/StdLibExtras.h>
-#include <wtf/replay/InputIterator.h>
-
 #include <limits.h>
+
+#if ENABLE(WEB_REPLAY)
+#include "SetRandomSeed.h"
+#include <wtf/replay/InputIterator.h>
+#endif
 
 namespace JSC {
 
 class WeakRandom {
 public:
     WeakRandom(unsigned seed)
-    : m_inputIterator(nullptr)
+#if ENABLE(WEB_REPLAY)
+        : m_inputIterator(nullptr)
+#endif
     {
         initializeSeed(seed);
     }
 
+#if ENABLE(WEB_REPLAY)
     void setInputIterator(InputIterator* it) {
         if (it && it->isCapturing())
             it->storeInput(std::make_unique<SetRandomSeed>(seedUnsafe()));
@@ -79,6 +84,7 @@ public:
 
         m_inputIterator = it;
     }
+#endif
 
     // Returns the seed provided that you've never called get() or getUint32().
     unsigned seedUnsafe() const { return m_high; }
@@ -110,7 +116,9 @@ private:
 
     unsigned m_low;
     unsigned m_high;
+#if ENABLE(WEB_REPLAY)
     InputIterator* m_inputIterator;
+#endif
 };
 
 } // namespace JSC

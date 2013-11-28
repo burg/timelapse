@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011-2013, Brian Burg.
- *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,40 +32,38 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
-// Uses PositionMark.
 #include "EventLoopInput.h"
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
 #include "ReplayAgentStateMachine.h"
-
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class DocumentLoader;
 class DOMWindow;
+class DocumentLoader;
 class Element;
 class Event;
 class EventContext;
 class Frame;
 class InspectorObject;
 class InspectorController;
-class InstrumentingAgents;
 class InspectorPageAgent;
+class InstrumentingAgents;
 class Node;
 class Page;
 class ReplayRecording;
 
 typedef String ErrorString;
 
- class InspectorReplayAgent : public InspectorBaseAgent, public InspectorReplayBackendDispatcherHandler {
+class InspectorReplayAgent : public InspectorBaseAgent, public InspectorReplayBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorReplayAgent);
 public:
     static PassOwnPtr<InspectorReplayAgent> create(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent)
@@ -108,7 +104,7 @@ public:
     void stop();
     bool enabled() const;
 
-    // Calls from the frontend
+    // Calls from the frontend.
     void enable(ErrorString*);
     void disable(ErrorString*);
     void isEnabled(ErrorString*, bool*);
@@ -142,4 +138,5 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
+
 #endif // InspectorReplayAgent_h

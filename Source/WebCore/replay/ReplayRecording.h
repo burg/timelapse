@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,14 +27,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #ifndef ReplayRecording_h
 #define ReplayRecording_h
 
 #if ENABLE(WEB_REPLAY)
 
 #include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -60,7 +56,6 @@ public:
     std::unique_ptr<CaptureInputIterator> createCaptureIterator(Page&);
     std::unique_ptr<ReplayInputIterator> createReplayIterator(Page&, EventLoopInputDispatcherClient*);
     std::unique_ptr<FunctorInputIterator> createFunctorIterator();
-
 private:
     ReplayRecording(int);
     std::unique_ptr<InputStorage> m_inputStorage;

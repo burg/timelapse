@@ -1,7 +1,6 @@
 /*
- *  Copyright (C) 2012, Jake Bailey.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 Jake Bailey.
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,10 +40,9 @@
 namespace WebCore {
 
 class SendResizeEvent : public EventLoopInput {
-
 public:
     SendResizeEvent(int width, int height, int frameIndex);
-    virtual ~SendResizeEvent() {}
+    virtual ~SendResizeEvent() { }
 
     int width() const { return m_width; }
     int height() const { return m_height; }
@@ -57,7 +55,6 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(SendResizeEvent); }
-
 private:
     int m_width;
     int m_height;
@@ -65,11 +62,11 @@ private:
 };
 
 template<> struct InputCoder<SendResizeEvent> {
-    static void encode(EncoderContext& encoder, const SendResizeEvent& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<SendResizeEvent>& input);
+    static void encode(EncoderContext&, const SendResizeEvent& input);
+    static bool decode(DecoderContext&, std::unique_ptr<SendResizeEvent>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

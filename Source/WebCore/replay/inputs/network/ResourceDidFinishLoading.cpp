@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ResourceDidFinishLoading.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ResourceDidFinishLoading.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -41,12 +38,15 @@
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ResourceLoader.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 ResourceDidFinishLoading::ResourceDidFinishLoading(unsigned long identifier, int frameIndex, double finishTime)
     : ResourceCallback(identifier, frameIndex)
-    , m_finishTime(finishTime) {}
+    , m_finishTime(finishTime)
+{
+}
 
 void ResourceDidFinishLoading::dispatch(ReplayController& controller)
 {
@@ -61,11 +61,13 @@ const AtomicString& ResourceDidFinishLoading::type() const
 
 String ResourceDidFinishLoading::toString() const
 {
-    return makeString("ResourceDidFinishLoading(id=",
-                      String::number(identifier()),
-                      "; finishTime=",
-                      String::number(m_finishTime)
-                      ,")");
+    StringBuilder builder;
+    builder.appendLiteral("ResourceDidFinishLoading(id=");
+    builder.appendNumber(identifier());
+    builder.appendLiteral("; finishTime=");
+    builder.appendNumber(m_finishTime);
+    builder.appendLiteral(")");
+    return builder.toString();
 }
 
 size_t ResourceDidFinishLoading::memorySize() const

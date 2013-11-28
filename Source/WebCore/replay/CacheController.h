@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ *  Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,32 +45,28 @@ class NSURLCache;
 
 namespace WebCore {
 
-    class CacheController {
-        WTF_MAKE_NONCOPYABLE(CacheController);
-    public:
-        CacheController()
-            : m_haveSavedSettings(false)
+class CacheController {
+    WTF_MAKE_NONCOPYABLE(CacheController);
+public:
+    CacheController()
+        : m_haveSavedSettings(false)
 #if PLATFORM(MAC)
-            , m_savedCache(0)
-            , m_dummyCache(0)
+        , m_savedCache(nullptr)
+        , m_dummyCache(nullptr) { }
 #endif
-            {}
+    ~CacheController();
 
-        ~CacheController();
+    void enableCache();
+    void disableCache(bool saveSettings = true);
+    bool cacheState() const;
 
-        // Main API
-        void enableCache();
-        void disableCache(bool saveSettings = true);
-        bool cacheState() const;
-
-    private:
-        bool m_haveSavedSettings;
+private:
+    bool m_haveSavedSettings;
 #if PLATFORM(MAC)
-        RetainPtr<NSURLCache> m_savedCache;
-        RetainPtr<NSURLCache> m_dummyCache;
+    RetainPtr<NSURLCache> m_savedCache;
+    RetainPtr<NSURLCache> m_dummyCache;
 #endif
     };
-
 }
 
 #endif // ENABLE(WEB_REPLAY)

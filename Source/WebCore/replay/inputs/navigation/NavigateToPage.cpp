@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "NavigateToPage.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "NavigateToPage.h"
 
 #include "DecoderContext.h"
 #include "DocumentLoader.h"
@@ -57,7 +54,9 @@ NavigateToPage::NavigateToPage(PassRefPtr<SecurityOrigin> securityOrigin, const 
     URL parsedUrl = URL(ParsedURLString, url);
 }
 
-NavigateToPage::~NavigateToPage() {}
+NavigateToPage::~NavigateToPage()
+{
+}
 
 PassRefPtr<SecurityOrigin> NavigateToPage::securityOrigin() const
 {

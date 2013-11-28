@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013 Brian Burg.
- *  Copyright (C) 2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ReplayRecording.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ReplayRecording.h"
 
 #include "CaptureInputIterator.h"
 #include "FunctorInputIterator.h"
@@ -49,13 +46,16 @@ PassRefPtr<ReplayRecording> ReplayRecording::create(int uid)
 }
 
 ReplayRecording::ReplayRecording(int uid)
-: m_inputStorage(std::make_unique<InputStorage>())
-, m_uid(uid)
-, m_canCapture(true)
-, m_timestamp(WTF::currentTimeMS()) { }
+    : m_inputStorage(std::make_unique<InputStorage>())
+    , m_uid(uid)
+    , m_canCapture(true)
+    , m_timestamp(WTF::currentTimeMS())
+{
+}
 
 ReplayRecording::~ReplayRecording()
-{}
+{
+}
 
 std::unique_ptr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page& page)
 {
@@ -78,16 +78,17 @@ class CountFunctor {
 public:
     typedef size_t ReturnType;
 
-    CountFunctor() : m_count(0) { }
+    CountFunctor()
+        : m_count(0) { }
     void count(size_t count) { m_count += count; }
     ReturnType returnValue() { return m_count; }
-
 private:
     ReturnType m_count;
 };
 
 struct CountMemorySize : CountFunctor {
-    void operator()(size_t, const NondeterministicInput* input) {
+    void operator()(size_t, const NondeterministicInput* input)
+    {
         count(input->memorySize());
     }
 };
@@ -104,6 +105,6 @@ size_t ReplayRecording::memorySize()
     return counter.returnValue();
 }
 
-}; // namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)

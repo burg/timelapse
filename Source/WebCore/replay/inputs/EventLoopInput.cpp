@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "EventLoopInput.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "EventLoopInput.h"
 
 #include "Document.h"
 #include "EncoderContext.h"
@@ -79,7 +76,7 @@ Frame* frameFromFrameIndex(Page* page, int frameIndex)
     Frame* mainFrame = &page->mainFrame();
     Frame* frame = mainFrame;
     int idx = 0;
-    for (; idx < frameIndex && frame; idx++, frame = frame->tree().traverseNext(mainFrame));
+    for (; idx < frameIndex && frame; idx++, frame = frame->tree().traverseNext(mainFrame)) { }
     return frame;
 }
 

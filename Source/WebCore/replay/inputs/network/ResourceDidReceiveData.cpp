@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ResourceDidReceiveData.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ResourceDidReceiveData.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -41,18 +38,21 @@
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ResourceLoader.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 ResourceDidReceiveData::ResourceDidReceiveData(unsigned long identifier, int frameIndex, const char* data, int length, int encodedLength)
     : ResourceCallback(identifier, frameIndex)
-    , m_buffer(Vector<char,0>())
+    , m_buffer(Vector<char, 0>())
     , m_encodedLength(encodedLength)
 {
     m_buffer.append(data, length);
 }
 
-ResourceDidReceiveData::~ResourceDidReceiveData() {}
+ResourceDidReceiveData::~ResourceDidReceiveData()
+{
+}
 
 void ResourceDidReceiveData::dispatch(ReplayController& controller)
 {
@@ -67,11 +67,13 @@ const AtomicString& ResourceDidReceiveData::type() const
 
 String ResourceDidReceiveData::toString() const
 {
-    return makeString("ResourceDidReceiveData(id=",
-                      String::number(identifier()),
-                      ";bytes=",
-                      String::number(length()),
-                      ")");
+    StringBuilder builder;
+    builder.appendLiteral("ResourceDidReceiveData(id=");
+    builder.appendNumber(identifier());
+    builder.appendLiteral(";bytes=");
+    builder.appendNumber(length());
+    builder.appendLiteral(")");
+    return builder.toString();
 }
 
 size_t ResourceDidReceiveData::memorySize() const
@@ -90,7 +92,7 @@ void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const R
 
 bool InputCoder<ResourceDidReceiveData>::decode(DecoderContext&, std::unique_ptr<ResourceDidReceiveData>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 

@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ResourceDidSendData.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ResourceDidSendData.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -48,7 +45,9 @@ namespace WebCore {
 ResourceDidSendData::ResourceDidSendData(unsigned long identifier, int frameIndex, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
     : ResourceCallback(identifier, frameIndex)
     , m_bytesSent(bytesSent)
-    , m_totalBytesToBeSent(totalBytesToBeSent) {}
+    , m_totalBytesToBeSent(totalBytesToBeSent)
+{
+}
 
 void ResourceDidSendData::dispatch(ReplayController& controller)
 {
@@ -64,11 +63,11 @@ const AtomicString& ResourceDidSendData::type() const
 String ResourceDidSendData::toString() const
 {
     StringBuilder sb;
-    sb.append("ResourceDidSendData(id=");
-    sb.append(String::number(identifier()));
-    sb.append(";bytesSent=");
-    sb.append(String::number(m_bytesSent));
-    sb.append(")");
+    sb.appendLiteral("ResourceDidSendData(id=");
+    sb.appendNumber(identifier());
+    sb.appendLiteral(";bytesSent=");
+    sb.appendNumber(m_bytesSent);
+    sb.appendLiteral(")");
     return sb.toString();
 }
 

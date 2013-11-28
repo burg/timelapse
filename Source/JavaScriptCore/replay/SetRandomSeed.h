@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, 2012 Brian Burg.
- *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,12 +30,13 @@
 #ifndef SetRandomSeed_h
 #define SetRandomSeed_h
 
+#if ENABLE(WEB_REPLAY)
+
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace JSC {
 
 class SetRandomSeed : public NondeterministicInput {
-
 public:
     JS_EXPORT_PRIVATE SetRandomSeed(uint64_t);
     virtual ~SetRandomSeed();
@@ -55,5 +54,7 @@ private:
 };
 
 } // namespace JSC
+
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // SetRandomSeed_h

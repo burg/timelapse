@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,8 +43,8 @@ class FocusSetFocused : public EventLoopInput {
 
 public:
     FocusSetFocused(bool toState)
-        : m_toState(toState) {}
-    virtual ~FocusSetFocused() {}
+        : m_toState(toState) { }
+    virtual ~FocusSetFocused() { }
 
     bool toState() const { return m_toState; }
 
@@ -63,11 +61,11 @@ private:
 };
 
 template<> struct InputCoder<FocusSetFocused> {
-    static void encode(EncoderContext& encoder, const FocusSetFocused& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<FocusSetFocused>& input);
+    static void encode(EncoderContext&, const FocusSetFocused& input);
+    static bool decode(DecoderContext&, std::unique_ptr<FocusSetFocused>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

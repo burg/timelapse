@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, 2012, Brian Burg.
- *  Copyright (C) 2011, 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +27,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NondeterministicInput_h
-#define NondeterministicInput_h
+#ifndef WTF_NondeterministicInput_h
+#define WTF_NondeterministicInput_h
+
+#if ENABLE(WEB_REPLAY)
 
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -39,17 +39,16 @@ namespace WTF {
 
 class NondeterministicInput {
     WTF_MAKE_NONCOPYABLE(NondeterministicInput);
-
 public:
-    typedef enum {
+    enum QueueType {
         ScriptMemoizedDataQueue    = 0x0,
         LoaderMemoizedDataQueue    = 0x1,
         EventLoopInputQueue        = 0x2,
         QueueTypeLength = 0x3,
-    } QueueType;
+    };
 
-    NondeterministicInput() {}
-    virtual ~NondeterministicInput() {};
+    NondeterministicInput() { }
+    virtual ~NondeterministicInput() { };
 
     virtual const AtomicString& type() const =0;
     virtual QueueType queue() const =0;
@@ -61,4 +60,6 @@ public:
 
 using WTF::NondeterministicInput;
 
-#endif // NondeterministicInput_h
+#endif // ENABLE(WEB_REPLAY)
+
+#endif // WTF_NondeterministicInput_h

@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012, University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,16 +28,15 @@
  */
 
 #include "config.h"
+#include "ResourceDidFail.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ResourceDidFail.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "Page.h"
-#include "ReplayInputTypes.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceLoader.h"
 #include "SerializationMethods.h"
 #include <wtf/text/StringBuilder.h>
@@ -48,11 +45,15 @@ namespace WebCore {
 
 ResourceDidFail::ResourceDidFail(unsigned long identifier, int frameIndex, const ResourceError& error)
     : ResourceCallback(identifier, frameIndex)
-    , m_error(error.copy()) {}
+    , m_error(error.copy())
+{
+}
 
 ResourceDidFail::ResourceDidFail(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceError> error)
     : ResourceCallback(identifier, frameIndex)
-    , m_error(*error) {}
+    , m_error(*error)
+{
+}
 
 void ResourceDidFail::dispatch(ReplayController& controller)
 {
@@ -68,26 +69,26 @@ const AtomicString& ResourceDidFail::type() const
 String ResourceDidFail::toString() const
 {
     StringBuilder sb;
-    sb.append("ResourceDidFail(id=");
-    sb.append(String::number(identifier()));
-    sb.append(";domain=");
+    sb.appendLiteral("ResourceDidFail(id=");
+    sb.appendNumber(identifier());
+    sb.appendLiteral(";domain=");
     sb.append(m_error.domain());
-    sb.append(";failingURL=");
+    sb.appendLiteral(";failingURL=");
     sb.append(m_error.failingURL());
-    sb.append(";errorCode=");
-    sb.append(String::number(m_error.errorCode()));
-    sb.append(";localizedDescription=");
+    sb.appendLiteral(";errorCode=");
+    sb.appendNumber(m_error.errorCode());
+    sb.appendLiteral(";localizedDescription=");
     sb.append(m_error.localizedDescription());
-    sb.append(")");
+    sb.appendLiteral(")");
     return sb.toString();
 }
 
 size_t ResourceDidFail::memorySize() const
 {
     size_t size = sizeof(ResourceDidFail);
-    size += (!m_error.domain().isEmpty()) ? m_error.domain().impl()->cost() : 0;
-    size += (!m_error.failingURL().isEmpty()) ? m_error.failingURL().impl()->cost() : 0;
-    size += (!m_error.localizedDescription().isEmpty()) ? m_error.localizedDescription().impl()->cost() : 0;
+    size += !m_error.domain().isEmpty() ? m_error.domain().impl()->cost() : 0;
+    size += !m_error.failingURL().isEmpty() ? m_error.failingURL().impl()->cost() : 0;
+    size += !m_error.localizedDescription().isEmpty() ? m_error.localizedDescription().impl()->cost() : 0;
     return size;
 }
 

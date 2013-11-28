@@ -1,7 +1,6 @@
 /*
- *  Copyright (C) 2012, Jake Bailey.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012, Jake Bailey.
+ * Copyright (C) 2012, University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,16 +29,15 @@
  */
 
 #include "config.h"
+#include "InitializeWindow.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "InitializeWindow.h"
-
-#include "Document.h"
 #include "DOMWindow.h"
-#include "Frame.h"
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
+#include "Frame.h"
 #include "MainFrame.h"
 #include "Page.h"
 #include "ReplayController.h"

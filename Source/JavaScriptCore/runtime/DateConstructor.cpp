@@ -36,7 +36,10 @@
 #include <math.h>
 #include <time.h>
 #include <wtf/MathExtras.h>
+
+#if ENABLE(WEB_REPLAY)
 #include <wtf/replay/InputIterator.h>
+#endif
 
 #if OS(WINCE)
 extern "C" time_t time(time_t* timer); // Provided by libce.

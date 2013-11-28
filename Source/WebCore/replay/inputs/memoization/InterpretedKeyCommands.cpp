@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +28,11 @@
  */
 
 #include "config.h"
+#include "InterpretedKeyCommands.h"
 
-#if ENABLE(WEB_REPLAY)
+#if ENABLE(WEB_REPLAY) && PLATFORM(MAC)
 
 #include "EncoderContext.h"
-#include "InterpretedKeyCommands.h"
 #include "KeyboardEvent.h"
 #include "ReplayInputTypes.h"
 #include <wtf/text/StringBuilder.h>
@@ -42,9 +40,9 @@
 namespace WebCore {
 
 InterpretedKeyCommands::InterpretedKeyCommands(Vector<KeypressCommand>& commands)
-    : m_commands(commands) {}
+    : m_commands(commands) { }
 
-InterpretedKeyCommands::~InterpretedKeyCommands() {}
+InterpretedKeyCommands::~InterpretedKeyCommands() { }
 
 const AtomicString& InterpretedKeyCommands::type() const
 {
@@ -54,8 +52,7 @@ const AtomicString& InterpretedKeyCommands::type() const
 String InterpretedKeyCommands::toString() const
 {
     StringBuilder sb;
-    sb.append(String::format("InterpretedKeyCommands (n=%lu): [",
-                             m_commands.size()));
+    sb.append(String::format("InterpretedKeyCommands (n=%lu): [", m_commands.size()));
     for (size_t i = 0; i < m_commands.size(); ++i) {
         if (i > 0)
             sb.append(",");
@@ -96,10 +93,10 @@ void InputCoder<InterpretedKeyCommands>::encode(EncoderContext& encoder, const I
 
 bool InputCoder<InterpretedKeyCommands>::decode(DecoderContext&, std::unique_ptr<InterpretedKeyCommands>&)
 {
-    // TODO: implement
+    // FIXME: implement.
     return false;
 }
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY) && PLATFORM(MAC)

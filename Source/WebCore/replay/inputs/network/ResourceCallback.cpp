@@ -28,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ResourceCallback.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ResourceCallback.h"
 
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -45,7 +44,9 @@ namespace WebCore {
 
 ResourceCallback::ResourceCallback(unsigned long identifier, int frameIndex)
     : m_identifier(identifier)
-    , m_frameIndex(frameIndex) {}
+    , m_frameIndex(frameIndex)
+{
+}
 
 ResourceLoader* ResourceCallback::findResourceLoader(ReplayController& controller)
 {

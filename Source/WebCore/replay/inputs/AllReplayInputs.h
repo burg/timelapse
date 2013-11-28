@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013 University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,15 +33,10 @@
 
 // Make sure that this list stays up to date with ReplayInputTypes.h.
 
+#ifndef AllReplayInputs_h
+#define AllReplayInputs_h
+
 #if ENABLE(WEB_REPLAY)
-
-// JSC inputs.
-
-#include <replay/GetCurrentTime.h>
-#include <replay/SetRandomSeed.h>
-
-using JSC::GetCurrentTime;
-using JSC::SetRandomSeed;
 
 // WebCore inputs.
 
@@ -53,8 +48,8 @@ using JSC::SetRandomSeed;
 #include "FocusSetFocused.h"
 #include "HandleContextMenu.h"
 #include "HandleKeyPress.h"
-#include "HandleMousePress.h"
 #include "HandleMouseMove.h"
+#include "HandleMousePress.h"
 #include "HandleMouseRelease.h"
 #include "HandleWheelEvent.h"
 #include "InitializeFocus.h"
@@ -80,6 +75,14 @@ using JSC::SetRandomSeed;
 #include "TimerFired.h"
 #include "TryClosePage.h"
 
+// JSC inputs.
+
+#include <replay/GetCurrentTime.h>
+#include <replay/SetRandomSeed.h>
+
+using JSC::GetCurrentTime;
+using JSC::SetRandomSeed;
+
 // Feature- or platform-specific inputs.
 
 #if PLATFORM(MAC)
@@ -87,3 +90,5 @@ using JSC::SetRandomSeed;
 #endif
 
 #endif // ENABLE(WEB_REPLAY)
+
+#endif // AllReplayInputs_h

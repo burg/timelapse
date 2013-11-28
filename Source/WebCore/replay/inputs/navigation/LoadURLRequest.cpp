@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013, University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,9 @@
  */
 
 #include "config.h"
+#include "LoadURLRequest.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "LoadURLRequest.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -41,18 +40,24 @@
 #include "ReplayInputTypes.h"
 #include "ResourceRequest.h"
 #include "SerializationMethods.h"
-#include <wtf/text/StringBuilder.h>
 #include <wtf/PassOwnPtr.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 LoadURLRequest::LoadURLRequest(const FrameLoadRequest& request)
-    : m_request(adoptPtr(new FrameLoadRequest(request.requester()->isolatedCopy(), request.resourceRequest(), request.frameName(), request.substituteData()))) {}
+    : m_request(adoptPtr(new FrameLoadRequest(request.requester()->isolatedCopy(), request.resourceRequest(), request.frameName(), request.substituteData())))
+{
+}
 
 LoadURLRequest::LoadURLRequest(PassOwnPtr<FrameLoadRequest> request)
-    : m_request(request) {}
+    : m_request(request)
+{
+}
 
-LoadURLRequest::~LoadURLRequest() {}
+LoadURLRequest::~LoadURLRequest()
+{
+}
 
 void LoadURLRequest::dispatch(ReplayController& controller)
 {
@@ -102,10 +107,9 @@ void InputCoder<FrameLoadRequest>::encode(EncoderContext& encoder, const FrameLo
 
 bool InputCoder<FrameLoadRequest>::decode(DecoderContext&, std::unique_ptr<FrameLoadRequest>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
-
 
 void InputCoder<LoadURLRequest>::encode(EncoderContext& encoder, const LoadURLRequest& input)
 {

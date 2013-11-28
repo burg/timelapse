@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "InitializeFocus.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "InitializeFocus.h"
 
 #include "DecoderContext.h"
 #include "Document.h"
@@ -43,19 +40,19 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include <wtf/text/StringConcatenate.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 void InitializeFocus::dispatch(ReplayController& controller)
 {
     Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
-    PassRefPtr<Frame> framePtr(document->frame());
+    RefPtr<Frame> frame(document->frame());
 
     // Setting active/focus is idempotent, so set it whether or not it needs to be set.
     controller.page().replayProxy().focusSetActive(m_active, true);
     controller.page().replayProxy().focusSetFocused(m_focus, true);
-    controller.page().focusController().setFocusedFrame(framePtr);
+    controller.page().focusController().setFocusedFrame(frame);
 }
 
 const AtomicString& InitializeFocus::type() const
@@ -65,9 +62,15 @@ const AtomicString& InitializeFocus::type() const
 
 String InitializeFocus::toString() const
 {
-    return makeString("InitializeFocus(focus=", (m_focus)?"true":"false",
-                      "; active=", (m_active)?"true":"false",
-                      "; frameIndex=", String::number(m_frameIndex), ")");
+    StringBuilder builder;
+    builder.appendLiteral("InitializeFocus(focus=");
+    builder.append(m_focus ? "true" : "false");
+    builder.appendLiteral("; active=");
+    builder.append(m_active ? "true" : "false");
+    builder.appendLiteral("; frameIndex=");
+    builder.appendNumber(m_frameIndex);
+    builder.appendLiteral(")");
+    return builder.toString();
 }
 
 std::unique_ptr<InitializeFocus> InitializeFocus::createFromPage(const Page& page)

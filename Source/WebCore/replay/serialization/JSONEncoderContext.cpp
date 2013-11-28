@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, 2013 Brian Burg.
- *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012, 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "JSONEncoderContext.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "JSONEncoderContext.h"
 
 #include "AllReplayInputs.h"
 #include "FunctorInputIterator.h"
@@ -43,16 +40,17 @@
 #include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
 #include <wtf/RefPtr.h>
+#include <wtf/replay/InputIterator.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
-#include <wtf/replay/InputIterator.h>
 
-static const char* queueTypeToString(NondeterministicInput::QueueType queue) {
+static const char* queueTypeToString(NondeterministicInput::QueueType queue)
+{
     switch (queue) {
-        case NondeterministicInput::EventLoopInputQueue:     return "EventLoopInputQueue";
-        case NondeterministicInput::LoaderMemoizedDataQueue: return "LoaderMemoizedDataQueue";
-        case NondeterministicInput::ScriptMemoizedDataQueue: return "ScriptMemoizedDataQueue";
-        case NondeterministicInput::QueueTypeLength:         return "QueueTypeLength (error)";
+    case NondeterministicInput::EventLoopInputQueue:     return "EventLoopInputQueue";
+    case NondeterministicInput::LoaderMemoizedDataQueue: return "LoaderMemoizedDataQueue";
+    case NondeterministicInput::ScriptMemoizedDataQueue: return "ScriptMemoizedDataQueue";
+    case NondeterministicInput::QueueTypeLength:         return "QueueTypeLength (error)";
     }
 }
 
@@ -62,7 +60,7 @@ static bool dispatchTypeSpecificEncodeMethod(EncoderContext& encoder, const Nond
 {
     const AtomicString& type = input->type();
 
-    #define INPUT_SPECIFIC_DISPATCH_CHECK(name) \
+#define INPUT_SPECIFIC_DISPATCH_CHECK(name) \
     if (type == inputTypes().name) { \
         InputCoder<name>::encode(encoder, *(static_cast<const name*>(input))); \
         return true; \
@@ -78,21 +76,26 @@ static bool dispatchTypeSpecificEncodeMethod(EncoderContext& encoder, const Nond
 #endif
     INPUT_SPECIFIC_DISPATCH_CHECK(SetRandomSeed)
 
-    #undef INPUT_SPECIFIC_DISPATCH_CHECK
+#undef INPUT_SPECIFIC_DISPATCH_CHECK
 
     if (type == inputTypes().AutoMemoized) {
         static_cast<const AutoMemoizedBase*>(input)->encode(encoder);
         return true;
     }
 
-    // FIXME(Issue #277): disambiguate AutoMemoized encode methods based on the serialized ctype.
+    // FIXME: disambiguate AutoMemoized encode methods based on the serialized ctype.
+    // https://github.com/burg/timelapse/issues/277
     return false;
 }
 
 JSONMapEncoder::JSONMapEncoder()
-: m_object(InspectorObject::create()) {}
+    : m_object(InspectorObject::create())
+{
+}
 
-JSONMapEncoder::~JSONMapEncoder() {}
+JSONMapEncoder::~JSONMapEncoder()
+{
+}
 
 void JSONMapEncoder::putBoolean(const String& key, bool value)
 {
@@ -155,18 +158,19 @@ void JSONMapEncoder::putContext(const String& key, const EncoderContext& context
     m_object->setValue(key, encodedObject);
 }
 
-void JSONMapEncoder::putBytes(const String& key, const char* data, int length)
+void JSONMapEncoder::putBytes(const String&, const char*, int)
 {
-    // TODO: implement
-    UNUSED_PARAM(key);
-    UNUSED_PARAM(data);
-    UNUSED_PARAM(length);
+    // FIXME: implement
 }
 
 JSONListEncoder::JSONListEncoder()
-: m_array(InspectorArray::create()) {}
+    : m_array(InspectorArray::create())
+{
+}
 
-JSONListEncoder::~JSONListEncoder() {}
+JSONListEncoder::~JSONListEncoder()
+{
+}
 
 void JSONListEncoder::appendContext(const EncoderContext& context)
 {
@@ -194,8 +198,8 @@ public:
     typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > ReturnType;
 
     SerializeInputToJSONFunctor()
-    : m_inputs(TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput>::create()) {}
-    ~SerializeInputToJSONFunctor() {}
+        : m_inputs(TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput>::create()) { }
+    ~SerializeInputToJSONFunctor() { }
 
     void operator()(size_t index, const NondeterministicInput* input)
     {
@@ -221,7 +225,7 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecording> JSONCoder::serialize(PassRe
     for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
         SerializeInputToJSONFunctor collector;
         NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
-        PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
+        RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
 
         RefPtr<TypeBuilder::Recordings::ReplayInputQueue> queue = TypeBuilder::Recordings::ReplayInputQueue::create()
             .setType(queueTypeToString(queueType))
@@ -244,17 +248,16 @@ PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONCoder::serializeInput(const
     std::unique_ptr<EncoderContext> encodedInput = JSONCoder::createMap();
     encodedInput->put("id", (uint64_t)index);
 
-    // TODO: remove
     if (input->queue() == NondeterministicInput::EventLoopInputQueue)
         static_cast<const EventLoopInput*>(input)->serializeDispatchInfo(*encodedInput);
 
-    // abort if we couldn't perform type-specific encoding based on the tag.
+    // Abort if we couldn't perform type-specific encoding based on the tag.
     if (!dispatchTypeSpecificEncodeMethod(*encodedInput, input))
         return 0;
 
     RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = TypeBuilder::Recordings::ReplayInput::create()
-                .setType(input->type())
-                .setData(static_cast<JSONEncoderContext*>(encodedInput.get())->encodedValue()->asObject());
+        .setType(input->type())
+        .setData(static_cast<JSONEncoderContext*>(encodedInput.get())->encodedValue()->asObject());
 
     return serializedInput.release();
 }

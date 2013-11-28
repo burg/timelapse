@@ -1,7 +1,6 @@
 /*
- *  Copyright (C) 2012 Jake Bailey.
- *  Copyright (C) 2012 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 Jake Bailey.
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +33,8 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "EncoderContext.h"
 #include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayInputTypes.h"
 #include "SerializedScriptValue.h"
 #include <wtf/text/StringConcatenate.h>
@@ -46,18 +45,17 @@ namespace WebCore {
 // to something which knows what type-specialized encode function to call.
 class AutoMemoizedBase : public NondeterministicInput {
 public:
-    virtual void encode(EncoderContext& context) const =0;
-    virtual ~AutoMemoizedBase() {}
+    virtual void encode(EncoderContext&) const =0;
+    virtual ~AutoMemoizedBase() { }
 };
 
 template<typename T>
 class AutoMemoized : public AutoMemoizedBase {
-
 public:
     AutoMemoized(const String& attribute, T result)
         : m_attribute(attribute)
-        , m_result(result) {}
-    virtual ~AutoMemoized() {}
+        , m_result(result) { }
+    virtual ~AutoMemoized() { }
 
     const String& attributeName() const { return m_attribute; }
     T result() const { return m_result; }
@@ -70,7 +68,6 @@ public:
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-
 private:
     String m_attribute;
     T m_result;
@@ -80,15 +77,13 @@ typedef int ExceptionCode;
 
 template<typename T>
 class AutoMemoizedWithExceptionCode : public AutoMemoized<T> {
-
 public:
     AutoMemoizedWithExceptionCode(const String& attribute, T result, ExceptionCode ec)
         : AutoMemoized<T>(attribute, result)
-        , m_exceptionCode(ec) {}
-    virtual ~AutoMemoizedWithExceptionCode() {}
+        , m_exceptionCode(ec) { }
+    virtual ~AutoMemoizedWithExceptionCode() { }
 
     ExceptionCode exceptionCode() const { return m_exceptionCode; }
-
 private:
     ExceptionCode m_exceptionCode;
 };
@@ -129,8 +124,8 @@ template<> inline String AutoMemoized<WebCore::SerializedScriptValue>::resultStr
 }
 
 template<typename T> struct InputCoder<AutoMemoized<T> > {
-    static void encode(EncoderContext& encoder, const AutoMemoized<T>& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<AutoMemoized<T> >& input);
+    static void encode(EncoderContext&, const AutoMemoized<T>& input);
+    static bool decode(DecoderContext&, OwnPtr<AutoMemoized<T> >& input);
 };
 
 template<typename T> inline const AtomicString& AutoMemoized<T>::type() const
@@ -159,8 +154,8 @@ template<typename T> inline void InputCoder<AutoMemoized<T> >::encode(EncoderCon
 template<> inline void InputCoder<AutoMemoized<RefPtr<SerializedScriptValue>>>::encode(EncoderContext& encoder, const AutoMemoized<RefPtr<SerializedScriptValue>>& input)
 {
     encoder.put("attribute", input.attributeName());
-    // TODO(Issue #403): implement this. We may want to put it somewhere else, to
-    // avoid pulling in SerializedScriptValue here.
+    // FIXME: implement this, and somewhere else to avoid including SerializedScriptValue here.
+    // Tracking bug: https://github.com/burg/timelapse/issues/403
 }
 
 template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(DecoderContext& decoder, OwnPtr<AutoMemoized<T> >& input)
@@ -179,7 +174,7 @@ template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(DecoderCon
 
 // FIXME: implement encode/decode for exceptionCode version.
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

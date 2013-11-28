@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013 University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,10 @@
  */
 
 #include "config.h"
-
 #include "ReplayProxy.h"
 
-#include "Document.h"
 #include "DOMWindow.h"
+#include "Document.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "FocusController.h"
@@ -98,11 +97,15 @@ static void printResourceRequestDiagnostics(const ResourceRequest& request)
 #endif
 
 ReplayProxy::ReplayProxy(Page& page)
-: m_page(page)
-, m_mode(Open)
-, m_nextUniqueIdentifier(1) {}
+    : m_page(page)
+    , m_mode(Open)
+    , m_nextUniqueIdentifier(1)
+{
+}
 
-ReplayProxy::~ReplayProxy() {}
+ReplayProxy::~ReplayProxy()
+{
+}
 
 void ReplayProxy::setMode(ProxyMode mode)
 {
@@ -110,10 +113,6 @@ void ReplayProxy::setMode(ProxyMode mode)
     m_mode = mode;
     m_nextUniqueIdentifier = 1;
 }
-
-/* We must always define these symbols even if !ENABLE(WEB_REPLAY),
-   because the embedding API (WebKit or WebKit2) may be
-   built with web replay support. */
 
 unsigned long ReplayProxy::createUniqueIdentifier()
 {
@@ -476,8 +475,8 @@ bool ReplayProxy::tryClosePage(bool fromReplay)
 #if ENABLE(WEB_REPLAY)
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
         {
-            ASSERT(mode() == Capturing);
             EventLoopInputExtent extent(m_page.replayController().activeIterator());
             allowed = m_page.mainFrame().loader().shouldClose();
         }

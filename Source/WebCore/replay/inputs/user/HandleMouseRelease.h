@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012, University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,8 +40,8 @@ namespace WebCore {
 class HandleMouseRelease : public HandleMouseBase {
 public:
     HandleMouseRelease(const PlatformMouseEvent& event)
-        : HandleMouseBase(event) {}
-    virtual ~HandleMouseRelease() {};
+        : HandleMouseBase(event) { }
+    virtual ~HandleMouseRelease() { };
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -57,11 +55,11 @@ public:
 };
 
 template<> struct InputCoder<HandleMouseRelease> {
-    static void encode(EncoderContext& encoder, const HandleMouseRelease& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<HandleMouseRelease>& input);
+    static void encode(EncoderContext&, const HandleMouseRelease& input);
+    static bool decode(DecoderContext&, std::unique_ptr<HandleMouseRelease>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

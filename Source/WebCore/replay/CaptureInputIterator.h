@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,7 +47,6 @@ class EventLoopInputExtent {
 public:
     EventLoopInputExtent(InputIterator*);
     ~EventLoopInputExtent();
-
 private:
     InputIterator* m_iterator;
 };
@@ -72,11 +69,9 @@ public:
 
     // Used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
-
 protected:
     void setWithinInputExtent(bool withinInputExtent) { m_withinInputExtent = withinInputExtent; }
     bool withinInputExtent() const { return m_withinInputExtent; }
-
 private:
     void finalizePreviousInput();
 

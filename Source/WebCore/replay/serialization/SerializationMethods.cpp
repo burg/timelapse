@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "SerializationMethods.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "SerializationMethods.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -56,41 +53,40 @@ void InputCoder<Vector<String>>::encode(EncoderContext& encoder, const Vector<St
 
 bool InputCoder<Vector<String>>::decode(DecoderContext&, std::unique_ptr<Vector<String>>&)
 {
-    // TODO: implement
+    // FIXME: implement.
     return false;
 }
 
 void InputCoder<SharedBuffer>::encode(EncoderContext& encoder, const SharedBuffer& buffer)
 {
-    // TODO: this should store a base64-encoded string, rather than bytes as chars.
+    // FIXME: this should store a base64-encoded string, rather than bytes as chars.
+    // Tracking bug: https://github.com/burg/timelapse/issues/265
     std::unique_ptr<EncoderContext> encodedData = encoder.createList();
     const char* segment;
     unsigned pos = 0;
     while (unsigned length = buffer.getSomeData(segment, pos)) {
         for (size_t i = 0; i < length; i++)
             encoder.append((uint32_t)segment[i]);
-      pos += length;
+        pos += length;
     }
     encoder.put("data", *encodedData);
 }
 
 bool InputCoder<SharedBuffer>::decode(DecoderContext&, std::unique_ptr<SharedBuffer>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
-/* map is serialized from a WTF::HashMap, which has unique keys. So, this can be stored in an object */
 void InputCoder<HTTPHeaderMap>::encode(EncoderContext& encoder, const HTTPHeaderMap& input)
 {
-    HTTPHeaderMap::const_iterator end_it = input.end();
-    for (HTTPHeaderMap::const_iterator it = input.begin(); it != end_it; ++it)
+    for (HTTPHeaderMap::const_iterator it = input.begin(); it != input.end(); ++it)
         encoder.put(it->key.string(), it->value);
 }
 
 bool InputCoder<HTTPHeaderMap>::decode(DecoderContext&, std::unique_ptr<HTTPHeaderMap>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
@@ -121,7 +117,7 @@ void InputCoder<FormDataElement>::encode(EncoderContext& encoder, const FormData
 
 bool InputCoder<FormDataElement>::decode(DecoderContext&, std::unique_ptr<FormDataElement>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
@@ -146,7 +142,7 @@ void InputCoder<FormData>::encode(EncoderContext& encoder, const FormData& data)
 
 bool InputCoder<FormData>::decode(DecoderContext&, std::unique_ptr<FormData>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
@@ -165,7 +161,7 @@ void InputCoder<SubstituteData>::encode(EncoderContext& encoder, const Substitut
 
 bool InputCoder<SubstituteData>::decode(DecoderContext&, std::unique_ptr<SubstituteData>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
@@ -187,7 +183,7 @@ void InputCoder<ResourceLoadTiming>::encode(EncoderContext& encoder, const Resou
 
 bool InputCoder<ResourceLoadTiming>::decode(DecoderContext&, std::unique_ptr<ResourceLoadTiming>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
@@ -201,7 +197,7 @@ void InputCoder<ResourceError>::encode(EncoderContext& encoder, const ResourceEr
 
 bool InputCoder<ResourceError>::decode(DecoderContext&, std::unique_ptr<ResourceError>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
@@ -234,7 +230,7 @@ void InputCoder<ResourceRequest>::encode(EncoderContext& encoder, const Resource
 
 bool InputCoder<ResourceRequest>::decode(DecoderContext&, std::unique_ptr<ResourceRequest>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 
@@ -263,7 +259,7 @@ void InputCoder<ResourceResponse>::encode(EncoderContext& encoder, const Resourc
 
 bool InputCoder<ResourceResponse>::decode(DecoderContext&, std::unique_ptr<ResourceResponse>&)
 {
-    // TODO: implement
+    // FIXME: implement
     return false;
 }
 

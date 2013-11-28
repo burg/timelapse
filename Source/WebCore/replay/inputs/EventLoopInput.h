@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, 2012 Brian Burg.
- *  Copyright (C) 2011-2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,8 +38,8 @@
 namespace WebCore {
 
 class Document;
-class EventTarget;
 class EncoderContext;
+class EventTarget;
 class Frame;
 class ReplayController;
 class Page;
@@ -50,12 +48,12 @@ typedef unsigned PositionMarkIndex;
 struct PositionMark {
 public:
     explicit PositionMark()
-    : m_index(0)
-    , m_time(0.0) {}
+        : m_index(0)
+        , m_time(0.0) { }
 
     PositionMark(PositionMarkIndex index)
-    : m_index(index)
-    , m_time(monotonicallyIncreasingTime()) {}
+        : m_index(index)
+        , m_time(monotonicallyIncreasingTime()) { }
 
     PositionMarkIndex index() const { return m_index; }
     double time() const { return m_time; }
@@ -67,23 +65,23 @@ private:
 
 int frameIndexFromDocument(const Document*);
 int frameIndexFromFrame(const Frame*);
-Document* documentFromFrameIndex(Page* page, int frameIndex);
-Frame* frameFromFrameIndex(Page* page, int frameIndex);
+Document* documentFromFrameIndex(Page*, int frameIndex);
+Frame* frameFromFrameIndex(Page*, int frameIndex);
 
 class EventLoopInput : public NondeterministicInput {
 
 public:
     EventLoopInput(const PositionMark& mark)
-    : m_executionTicksQuota(-1)
-    , m_mark(mark)
-    , m_sealed(false) {}
+        : m_executionTicksQuota(-1)
+        , m_mark(mark)
+        , m_sealed(false) { }
 
     EventLoopInput()
-    : m_executionTicksQuota(-1)
-    , m_mark(PositionMark())
-    , m_sealed(false) {}
+        : m_executionTicksQuota(-1)
+        , m_mark(PositionMark())
+        , m_sealed(false) { }
 
-    virtual ~EventLoopInput() {};
+    virtual ~EventLoopInput() { }
 
     // NondeterministicInput
     virtual String toString() const =0;
@@ -97,7 +95,6 @@ public:
 
     // Mark and tick quota are only known at construction time during replay.
     // During capture, these are set when the following event loop input is captured.
-
     void setMark(const PositionMark& mark) { ASSERT(!m_sealed); m_mark = mark; }
     PositionMark mark() const { return m_mark; }
 
@@ -123,7 +120,7 @@ private:
     bool m_sealed;
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

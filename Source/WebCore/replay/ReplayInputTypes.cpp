@@ -1,7 +1,6 @@
 /*
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *  Copyright (C) 2005 Apple Computer, Inc.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
+ * Copyright (C) 2005 Apple Computer, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public

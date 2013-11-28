@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ReplayAgentStateMachine.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ReplayAgentStateMachine.h"
 
 #include "Logging.h"
 #include <wtf/Assertions.h>
@@ -79,11 +76,13 @@ const char* ReplayAgentStateMachine::stateNameFor(ReplayAgentStateMachine::State
         return ReplayAgentStateNames::ReplayPaused;
     }
     ASSERT_NOT_REACHED();
-    return NULL;
+    return nullptr;
 }
 
 ReplayAgentStateMachine::ReplayAgentStateMachine()
-    : m_state(Disabled) { }
+    : m_state(Disabled)
+{
+}
 
 bool ReplayAgentStateMachine::disabled() const
 {
@@ -125,53 +124,52 @@ void ReplayAgentStateMachine::advanceTo(State newState)
     switch (newState) {
     case Disabled:
         if (inState(RecordingLoaded) || inState(RecordingUnloaded))
-            goto commit_transition;
+            goto commit;
 
         break;
 
-    case RecordingUnloaded: // can always get to this state; not idempotent
+    case RecordingUnloaded: // Can always get to this state; not idempotent.
         if (!inState(RecordingUnloaded))
-            goto commit_transition;
+            goto commit;
 
         break;
 
     case RecordingLoaded:
         if (inState(Replaying) || inState(ReplayPaused) || inState(RecordingUnloaded))
-            goto commit_transition;
+            goto commit;
 
         break;
 
     case WaitingForCapture:
         if (inState(RecordingUnloaded))
-            goto commit_transition;
+            goto commit;
 
         break;
 
     case WaitingForReplay:
         if (inState(RecordingLoaded) || inState(ReplayPaused))
-            goto commit_transition;
+            goto commit;
 
         break;
 
     case Capturing:
         if (inState(WaitingForCapture))
-            goto commit_transition;
+            goto commit;
 
         break;
 
     case Replaying:
         if (inState(WaitingForReplay))
-            goto commit_transition;
+            goto commit;
 
     case ReplayPaused:
         if (inState(Replaying))
-            goto commit_transition;
+            goto commit;
     }
 
-    LOG_ERROR("Illegal state transition: %s -> %s\n",
-              stateNameFor(m_state), stateNameFor(newState));
+    LOG_ERROR("Illegal state transition: %s -> %s\n", stateNameFor(m_state), stateNameFor(newState));
 
-commit_transition:
+commit:
     m_state = newState;
 }
 

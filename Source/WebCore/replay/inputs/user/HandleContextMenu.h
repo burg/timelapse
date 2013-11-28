@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Jake Bailey.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,8 +41,8 @@ class HandleContextMenu : public HandleMouseBase {
 public:
     HandleContextMenu(const PlatformMouseEvent& event, int frameIndex)
         : HandleMouseBase(event)
-        , m_frameIndex(frameIndex) {}
-    virtual ~HandleContextMenu() {};
+        , m_frameIndex(frameIndex) { }
+    virtual ~HandleContextMenu() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -63,11 +61,11 @@ private:
 };
 
 template<> struct InputCoder<HandleContextMenu> {
-    static void encode(EncoderContext& encoder, const HandleContextMenu& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<HandleContextMenu>& input);
+    static void encode(EncoderContext&, const HandleContextMenu& input);
+    static bool decode(DecoderContext&, std::unique_ptr<HandleContextMenu>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

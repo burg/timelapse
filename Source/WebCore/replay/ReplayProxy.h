@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
+ * Copyright (C) 2012, 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,16 +43,15 @@ struct FrameLoadRequest;
 
 class Frame;
 class Page;
+class PlatformKeyboardEvent;
 class PlatformMouseEvent;
 class PlatformWheelEvent;
-class PlatformKeyboardEvent;
 class ReplayController;
 class ResourceLoader;
 class ResourceRequest;
 
 class ReplayProxy {
     WTF_MAKE_NONCOPYABLE(ReplayProxy);
-
 public:
     enum ProxyMode {
         Capturing,
@@ -60,10 +59,10 @@ public:
         Replaying,
     };
 
-    ReplayProxy(Page& page);
+    ReplayProxy(Page&);
     virtual ~ReplayProxy();
 
-    virtual void setMode(ProxyMode mode);
+    virtual void setMode(ProxyMode);
     ProxyMode mode() const { return m_mode; }
 
     // Networking APIs.

@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,8 +42,8 @@ class HandleMouseMove : public HandleMouseBase {
 public:
     HandleMouseMove(const PlatformMouseEvent& event, bool scrollbarTargeted)
         : HandleMouseBase(event)
-        , m_scrollbarTargeted(scrollbarTargeted) {}
-    virtual ~HandleMouseMove() {};
+        , m_scrollbarTargeted(scrollbarTargeted) { }
+    virtual ~HandleMouseMove() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -59,16 +57,16 @@ public:
 
     bool scrollbarTargeted() const { return m_scrollbarTargeted; }
 
- private:
+private:
     bool m_scrollbarTargeted;
 };
 
 template<> struct InputCoder<HandleMouseMove> {
-    static void encode(EncoderContext& encoder, const HandleMouseMove& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<HandleMouseMove>& input);
+    static void encode(EncoderContext&, const HandleMouseMove& input);
+    static bool decode(DecoderContext&, std::unique_ptr<HandleMouseMove>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

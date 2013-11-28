@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ *  Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,23 +41,22 @@ namespace WebCore {
 class ReplayController;
 
 class ScrollPage : public EventLoopInput {
-
 public:
     ScrollPage(ScrollDirection direction, ScrollGranularity granularity)
         : m_isLogicalScroll(false)
         , m_granularity(granularity)
-        {
-            m_direction.normal = direction;
-        }
+    {
+        m_direction.normal = direction;
+    }
 
     ScrollPage(ScrollLogicalDirection logicalDirection, ScrollGranularity granularity)
         : m_isLogicalScroll(true)
         , m_granularity(granularity)
-        {
-            m_direction.logical = logicalDirection;
-        }
+    {
+        m_direction.logical = logicalDirection;
+    }
 
-    virtual ~ScrollPage() {}
+    virtual ~ScrollPage() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -88,11 +85,11 @@ private:
 };
 
 template<> struct InputCoder<ScrollPage> {
-    static void encode(EncoderContext& encoder, const ScrollPage& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<ScrollPage>& input);
+    static void encode(EncoderContext&, const ScrollPage& input);
+    static bool decode(DecoderContext&, std::unique_ptr<ScrollPage>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

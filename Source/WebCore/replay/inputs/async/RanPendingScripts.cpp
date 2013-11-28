@@ -1,7 +1,6 @@
 /*
- *  Copyright (C) 2012, Jake Bailey.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 Jake Bailey.
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +29,12 @@
  */
 
 #include "config.h"
+#include "RanPendingScripts.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "RanPendingScripts.h"
-
-#include "Document.h"
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -47,7 +45,9 @@
 namespace WebCore {
 
 RanPendingScripts::RanPendingScripts(int frameIndex)
-: m_frameIndex(frameIndex) {}
+    : m_frameIndex(frameIndex)
+{
+}
 
 const AtomicString& RanPendingScripts::type() const
 {

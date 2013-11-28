@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,8 +63,8 @@ private:
 };
 
 template<> struct InputCoder<ResourceDidReceiveData> {
-    static void encode(EncoderContext& encoder, const ResourceDidReceiveData& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidReceiveData>& input);
+    static void encode(EncoderContext&, const ResourceDidReceiveData& input);
+    static bool decode(DecoderContext&, std::unique_ptr<ResourceDidReceiveData>& input);
 };
 
 } // namespace WebCore

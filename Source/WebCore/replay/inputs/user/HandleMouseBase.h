@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,8 +42,8 @@ class HandleMouseBase : public EventLoopInput {
 
 public:
     HandleMouseBase(const PlatformMouseEvent& event)
-        : m_platformEvent(event) {}
-    virtual ~HandleMouseBase() {}
+        : m_platformEvent(event) { }
+    virtual ~HandleMouseBase() { }
 
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
@@ -60,11 +58,11 @@ private:
 };
 
 template<> struct InputCoder<PlatformMouseEvent> {
-    static void encode(EncoderContext& encoder, const PlatformMouseEvent& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<PlatformMouseEvent>& input);
+    static void encode(EncoderContext&, const PlatformMouseEvent& input);
+    static bool decode(DecoderContext&, std::unique_ptr<PlatformMouseEvent>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

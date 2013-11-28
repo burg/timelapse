@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +28,9 @@
  */
 
 #include "config.h"
+#include "ResourceDidReceiveResponse.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "ResourceDidReceiveResponse.h"
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -47,11 +45,15 @@ namespace WebCore {
 
 ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, const ResourceResponse& response)
     : ResourceCallback(identifier, frameIndex)
-    , m_response(ResourceResponse::adopt(response.copyData())) {}
+    , m_response(ResourceResponse::adopt(response.copyData()))
+{
+}
 
 ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceResponse> response)
     : ResourceCallback(identifier, frameIndex)
-    , m_response(adoptPtr(response.release())) {}
+    , m_response(adoptPtr(response.release()))
+{
+}
 
 void ResourceDidReceiveResponse::dispatch(ReplayController& controller)
 {
@@ -67,13 +69,13 @@ const AtomicString& ResourceDidReceiveResponse::type() const
 String ResourceDidReceiveResponse::toString() const
 {
     StringBuilder sb;
-    sb.append("ResourceDidReceiveResponse(id=");
-    sb.append(String::number(identifier()));
-    sb.append("; frameIndex=");
-    sb.append(String::number(frameIndex()));
-    sb.append("; url=");
+    sb.appendLiteral("ResourceDidReceiveResponse(id=");
+    sb.appendNumber(identifier());
+    sb.appendLiteral("; frameIndex=");
+    sb.appendNumber(frameIndex());
+    sb.appendLiteral("; url=");
     sb.append(m_response->url().string());
-    sb.append(")");
+    sb.appendLiteral(")");
     return sb.toString();
 }
 

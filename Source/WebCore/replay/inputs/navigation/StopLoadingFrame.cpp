@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,24 +28,27 @@
  */
 
 #include "config.h"
+#include "StopLoadingFrame.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "StopLoadingFrame.h"
-
-#include "Document.h"
-#include "Frame.h"
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
+#include "Frame.h"
 #include "Page.h"
 #include "ReplayController.h"
 
 namespace WebCore {
 
 StopLoadingFrame::StopLoadingFrame(int frameIndex)
-    : m_frameIndex(frameIndex) { }
+    : m_frameIndex(frameIndex)
+{
+}
 
-StopLoadingFrame::~StopLoadingFrame() {}
+StopLoadingFrame::~StopLoadingFrame()
+{
+}
 
 void StopLoadingFrame::dispatch(ReplayController& controller)
 {

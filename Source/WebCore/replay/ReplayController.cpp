@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011-2013 Brian Burg.
- *  Copyright (C) 2011-2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011-2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,16 +28,15 @@
  */
 
 #include "config.h"
+#include "ReplayController.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "ReplayController.h"
-
 #include "CacheController.h"
 #include "CaptureInputIterator.h"
+#include "DOMWindow.h"
 #include "DisableCache.h"
 #include "DocumentLoader.h"
-#include "DOMWindow.h"
 #include "EnableCache.h"
 #include "Event.h"
 #include "FrameTree.h"
@@ -96,7 +93,9 @@ ReplayController::ReplayController(Page& page)
     , m_cacheController(std::make_unique<CacheController>())
     , m_stopBeforeMarkIndex(0)
     , m_status(CannotReplay)
-    , m_errorStrategy(PauseOnError) { }
+    , m_errorStrategy(PauseOnError)
+{
+}
 
 ReplayController::~ReplayController()
 {
@@ -124,26 +123,22 @@ void ReplayController::beginCapturing()
     // Combine the following inputs into a single extent, since they are synchronous.
     EventLoopInputExtent extent(m_activeIterator.get());
 
-    // create begin sentinel
     m_activeIterator->storeInput(std::make_unique<BeginSentinel>());
 
     m_cacheController->disableCache();
     m_activeIterator->storeInput(std::make_unique<DisableCache>());
     m_activeIterator->storeInput(InitializeFocus::createFromPage(m_page));
     m_activeIterator->storeInput(InitializeWindow::createFromPage(m_page));
-    // attempt to pull reasonable values here to save in the log, and
-    // also to use for the initial refresh.
+    // Try to get reasonable values here to save in the log, and for the initial refresh.
     MainFrame& mainFrame = m_page.mainFrame();
-    m_activeIterator->storeInput(std::make_unique<NavigateToPage>(mainFrame.document()->securityOrigin(),
-                                                                  mainFrame.document()->url().string(),
-                                                                  mainFrame.loader().referrer()));
+    m_activeIterator->storeInput(std::make_unique<NavigateToPage>(mainFrame.document()->securityOrigin(), mainFrame.document()->url().string(), mainFrame.loader().referrer()));
 
-    // TODO: right now, the last two args make this page load count in the BFCache
+    // FIXME: right now, the last two args make this page load count in the BFCache
     // and the history. Is this a bad idea? They are not counted during replays.
     mainFrame.navigationScheduler().scheduleLocationChange(mainFrame.document()->securityOrigin(),
-                                                           mainFrame.document()->url(),
-                                                           mainFrame.loader().referrer(),
-                                                           false, false);
+        mainFrame.document()->url(),
+        mainFrame.loader().referrer(),
+        false, false);
 }
 
 bool ReplayController::endCapturing()
@@ -234,29 +229,29 @@ void ReplayController::replayToCompletion(ReplayMode mode)
 void ReplayController::cancelPlayback()
 {
     switch (m_status) {
-        case CannotReplay:
-            ASSERT_NOT_REACHED();
-        case PlaybackUninitialized:
-            break; // There's nothing to cancel.
+    case CannotReplay:
+        ASSERT_NOT_REACHED();
+    case PlaybackUninitialized:
+        break; // There's nothing to cancel.
 
-        // From here, we intentionally fall through the cases. Depending on the current state, we
-        // need to perform some or all of the following transitions to cancel gracefully:
-        //
-        //    running --> paused --> finished --> cancelled
-        case ReplayToStart:
-        case ReplayUpToMarkIndex:
-        case ReplayToCompletion:
-        case PlaybackResetting:
-            // This cancels any pending timers, and fires instrumentation.
-            pauseReplay();
+    // From here, we intentionally fall through the cases. Depending on the current state, we
+    // need to perform some or all of the following transitions to cancel gracefully:
+    //
+    //    running --> paused --> finished --> cancelled
+    case ReplayToStart:
+    case ReplayUpToMarkIndex:
+    case ReplayToCompletion:
+    case PlaybackResetting:
+        // This cancels any pending timers, and fires instrumentation.
+        pauseReplay();
 
-        case PlaybackPaused:
-            // This disconnects the determinism log from global object, and fires instrumentation.
-            finishReplay();
+    case PlaybackPaused:
+        // This disconnects the determinism log from global object, and fires instrumentation.
+        finishReplay();
 
-        case PlaybackFinished:
-            changeProxyMode(ReplayProxy::Open);
-            InspectorInstrumentation::playbackCancelled(&m_page);
+    case PlaybackFinished:
+        changeProxyMode(ReplayProxy::Open);
+        InspectorInstrumentation::playbackCancelled(&m_page);
     }
 }
 
@@ -317,9 +312,9 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
         return;
     }
 
-    if (m_errorStrategy == ContinueOnError) {
+    if (m_errorStrategy == ContinueOnError)
         LOG(DeterministicReplay, "%-20s Continuing past non-fatal error.", "ReplayController");
-    } else {
+    else {
         LOG(DeterministicReplay, "%-20s Reporting and pausing because of non-fatal error.", "ReplayController");
         pauseReplay();
         InspectorInstrumentation::playbackError(&m_page, isFatal, errorMessage);
@@ -329,9 +324,8 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
 void ReplayController::willDispatchInput(const EventLoopInput& input)
 {
     bool pauseAtSpecificMark = (m_status == ReplayUpToMarkIndex && m_stopBeforeMarkIndex == input.mark().index());
-    if (m_status == ReplayToStart || pauseAtSpecificMark) {
+    if (m_status == ReplayToStart || pauseAtSpecificMark)
         pauseReplay();
-    }
 }
 
 void ReplayController::didDispatchInput(const EventLoopInput& input)
@@ -429,15 +423,15 @@ void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 
 bool ReplayController::capturing() const
 {
-    return m_status == CannotReplay &&
-           m_activeIterator && m_activeIterator->isCapturing();
+    return m_status == CannotReplay
+        && m_activeIterator && m_activeIterator->isCapturing();
 }
 
 bool ReplayController::replaying() const
 {
-    return m_status != CannotReplay &&
-           m_status != PlaybackUninitialized &&
-           m_activeIterator && m_activeIterator->isReplaying();
+    return m_status != CannotReplay
+        && m_status != PlaybackUninitialized
+        && m_activeIterator && m_activeIterator->isReplaying();
 }
 
 EventLoopInputDispatcher& ReplayController::dispatcher() const
@@ -448,6 +442,6 @@ EventLoopInputDispatcher& ReplayController::dispatcher() const
     return static_cast<ReplayInputIterator*>(m_activeIterator.get())->dispatcher();
 }
 
-}; // namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)

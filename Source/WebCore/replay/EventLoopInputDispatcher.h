@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +39,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
-    class InputIterator;
+class InputIterator;
 }
 
 namespace WebCore {
@@ -56,8 +54,8 @@ enum ReplayMode {
 
 class EventLoopInputDispatcherClient {
 public:
-    EventLoopInputDispatcherClient() {}
-    virtual ~EventLoopInputDispatcherClient() {}
+    EventLoopInputDispatcherClient() { }
+    virtual ~EventLoopInputDispatcherClient() { }
 
     virtual void playbackError(bool isFatal, const String& errorMessage) =0;
     virtual void willDispatchInput(const EventLoopInput&) =0;
@@ -108,4 +106,3 @@ private:
 #endif // ENABLE(WEB_REPLAY)
 
 #endif // EventLoopInputDispatcher_h
-

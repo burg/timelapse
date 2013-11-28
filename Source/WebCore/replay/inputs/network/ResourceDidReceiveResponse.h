@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,9 +43,9 @@ class ReplayController;
 
 class ResourceDidReceiveResponse : public EventLoopInput, public ResourceCallback {
 public:
-    ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, const ResourceResponse& response);
-    ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceResponse> response);
-    virtual ~ResourceDidReceiveResponse() {}
+    ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, const ResourceResponse&);
+    ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceResponse>);
+    virtual ~ResourceDidReceiveResponse() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -63,8 +61,8 @@ private:
 };
 
 template<> struct InputCoder<ResourceDidReceiveResponse> {
-    static void encode(EncoderContext& encoder, const ResourceDidReceiveResponse& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidReceiveResponse>& input);
+    static void encode(EncoderContext&, const ResourceDidReceiveResponse& input);
+    static bool decode(DecoderContext&, std::unique_ptr<ResourceDidReceiveResponse>& input);
 };
 
 } // namespace WebCore

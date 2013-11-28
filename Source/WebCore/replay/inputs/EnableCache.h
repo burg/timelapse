@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, 2013 Brian Burg.
- *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012, 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,11 +45,11 @@ class EnableCache : public EventLoopInput {
 
 public:
     EnableCache()
-    : EventLoopInput() {}
-    virtual ~EnableCache() {};
+        : EventLoopInput() { }
+    virtual ~EnableCache() { }
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController& controller) OVERRIDE;
+    virtual void dispatch(ReplayController&) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
@@ -61,11 +59,11 @@ public:
 };
 
 template<> struct InputCoder<EnableCache> {
-    static void encode(EncoderContext& encoder, const EnableCache& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<EnableCache>& input);
+    static void encode(EncoderContext&, const EnableCache& input);
+    static bool decode(DecoderContext&, std::unique_ptr<EnableCache>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

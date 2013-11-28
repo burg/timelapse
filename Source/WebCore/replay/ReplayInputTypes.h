@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington.
  * Copyright (C) 2005, 2007 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
  *
@@ -76,9 +76,9 @@ class ReplayInputTypes {
     friend class ThreadGlobalData;
 
 public:
-    #define REPLAY_INPUT_TYPES_DECLARE(name) AtomicString name;
+#define REPLAY_INPUT_TYPES_DECLARE(name) AtomicString name;
     REPLAY_INPUT_TYPES_FOR_EACH(REPLAY_INPUT_TYPES_DECLARE)
-    #undef REPLAY_INPUT_TYPES_DECLARE
+#undef REPLAY_INPUT_TYPES_DECLARE
 
     // Inputs that depend on specific compilation options go here.
 #if PLATFORM(MAC)

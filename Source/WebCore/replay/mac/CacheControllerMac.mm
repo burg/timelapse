@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,17 +28,16 @@
  */
 
 #include "config.h"
+#include "CacheController.h"
 
 #if ENABLE(WEB_REPLAY)
-
-#include "CacheController.h"
 
 #include "Logging.h"
 #include "MemoryCache.h"
 
 namespace WebCore {
 
-CacheController::~CacheController() {}
+CacheController::~CacheController() { }
 
 void CacheController::enableCache()
 {
@@ -50,7 +47,7 @@ void CacheController::enableCache()
     m_haveSavedSettings = false;
     [NSURLCache setSharedURLCache:m_savedCache.get()];
     LOG(DeterministicReplay, "%-30s Reverted to using the shared NSURLCache.\n", "[CacheController]");
-    // empty dummy cache so next use of it starts fresh.
+    // Empty dummy cache so next use of it starts fresh.
     [m_dummyCache.get() removeAllCachedResponses];
     m_savedCache.clear();
 }
@@ -59,7 +56,7 @@ void CacheController::disableCache(bool saveSettings)
 {
     if (saveSettings) {
         m_savedCache = [NSURLCache sharedURLCache];
-	m_haveSavedSettings = true;
+        m_haveSavedSettings = true;
     }
 
     if (!m_dummyCache) {

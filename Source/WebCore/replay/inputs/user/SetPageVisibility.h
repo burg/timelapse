@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013, University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,9 +44,9 @@ class SetPageVisibility : public EventLoopInput {
 
 public:
     SetPageVisibility(PageVisibilityState visibilityState, bool isInitialState)
-    : m_visibilityState(visibilityState)
-    , m_isInitialState(isInitialState) {}
-    virtual ~SetPageVisibility() {}
+        : m_visibilityState(visibilityState)
+        , m_isInitialState(isInitialState) { }
+    virtual ~SetPageVisibility() { }
 
     PageVisibilityState visibilityState() const { return m_visibilityState; }
     bool isInitialState() const { return m_isInitialState; }
@@ -65,11 +65,11 @@ private:
 };
 
 template<> struct InputCoder<SetPageVisibility> {
-    static void encode(EncoderContext& encoder, const SetPageVisibility& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<SetPageVisibility>& input);
+    static void encode(EncoderContext&, const SetPageVisibility& input);
+    static bool decode(DecoderContext&, std::unique_ptr<SetPageVisibility>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY) && ENABLE(PAGE_VISIBILITY_API)
 

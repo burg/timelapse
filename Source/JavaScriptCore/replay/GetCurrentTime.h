@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, 2012 Brian Burg.
- *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +30,8 @@
 #ifndef GetCurrentTime_h
 #define GetCurrentTime_h
 
+#if ENABLE(WEB_REPLAY)
+
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace JSC {
@@ -55,5 +55,7 @@ private:
 };
 
 } // namespace JSC
+
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // GetCurrentTime_h

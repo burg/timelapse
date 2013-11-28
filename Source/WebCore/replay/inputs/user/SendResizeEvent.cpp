@@ -1,7 +1,6 @@
 /*
- *  Copyright (C) 2012, Jake Bailey.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 Jake Bailey.
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +29,13 @@
  */
 
 #include "config.h"
+#include "SendResizeEvent.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "SendResizeEvent.h"
-
+#include "DOMWindow.h"
 #include "DecoderContext.h"
 #include "Document.h"
-#include "DOMWindow.h"
 #include "EncoderContext.h"
 #include "Frame.h"
 #include "Page.h"
@@ -50,7 +48,9 @@ namespace WebCore {
 SendResizeEvent::SendResizeEvent(int width, int height, int frameIndex)
     : m_width(width)
     , m_height(height)
-    , m_frameIndex(frameIndex) {}
+    , m_frameIndex(frameIndex)
+{
+}
 
 void SendResizeEvent::dispatch(ReplayController& controller)
 {

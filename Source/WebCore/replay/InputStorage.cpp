@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,43 +28,41 @@
  */
 
 #include "config.h"
+#include "InputStorage.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "InputStorage.h"
-
 #include "Logging.h"
-#include <wtf/Noncopyable.h>
-#include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
 
 #if !defined(NDEBUG)
-static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue, bool isLoad) {
-    if (isLoad)
+static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue, bool isLoad)
+{
+    if (isLoad) {
         switch (queue) {
-            case NondeterministicInput::EventLoopInputQueue:     return "(DSPTCH-LOAD)";
-            case NondeterministicInput::LoaderMemoizedDataQueue: return "<LDMEMO-LOAD";
-            case NondeterministicInput::ScriptMemoizedDataQueue: return "<---<---<---JSMEMO-LOAD";
-            case NondeterministicInput::QueueTypeLength:         return "ERROR!";
+        case NondeterministicInput::EventLoopInputQueue:     return "(DSPTCH-LOAD)";
+        case NondeterministicInput::LoaderMemoizedDataQueue: return "<LDMEMO-LOAD";
+        case NondeterministicInput::ScriptMemoizedDataQueue: return "<---<---<---JSMEMO-LOAD";
+        case NondeterministicInput::QueueTypeLength:         return "ERROR!";
         }
-
-    else
+    } else {
         switch (queue) {
-            case NondeterministicInput::EventLoopInputQueue:     return ">DSPTCH-STORE";
-            case NondeterministicInput::LoaderMemoizedDataQueue: return "<LDMEMO-STORE";
-            case NondeterministicInput::ScriptMemoizedDataQueue: return "<---<---<---JSMEMO-STORE";
-            case NondeterministicInput::QueueTypeLength:         return "ERROR!";
+        case NondeterministicInput::EventLoopInputQueue:     return ">DSPTCH-STORE";
+        case NondeterministicInput::LoaderMemoizedDataQueue: return "<LDMEMO-STORE";
+        case NondeterministicInput::ScriptMemoizedDataQueue: return "<---<---<---JSMEMO-STORE";
+        case NondeterministicInput::QueueTypeLength:         return "ERROR!";
         }
+    }
 }
 #endif
 
 namespace WebCore {
 
 InputStorage::InputStorage()
-: m_inputCount(0)
-, m_readOnly(false)
+    : m_inputCount(0)
+    , m_readOnly(false)
 {
     for (size_t i = 0; i < NondeterministicInput::QueueTypeLength; i++)
         m_queues.append(new InputQueue());

@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +30,8 @@
 #ifndef DecoderContext_h
 #define DecoderContext_h
 
+#if ENABLE(WEB_REPLAY)
+
 #include "InputCoder.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
@@ -40,10 +40,9 @@ namespace WebCore {
 
 class DecoderContext {
     WTF_MAKE_NONCOPYABLE(DecoderContext);
-
 public:
-    DecoderContext() {}
-    virtual ~DecoderContext() {}
+    DecoderContext() { }
+    virtual ~DecoderContext() { }
 
     template<typename T> void decode(const T& t)
     {
@@ -52,7 +51,7 @@ public:
 
     // Templatized interface to decode values succinctly.
     template<typename T> bool get(const String&, T&);
-    // TODO: This should use iterators, I think?
+    // FIXME: This should use iterators or something less stateful.
     template<typename T> bool pop(T&);
 
 protected:
@@ -72,50 +71,63 @@ protected:
 };
 
 // Redirectors to virtual methods.
-template<> inline bool DecoderContext::get(const String& key, bool& result) {
+template<> inline bool DecoderContext::get(const String& key, bool& result)
+{
     return getBoolean(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, Vector<char>& result) {
+template<> inline bool DecoderContext::get(const String& key, Vector<char>& result)
+{
     return getBytes(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, std::unique_ptr<DecoderContext>& result) {
+template<> inline bool DecoderContext::get(const String& key, std::unique_ptr<DecoderContext>& result)
+{
     return getContext(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, double& result) {
+template<> inline bool DecoderContext::get(const String& key, double& result)
+{
     return getDouble(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, float& result) {
+template<> inline bool DecoderContext::get(const String& key, float& result)
+{
     return getFloat(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, int32_t& result) {
+template<> inline bool DecoderContext::get(const String& key, int32_t& result)
+{
     return getInt32(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, int64_t& result) {
+template<> inline bool DecoderContext::get(const String& key, int64_t& result)
+{
     return getInt64(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, String& result) {
+template<> inline bool DecoderContext::get(const String& key, String& result)
+{
     return getString(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, uint32_t& result) {
+template<> inline bool DecoderContext::get(const String& key, uint32_t& result)
+{
     return getUInt32(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, uint64_t& result) {
+template<> inline bool DecoderContext::get(const String& key, uint64_t& result)
+{
     return getUInt64(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, unsigned long& result) {
+template<> inline bool DecoderContext::get(const String& key, unsigned long& result)
+{
     return getULong(key, result);
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // DecoderContext_h

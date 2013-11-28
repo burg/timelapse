@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, 2012 Brian Burg.
- *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,8 +34,8 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
+#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -47,9 +45,9 @@ class Page;
 class TimerCreated : public NondeterministicInput {
 public:
     TimerCreated(int timerId, int frameIndex)
-    : m_timerId(timerId)
-    , m_frameIndex(frameIndex) {}
-    virtual ~TimerCreated() {}
+        : m_timerId(timerId)
+        , m_frameIndex(frameIndex) { }
+    virtual ~TimerCreated() { }
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
@@ -62,18 +60,18 @@ public:
 
     int timerId() const { return m_timerId; }
     int frameIndex() const { return m_frameIndex; }
-    Document* document(Page* page) const;
+    Document* document(Page*) const;
 private:
     int m_timerId;
     int m_frameIndex;
 };
 
 template<> struct InputCoder<TimerCreated> {
-    static void encode(EncoderContext& encoder, const TimerCreated& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<TimerCreated>& input);
+    static void encode(EncoderContext&, const TimerCreated& input);
+    static bool decode(DecoderContext&, std::unique_ptr<TimerCreated>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

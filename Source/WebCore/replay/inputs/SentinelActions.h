@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,11 +42,10 @@ class EventLoopInputDispatcher;
 class ReplayController;
 
 class BeginSentinel : public EventLoopInput {
-
 public:
     BeginSentinel()
-    : EventLoopInput() {}
-    virtual ~BeginSentinel() {};
+        : EventLoopInput() { }
+    virtual ~BeginSentinel() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -61,16 +58,15 @@ public:
 };
 
 template<> struct InputCoder<BeginSentinel> {
-    static void encode(EncoderContext& encoder, const BeginSentinel& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<BeginSentinel>& input);
+    static void encode(EncoderContext&, const BeginSentinel& input);
+    static bool decode(DecoderContext&, std::unique_ptr<BeginSentinel>& input);
 };
 
 class EndSentinel : public EventLoopInput {
-
 public:
     EndSentinel()
-    : EventLoopInput() {}
-    virtual ~EndSentinel() {};
+        : EventLoopInput() { }
+    virtual ~EndSentinel() { }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -83,11 +79,11 @@ public:
 };
 
 template<> struct InputCoder<EndSentinel> {
-    static void encode(EncoderContext& encoder, const EndSentinel& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<EndSentinel>& input);
+    static void encode(EncoderContext&, const EndSentinel& input);
+    static bool decode(DecoderContext&, std::unique_ptr<EndSentinel>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2013, University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +30,8 @@
 #ifndef EncoderContext_h
 #define EncoderContext_h
 
+#if ENABLE(WEB_REPLAY)
+
 #include "InputCoder.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/text/WTFString.h>
@@ -40,10 +40,9 @@ namespace WebCore {
 
 class EncoderContext {
     WTF_MAKE_NONCOPYABLE(EncoderContext);
-
 public:
-    EncoderContext() {}
-    virtual ~EncoderContext() {}
+    EncoderContext() { }
+    virtual ~EncoderContext() { }
 
     template<typename T> void encode(const T& t)
     {
@@ -83,62 +82,78 @@ public:
 };
 
 // Redirectors to virtual methods.
-template<> inline void EncoderContext::put(const String& key, const bool& value) {
+template<> inline void EncoderContext::put(const String& key, const bool& value)
+{
     return putBoolean(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const EncoderContext& value) {
+template<> inline void EncoderContext::put(const String& key, const EncoderContext& value)
+{
     return putContext(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const double& value) {
+template<> inline void EncoderContext::put(const String& key, const double& value)
+{
     return putDouble(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const float& value) {
+template<> inline void EncoderContext::put(const String& key, const float& value)
+{
     return putFloat(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const int32_t& value) {
+template<> inline void EncoderContext::put(const String& key, const int32_t& value)
+{
     return putInt32(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const int64_t& value) {
+template<> inline void EncoderContext::put(const String& key, const int64_t& value)
+{
     return putInt64(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const String& value) {
+template<> inline void EncoderContext::put(const String& key, const String& value)
+{
     return putString(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const uint32_t& value) {
+template<> inline void EncoderContext::put(const String& key, const uint32_t& value)
+{
     return putUInt32(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const uint64_t& value) {
+template<> inline void EncoderContext::put(const String& key, const uint64_t& value)
+{
     return putUInt64(key, value);
 }
 
-template<> inline void EncoderContext::put(const String& key, const unsigned long& value) {
+template<> inline void EncoderContext::put(const String& key, const unsigned long& value)
+{
     return putULong(key, value);
 }
 
-template<> inline void EncoderContext::append(const EncoderContext& value) {
+template<> inline void EncoderContext::append(const EncoderContext& value)
+{
     return appendContext(value);
 }
 
-template<> inline void EncoderContext::append(const int32_t& value) {
+template<> inline void EncoderContext::append(const int32_t& value)
+{
     return appendInt32(value);
 }
 
-template<> inline void EncoderContext::append(const String& value) {
+template<> inline void EncoderContext::append(const String& value)
+{
     return appendString(value);
 }
 
-template<> inline void EncoderContext::append(const uint32_t& value) {
+template<> inline void EncoderContext::append(const uint32_t& value)
+{
     return appendUInt32(value);
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // EncoderContext_h

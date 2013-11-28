@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
- *
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,10 +40,9 @@ namespace WebCore {
 class ReplayController;
 
 class TimerFired : public EventLoopInput {
-
 public:
     TimerFired(int timerId, int frameIndex);
-    virtual ~TimerFired() {}
+    virtual ~TimerFired() { }
 
     int timerId() const { return m_timerId; }
     int frameIndex() const { return m_frameIndex; }
@@ -64,11 +61,11 @@ private:
 };
 
 template<> struct InputCoder<TimerFired> {
-    static void encode(EncoderContext& encoder, const TimerFired& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<TimerFired>& input);
+    static void encode(EncoderContext&, const TimerFired& input);
+    static bool decode(DecoderContext&, std::unique_ptr<TimerFired>& input);
 };
 
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 

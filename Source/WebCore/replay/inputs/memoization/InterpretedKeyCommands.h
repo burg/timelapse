@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2012 Brian Burg.
- *  Copyright (C) 2012 University of Washington. All rights reserved.
- *
+ * Copyright (C) 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,15 +27,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #ifndef InterpretedKeyCommands_h
 #define InterpretedKeyCommands_h
 
 #if ENABLE(WEB_REPLAY) && PLATFORM(MAC)
 
 #include "InputCoder.h"
-#include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>
+#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
@@ -56,14 +53,13 @@ public:
     void serialize(EncoderContext&) const;
 
     const Vector<KeypressCommand>& commands() const { return m_commands; }
-
 private:
     Vector<KeypressCommand> m_commands;
 };
 
 template<> struct InputCoder<InterpretedKeyCommands> {
-    static void encode(EncoderContext& encoder, const InterpretedKeyCommands& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<InterpretedKeyCommands>& input);
+    static void encode(EncoderContext&, const InterpretedKeyCommands& input);
+    static bool decode(DecoderContext&, std::unique_ptr<InterpretedKeyCommands>& input);
 };
 
 } // namespace WebCore
