@@ -49,7 +49,6 @@ DOMAIN_DEFINE_NAME_MAP = {
     "IndexedDB": "INDEXED_DATABASE",
     "Profiler": "JAVASCRIPT_DEBUGGER",
     "Replay": "WEB_REPLAY",
-    "Recordings": "WEB_REPLAY",
     "Worker": "WORKERS",
 }
 

@@ -195,17 +195,17 @@ void JSONListEncoder::appendUInt32(uint32_t value)
 
 class SerializeInputToJSONFunctor {
 public:
-    typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > ReturnType;
+    typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInput> > ReturnType;
 
     SerializeInputToJSONFunctor()
-        : m_inputs(TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput>::create()) { }
+        : m_inputs(TypeBuilder::Array<TypeBuilder::Replay::ReplayInput>::create()) { }
     ~SerializeInputToJSONFunctor() { }
 
     void operator()(size_t index, const NondeterministicInput* input)
     {
         LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type().string().ascii().data());
 
-        RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = JSONCoder::serializeInput(input, index);
+        RefPtr<TypeBuilder::Replay::ReplayInput> serializedInput = JSONCoder::serializeInput(input, index);
         if (!serializedInput)
             return;
 
@@ -214,27 +214,27 @@ public:
 
     ReturnType returnValue() { return m_inputs.release(); }
 private:
-    RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > m_inputs;
+    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInput> > m_inputs;
 };
 
-PassRefPtr<TypeBuilder::Recordings::ReplayRecording> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
+PassRefPtr<TypeBuilder::Replay::ReplayRecording> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue>::create();
+    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Replay::ReplayInputQueue>::create();
 
     for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
         SerializeInputToJSONFunctor collector;
         NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
-        RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
+        RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
 
-        RefPtr<TypeBuilder::Recordings::ReplayInputQueue> queue = TypeBuilder::Recordings::ReplayInputQueue::create()
+        RefPtr<TypeBuilder::Replay::ReplayInputQueue> queue = TypeBuilder::Replay::ReplayInputQueue::create()
             .setType(queueTypeToString(queueType))
             .setInputs(queueInputs);
 
         queues->addItem(queue.release());
     }
 
-    RefPtr<TypeBuilder::Recordings::ReplayRecording> recordingObject = TypeBuilder::Recordings::ReplayRecording::create()
+    RefPtr<TypeBuilder::Replay::ReplayRecording> recordingObject = TypeBuilder::Replay::ReplayRecording::create()
         .setUid(recording->uid())
         .setDateCreated(recording->creationTimestamp())
         .setMemorySize(recording->memorySize())
@@ -243,7 +243,7 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecording> JSONCoder::serialize(PassRe
     return recordingObject;
 }
 
-PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONCoder::serializeInput(const NondeterministicInput* input, int index)
+PassRefPtr<TypeBuilder::Replay::ReplayInput> JSONCoder::serializeInput(const NondeterministicInput* input, int index)
 {
     std::unique_ptr<EncoderContext> encodedInput = JSONCoder::createMap();
     encodedInput->put("id", (uint64_t)index);
@@ -255,7 +255,7 @@ PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONCoder::serializeInput(const
     if (!dispatchTypeSpecificEncodeMethod(*encodedInput, input))
         return 0;
 
-    RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = TypeBuilder::Recordings::ReplayInput::create()
+    RefPtr<TypeBuilder::Replay::ReplayInput> serializedInput = TypeBuilder::Replay::ReplayInput::create()
         .setType(input->type())
         .setData(static_cast<JSONEncoderContext*>(encodedInput.get())->encodedValue()->asObject());
 

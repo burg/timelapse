@@ -38,7 +38,7 @@ WebInspector.RecordingsManager = function()
     this._recordingsByUID = {};
 
     // load recordings that may already be available on backend.
-    RecordingsAgent.getAvailableRecordings(this._updateAvailableRecordings.bind(this));
+    ReplayAgent.getAvailableRecordings(this._updateAvailableRecordings.bind(this));
 }
 
 WebInspector.RecordingsManager.Event = {
@@ -71,7 +71,7 @@ WebInspector.RecordingsManager.prototype = {
 
         filename = filename || recording.filename() || WebInspector.UIString("SavedRecording.webreplay");
 
-        RecordingsAgent.getSerializedRecording(recording.uid, function(error, data) {
+        ReplayAgent.getSerializedRecording(recording.uid, function(error, data) {
             if (error) {
                 console.error("Couldn't save recording to disk: " + error);
                 return;
@@ -105,7 +105,7 @@ WebInspector.RecordingsManager.prototype = {
             this.dispatchEventToListeners(WebInspector.RecordingsManager.Event.RecordingAdded, recording);
         };
 
-        RecordingsAgent.getSerializedRecording(uid, loadDataForRecording.bind(this, newRecording));
+        ReplayAgent.getSerializedRecording(uid, loadDataForRecording.bind(this, newRecording));
     },
 
     removeRecording: function(recording) {

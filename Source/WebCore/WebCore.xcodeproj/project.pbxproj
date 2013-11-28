@@ -5322,8 +5322,6 @@
 		C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */; };
 		C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA712171776FA001A8BB4 /* EventLoopInput.h */; };
 		C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA71517178087001A8BB4 /* FunctorInputIterator.h */; };
-		C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */; };
-		C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */; };
 		C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */; };
 		C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */; };
 		C4A898B017E3BC0400C74A2C /* StopLoadingFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */; };
@@ -12464,8 +12462,6 @@
 		C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventLoopInput.cpp; sourceTree = "<group>"; };
 		C48EA712171776FA001A8BB4 /* EventLoopInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventLoopInput.h; sourceTree = "<group>"; };
 		C48EA71517178087001A8BB4 /* FunctorInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FunctorInputIterator.h; path = replay/FunctorInputIterator.h; sourceTree = "<group>"; };
-		C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorRecordingsAgent.cpp; sourceTree = "<group>"; };
-		C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorRecordingsAgent.h; sourceTree = "<group>"; };
 		C493493517A431C90054AC75 /* ResourceHandleClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceHandleClient.cpp; sourceTree = "<group>"; };
 		C493493717A432350054AC75 /* PageConsole.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PageConsole.cpp; sourceTree = "<group>"; };
 		C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EventLoopInputDispatcher.cpp; path = replay/EventLoopInputDispatcher.cpp; sourceTree = "<group>"; };
@@ -14690,8 +14686,6 @@
 				4F6FDD631341DEDD001F8EE3 /* InspectorPageAgent.h */,
 				9F0D6B2C121BFEBA006C0288 /* InspectorProfilerAgent.cpp */,
 				9F0D6B2D121BFEBA006C0288 /* InspectorProfilerAgent.h */,
-				C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */,
-				C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */,
 				C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */,
 				C4F7F9391705EA1F005AB205 /* InspectorReplayAgent.h */,
 				82AB1771125C826700C5069D /* InspectorResourceAgent.cpp */,
@@ -25651,7 +25645,6 @@
 				C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */,
 				C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */,
 				C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */,
-				C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */,
 				C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */,
 				C4F4CA44175AC86B00F71FE1 /* DecoderContext.h in Headers */,
 				C4F4CA45175AC86B00F71FE1 /* EncoderContext.h in Headers */,
@@ -28796,7 +28789,6 @@
 				C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */,
 				C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */,
 				C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */,
-				C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */,
 				C4F4CA4B175AF4DC00F71FE1 /* TimerCreated.cpp in Sources */,
 				C4F4CA4E175AF8D200F71FE1 /* JSONEncoderContext.cpp in Sources */,
 				C4F4CA52175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp in Sources */,

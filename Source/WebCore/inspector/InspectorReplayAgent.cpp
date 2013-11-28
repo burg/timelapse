@@ -39,7 +39,6 @@
 #include "InspectorDebuggerAgent.h"
 #include "InspectorFrontend.h"
 #include "InspectorPageAgent.h"
-#include "InspectorRecordingsAgent.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "JSONEncoderContext.h"
@@ -138,17 +137,29 @@ void InspectorReplayAgent::recordingUnloaded()
 
 void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecording)
 {
+    RefPtr<ReplayRecording> recording = prpRecording;
+    // In case we didn't know about the loaded recording, add here.
+    m_recordingsMap.add(recording->uid(), recording);
+
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
 
     if (m_frontendDispatcher)
-        m_frontendDispatcher->recordingLoaded(prpRecording->uid());
+        m_frontendDispatcher->recordingLoaded(recording->uid());
 }
 
 void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecording)
 {
+    RefPtr<ReplayRecording> recording = prpRecording;
+    RecordingsMap::AddResult result = m_recordingsMap.add(recording->uid(), recording);
+    // Can't have two recordings with same uid.
+    ASSERT_UNUSED(result, result.isNewEntry);
+
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->recordingAdded(recording->uid());
+
     // Automatically load the created recording if nothing else is loaded.
     if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded))
-        m_page->replayController().loadRecording(prpRecording);
+        m_page->replayController().loadRecording(recording);
 }
 
 void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
@@ -165,7 +176,7 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
     if (!input->isUserVisible())
         return;
 
-    RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = JSONCoder::serializeInput(input, newMark.index());
+    RefPtr<TypeBuilder::Replay::ReplayInput> serializedInput = JSONCoder::serializeInput(input, newMark.index());
     if (serializedInput)
         m_frontendDispatcher->capturedInput(serializedInput.release());
 }
@@ -361,8 +372,7 @@ void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
 
 void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool* wasAllowed)
 {
-    InspectorRecordingsAgent* recordingsAgent = m_instrumentingAgents->inspectorRecordingsAgent();
-    RefPtr<ReplayRecording> recording = recordingsAgent->findRecording(errorString, uid);
+    RefPtr<ReplayRecording> recording = findRecording(errorString, uid);
     if (!recording) {
         *wasAllowed = false;
         return;
@@ -382,6 +392,36 @@ void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAl
     *wasAllowed = m_page->replayController().unloadRecording();
 }
 
-}; // namespace WebCore
+PassRefPtr<ReplayRecording> InspectorReplayAgent::findRecording(ErrorString* errorString, int uid)
+{
+    ASSERT(uid >= 0);
+
+    RecordingsMap::iterator it = m_recordingsMap.find(uid);
+    if (it == m_recordingsMap.end()) {
+        *errorString = "Couldn't find recording with specified uid";
+        return nullptr;
+    }
+
+    return it->value;
+}
+
+void InspectorReplayAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<TypeBuilder::Replay::ReplayRecording>& serializedObject)
+{
+    RefPtr<ReplayRecording> recording = findRecording(errorString, uid);
+    if (!recording)
+        return;
+
+    serializedObject = JSONCoder::serialize(recording);
+}
+
+void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
+{
+    recordingsList = TypeBuilder::Array<int>::create();
+    for (RecordingsMap::iterator it = m_recordingsMap.begin(); it != m_recordingsMap.end(); ++it) {
+        recordingsList->addItem(it->key);
+    }
+}
+
+} // namespace WebCore
 
 #endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)

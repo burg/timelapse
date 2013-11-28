@@ -45,8 +45,8 @@ class ReplayRecording;
 
 class JSONCoder {
 public:
-    static PassRefPtr<TypeBuilder::Recordings::ReplayRecording> serialize(PassRefPtr<ReplayRecording>);
-    static PassRefPtr<TypeBuilder::Recordings::ReplayInput> serializeInput(const NondeterministicInput*, int index = 0);
+    static PassRefPtr<TypeBuilder::Replay::ReplayRecording> serialize(PassRefPtr<ReplayRecording>);
+    static PassRefPtr<TypeBuilder::Replay::ReplayInput> serializeInput(const NondeterministicInput*, int index = 0);
     static std::unique_ptr<EncoderContext> createMap();
     static std::unique_ptr<EncoderContext> createList();
 };

@@ -53,7 +53,6 @@ class InspectorLayerTreeAgent;
 class InspectorPageAgent;
 class InspectorProfilerAgent;
 class InspectorResourceAgent;
-class InspectorRecordingsAgent;
 class InspectorReplayAgent;
 class InspectorTimelineAgent;
 class InspectorWorkerAgent;
@@ -96,9 +95,6 @@ public:
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
 
 #if ENABLE(WEB_REPLAY)
-    InspectorRecordingsAgent* inspectorRecordingsAgent() const { return m_inspectorRecordingsAgent; }
-    void setInspectorRecordingsAgent(InspectorRecordingsAgent* agent) { m_inspectorRecordingsAgent = agent; }
-
     InspectorReplayAgent* inspectorReplayAgent() const { return m_inspectorReplayAgent; }
     void setInspectorReplayAgent(InspectorReplayAgent* agent) { m_inspectorReplayAgent = agent; }
 #endif
@@ -164,7 +160,6 @@ private:
     InspectorResourceAgent* m_inspectorResourceAgent;
     PageRuntimeAgent* m_pageRuntimeAgent;
 #if ENABLE(WEB_REPLAY)
-    InspectorRecordingsAgent* m_inspectorRecordingsAgent;
     InspectorReplayAgent* m_inspectorReplayAgent;
 #endif
     WorkerRuntimeAgent* m_workerRuntimeAgent;

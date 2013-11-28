@@ -82,10 +82,6 @@ public:
 #ifndef NDEBUG
     void willCallFunction(const String&, int scriptLine, Frame*);
 #endif
-
-    bool capturing() const { return m_stateMachine.capturing(); }
-    bool replaying() const { return m_stateMachine.replaying(); }
-
     void recordingUnloaded();
     void recordingLoaded(PassRefPtr<ReplayRecording>);
     void recordingCreated(PassRefPtr<ReplayRecording>);
@@ -99,6 +95,9 @@ public:
     void playbackCancelled();
     void playbackError(bool isFatal, const String&);
     void imageCaptured(const String&);
+
+    bool capturing() const { return m_stateMachine.capturing(); }
+    bool replaying() const { return m_stateMachine.replaying(); }
 
     // Figures out current state and stops everything.
     void stop();
@@ -118,11 +117,17 @@ public:
     void loadRecording(ErrorString*, int, bool*);
     void unloadRecording(ErrorString*, bool*);
 
+    void getSerializedRecording(ErrorString*, int, RefPtr<TypeBuilder::Replay::ReplayRecording>&);
+    void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int>>&);
+
 private:
     InspectorReplayAgent(InstrumentingAgents*, InspectorPageAgent*);
     PositionMark createMark();
     PositionMark reuseMark() const;
     void reset();
+
+    // Helper method that's also shared with InspectorReplayAgent.
+    PassRefPtr<ReplayRecording> findRecording(ErrorString*, int uid);
 
     std::unique_ptr<InspectorReplayFrontendDispatcher> m_frontendDispatcher;
     RefPtr<InspectorReplayBackendDispatcher> m_backendDispatcher;
@@ -131,8 +136,10 @@ private:
     ReplayAgentStateMachine m_stateMachine;
     unsigned m_nextMarkIndex;
     unsigned m_lastHitMarkIndex;
-
     bool m_inputLocked;
+
+    typedef HashMap<int, RefPtr<ReplayRecording>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > RecordingsMap;
+    RecordingsMap m_recordingsMap;
 };
 
 } // namespace WebCore

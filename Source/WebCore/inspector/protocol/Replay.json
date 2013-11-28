@@ -1,6 +1,54 @@
 {
     "domain": "Replay",
-    "description": "Controls per-page deterministic record/replay. In capture mode, nondeterministic inputs are captured into a log (aka recording). In replaying mode, the captured execution is replicated by reusing nondeterministic inputs.",
+    "description": "Controls deterministic record/replay behaviors, and manages replayable recordings and sessions.",
+    "types": [
+        {
+            "id": "RecordingId",
+            "type": "integer",
+            "description": "Unique replay recording identifier."
+        },
+        {
+            "id": "MarkIndex",
+            "type": "integer",
+            "description": "The mark index type."
+        },
+        {
+            "id": "Mark",
+            "type": "object",
+            "properties": [
+               { "name": "index", "$ref": "MarkIndex", "description": "The index of this mark." },
+               { "name": "timestamp", "type": "number", "description": "The timestamp of this mark." }
+            ],
+            "description": "The index and timestamp of an input action."
+        },
+        {
+            "id": "ReplayInput",
+            "type": "object",
+            "properties": [
+                { "name": "type", "type": "string", "description": "Input type." },
+                { "name": "data", "type": "object", "description": "Per-input payload." }
+            ]
+        },
+        {
+            "id": "ReplayInputQueue",
+            "type": "object",
+            "properties": [
+                { "name": "type", "type": "string", "description": "Queue type" },
+                { "name": "inputs", "type": "array", "items": { "$ref": "ReplayInput"}, "description": "Inputs belonging to this queue." }
+            ]
+        },
+        {
+            "id": "ReplayRecording",
+            "type": "object",
+            "properties": [
+                { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
+                { "name": "dateCreated", "type": "number", "description": "Creation time of recording, in milliseconds since the epoch." },
+                { "name": "memorySize", "type": "number", "description": "Approximate size of in-memory recording representation." },
+                { "name": "queues", "type": "array", "items": { "$ref": "ReplayInputQueue"} }
+            ],
+            "description": "A replay recording serialized to JSON."
+        }
+    ],
     "commands": [
         {
             "name": "enable"
@@ -29,7 +77,7 @@
             "name": "replayUpToMarkIndex",
             "description": "Replays the program up to a specific point, called a mark.  command will bring the replay execution up to the point before the first input with the specified mark is used.",
             "parameters": [
-                { "name": "markIndex", "$ref": "Recordings.MarkIndex" },
+                { "name": "markIndex", "$ref": "MarkIndex" },
                 { "name": "fastReplay", "type": "boolean" }
             ]
         },
@@ -62,7 +110,7 @@
             "name": "loadRecording",
             "description": "Loads the specified recording",
             "parameters": [
-                { "name": "uid", "$ref": "Recordings.RecordingId" }
+                { "name": "uid", "$ref": "RecordingId" }
             ],
             "returns": [
                 { "name": "wasAllowed", "type": "boolean" }
@@ -73,6 +121,23 @@
             "description": "Unloads the currently loaded recording, if any is loaded.",
             "returns": [
                 { "name": "wasAllowed", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "getSerializedRecording",
+            "description": "Returns the recording serialized to a JSON object.",
+            "parameters": [
+                { "name": "uid", "$ref": "RecordingId" }
+            ],
+            "returns": [
+                { "name": "recording", "$ref": "ReplayRecording", "description": "the requested recording", "optional": true }
+            ]
+        },
+        {
+            "name": "getAvailableRecordings",
+            "description": "Returns uids for all available recordings.",
+            "returns": [
+                { "name": "recordingUids", "type": "array", "items": { "$ref": "RecordingId" } }
             ]
         }
     ],
@@ -96,14 +161,14 @@
             "name": "capturedInput",
             "description": "A new (event loop) input was captured.",
             "parameters": [
-                { "name": "input", "$ref": "Recordings.ReplayInput", "description": "Data for the captured (event loop) input." }
+                { "name": "input", "$ref": "ReplayInput", "description": "Data for the captured (event loop) input." }
             ]
         },
         {
             "name": "playbackHitMark",
             "description": "A mark was reached during the replay.",
             "parameters": [
-                { "name": "mark", "$ref": "Recordings.MarkIndex", "description": "The mark that was hit." }
+                { "name": "mark", "$ref": "MarkIndex", "description": "The mark that was hit." }
             ]
         },
         {
@@ -114,7 +179,7 @@
             "name": "playbackPaused",
             "description": "Fired when replaying has paused, but not finished.",
             "parameters": [
-                { "name": "mark", "$ref": "Recordings.MarkIndex", "description": "The mark of the input at which we paused, but has not yet been executed." }
+                { "name": "mark", "$ref": "MarkIndex", "description": "The mark of the input at which we paused, but has not yet been executed." }
             ]
         },
         {
@@ -141,7 +206,7 @@
             "name": "recordingLoaded",
             "description": "Fired when a recording is loaded.",
             "parameters": [
-                { "name": "uid", "$ref": "Recordings.RecordingId", "description": "Id for the loaded recording." }
+                { "name": "uid", "$ref": "RecordingId", "description": "Id for the loaded recording." }
             ]
         },
         {
@@ -153,6 +218,20 @@
             "description": "Fired when an image of a DOM node is captured.",
             "parameters": [
                 { "name": "image", "type": "string", "description": "A data URI encoding the captured image." }
+            ]
+        },
+        {
+            "name": "recordingAdded",
+            "description": "Fired when a new recording is created or found on the filesystem.",
+            "parameters": [
+                { "name": "uid", "$ref": "RecordingId", "description": "Id for the added recording." }
+            ]
+        },
+        {
+            "name": "recordingRemoved",
+            "description": "Fired when a recording is removed and can no longer be loaded.",
+            "parameters": [
+                { "name": "uid", "$ref": "RecordingId", "description": "Id for the removed recording." }
             ]
         }
     ]

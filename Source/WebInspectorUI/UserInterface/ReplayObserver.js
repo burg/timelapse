@@ -102,5 +102,15 @@ WebInspector.ReplayObserver.prototype = {
     recordingUnloaded: function()
     {
         WebInspector.replayManager.recordingUnloaded();
+    },
+
+    recordingAdded: function(uid)
+    {
+        WebInspector.recordingsManager.addRecording(uid);
+    },
+
+    recordingRemoved: function(uid)
+    {
+        WebInspector.recordingsManager.removeRecording(uid);
     }
 };

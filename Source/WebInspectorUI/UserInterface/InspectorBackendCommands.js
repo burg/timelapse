@@ -408,10 +408,6 @@ InspectorBackend.registerCommand("Worker.setAutoconnectToWorkers", [{"name": "va
 
 // Recordings.
 InspectorBackend.registerRecordingsDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Recordings");
-InspectorBackend.registerEvent("Recordings.recordingAdded", ["uid"]);
-InspectorBackend.registerEvent("Recordings.recordingRemoved", ["uid"]);
-InspectorBackend.registerCommand("Recordings.getSerializedRecording", [{"name": "uid", "type": "number", "optional": false}], ["recording"]);
-InspectorBackend.registerCommand("Recordings.getAvailableRecordings", [], ["recordingUids"]);
 
 // Replay.
 InspectorBackend.registerReplayDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Replay");
@@ -429,6 +425,8 @@ InspectorBackend.registerEvent("Replay.inputLocked", []);
 InspectorBackend.registerEvent("Replay.inputUnlocked", []);
 InspectorBackend.registerEvent("Replay.recordingLoaded", ["uid"]);
 InspectorBackend.registerEvent("Replay.recordingUnloaded", []);
+InspectorBackend.registerEvent("Replay.recordingAdded", ["uid"]);
+InspectorBackend.registerEvent("Replay.recordingRemoved", ["uid"]);
 InspectorBackend.registerCommand("Replay.enable", [], []);
 InspectorBackend.registerCommand("Replay.disable", [], []);
 InspectorBackend.registerCommand("Replay.isEnabled", [], ["state"]);
@@ -441,3 +439,5 @@ InspectorBackend.registerCommand("Replay.stopPlayback", [{"name": "unlock", "typ
 InspectorBackend.registerCommand("Replay.setPauseOnError", [{"name": "shouldPause", "type": "boolean", "optional": false}], []);
 InspectorBackend.registerCommand("Replay.loadRecording", [{"name": "uid", "type": "number", "optional": false}], ["wasAllowed"]);
 InspectorBackend.registerCommand("Replay.unloadRecording", [], ["wasAllowed"]);
+InspectorBackend.registerCommand("Replay.getSerializedRecording", [{"name": "uid", "type": "number", "optional": false}], ["recording"]);
+InspectorBackend.registerCommand("Replay.getAvailableRecordings", [], ["recordingUids"]);

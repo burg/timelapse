@@ -54,7 +54,6 @@ InstrumentingAgents::InstrumentingAgents()
     , m_inspectorResourceAgent(0)
     , m_pageRuntimeAgent(0)
 #if ENABLE(WEB_REPLAY)
-    , m_inspectorRecordingsAgent(0)
     , m_inspectorReplayAgent(0)
 #endif
     , m_workerRuntimeAgent(0)
@@ -90,7 +89,6 @@ void InstrumentingAgents::reset()
     m_inspectorResourceAgent = 0;
     m_pageRuntimeAgent = 0;
 #if ENABLE(WEB_REPLAY)
-    m_inspectorRecordingsAgent = 0;
     m_inspectorReplayAgent = 0;
 #endif
     m_workerRuntimeAgent = 0;

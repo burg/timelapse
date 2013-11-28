@@ -64,7 +64,6 @@
 #include "InspectorProfilerAgent.h"
 #include "InspectorResourceAgent.h"
 #include "InspectorTimelineAgent.h"
-#include "InspectorRecordingsAgent.h"
 #include "InspectorReplayAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
@@ -117,7 +116,6 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     m_agents.append(domStorageAgentPtr.release());
 
 #if ENABLE(WEB_REPLAY)
-    m_agents.append(InspectorRecordingsAgent::create(m_instrumentingAgents.get()));
     m_agents.append(InspectorReplayAgent::create(m_instrumentingAgents.get(), pageAgent));
 #endif
 
