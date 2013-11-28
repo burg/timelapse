@@ -676,6 +676,7 @@ INSPECTOR_DOMAINS = \
     $(WebCore)/inspector/protocol/Network.json \
     $(WebCore)/inspector/protocol/Page.json \
     $(WebCore)/inspector/protocol/Profiler.json \
+	$(WebCore)/inspector/protocol/Replay.json \
     $(WebCore)/inspector/protocol/Runtime.json \
     $(WebCore)/inspector/protocol/Timeline.json \
     $(WebCore)/inspector/protocol/Worker.json
