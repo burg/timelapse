@@ -94,7 +94,6 @@ public:
     void playbackFinished();
     void playbackCancelled();
     void playbackError(bool isFatal, const String&);
-    void imageCaptured(const String&);
 
     bool capturing() const { return m_stateMachine.capturing(); }
     bool replaying() const { return m_stateMachine.replaying(); }

@@ -338,11 +338,6 @@ void ReplayController::didDispatchFinalInput()
     finishReplay();
 }
 
-void ReplayController::imageCaptured(const String& imageDataUri)
-{
-    InspectorInstrumentation::imageCaptured(&m_page, imageDataUri);
-}
-
 void ReplayController::resetReplayState()
 {
     LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)(&m_page));

@@ -259,12 +259,6 @@ void InspectorReplayAgent::playbackError(bool isFatal, const String& errorString
         m_frontendDispatcher->playbackError(isFatal, errorString);
 }
 
-void InspectorReplayAgent::imageCaptured(const String& imageDataUri)
-{
-    if (m_frontendDispatcher)
-        m_frontendDispatcher->imageCaptured(imageDataUri);
-}
-
 PositionMark InspectorReplayAgent::createMark()
 {
     return PositionMark(m_nextMarkIndex++);
