@@ -44,6 +44,8 @@ WebInspector.NavigationSidebarPanel = function(identifier, displayName, image, k
     if (autoHideToolbarItemWhenEmpty)
         this.toolbarItem.hidden = true;
 
+    this._allContentTreeOutlines = new Set;
+
     this._contentElement = document.createElement("div");
     this._contentElement.className = WebInspector.NavigationSidebarPanel.ContentElementStyleClassName;
     this._contentElement.addEventListener("scroll", this._updateContentOverflowShadowVisibility.bind(this));
@@ -136,6 +138,9 @@ WebInspector.NavigationSidebarPanel.prototype = {
         if (this._defaultContentTreeOutline)
             this._defaultContentTreeOutline.element.classList.add(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
 
+        this._allContentTreeOutlines.delete(this._defaultContentTreeOutline);
+        this._allContentTreeOutlines.add(newTreeOutline);
+
         this._defaultContentTreeOutline = newTreeOutline;
         this._defaultContentTreeOutline.element.classList.remove(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
 
@@ -167,6 +172,8 @@ WebInspector.NavigationSidebarPanel.prototype = {
         contentTreeOutline.onfilter = this._treeElementFiltered.bind(this);
         contentTreeOutline.allowsRepeatSelection = true;
 
+        this._allContentTreeOutlines.add(contentTreeOutline);
+
         return contentTreeOutline;
     },
 
@@ -181,6 +188,44 @@ WebInspector.NavigationSidebarPanel.prototype = {
         var selectedTreeElement = this._defaultContentTreeOutline.selectedTreeElement;
         if (selectedTreeElement)
             selectedTreeElement.select();
+    },
+
+    saveStateToCookie: function(cookie)
+    {
+        console.assert(cookie);
+
+        // FIXME: this does not handle selections in the search results tree outline, or folder selections.
+        var selectedTreeElement = null;
+        this._allContentTreeOutlines.forEach(function(outline) {
+            if (outline.selectedTreeElement)
+                selectedTreeElement = outline.selectedTreeElement;
+        });
+        if (!selectedTreeElement)
+            return;
+
+        var representedObject = selectedTreeElement.representedObject;
+        cookie[WebInspector.TypeIdentifierCookieKey] = representedObject.constructor.TypeIdentifier;
+        representedObject.saveIdentityToCookie(cookie);
+    },
+
+    // This can be supplemented by subclasses that admit a simpler strategy for static tree elements.
+    restoreStateFromCookie: function(cookie, relaxedMatchDelay)
+    {
+        this._pendingViewStateCookie = cookie;
+        // Check if any existing tree elements in any outline match the cookie.
+        this._checkOutlinesForPendingViewStateCookie();
+
+        if (this._finalAttemptToRestoreViewStateTimeout)
+            clearTimeout(this._finalAttemptToRestoreViewStateTimeout);
+
+        var finalAttemptToRestoreViewStateFromCookie = function() {
+            delete this._finalAttemptToRestoreViewStateTimeout;
+            this._checkOutlinesForPendingViewStateCookie(true);
+        };
+
+        // If the specific tree element wasn't found, we may need to wait for the resources
+        // to be registered. We try one last time (match type only) after an arbitrary amount of timeout.
+        this._finalAttemptToRestoreViewStateTimeout = setTimeout(finalAttemptToRestoreViewStateFromCookie.bind(this), relaxedMatchDelay);
     },
 
     showEmptyContentPlaceholder: function(message, hideToolbarItem)
@@ -315,6 +360,7 @@ WebInspector.NavigationSidebarPanel.prototype = {
         treeElement.applyFilterRecursively(filterRegex);
         this.filterAppliedToTreeOutline(treeElement.treeOutline);
         this._updateContentOverflowShadowVisibility();
+        this._checkElementsForPendingViewStateCookie(treeElement);
     },
 
     _treeElementExpandedOrCollapsed: function(treeElement)
@@ -410,6 +456,67 @@ WebInspector.NavigationSidebarPanel.prototype = {
 
         // Check on a delay to coalesce multiple calls to _checkForOldResources.
         this._checkForOldResourcesTimeoutIdentifier = setTimeout(delayedWork.bind(this), 0);
+    },
+
+    _checkOutlinesForPendingViewStateCookie: function(matchTypeOnly)
+    {
+        if (!this._pendingViewStateCookie)
+            return;
+
+        var workList = [];
+        this._allContentTreeOutlines.forEach(function(outline) { workList.push(outline); });
+        for (var i = 0; i < workList.length; ++i)
+            if (workList[i].hasChildren)
+                workList = workList.concat(workList[i].children);
+
+        // This includes treeOutlines in the elements list, but this is harmless.
+        return this._checkElementsForPendingViewStateCookie(workList);
+    },
+
+    _checkElementsForPendingViewStateCookie: function(treeElements, matchTypeOnly)
+    {
+        if (!this._pendingViewStateCookie)
+            return;
+
+        var cookie = this._pendingViewStateCookie;
+
+        function treeElementMatchesCookie(treeElement) {
+            var representedObject = treeElement.representedObject;
+            if (!representedObject)
+                return false;
+
+            var typeIdentifier = cookie[WebInspector.TypeIdentifierCookieKey];
+            if (typeIdentifier !== representedObject.constructor.TypeIdentifier)
+                return false;
+
+            if (matchTypeOnly)
+                return true;
+
+            var candidateObjectCookie = {};
+            representedObject.saveIdentityToCookie(candidateObjectCookie);
+
+            return Object.keys(candidateObjectCookie).every(function valuesMatchForKey(key) {
+                return candidateObjectCookie[key] === cookie[key];
+            });
+        }
+
+        if (!(treeElements instanceof Array))
+            treeElements = [treeElements];
+
+        var matchedElement = null;
+        treeElements.some(function(element) {
+            if (treeElementMatchesCookie(element)) {
+                matchedElement = element;
+                return true;
+            }
+        });
+
+        if (matchedElement) {
+            matchedElement.revealAndSelect();
+            delete this._pendingViewStateCookie;
+            if (this._finalAttemptToRestoreViewStateTimeout)
+                clearTimeout(this._finalAttemptToRestoreViewStateTimeout);
+        }
     }
 };
 

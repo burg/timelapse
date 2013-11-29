@@ -47,6 +47,8 @@ WebInspector.ResourceClusterContentView = function(resource)
     this._currentContentViewSetting = new WebInspector.Setting("resource-current-view-" + this._resource.url.hash, WebInspector.ResourceClusterContentView.ResponseIdentifier);
 };
 
+WebInspector.ResourceClusterContentView.ContentViewIdentifierCookieKey = "resource-cluster-content-view-identifier";
+
 WebInspector.ResourceClusterContentView.RequestIconStyleClassName = "request-icon";
 WebInspector.ResourceClusterContentView.ResponseIconStyleClassName = "response-icon";
 WebInspector.ResourceClusterContentView.RequestIdentifier = "request";
@@ -142,17 +144,13 @@ WebInspector.ResourceClusterContentView.prototype = {
 
     saveViewStateToCookie: function(cookie)
     {
-        cookie.type = WebInspector.RepresentedObjectCookieType.Resource;
-        cookie.url = this.representedObject.url;
-        cookie.subview = this._currentContentViewSetting.value;
+        cookie[WebInspector.ResourceClusterContentView.ContentViewIdentifierCookieKey] = this._currentContentViewSetting.value;
     },
 
     restoreViewStateFromCookie: function(cookie)
     {
-        if ("lineNumber" in cookie && "columnNumber" in cookie)
-            return this.showResponse(new WebInspector.SourceCodePosition(cookie.lineNumber, cookie.columnNumber));
-
-        this._showContentViewForIdentifier(cookie.subview);
+        var viewIdentifier = cookie[WebInspector.ResourceClusterContentView.ContentViewIdentifierCookieKey];
+        this._showContentViewForIdentifier(viewIdentifier);
     },
 
     showRequest: function()

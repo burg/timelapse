@@ -30,9 +30,13 @@ WebInspector.DOMStorageObject = function(id, host, isLocalStorage)
     this._isLocalStorage = isLocalStorage;
 };
 
+WebInspector.DOMStorageObject.TypeIdentifier = "dom-storage";
+WebInspector.DOMStorageObject.HostCookieKey = "dom-storage-object-host";
+WebInspector.DOMStorageObject.LocalStorageCookieKey = "dom-storage-object-local-storage";
+
 WebInspector.DOMStorageObject.prototype = {
     constructor: WebInspector.DOMStorageObject,
-    
+
     get id()
     {
         return this._id;
@@ -41,6 +45,12 @@ WebInspector.DOMStorageObject.prototype = {
     get host()
     {
         return this._host;
+    },
+
+    saveIdentityToCookie: function(cookie)
+    {
+        cookie[WebInspector.DOMStorageObject.HostCookieKey] = this.host;
+        cookie[WebInspector.DOMStorageObject.LocalStorageCookieKey] = this.isLocalStorage();
     },
 
     isLocalStorage: function()

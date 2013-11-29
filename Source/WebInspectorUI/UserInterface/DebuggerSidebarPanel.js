@@ -113,11 +113,14 @@ WebInspector.DebuggerSidebarPanel = function()
     var callStackGroup = new WebInspector.DetailsSectionGroup([this._callStackRow]);
     this._callStackSection = new WebInspector.DetailsSection("call-stack", WebInspector.UIString("Call Stack"), [callStackGroup]);
 
-      WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisplayLocationDidChange, this._breakpointDisplayLocationDidChange, this);
+    WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisplayLocationDidChange, this._breakpointDisplayLocationDidChange, this);
 };
 
 WebInspector.DebuggerSidebarPanel.OffsetSectionsStyleClassName = "offset-sections";
 WebInspector.DebuggerSidebarPanel.ExceptionIconStyleClassName = "breakpoint-exception-icon";
+
+WebInspector.DebuggerSidebarPanel.SelectedAllExceptionsCookieKey = "debugger-sidebar-panel-all-exceptions-breakpoint";
+WebInspector.DebuggerSidebarPanel.SelectedAllUncaughtExceptionsCookieKey = "debugger-sidebar-panel-all-uncaught-exceptions-breakpoint";
 
 WebInspector.DebuggerSidebarPanel.prototype = {
     constructor: WebInspector.DebuggerSidebarPanel,
@@ -160,6 +163,38 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         this._filterableTreeOutlines.push(outline);
 
         return outline;
+    },
+
+    saveStateToCookie: function(cookie)
+    {
+        console.assert(cookie);
+
+        var selectedTreeElement = this._breakpointsContentTreeOutline.selectedTreeElement;
+        if (!selectedTreeElement)
+            return;
+
+        var representedObject = selectedTreeElement.representedObject;
+
+        if (representedObject === WebInspector.debuggerManager.allExceptionsBreakpoint)
+            cookie[WebInspector.DebuggerSidebarPanel.SelectedAllExceptionsCookieKey] = true;
+
+        if (representedObject === WebInspector.debuggerManager.allUncaughtExceptionsBreakpoint)
+            cookie[WebInspector.DebuggerSidebarPanel.SelectedAllUncaughtExceptionsCookieKey] = true;
+
+        WebInspector.NavigationSidebarPanel.prototype.saveStateToCookie.call(this, cookie);
+    },
+
+    restoreStateFromCookie: function(cookie)
+    {
+        console.assert(cookie);
+
+        // Eagerly resolve the special breakpoints; otherwise, use the default behavior.
+        if (cookie[WebInspector.DebuggerSidebarPanel.SelectedAllExceptionsCookieKey])
+            this._allExceptionsBreakpointTreeElement.revealAndSelect();
+        else if (cookie[WebInspector.DebuggerSidebarPanel.SelectedAllUncaughtExceptionsCookieKey])
+            this._allUncaughtExceptionsBreakpointTreeElement.revealAndSelect();
+        else
+            WebInspector.NavigationSidebarPanel.prototype.restoreStateFromCookie.call(this, cookie);
     },
 
     // Public

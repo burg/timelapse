@@ -26,23 +26,34 @@
 WebInspector.DatabaseTableObject = function(name, database)
 {
     console.assert(database instanceof WebInspector.DatabaseObject);
-    
+
     this._name = name;
     this._database = database;
 };
 
+WebInspector.DatabaseTableObject.TypeIdentifier = "database-table";
+WebInspector.DatabaseTableObject.NameCookieKey = "database-table-object-name";
+
 WebInspector.DatabaseTableObject.prototype = {
     constructor: WebInspector.DatabaseTableObject,
-    
+
+    // Public
+
     get name()
     {
         return this._name;
     },
-    
+
     get database()
     {
         return this._database;
-    }
+    },
+
+    saveIdentityToCookie: function(cookie)
+    {
+        cookie[WebInspector.DatabaseTableObject.NameCookieKey] = this.name;
+    },
+
 };
 
 WebInspector.DatabaseTableObject.prototype.__proto__ = WebInspector.Object.prototype;
