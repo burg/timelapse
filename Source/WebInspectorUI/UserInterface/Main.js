@@ -30,17 +30,6 @@ WebInspector.Notification = {
     PageArchiveEnded: "page-archive-ended"
 };
 
-WebInspector.RepresentedObjectCookieType = {
-    ApplicationCache: "application-cache",
-    CookieStorage: "cookie-storage",
-    Database: "database",
-    DatabaseTable: "database-table",
-    DOMStorage: "dom-storage",
-    Resource: "resource", // includes Frame too.
-    Timelines: "timelines",
-
-};
-
 WebInspector.SelectedSidebarPanelCookieKey = "selected-sidebar-panel";
 WebInspector.TypeIdentifierCookieKey = "represented-object-type";
 

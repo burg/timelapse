@@ -73,13 +73,6 @@ WebInspector.ApplicationCacheFrameContentView.prototype = {
             this.dataGrid.updateLayout();
     },
 
-    saveViewStateToCookie: function(cookie)
-    {
-        cookie.type = WebInspector.RepresentedObjectCookieType.ApplicationCache;
-        cookie.frame = this.representedObject.frame.url;
-        cookie.manifest = this.representedObject.manifest.manifestURL;
-    },
-
     get scrollableElements()
     {
         if (!this._dataGrid)

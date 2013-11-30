@@ -250,12 +250,12 @@ WebInspector.ContentView.prototype = {
 
     saveViewStateToCookie: function(cookie)
     {
-        // Implemented by subclasses.
+        // Implemented by subclasses that have multiple nested content views.
     },
 
     restoreViewStateFromCookie: function(cookie)
     {
-        // Implemented by subclasses.
+        // Implemented by subclasses that have multiple nested content views.
     },
 
     canGoBack: function()

@@ -95,21 +95,6 @@ WebInspector.FrameContentView.prototype = {
         this._shownInitialContent = false;
     },
 
-    saveViewStateToCookie: function(cookie)
-    {
-        cookie.type = WebInspector.RepresentedObjectCookieType.Resource;
-        cookie.subview = this._currentContentViewSetting.value;
-        if (!this.representedObject.isMainFrame())
-            cookie.url = this.representedObject.url;
-    },
-
-    restoreViewStateFromCookie: function(cookie)
-    {
-        var shownView = this._showContentViewForIdentifier(cookie.subview);
-        if ("lineNumber" in cookie && "columnNumber" in cookie)
-            this.showSourceCode(new WebInspector.SourceCodePosition(cookie.lineNumber, cookie.columnNumber));
-    },
-
     showResource: function()
     {
         this._shownInitialContent = true;

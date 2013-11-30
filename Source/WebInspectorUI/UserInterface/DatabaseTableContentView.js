@@ -50,14 +50,6 @@ WebInspector.DatabaseTableContentView.prototype = {
             this._dataGrid.updateLayout();
     },
 
-    saveViewStateToCookie: function(cookie)
-    {
-        cookie.type = WebInspector.RepresentedObjectCookieType.DatabaseTable;
-        cookie.host = this.representedObject.host;
-        cookie.name = this.representedObject.name;
-        cookie.database = this.representedObject.database.name;
-    },
-
     get scrollableElements()
     {
         if (!this._dataGrid)

@@ -69,13 +69,6 @@ WebInspector.DatabaseContentView.prototype = {
         }
     },
 
-    saveViewStateToCookie: function(cookie)
-    {
-        cookie.type = WebInspector.RepresentedObjectCookieType.Database;
-        cookie.host = this.representedObject.host;
-        cookie.name = this.representedObject.name;
-    },
-
     consolePromptCompletionsNeeded: function(prompt, defaultCompletions, base, prefix, suffix)
     {
         var results = [];

@@ -111,18 +111,6 @@ WebInspector.ScriptContentView.prototype = {
         this._textEditor.close();
     },
 
-    saveViewStateToCookie: function(cookie)
-    {
-        cookie.type = WebInspector.RepresentedObjectCookieType.Resource;
-        cookie.url = this.representedObject.url;
-    },
-
-    restoreViewStateFromCookie: function(cookie)
-    {
-        if ("lineNumber" in cookie && "columnNumber" in cookie)
-            this.revealPosition(new WebInspector.SourceCodePosition(cookie.lineNumber, cookie.columnNumber));
-    },
-
     get supportsSave()
     {
         return true;
