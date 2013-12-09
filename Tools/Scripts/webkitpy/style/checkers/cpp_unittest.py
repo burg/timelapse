@@ -247,9 +247,8 @@ class CppStyleTestBase(unittest.TestCase):
     # Helper function to avoid needing to explicitly pass confidence
     # in all the unit test calls to cpp_style.process_file_data().
     def process_file_data(self, filename, file_extension, lines, error, unit_test_config={}):
-        """Call cpp_style.process_file_data() with the min_confidence."""
-        return cpp_style.process_file_data(filename, file_extension, lines,
-                                           error, self.min_confidence, unit_test_config)
+        checker = CppChecker(filename, file_extension, error, self.min_confidence, unit_test_config)
+        checker.check(lines)
 
     def perform_lint(self, code, filename, basic_error_rules, unit_test_config={}, lines_to_check=None):
         error_collector = ErrorCollector(self.assertTrue, FilterConfiguration(basic_error_rules), lines_to_check)
@@ -624,6 +623,13 @@ class FunctionDetectionTest(CppStyleTestBase):
             detection_line=2)
 
 
+class Cpp11StyleTest(CppStyleTestBase):
+    def test_rvaule_reference_at_end_of_line(self):
+        self.assert_lint('T&&', '')
+
+    def test_rvaule_reference_in_parameter_pack(self):
+        self.assert_lint('void requestCompleted(Arguments&&... arguments)', '')
+
 class CppStyleTest(CppStyleTestBase):
 
     def test_asm_lines_ignored(self):
@@ -743,15 +749,27 @@ class CppStyleTest(CppStyleTestBase):
             '')
 
     def test_runtime_selfinit(self):
-        self.assert_lint(
-            'Foo::Foo(Bar r, Bel l) : r_(r_), l_(l_) { }',
+        self.assert_multi_line_lint(
+            '''\
+            Foo::Foo(Bar r, Bel l)
+                : r_(r_)
+                , l_(l_) { }''',
+            ['You seem to be initializing a member variable with itself.'
+            '  [runtime/init] [4]',
             'You seem to be initializing a member variable with itself.'
-            '  [runtime/init] [4]')
-        self.assert_lint(
-            'Foo::Foo(Bar r, Bel l) : r_(r), l_(l) { }',
+            '  [runtime/init] [4]'])
+        self.assert_multi_line_lint(
+            '''\
+            Foo::Foo(Bar r, Bel l)
+                : r_(r)
+                , l_(l) { }''',
             '')
-        self.assert_lint(
-            'Foo::Foo(Bar r) : r_(r), l_(r_), ll_(l_) { }',
+        self.assert_multi_line_lint(
+            '''\
+            Foo::Foo(Bar r)
+                : r_(r)
+                , l_(r_)
+                , ll_(l_) { }''',
             '')
 
     def test_runtime_rtti(self):
@@ -813,8 +831,10 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint(
             'int a = int(); // Constructor, o.k.',
             '')
-        self.assert_lint(
-            'X::X() : a(int()) { } // default Constructor, o.k.',
+        self.assert_multi_line_lint(
+            '''\
+            X::X()
+                : a(int()) { } // default Constructor, o.k.''',
             '')
         self.assert_lint(
             'operator bool(); // Conversion operator, o.k.',
@@ -2512,30 +2532,6 @@ class OrderOfIncludesTest(CppStyleTestBase):
 
         # Cheat os.path.abspath called in FileInfo class.
         self.os_path_abspath_orig = os.path.abspath
-        os.path.abspath = lambda value: value
-
-    def tearDown(self):
-        os.path.abspath = self.os_path_abspath_orig
-
-    def test_try_drop_common_suffixes(self):
-        self.assertEqual('foo/foo', cpp_style._drop_common_suffixes('foo/foo-inl.h'))
-        self.assertEqual('foo/bar/foo',
-                         cpp_style._drop_common_suffixes('foo/bar/foo_inl.h'))
-        self.assertEqual('foo/foo', cpp_style._drop_common_suffixes('foo/foo.cpp'))
-        self.assertEqual('foo/foo_unusualinternal',
-                         cpp_style._drop_common_suffixes('foo/foo_unusualinternal.h'))
-        self.assertEqual('',
-                         cpp_style._drop_common_suffixes('_test.cpp'))
-        self.assertEqual('test',
-                         cpp_style._drop_common_suffixes('test.cpp'))
-
-
-class OrderOfIncludesTest(CppStyleTestBase):
-    def setUp(self):
-        self.include_state = cpp_style._IncludeState()
-
-        # Cheat os.path.abspath called in FileInfo class.
-        self.os_path_abspath_orig = os.path.abspath
         self.os_path_isfile_orig = os.path.isfile
         os.path.abspath = lambda value: value
 
@@ -2631,6 +2627,22 @@ class OrderOfIncludesTest(CppStyleTestBase):
                                          '#include "foo.h"\n'
                                          '#include "bar.h"\n',
                                          'You should add a blank line after implementation file\'s own header.  [build/include_order] [4]')
+
+        self.assert_language_rules_check('foo.cpp',
+                                         '#include "config.h"\n'
+                                         '#include "foo.h"\n'
+                                         '\n'
+                                         '#include "bar.h"\n',
+                                         '')
+
+    def test_check_line_break_before_own_header(self):
+        self.assert_language_rules_check('foo.cpp',
+                                         '#include "config.h"\n'
+                                         '\n'
+                                         '#include "foo.h"\n'
+                                         '\n'
+                                         '#include "bar.h"\n',
+                                         'You should not add a blank line before implementation file\'s own header.  [build/include_order] [4]')
 
         self.assert_language_rules_check('foo.cpp',
                                          '#include "config.h"\n'
@@ -2840,8 +2852,7 @@ class OrderOfIncludesTest(CppStyleTestBase):
                          cpp_style._drop_common_suffixes('_test.cpp'))
         self.assertEqual('test',
                          cpp_style._drop_common_suffixes('test.cpp'))
-        self.assertEqual('test',
-                         cpp_style._drop_common_suffixes('test.cpp'))
+
 
 class CheckForFunctionLengthsTest(CppStyleTestBase):
     def setUp(self):
@@ -4875,6 +4886,93 @@ class WebKitStyleTest(CppStyleTestBase):
                 'foo() = 0;\n',
                 'test.h',
                 webkit_export_error_rules))
+
+    def test_member_initialization_list(self):
+        self.assert_lint('explicit MyClass(Document* doc) : MySuperClass() { }',
+        'Should be indented on a separate line, with the colon or comma first on that line.'
+        '  [whitespace/indent] [4]')
+        self.assert_lint('MyClass::MyClass(Document* doc) : MySuperClass() { }',
+        'Should be indented on a separate line, with the colon or comma first on that line.'
+        '  [whitespace/indent] [4]')
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc) : MySuperClass()
+        { }''',
+        'Should be indented on a separate line, with the colon or comma first on that line.'
+        '  [whitespace/indent] [4]')
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc)
+        : MySuperClass()
+        { }''',
+        'Wrong number of spaces before statement. (expected: 12)'
+        '  [whitespace/indent] [4]')
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc) :
+            MySuperClass(),
+            m_doc(0)
+        { }''',
+        ['Should be indented on a separate line, with the colon or comma first on that line.'
+         '  [whitespace/indent] [4]',
+         'Comma should be at the beginning of the line in a member initialization list.'
+         '  [whitespace/init] [4]'])
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc) :MySuperClass()
+        { }''',
+        ['Missing spaces around :  [whitespace/init] [4]',
+         'Should be indented on a separate line, with the colon or comma first on that line.'
+         '  [whitespace/indent] [4]'])
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc):MySuperClass()
+        { }''',
+        ['Missing spaces around :  [whitespace/init] [4]',
+         'Should be indented on a separate line, with the colon or comma first on that line.'
+         '  [whitespace/indent] [4]'])
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc) : MySuperClass()
+        ,MySuperClass()
+        , m_doc(0)
+            , m_myMember(0)
+        { }''',
+        ['Should be indented on a separate line, with the colon or comma first on that line.'
+         '  [whitespace/indent] [4]',
+         'Wrong number of spaces before statement. (expected: 12)'
+         '  [whitespace/indent] [4]',
+         'Wrong number of spaces before statement. (expected: 12)'
+         '  [whitespace/indent] [4]',
+         'Missing space after ,  [whitespace/comma] [3]'])
+
+        fine_example = (
+            'MyClass::MyClass(Document* doc)\n'
+            '    : MySuperClass()\n'
+            '#if !BLA(FOO)\n'
+            '    , MySuperClass()\n'
+            '    , m_doc(0)\n'
+            '#endif\n'
+            '    , m_myMember(0)\n'
+            '{ }')
+        self.assert_multi_line_lint(fine_example, '')
+
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc)
+            :MySuperClass()
+        { }''',
+        'Missing spaces around :  [whitespace/init] [4]')
+        self.assert_multi_line_lint('''\
+        MyClass::MyClass(Document* doc)
+            : MySuperClass() , m_doc(0)
+        { }''',
+        'Comma should be at the beginning of the line in a member initialization list.'
+        '  [whitespace/init] [4]')
+        self.assert_multi_line_lint('''\
+        class MyClass : public Goo {
+        };''',
+        '')
+        self.assert_multi_line_lint('''\
+        class MyClass
+        : public Goo
+        , public foo {
+        };''',
+        '')
+        self.assert_lint('o = foo(b ? bar() : baz());', '')
 
     def test_other(self):
         # FIXME: Implement this.

@@ -59,7 +59,7 @@
 #include "InspectorConsoleAgent.h"
 #include "InspectorController.h"
 #include "InspectorCounters.h"
-#include "InspectorFrontendChannel.h"
+#include "InspectorForwarding.h"
 #include "InspectorFrontendClientLocal.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorOverlay.h"
@@ -330,11 +330,7 @@ InternalSettings* Internals::settings() const
 
 unsigned Internals::workerThreadCount() const
 {
-#if ENABLE(WORKERS)
     return WorkerThread::workerThreadCount();
-#else
-    return 0;
-#endif
 }
 
 String Internals::address(Node* node)
@@ -2264,6 +2260,9 @@ bool Internals::isPluginUnavailabilityIndicatorObscured(Element* element, Except
 #if ENABLE(MEDIA_SOURCE)
 void Internals::initializeMockMediaSource()
 {
+#if USE(AVFOUNDATION)
+    WebCore::Settings::setAVFoundationEnabled(false);
+#endif
     MediaPlayerFactorySupport::callRegisterMediaEngine(MockMediaPlayerMediaSource::registerMediaEngine);
 }
 #endif

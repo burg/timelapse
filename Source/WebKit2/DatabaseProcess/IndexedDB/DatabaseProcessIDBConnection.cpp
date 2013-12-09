@@ -26,25 +26,50 @@
 #include "config.h"
 #include "DatabaseProcessIDBConnection.h"
 
-#include "DatabaseToWebProcessConnection.h"
-
 #if ENABLE(INDEXED_DATABASE) && ENABLE(DATABASE_PROCESS)
+
+#include "DatabaseProcess.h"
+#include "DatabaseToWebProcessConnection.h"
+#include "UniqueIDBDatabase.h"
+#include "WebCoreArgumentCoders.h"
+#include "WebIDBServerConnectionMessages.h"
+#include <WebCore/IDBDatabaseMetadata.h>
+
+using namespace WebCore;
 
 namespace WebKit {
 
-DatabaseProcessIDBConnection::DatabaseProcessIDBConnection(uint64_t backendIdentifier)
-    : m_backendIdentifier(backendIdentifier)
+DatabaseProcessIDBConnection::DatabaseProcessIDBConnection(DatabaseToWebProcessConnection& connection, uint64_t serverConnectionIdentifier)
+    : m_connection(connection)
+    , m_serverConnectionIdentifier(serverConnectionIdentifier)
 {
 }
 
 DatabaseProcessIDBConnection::~DatabaseProcessIDBConnection()
 {
+    ASSERT(!m_uniqueIDBDatabase);
 }
 
-void DatabaseProcessIDBConnection::establishConnection()
+void DatabaseProcessIDBConnection::disconnectedFromWebProcess()
 {
-    // FIXME: This method is successfully called by messaging from the WebProcess.
-    // Now implement it.
+    m_uniqueIDBDatabase->unregisterConnection(*this);
+    m_uniqueIDBDatabase.clear();
+}
+
+void DatabaseProcessIDBConnection::establishConnection(const String& databaseName, const SecurityOriginData& openingOrigin, const SecurityOriginData& mainFrameOrigin)
+{
+    m_uniqueIDBDatabase = DatabaseProcess::shared().getOrCreateUniqueIDBDatabase(UniqueIDBDatabaseIdentifier(databaseName, openingOrigin, mainFrameOrigin));
+    m_uniqueIDBDatabase->registerConnection(*this);
+}
+
+void DatabaseProcessIDBConnection::getOrEstablishIDBDatabaseMetadata(uint64_t requestID)
+{
+    ASSERT(m_uniqueIDBDatabase);
+
+    RefPtr<DatabaseProcessIDBConnection> connection(this);
+    m_uniqueIDBDatabase->getOrEstablishIDBDatabaseMetadata([connection, requestID](bool success, const IDBDatabaseMetadata& metadata) {
+        connection->send(Messages::WebIDBServerConnection::DidGetOrEstablishIDBDatabaseMetadata(requestID, success, metadata));
+    });
 }
 
 CoreIPC::Connection* DatabaseProcessIDBConnection::messageSenderConnection()

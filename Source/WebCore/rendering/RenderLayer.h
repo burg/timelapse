@@ -62,6 +62,7 @@ class RenderGeometryMap;
 class RenderLayerBacking;
 class RenderLayerCompositor;
 class RenderMarquee;
+class RenderNamedFlowFragment;
 class RenderReplica;
 class RenderScrollbarPart;
 class RenderStyle;
@@ -113,6 +114,10 @@ public:
     bool isEmpty() const { return m_rect.isEmpty(); }
     bool intersects(const LayoutRect& rect) const { return m_rect.intersects(rect); }
     bool intersects(const HitTestLocation&) const;
+
+    void inflateX(LayoutUnit dx) { m_rect.inflateX(dx); }
+    void inflateY(LayoutUnit dy) { m_rect.inflateY(dy); }
+    void inflate(LayoutUnit d) { inflateX(d); inflateY(d); }
 
 private:
     LayoutRect m_rect;
@@ -315,6 +320,10 @@ public:
     explicit RenderLayer(RenderLayerModelObject&);
     virtual ~RenderLayer();
 
+#if PLATFORM(IOS)
+    // Called before the renderer's widget (if any) has been nulled out.
+    void willBeDestroyed();
+#endif
     String name() const;
 
     RenderLayerModelObject& renderer() const { return m_renderer; }
@@ -414,6 +423,27 @@ public:
     virtual Scrollbar* horizontalScrollbar() const OVERRIDE { return m_hBar.get(); }
     virtual Scrollbar* verticalScrollbar() const OVERRIDE { return m_vBar.get(); }
     virtual ScrollableArea* enclosingScrollableArea() const OVERRIDE;
+
+#if PLATFORM(IOS)
+#if ENABLE(TOUCH_EVENTS)
+    virtual bool handleTouchEvent(const PlatformTouchEvent&) OVERRIDE;
+    virtual bool isTouchScrollable() const OVERRIDE { return true; }
+#endif
+    virtual bool isOverflowScroll() const OVERRIDE { return true; }
+    
+    virtual void didStartScroll() OVERRIDE;
+    virtual void didEndScroll() OVERRIDE;
+    virtual void didUpdateScroll() OVERRIDE;
+    virtual void setIsUserScroll(bool isUserScroll) OVERRIDE { m_inUserScroll = isUserScroll; }
+
+    bool isInUserScroll() const { return m_inUserScroll; }
+
+    bool requiresScrollBoundsOriginUpdate() const { return m_requiresScrollBoundsOriginUpdate; }
+    void setRequiresScrollBoundsOriginUpdate(bool requiresUpdate = true) { m_requiresScrollBoundsOriginUpdate = requiresUpdate; }
+
+    bool hasAcceleratedTouchScrolling() const;
+
+#endif
 
     int verticalScrollbarWidth(OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize) const;
     int horizontalScrollbarHeight(OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize) const;
@@ -528,6 +558,9 @@ public:
     // Update our normal and z-index lists.
     void updateLayerListsIfNeeded();
 
+    // Update the normal and z-index lists of our descendants.
+    void updateDescendantsLayerListsIfNeeded(bool recursive);
+
     // FIXME: We should ASSERT(!m_visibleContentStatusDirty) here, but see https://bugs.webkit.org/show_bug.cgi?id=71044
     // ditto for hasVisibleDescendant(), see https://bugs.webkit.org/show_bug.cgi?id=71277
     bool hasVisibleContent() const { return m_hasVisibleContent; }
@@ -629,6 +662,8 @@ public:
     bool hitTest(const HitTestRequest&, const HitTestLocation&, HitTestResult&);
     void paintOverlayScrollbars(GraphicsContext*, const LayoutRect& damageRect, PaintBehavior, RenderObject* subtreePaintRoot = 0);
 
+    void paintNamedFlowThreadInsideRegion(GraphicsContext*, RenderNamedFlowFragment*, LayoutRect, LayoutPoint, PaintBehavior = PaintBehaviorNormal, PaintLayerFlags = 0);
+
     struct ClipRectsContext {
         ClipRectsContext(const RenderLayer* inRootLayer, RenderRegion* inRegion, ClipRectsType inClipRectsType, OverlayScrollbarSizeRelevancy inOverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, ShouldRespectOverflowClip inRespectOverflowClip = RespectOverflowClip)
             : rootLayer(inRootLayer)
@@ -668,7 +703,7 @@ public:
     LayoutRect localClipRect() const; // Returns the background clip rect of the layer in the local coordinate space.
 
     // Pass offsetFromRoot if known.
-    bool intersectsDamageRect(const LayoutRect& layerBounds, const LayoutRect& damageRect, const RenderLayer* rootLayer, const LayoutPoint* offsetFromRoot = 0) const;
+    bool intersectsDamageRect(const LayoutRect& layerBounds, const LayoutRect& damageRect, const RenderLayer* rootLayer, const LayoutPoint* offsetFromRoot = 0, RenderRegion* = 0) const;
 
     enum CalculateLayerBoundsFlag {
         IncludeSelfTransform = 1 << 0,
@@ -717,6 +752,11 @@ public:
    
     void setStaticInlinePosition(LayoutUnit position) { m_staticInlinePosition = position; }
     void setStaticBlockPosition(LayoutUnit position) { m_staticBlockPosition = position; }
+
+#if PLATFORM(IOS)
+    bool adjustForIOSCaretWhenScrolling() const { return m_adjustForIOSCaretWhenScrolling; }
+    void setAdjustForIOSCaretWhenScrolling(bool adjustForIOSCaretWhenScrolling) { m_adjustForIOSCaretWhenScrolling = adjustForIOSCaretWhenScrolling; }
+#endif
 
     bool hasTransform() const { return renderer().hasTransform(); }
     // Note that this transform has the transform-origin baked in.
@@ -1034,6 +1074,11 @@ private:
     virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;
     virtual bool updatesScrollLayerPositionOnMainThread() const OVERRIDE { return true; }
 
+#if PLATFORM(IOS)
+    void registerAsTouchEventListenerForScrolling();
+    void unregisterAsTouchEventListenerForScrolling();
+#endif
+
     // Rectangle encompassing the scroll corner and resizer rect.
     IntRect scrollCornerAndResizerRect() const;
 
@@ -1132,6 +1177,12 @@ private:
 
     bool overflowControlsIntersectRect(const IntRect& localRect) const;
 
+    RenderLayer* hitTestFlowThreadIfRegion(RenderLayer*, const HitTestRequest&, HitTestResult&,
+        const LayoutRect&, const HitTestLocation&,
+        const HitTestingTransformState*, double*);
+    void paintFlowThreadIfRegion(GraphicsContext*, const LayerPaintingInfo&, PaintLayerFlags, LayoutPoint, LayoutRect, bool);
+    void mapLayerClipRectsToFragmentationLayer(RenderRegion*, ClipRects&) const;
+
 private:
     // The bitfields are up here so they will fall into the padding from ScrollableArea on 64-bit.
 
@@ -1186,6 +1237,13 @@ private:
     bool m_hasCompositingDescendant : 1; // In the z-order tree.
     unsigned m_indirectCompositingReason : 3;
     unsigned m_viewportConstrainedNotCompositedReason : 2;
+#endif
+
+#if PLATFORM(IOS)
+    bool m_adjustForIOSCaretWhenScrolling : 1;
+    bool m_registeredAsTouchEventListenerForScrolling : 1;
+    bool m_inUserScroll : 1;
+    bool m_requiresScrollBoundsOriginUpdate : 1;
 #endif
 
     bool m_containsDirtyOverlayScrollbars : 1;

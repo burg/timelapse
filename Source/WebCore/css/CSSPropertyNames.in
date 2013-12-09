@@ -8,6 +8,7 @@
 // http://msdn.microsoft.com/workshop/author/css/reference/attributes.asp
 // 
 
+
 // high-priority property names have to be listed first, to simplify the check
 // for applying them first.
 color [Inherited]
@@ -213,6 +214,7 @@ word-break [Inherited]
 word-spacing [Inherited]
 word-wrap [Inherited]
 z-index
+-webkit-alt
 -webkit-animation
 -webkit-animation-delay
 -webkit-animation-direction

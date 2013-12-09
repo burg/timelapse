@@ -154,6 +154,8 @@ public:
     LValue lShr(LValue left, LValue right) { return buildLShr(m_builder, left, right); }
     LValue bitNot(LValue value) { return buildNot(m_builder, value); }
     
+    LValue insertElement(LValue vector, LValue element, LValue index) { return buildInsertElement(m_builder, vector, element, index); }
+    
     LValue addWithOverflow32(LValue left, LValue right)
     {
         return call(addWithOverflow32Intrinsic(), left, right);
@@ -181,6 +183,17 @@ public:
     LValue doubleAbs(LValue value)
     {
         return call(doubleAbsIntrinsic(), value);
+    }
+    
+    static bool hasSensibleDoubleToInt() { return isX86(); }
+    LValue sensibleDoubleToInt(LValue value)
+    {
+        RELEASE_ASSERT(isX86());
+        return call(
+            x86SSE2CvtTSD2SIIntrinsic(),
+            insertElement(
+                insertElement(getUndef(vectorType(doubleType, 2)), value, int32Zero),
+                doubleZero, int32One));
     }
     
     LValue signExt(LValue value, LType type) { return buildSExt(m_builder, value, type); }
@@ -343,6 +356,9 @@ public:
     
     LValue select(LValue value, LValue taken, LValue notTaken) { return buildSelect(m_builder, value, taken, notTaken); }
     LValue extractValue(LValue aggVal, unsigned index) { return buildExtractValue(m_builder, aggVal, index); }
+    
+    LValue fence(LAtomicOrdering ordering = LLVMAtomicOrderingSequentiallyConsistent, SynchronizationScope scope = CrossThread) { return buildFence(m_builder, ordering, scope); }
+    LValue fenceAcqRel() { return fence(LLVMAtomicOrderingAcquireRelease); }
     
     template<typename VectorType>
     LValue call(LValue function, const VectorType& vector) { return buildCall(m_builder, function, vector); }

@@ -79,7 +79,7 @@ public:
 
     virtual void seek(float) { }
     virtual void seekDouble(double time) { seek(time); }
-    virtual void seekWithTolerance(double time, double, double) { seek(time); }
+    virtual void seekWithTolerance(double time, double, double) { seekDouble(time); }
 
     virtual bool seeking() const = 0;
 
@@ -213,6 +213,8 @@ public:
     virtual String languageOfPrimaryAudioTrack() const { return emptyString(); }
 
     virtual size_t extraMemoryCost() const { return 0; }
+    
+    virtual unsigned long long fileSize() const { return 0; }
 };
 
 }

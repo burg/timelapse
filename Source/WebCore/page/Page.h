@@ -81,6 +81,7 @@ class MediaCanStartListener;
 class Node;
 class PageActivityAssertionToken;
 class PageConsole;
+class PageDebuggable;
 class PageGroup;
 class PageThrottler;
 class PlugInClient;
@@ -179,6 +180,12 @@ public:
     void incrementSubframeCount() { ++m_subframeCount; }
     void decrementSubframeCount() { ASSERT(m_subframeCount); --m_subframeCount; }
     int subframeCount() const { checkSubframeCountConsistency(); return m_subframeCount; }
+
+#if ENABLE(REMOTE_INSPECTOR)
+    bool remoteInspectionAllowed() const;
+    void setRemoteInspectionAllowed(bool);
+    void remoteInspectorInformationDidChange() const;
+#endif
 
     Chrome& chrome() const { return *m_chrome; }
     DragCaretController& dragCaretController() const { return *m_dragCaretController; }
@@ -541,6 +548,10 @@ private:
     bool m_scriptedAnimationsSuspended;
     const std::unique_ptr<PageThrottler> m_pageThrottler;
     const std::unique_ptr<PageConsole> m_console;
+
+#if ENABLE(REMOTE_INSPECTOR)
+    const std::unique_ptr<PageDebuggable> m_inspectorDebuggable;
+#endif
 
     HashSet<String> m_seenPlugins;
     HashSet<String> m_seenMediaEngines;

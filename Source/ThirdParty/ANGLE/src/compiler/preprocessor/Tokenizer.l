@@ -72,8 +72,6 @@ typedef pp::SourceLocation YYLTYPE;
 #define YY_INPUT(buf, result, maxSize) \
     result = yyextra->input.read(buf, maxSize);
 
-#define YY_NO_INPUT
-
 %}
 
 %option noyywrap nounput never-interactive
@@ -279,11 +277,9 @@ FRACTIONAL_CONSTANT  ({DIGIT}*"."{DIGIT}+)|({DIGIT}+".")
 
 namespace pp {
 
-// TODO(alokp): Maximum token length should ideally be specified by
-// the preprocessor client, i.e., the compiler.
-const size_t Tokenizer::kMaxTokenLength = 256;
-
-Tokenizer::Tokenizer(Diagnostics* diagnostics) : mHandle(0)
+Tokenizer::Tokenizer(Diagnostics* diagnostics)
+    : mHandle(0),
+      mMaxTokenLength(256)
 {
     mContext.diagnostics = diagnostics;
 }
@@ -316,11 +312,11 @@ void Tokenizer::setLineNumber(int line)
 void Tokenizer::lex(Token* token)
 {
     token->type = yylex(&token->text, &token->location, mHandle);
-    if (token->text.size() > kMaxTokenLength)
+    if (token->text.size() > mMaxTokenLength)
     {
         mContext.diagnostics->report(Diagnostics::TOKEN_TOO_LONG,
                                      token->location, token->text);
-        token->text.erase(kMaxTokenLength);
+        token->text.erase(mMaxTokenLength);
     }
 
     token->flags = 0;

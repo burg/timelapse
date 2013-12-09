@@ -88,7 +88,7 @@ void RenderBlockFlow::appendRunsForObject(BidiRunList<BidiRun>& runs, int start,
     if (haveNextMidpoint)
         nextMidpoint = lineMidpointState.midpoints[lineMidpointState.currentMidpoint];
     if (lineMidpointState.betweenMidpoints) {
-        if (!(haveNextMidpoint && nextMidpoint.m_obj == obj))
+        if (!(haveNextMidpoint && nextMidpoint.renderer() == obj))
             return;
         // This is a new start point. Stop ignoring objects and
         // adjust our start.
@@ -98,7 +98,7 @@ void RenderBlockFlow::appendRunsForObject(BidiRunList<BidiRun>& runs, int start,
         if (start < end)
             return appendRunsForObject(runs, start, end, obj, resolver);
     } else {
-        if (!haveNextMidpoint || (obj != nextMidpoint.m_obj)) {
+        if (!haveNextMidpoint || (obj != nextMidpoint.renderer())) {
             runs.addRun(createRun(start, end, obj, resolver));
             return;
         }
@@ -865,16 +865,6 @@ void RenderBlockFlow::appendFloatingObjectToLastLine(FloatingObject* floatingObj
     lastRootBox()->appendFloat(floatingObject->renderer());
 }
 
-// FIXME: This should be a BidiStatus constructor or create method.
-static inline BidiStatus statusWithDirection(TextDirection textDirection, bool isOverride)
-{
-    UCharDirection direction = textDirection == LTR ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
-    RefPtr<BidiContext> context = BidiContext::create(textDirection == LTR ? 0 : 1, direction, isOverride, FromStyleOrDOM);
-
-    // This copies BidiStatus and may churn the ref on BidiContext. I doubt it matters.
-    return BidiStatus(direction, direction, direction, context.release());
-}
-
 // FIXME: BidiResolver should have this logic.
 static inline void constructBidiRunsForSegment(InlineBidiResolver& topResolver, BidiRunList<BidiRun>& bidiRuns, const InlineIterator& endOfRuns, VisualDirectionOverride override, bool previousLineBrokeCleanly)
 {
@@ -907,7 +897,7 @@ static inline void constructBidiRunsForSegment(InlineBidiResolver& topResolver, 
             ASSERT(unicodeBidi == Isolate || unicodeBidi == IsolateOverride);
             direction = isolatedInline->style().direction();
         }
-        isolatedResolver.setStatus(statusWithDirection(direction, isOverride(unicodeBidi)));
+        isolatedResolver.setStatus(BidiStatus(direction, isOverride(unicodeBidi)));
 
         // FIXME: The fact that we have to construct an Iterator here
         // currently prevents this code from moving into BidiResolver.
@@ -962,8 +952,8 @@ static inline void constructBidiRunsForLine(const RenderBlockFlow* block, Inline
         iterator = segmentRanges[i].end;
         InlineIterator segmentEnd(iterator.root, iterator.object, iterator.offset);
         if (i) {
-            ASSERT(segmentStart.m_obj);
-            BidiRun* segmentMarker = createRun(segmentStart.m_pos, segmentStart.m_pos, segmentStart.m_obj, topResolver);
+            ASSERT(segmentStart.renderer());
+            BidiRun* segmentMarker = createRun(segmentStart.m_pos, segmentStart.m_pos, segmentStart.renderer(), topResolver);
             segmentMarker->m_startsSegment = true;
             bidiRuns.addRun(segmentMarker);
             // Do not collapse midpoints between segments
@@ -984,7 +974,7 @@ RootInlineBox* RenderBlockFlow::createLineBoxesFromBidiRuns(BidiRunList<BidiRun>
         return 0;
 
     // FIXME: Why is this only done when we had runs?
-    lineInfo.setLastLine(!end.m_obj);
+    lineInfo.setLastLine(!end.renderer());
 
     RootInlineBox* lineBox = constructLine(bidiRuns, lineInfo);
     if (!lineBox)
@@ -1134,7 +1124,7 @@ static inline void pushShapeContentOverflowBelowTheContentBox(RenderBlockFlow* b
     LayoutUnit shapeLogicalBottom = shapeInsideInfo->shapeLogicalBottom();
     LayoutUnit shapeContainingBlockLogicalHeight = shapeInsideInfo->shapeContainingBlockLogicalHeight();
 
-    bool isOverflowPositionedAlready = (shapeContainingBlockLogicalHeight - shapeInsideInfo->owner()->borderAndPaddingAfter() + lineHeight) <= lineTop;
+    bool isOverflowPositionedAlready = (shapeContainingBlockLogicalHeight - shapeInsideInfo->owner().borderAndPaddingAfter() + lineHeight) <= lineTop;
 
     // If the last line overlaps with the shape, we don't need the segments anymore
     if (lineTop < shapeLogicalBottom && shapeLogicalBottom < logicalLineBottom)
@@ -1143,7 +1133,7 @@ static inline void pushShapeContentOverflowBelowTheContentBox(RenderBlockFlow* b
     if (logicalLineBottom <= shapeLogicalBottom || !shapeContainingBlockLogicalHeight || isOverflowPositionedAlready)
         return;
 
-    LayoutUnit newLogicalHeight = block->logicalHeight() + (shapeContainingBlockLogicalHeight - (lineTop + shapeInsideInfo->owner()->borderAndPaddingAfter()));
+    LayoutUnit newLogicalHeight = block->logicalHeight() + (shapeContainingBlockLogicalHeight - (lineTop + shapeInsideInfo->owner().borderAndPaddingAfter()));
     block->setLogicalHeight(newLogicalHeight);
 }
 
@@ -1301,17 +1291,17 @@ void RenderBlockFlow::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, I
     LayoutSize logicalOffsetFromShapeContainer;
     ShapeInsideInfo* shapeInsideInfo = layoutShapeInsideInfo();
     if (shapeInsideInfo) {
-        ASSERT(shapeInsideInfo->owner() == this || allowsShapeInsideInfoSharing());
+        ASSERT(&shapeInsideInfo->owner() == this || allowsShapeInsideInfoSharing());
         if (shapeInsideInfo != this->shapeInsideInfo()) {
             // FIXME Bug 100284: If subsequent LayoutStates are pushed, we will have to add
             // their offsets from the original shape-inside container.
-            logicalOffsetFromShapeContainer = logicalOffsetFromShapeAncestorContainer(shapeInsideInfo->owner());
+            logicalOffsetFromShapeContainer = logicalOffsetFromShapeAncestorContainer(&shapeInsideInfo->owner());
         }
         // Begin layout at the logical top of our shape inside.
         if (logicalHeight() + logicalOffsetFromShapeContainer.height() < shapeInsideInfo->shapeLogicalTop()) {
             LayoutUnit logicalHeight = shapeInsideInfo->shapeLogicalTop() - logicalOffsetFromShapeContainer.height();
             if (layoutState.flowThread())
-                logicalHeight -= shapeInsideInfo->owner()->borderAndPaddingBefore();
+                logicalHeight -= shapeInsideInfo->owner().borderAndPaddingBefore();
             setLogicalHeight(logicalHeight);
         }
     }
@@ -1361,7 +1351,7 @@ void RenderBlockFlow::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, I
         // This is a short-cut for empty lines.
         if (layoutState.lineInfo().isEmpty()) {
             if (lastRootBox())
-                lastRootBox()->setLineBreakInfo(end.m_obj, end.m_pos, resolver.status());
+                lastRootBox()->setLineBreakInfo(end.renderer(), end.m_pos, resolver.status());
         } else {
             VisualDirectionOverride override = (styleToUse.rtlOrdering() == VisualOrder ? (styleToUse.direction() == LTR ? VisualLeftToRightOverride : VisualRightToLeftOverride) : NoVisualOverride);
 
@@ -1394,7 +1384,7 @@ void RenderBlockFlow::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, I
             resolver.markCurrentRunEmpty(); // FIXME: This can probably be replaced by an ASSERT (or just removed).
 
             if (lineBox) {
-                lineBox->setLineBreakInfo(end.m_obj, end.m_pos, resolver.status());
+                lineBox->setLineBreakInfo(end.renderer(), end.m_pos, resolver.status());
                 if (layoutState.usesRepaintBounds())
                     layoutState.updateRepaintRangeFromBox(lineBox);
 
@@ -1972,7 +1962,7 @@ bool RenderBlockFlow::matchedEndLine(LineLayoutState& layoutState, const InlineB
     RootInlineBox* originalEndLine = layoutState.endLine();
     RootInlineBox* line = originalEndLine;
     for (int i = 0; i < numLines && line; i++, line = line->nextRootBox()) {
-        if (line->lineBreakObj() == resolver.position().m_obj && line->lineBreakPos() == resolver.position().m_pos) {
+        if (line->lineBreakObj() == resolver.position().renderer() && line->lineBreakPos() == resolver.position().m_pos) {
             // We have a match.
             if (line->lineBreakBidiStatus() != resolver.status())
                 return false; // ...but the bidi state doesn't match.
@@ -2244,9 +2234,13 @@ bool RenderBlockFlow::positionNewFloatOnLine(FloatingObject* newFloat, FloatingO
             floatingObject->setPaginationStrut(paginationStrut + floatingObject->paginationStrut());
             RenderBox& floatBox = floatingObject->renderer();
             setLogicalTopForChild(floatBox, logicalTopForChild(floatBox) + marginBeforeForChild(floatBox) + paginationStrut);
-            if (floatBox.isRenderBlock())
+
+            if (updateRegionRangeForBoxChild(floatingObject->renderer()))
+                floatBox.setNeedsLayout(MarkOnlyThis);
+            else if (floatBox.isRenderBlock())
                 toRenderBlock(floatBox).setChildNeedsLayout(MarkOnlyThis);
             floatBox.layoutIfNeeded();
+
             // Save the old logical top before calling removePlacedObject which will set
             // isPlaced to false. Otherwise it will trigger an assert in logicalTopForFloat.
             LayoutUnit oldLogicalTop = logicalTopForFloat(floatingObject);

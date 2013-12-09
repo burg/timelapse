@@ -71,9 +71,6 @@ private:
         else
             result++;
         ASSERT(result <= m_indexInBlock);
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLogF("  limit %u: ", result);
-#endif
         return result;
     }
 
@@ -227,7 +224,7 @@ private:
         return 0;
     }
     
-    Node* scopedVarLoadElimination(Node* registers, unsigned varNumber)
+    Node* scopedVarLoadElimination(Node* registers, int varNumber)
     {
         for (unsigned i = m_indexInBlock; i--;) {
             Node* node = m_currentBlock->at(i);
@@ -260,28 +257,6 @@ private:
         return 0;
     }
     
-    bool globalVarWatchpointElimination(WriteBarrier<Unknown>* registerPointer)
-    {
-        for (unsigned i = m_indexInBlock; i--;) {
-            Node* node = m_currentBlock->at(i);
-            switch (node->op()) {
-            case GlobalVarWatchpoint:
-                if (node->registerPointer() == registerPointer)
-                    return true;
-                break;
-            case PutGlobalVar:
-                if (node->registerPointer() == registerPointer)
-                    return false;
-                break;
-            default:
-                break;
-            }
-            if (m_graph.clobbersWorld(node))
-                break;
-        }
-        return false;
-    }
-
     bool varInjectionWatchpointElimination()
     {
         for (unsigned i = m_indexInBlock; i--;) {
@@ -318,7 +293,7 @@ private:
         return 0;
     }
     
-    Node* scopedVarStoreElimination(Node* scope, Node* registers, unsigned varNumber)
+    Node* scopedVarStoreElimination(Node* scope, Node* registers, int varNumber)
     {
         for (unsigned i = m_indexInBlock; i--;) {
             Node* node = m_currentBlock->at(i);
@@ -338,7 +313,8 @@ private:
                 break;
             }
                 
-            case GetLocal: {
+            case GetLocal:
+            case SetLocal: {
                 VariableAccessData* variableAccessData = node->variableAccessData();
                 if (variableAccessData->isCaptured()
                     && variableAccessData->local() == static_cast<VirtualRegister>(varNumber))
@@ -355,7 +331,7 @@ private:
         return 0;
     }
     
-    Node* getByValLoadElimination(Node* child1, Node* child2)
+    Node* getByValLoadElimination(Node* child1, Node* child2, ArrayMode arrayMode)
     {
         for (unsigned i = m_indexInBlock; i--;) {
             Node* node = m_currentBlock->at(i);
@@ -366,7 +342,9 @@ private:
             case GetByVal:
                 if (!m_graph.byValIsPure(node))
                     return 0;
-                if (node->child1() == child1 && node->child2() == child2)
+                if (node->child1() == child1
+                    && node->child2() == child2
+                    && node->arrayMode().type() == arrayMode.type())
                     return node;
                 break;
                     
@@ -375,7 +353,12 @@ private:
             case PutByValAlias: {
                 if (!m_graph.byValIsPure(node))
                     return 0;
-                if (m_graph.varArgChild(node, 0) == child1 && m_graph.varArgChild(node, 1) == child2)
+                // Typed arrays 
+                if (arrayMode.typedArrayType() != NotTypedArray)
+                    return 0;
+                if (m_graph.varArgChild(node, 0) == child1
+                    && m_graph.varArgChild(node, 1) == child2
+                    && node->arrayMode().type() == arrayMode.type())
                     return m_graph.varArgChild(node, 2).node();
                 // We must assume that the PutByVal will clobber the location we're getting from.
                 // FIXME: We can do better; if we know that the PutByVal is accessing an array of a
@@ -851,6 +834,7 @@ private:
                 }
                 break;
                 
+            case GetClosureVar:
             case PutClosureVar:
                 if (static_cast<VirtualRegister>(node->varNumber()) == local)
                     return 0;
@@ -904,6 +888,7 @@ private:
             }
                 
             case GetClosureVar:
+            case PutClosureVar:
                 if (static_cast<VirtualRegister>(node->varNumber()) == local)
                     result.mayBeAccessed = true;
                 break;
@@ -968,9 +953,6 @@ private:
             if (edge->flags() & NodeRelevantToOSR)
                 continue;
             
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-            dataLog("   Eliminating edge @", m_currentNode->index(), " -> @", edge->index());
-#endif
             node->children.removeEdge(i--);
             m_changed = true;
         }
@@ -980,10 +962,6 @@ private:
     {
         if (!replacement)
             return false;
-        
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLogF("   Replacing @%u -> @%u", m_currentNode->index(), replacement->index());
-#endif
         
         m_currentNode->convertToPhantom();
         eliminateIrrelevantPhantomChildren(m_currentNode);
@@ -998,10 +976,6 @@ private:
     
     void eliminate()
     {
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLogF("   Eliminating @%u", m_currentNode->index());
-#endif
-        
         ASSERT(m_currentNode->mustGenerate());
         m_currentNode->convertToPhantom();
         eliminateIrrelevantPhantomChildren(m_currentNode);
@@ -1028,10 +1002,6 @@ private:
         
         if (node->op() == SetLocal)
             node->child1()->mergeFlags(NodeRelevantToOSR);
-        
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLogF("   %s @%u: ", Graph::opName(node->op()), node->index());
-#endif
         
         switch (node->op()) {
         
@@ -1229,13 +1199,6 @@ private:
             break;
         }
 
-        case GlobalVarWatchpoint:
-            if (cseMode == StoreElimination)
-                break;
-            if (globalVarWatchpointElimination(node->registerPointer()))
-                eliminate();
-            break;
-            
         case VarInjectionWatchpoint:
             if (cseMode == StoreElimination)
                 break;
@@ -1260,7 +1223,7 @@ private:
             if (cseMode == StoreElimination)
                 break;
             if (m_graph.byValIsPure(node))
-                setReplacement(getByValLoadElimination(node->child1().node(), node->child2().node()));
+                setReplacement(getByValLoadElimination(node->child1().node(), node->child2().node(), node->arrayMode()));
             break;
                 
         case PutByValDirect:
@@ -1270,7 +1233,7 @@ private:
             Edge child1 = m_graph.varArgChild(node, 0);
             Edge child2 = m_graph.varArgChild(node, 1);
             if (node->arrayMode().canCSEStorage()) {
-                Node* replacement = getByValLoadElimination(child1.node(), child2.node());
+                Node* replacement = getByValLoadElimination(child1.node(), child2.node(), node->arrayMode());
                 if (!replacement)
                     break;
                 node->setOp(PutByValAlias);
@@ -1363,9 +1326,6 @@ private:
         }
         
         m_lastSeen[node->op()] = m_indexInBlock;
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        dataLogF("\n");
-#endif
     }
     
     void performBlockCSE(BasicBlock* block)

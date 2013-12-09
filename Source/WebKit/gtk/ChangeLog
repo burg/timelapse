@@ -1,3 +1,72 @@
+2013-12-07  Gustavo Noronha Silva  <gns@gnome.org>
+
+        Fix API test expectation following 160220.
+
+        Rubber-stamped by Martin Robinson.
+
+        * tests/testatkroles.c:
+        (finish_loading): rename variable documentFrame -> document.
+        (test_webkit_atk_get_role_document_frame): check for ATK_ROLE_DOCUMENT_WEB instead of
+        ATK_ROLE_DOCUMENT_FRAME.
+        (test_webkit_atk_get_role_heading): rename variable documentFrame -> document.
+        (test_webkit_atk_get_role_image): ditto.
+        (test_webkit_atk_get_role_link): ditto.
+        (test_webkit_atk_get_role_list_and_item): ditto.
+        (test_webkit_atk_get_role_paragraph): ditto.
+        (test_webkit_atk_get_role_section): ditto.
+        (test_webkit_atk_get_role_table): ditto.
+        (test_webkit_atk_get_role_separator): ditto.
+        (test_webkit_atk_get_role_combobox): ditto.
+        (test_webkit_atk_get_role_form): ditto.
+        (test_webkit_atk_get_role_check_box): ditto.
+        (test_webkit_atk_get_role_entry): ditto.
+        (test_webkit_atk_get_role_label): ditto.
+        (test_webkit_atk_get_role_listbox): ditto.
+        (test_webkit_atk_get_role_password_text): ditto.
+        (test_webkit_atk_get_role_push_button): ditto.
+        (test_webkit_atk_get_role_radio_button): ditto.
+
+2013-12-05  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Fix GObject introspection warnings in webkitspellchecker
+        https://bugs.webkit.org/show_bug.cgi?id=125299
+
+        Reviewed by Philippe Normand.
+
+        * webkit/webkitspellchecker.cpp: Add missing ':' after some
+        gobject-introspection annotations.
+
+2013-12-03  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Push Remote Inspector debugging connection management into JavaScriptCore
+        https://bugs.webkit.org/show_bug.cgi?id=124613
+
+        Reviewed by Timothy Hatcher.
+
+        * WebCoreSupport/InspectorClientGtk.h:
+
+2013-12-02  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        [GTK] GTK2 paint code path does not render AC layers
+        https://bugs.webkit.org/show_bug.cgi?id=124967
+
+        Reviewed by Carlos Garcia Campos.
+
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_expose_event): also paint AC layers when painting the widget,
+        when AC is on.
+
+2013-11-28  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        REGRESSION(r154658): webkit_web_view_get_view_source_mode always returns false
+        https://bugs.webkit.org/show_bug.cgi?id=124954
+
+        Reviewed by Carlos Garcia Campos.
+
+        * tests/testwebview.c: new test to ensure setting and getting source mode work as intended.
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_get_view_source_mode): actually return the value we query from WebCore.
+
 2013-11-18  Carlos Garcia Campos  <cgarcia@igalia.com>
 
         Unreviewed. Update NEWS and Versions.m4 for 2.3.2 release.

@@ -1487,6 +1487,15 @@ public:
         setupArgumentsWithExecState(arg1, arg2, arg3);
     }
 
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImm32 arg1, GPRReg arg2, GPRReg arg3, TrustedImm32 arg4, TrustedImm32 arg5, GPRReg arg6, GPRReg arg7)
+    {
+        poke(arg7, POKE_ARGUMENT_OFFSET + 3);
+        poke(arg6, POKE_ARGUMENT_OFFSET + 2);
+        poke(arg5, POKE_ARGUMENT_OFFSET + 1);
+        poke(arg4, POKE_ARGUMENT_OFFSET);
+        setupArgumentsWithExecState(arg1, arg2, arg3);
+    }
+
     ALWAYS_INLINE void setupArguments(GPRReg arg1, GPRReg arg2, TrustedImmPtr arg3, TrustedImm32 arg4, GPRReg arg5)
     {
         poke(arg5, POKE_ARGUMENT_OFFSET);
@@ -1565,10 +1574,7 @@ public:
     {
         // genericUnwind() leaves the handler CallFrame* in vm->callFrameForThrow,
         // and the address of the handler in vm->targetMachinePCForThrow.
-        // The exception handler expects the CallFrame* in regT0.
-        move(TrustedImmPtr(vm()), GPRInfo::regT0);
-        loadPtr(Address(GPRInfo::regT0, VM::targetMachinePCForThrowOffset()), GPRInfo::regT1);
-        loadPtr(Address(GPRInfo::regT0, VM::callFrameForThrowOffset()), GPRInfo::regT0);
+        loadPtr(&vm()->targetMachinePCForThrow, GPRInfo::regT1);
         jump(GPRInfo::regT1);
     }
 };

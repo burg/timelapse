@@ -44,7 +44,7 @@ WebInspector.NavigationSidebarPanel = function(identifier, displayName, image, k
     if (autoHideToolbarItemWhenEmpty)
         this.toolbarItem.hidden = true;
 
-    this._allContentTreeOutlines = new Set;
+    this._visibleContentTreeOutlines = new Set;
 
     this._contentElement = document.createElement("div");
     this._contentElement.className = WebInspector.NavigationSidebarPanel.ContentElementStyleClassName;
@@ -141,8 +141,8 @@ WebInspector.NavigationSidebarPanel.prototype = {
         this._allContentTreeOutlines.delete(this._defaultContentTreeOutline);
         this._allContentTreeOutlines.add(newTreeOutline);
 
-        this._defaultContentTreeOutline = newTreeOutline;
-        this._defaultContentTreeOutline.element.classList.remove(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
+        this._visibleContentTreeOutlines.delete(this._contentTreeOutline);
+        this._visibleContentTreeOutlines.add(newTreeOutline);
 
         this._filterChanged();
     },
@@ -172,7 +172,8 @@ WebInspector.NavigationSidebarPanel.prototype = {
         contentTreeOutline.onfilter = this._treeElementFiltered.bind(this);
         contentTreeOutline.allowsRepeatSelection = true;
 
-        this._allContentTreeOutlines.add(contentTreeOutline);
+        if (dontHideByDefault)
+            this._visibleContentTreeOutlines.add(contentTreeOutline);
 
         return contentTreeOutline;
     },
@@ -194,12 +195,13 @@ WebInspector.NavigationSidebarPanel.prototype = {
     {
         console.assert(cookie);
 
-        // FIXME: this does not handle selections in the search results tree outline, or folder selections.
+        // This does not save folder selections, which lack a represented object and content view.
         var selectedTreeElement = null;
-        this._allContentTreeOutlines.forEach(function(outline) {
+        this._visibleContentTreeOutlines.forEach(function(outline) {
             if (outline.selectedTreeElement)
                 selectedTreeElement = outline.selectedTreeElement;
         });
+
         if (!selectedTreeElement)
             return;
 
@@ -212,6 +214,7 @@ WebInspector.NavigationSidebarPanel.prototype = {
     restoreStateFromCookie: function(cookie, relaxedMatchDelay)
     {
         this._pendingViewStateCookie = cookie;
+
         // Check if any existing tree elements in any outline match the cookie.
         this._checkOutlinesForPendingViewStateCookie();
 
@@ -463,14 +466,17 @@ WebInspector.NavigationSidebarPanel.prototype = {
         if (!this._pendingViewStateCookie)
             return;
 
-        var workList = [];
-        this._allContentTreeOutlines.forEach(function(outline) { workList.push(outline); });
-        for (var i = 0; i < workList.length; ++i)
-            if (workList[i].hasChildren)
-                workList = workList.concat(workList[i].children);
+        var visibleTreeElements = [];
+        this._visibleContentTreeOutlines.forEach(function(outline) {
+            var currentTreeElement = outline.hasChildren ? outline.children[0] : null;
+            while (currentTreeElement) {
+                visibleTreeElements.push(currentTreeElement);
+                currentTreeElement = currentTreeElement.traverseNextTreeElement(false, null, false);
+            }
+        });
 
         // This includes treeOutlines in the elements list, but this is harmless.
-        return this._checkElementsForPendingViewStateCookie(workList);
+        return this._checkElementsForPendingViewStateCookie(visibleTreeElements, matchTypeOnly);
     },
 
     _checkElementsForPendingViewStateCookie: function(treeElements, matchTypeOnly)
@@ -480,7 +486,8 @@ WebInspector.NavigationSidebarPanel.prototype = {
 
         var cookie = this._pendingViewStateCookie;
 
-        function treeElementMatchesCookie(treeElement) {
+        function treeElementMatchesCookie(treeElement)
+        {
             var representedObject = treeElement.representedObject;
             if (!representedObject)
                 return false;

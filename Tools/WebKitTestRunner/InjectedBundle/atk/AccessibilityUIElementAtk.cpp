@@ -85,13 +85,18 @@ const String attributesMap[][2] = {
     { "AXUnknownSortDirection", "unknown" }
 };
 
-String coreAttributeToAtkAttribute(JSStringRef attribute)
+String jsStringToWTFString(JSStringRef attribute)
 {
     size_t bufferSize = JSStringGetMaximumUTF8CStringSize(attribute);
     GOwnPtr<gchar> buffer(static_cast<gchar*>(g_malloc(bufferSize)));
     JSStringGetUTF8CString(attribute, buffer.get(), bufferSize);
 
-    String attributeString = String::fromUTF8(buffer.get());
+    return String::fromUTF8(buffer.get());
+}
+
+String coreAttributeToAtkAttribute(JSStringRef attribute)
+{
+    String attributeString = jsStringToWTFString(attribute);
     for (int i = 0; i < NumberOfAttributes; ++i) {
         if (attributesMap[i][CoreDomain] == attributeString)
             return attributesMap[i][AtkDomain];
@@ -267,6 +272,8 @@ const gchar* roleToString(AtkRole role)
     switch (role) {
     case ATK_ROLE_ALERT:
         return "AXAlert";
+    case ATK_ROLE_DIALOG:
+        return "AXDialog";
     case ATK_ROLE_CANVAS:
         return "AXCanvas";
     case ATK_ROLE_CHECK_BOX:
@@ -278,6 +285,8 @@ const gchar* roleToString(AtkRole role)
     case ATK_ROLE_COMBO_BOX:
         return "AXComboBox";
     case ATK_ROLE_DOCUMENT_FRAME:
+        return "AXDocument";
+    case ATK_ROLE_DOCUMENT_WEB:
         return "AXWebArea";
     case ATK_ROLE_EMBEDDED:
         return "AXEmbedded";
@@ -345,6 +354,8 @@ const gchar* roleToString(AtkRole role)
         return "AXSlider";
     case ATK_ROLE_SPIN_BUTTON:
         return "AXSpinButton";
+    case ATK_ROLE_STATUSBAR:
+        return "AXStatusBar";
     case ATK_ROLE_TABLE:
         return "AXTable";
     case ATK_ROLE_TABLE_CELL:
@@ -751,7 +762,13 @@ bool AccessibilityUIElement::boolAttributeValue(JSStringRef attribute)
 
 bool AccessibilityUIElement::isAttributeSettable(JSStringRef attribute)
 {
-    // FIXME: implement
+    if (!ATK_IS_OBJECT(m_element.get()))
+        return false;
+
+    String attributeString = jsStringToWTFString(attribute);
+    if (attributeString == "AXValue")
+        return checkElementState(m_element.get(), ATK_STATE_EDITABLE);
+
     return false;
 }
 
@@ -1052,6 +1069,11 @@ bool AccessibilityUIElement::isSelected() const
     return checkElementState(m_element.get(), ATK_STATE_SELECTED);
 }
 
+bool AccessibilityUIElement::isSelectedOptionActive() const
+{
+    return checkElementState(m_element.get(), ATK_STATE_ACTIVE);
+}
+
 bool AccessibilityUIElement::isExpanded() const
 {
     return checkElementState(m_element.get(), ATK_STATE_EXPANDED);
@@ -1139,6 +1161,12 @@ bool AccessibilityUIElement::attributedStringRangeIsMisspelled(unsigned location
 {
     // FIXME: implement
     return false;
+}
+
+unsigned AccessibilityUIElement::uiElementCountForSearchPredicate(JSContextRef context, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly)
+{
+    // FIXME: implement
+    return 0;
 }
 
 PassRefPtr<AccessibilityUIElement> AccessibilityUIElement::uiElementForSearchPredicate(JSContextRef context, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly)

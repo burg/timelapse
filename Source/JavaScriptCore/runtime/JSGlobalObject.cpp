@@ -125,6 +125,11 @@
 #include "JSPromiseResolverPrototype.h"
 #endif // ENABLE(PROMISES)
 
+#if ENABLE(REMOTE_INSPECTOR)
+#include "JSGlobalObjectDebuggable.h"
+#include "RemoteInspector.h"
+#endif
+
 #include "JSGlobalObject.lut.h"
 
 namespace JSC {
@@ -190,6 +195,12 @@ void JSGlobalObject::init(JSObject* thisValue)
 
     m_debugger = 0;
 
+#if ENABLE(REMOTE_INSPECTOR)
+    m_inspectorDebuggable = std::make_unique<JSGlobalObjectDebuggable>(*this);
+    m_inspectorDebuggable->init();
+    m_inspectorDebuggable->setRemoteDebuggingAllowed(true);
+#endif
+
     reset(prototype());
 }
 
@@ -213,21 +224,31 @@ bool JSGlobalObject::defineOwnProperty(JSObject* object, ExecState* exec, Proper
     return Base::defineOwnProperty(thisObject, exec, propertyName, descriptor, shouldThrow);
 }
 
-int JSGlobalObject::addGlobalVar(const Identifier& ident, ConstantMode constantMode, FunctionMode functionMode)
+JSGlobalObject::NewGlobalVar JSGlobalObject::addGlobalVar(const Identifier& ident, ConstantMode constantMode)
 {
     ConcurrentJITLocker locker(symbolTable()->m_lock);
     int index = symbolTable()->size(locker);
     SymbolTableEntry newEntry(index, (constantMode == IsConstant) ? ReadOnly : 0);
-    if (functionMode == IsFunctionToSpecialize)
-        newEntry.attemptToWatch();
+    if (constantMode == IsVariable)
+        newEntry.prepareToWatch();
     SymbolTable::Map::AddResult result = symbolTable()->add(locker, ident.impl(), newEntry);
     if (result.isNewEntry)
         addRegisters(1);
-    else {
-        result.iterator->value.notifyWrite();
+    else
         index = result.iterator->value.getIndex();
-    }
-    return index;
+    NewGlobalVar var;
+    var.registerNumber = index;
+    var.set = result.iterator->value.watchpointSet();
+    return var;
+}
+
+void JSGlobalObject::addFunction(ExecState* exec, const Identifier& propertyName, JSValue value)
+{
+    removeDirect(exec->vm(), propertyName); // Newly declared functions overwrite existing properties.
+    NewGlobalVar var = addGlobalVar(propertyName, IsVariable);
+    registerAt(var.registerNumber).set(exec->vm(), this, value);
+    if (var.set)
+        var.set->notifyWrite(value);
 }
 
 static inline JSObject* lastInPrototypeChain(JSObject* object)
@@ -719,26 +740,6 @@ void JSGlobalObject::clearRareData(JSCell* cell)
     jsCast<JSGlobalObject*>(cell)->m_rareData.clear();
 }
 
-DynamicGlobalObjectScope::DynamicGlobalObjectScope(VM& vm, JSGlobalObject* dynamicGlobalObject)
-    : m_dynamicGlobalObjectSlot(vm.dynamicGlobalObject)
-    , m_savedDynamicGlobalObject(m_dynamicGlobalObjectSlot)
-{
-    if (!m_dynamicGlobalObjectSlot) {
-#if ENABLE(ASSEMBLER)
-        if (ExecutableAllocator::underMemoryPressure())
-            vm.heap.deleteAllCompiledCode();
-#endif
-
-        m_dynamicGlobalObjectSlot = dynamicGlobalObject;
-
-        // Reset the date cache between JS invocations to force the VM
-        // to observe time zone changes.
-        vm.resetDateCache();
-    }
-    // Clear the exception stack between entries
-    vm.clearExceptionStack();
-}
-
 void slowValidateCell(JSGlobalObject* globalObject)
 {
     RELEASE_ASSERT(globalObject->isGlobalObject());
@@ -781,6 +782,33 @@ UnlinkedEvalCodeBlock* JSGlobalObject::createEvalCodeBlock(CallFrame* callFrame,
     }
 
     return unlinkedCodeBlock;
+}
+
+void JSGlobalObject::setRemoteDebuggingEnabled(bool enabled)
+{
+#if ENABLE(REMOTE_INSPECTOR)
+    m_inspectorDebuggable->setRemoteDebuggingAllowed(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+}
+
+bool JSGlobalObject::remoteDebuggingEnabled() const
+{
+#if ENABLE(REMOTE_INSPECTOR)
+    return m_inspectorDebuggable->remoteDebuggingAllowed();
+#else
+    return false;
+#endif
+}
+
+void JSGlobalObject::setName(const String& name)
+{
+    m_name = name;
+
+#if ENABLE(REMOTE_INSPECTOR)
+    m_inspectorDebuggable->update();
+#endif
 }
 
 } // namespace JSC

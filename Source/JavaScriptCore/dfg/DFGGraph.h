@@ -428,6 +428,18 @@ public:
         return baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, m_profiledBlock);
     }
     
+    bool isStrictModeFor(CodeOrigin codeOrigin)
+    {
+        if (!codeOrigin.inlineCallFrame)
+            return m_codeBlock->isStrictMode();
+        return jsCast<FunctionExecutable*>(codeOrigin.inlineCallFrame->executable.get())->isStrictMode();
+    }
+    
+    ECMAMode ecmaModeFor(CodeOrigin codeOrigin)
+    {
+        return isStrictModeFor(codeOrigin) ? StrictMode : NotStrictMode;
+    }
+    
     bool masqueradesAsUndefinedWatchpointIsStillValid(const CodeOrigin& codeOrigin)
     {
         return m_plan.watchpoints.isStillValid(
@@ -786,6 +798,17 @@ public:
     FullBytecodeLiveness& livenessFor(CodeBlock*);
     FullBytecodeLiveness& livenessFor(InlineCallFrame*);
     bool isLiveInBytecode(VirtualRegister, CodeOrigin);
+    
+    unsigned frameRegisterCount();
+    unsigned requiredRegisterCountForExit();
+    unsigned requiredRegisterCountForExecutionAndExit();
+    
+    JSActivation* tryGetActivation(Node*);
+    WriteBarrierBase<Unknown>* tryGetRegisters(Node*);
+    
+    JSArrayBufferView* tryGetFoldableView(Node*);
+    JSArrayBufferView* tryGetFoldableView(Node*, ArrayMode);
+    JSArrayBufferView* tryGetFoldableViewForChild1(Node*);
     
     VM& m_vm;
     Plan& m_plan;

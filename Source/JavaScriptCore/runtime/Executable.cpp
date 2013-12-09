@@ -298,6 +298,9 @@ JSObject* ScriptExecutable::prepareForExecutionImpl(
         return exception;
     }
     
+    if (Options::validateBytecode())
+        codeBlock->validate();
+    
     bool shouldUseLLInt;
 #if !ENABLE(JIT)
     // No JIT implies use of the C Loop LLINT. Override the options to reflect this. 
@@ -531,6 +534,11 @@ void FunctionExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
     if (thisObject->m_codeBlockForConstruct)
         thisObject->m_codeBlockForConstruct->visitAggregate(visitor);
     visitor.append(&thisObject->m_unlinkedExecutable);
+}
+
+SymbolTable* FunctionExecutable::symbolTable(CodeSpecializationKind kind)
+{
+    return codeBlockFor(kind)->symbolTable();
 }
 
 void FunctionExecutable::clearCodeIfNotCompiling()

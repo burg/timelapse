@@ -137,8 +137,8 @@ PassRefPtr<MediaStream> MediaStream::clone()
 
 void MediaStream::cloneMediaStreamTrackVector(Vector<RefPtr<MediaStreamTrack>>& destination, const Vector<RefPtr<MediaStreamTrack>>& source)
 {
-    for (unsigned i = 0; i < source.size(); i++)
-        destination.append(source[i]->clone());
+    for (auto it = source.begin(), end = source.end(); it != end; ++it)
+        destination.append((*it)->clone());
 }
 
 void MediaStream::addTrack(PassRefPtr<MediaStreamTrack> prpTrack, ExceptionCode& ec)
@@ -153,7 +153,10 @@ void MediaStream::addTrack(PassRefPtr<MediaStreamTrack> prpTrack, ExceptionCode&
         return;
     }
 
-    addTrack(prpTrack);
+    if (addTrack(prpTrack)) {
+        for (auto observer = m_observers.begin(), end = m_observers.end(); observer != end; ++observer)
+            (*observer)->didAddOrRemoveTrack();
+    }
 }
 
 bool MediaStream::addTrack(PassRefPtr<MediaStreamTrack> prpTrack)
@@ -184,7 +187,10 @@ void MediaStream::removeTrack(PassRefPtr<MediaStreamTrack> prpTrack, ExceptionCo
         return;
     }
 
-    removeTrack(prpTrack);
+    if (removeTrack(prpTrack)) {
+        for (auto observer = m_observers.begin(), end = m_observers.end(); observer != end; ++observer)
+            (*observer)->didAddOrRemoveTrack();
+    }
 }
 
 bool MediaStream::removeTrack(PassRefPtr<MediaStreamTrack> prpTrack)
@@ -217,15 +223,15 @@ bool MediaStream::removeTrack(PassRefPtr<MediaStreamTrack> prpTrack)
 bool MediaStream::haveTrackWithSource(PassRefPtr<MediaStreamSource> source)
 {
     if (source->type() == MediaStreamSource::Audio) {
-        for (auto iter = m_audioTracks.begin(); iter != m_audioTracks.end(); ++iter) {
-            if ((*iter)->source() == source.get())
+        for (auto it = m_audioTracks.begin(), end = m_audioTracks.end(); it != end; ++it) {
+            if ((*it)->source() == source.get())
                 return true;
         }
         return false;
     }
 
-    for (auto iter = m_videoTracks.begin(); iter != m_videoTracks.end(); ++iter) {
-        if ((*iter)->source() == source.get())
+    for (auto it = m_videoTracks.begin(), end = m_videoTracks.end(); it != end; ++it) {
+        if ((*it)->source() == source.get())
             return true;
     }
 
@@ -234,14 +240,14 @@ bool MediaStream::haveTrackWithSource(PassRefPtr<MediaStreamSource> source)
 
 MediaStreamTrack* MediaStream::getTrackById(String id)
 {
-    for (auto iter = m_audioTracks.begin(); iter != m_audioTracks.end(); ++iter) {
-        if ((*iter)->id() == id)
-            return (*iter).get();
+    for (auto it = m_audioTracks.begin(), end = m_audioTracks.end(); it != end; ++it) {
+        if ((*it)->id() == id)
+            return (*it).get();
     }
 
-    for (auto iter = m_videoTracks.begin(); iter != m_videoTracks.end(); ++iter) {
-        if ((*iter)->id() == id)
-            return (*iter).get();
+    for (auto it = m_videoTracks.begin(), end = m_videoTracks.end(); it != end; ++it) {
+        if ((*it)->id() == id)
+            return (*it).get();
     }
 
     return nullptr;
@@ -249,14 +255,15 @@ MediaStreamTrack* MediaStream::getTrackById(String id)
 
 void MediaStream::trackDidEnd()
 {
-    for (size_t i = 0; i < m_audioTracks.size(); ++i)
-        if (!m_audioTracks[i]->ended())
+    for (auto it = m_audioTracks.begin(), end = m_audioTracks.end(); it != end; ++it) {
+        if (!(*it)->ended())
             return;
-    
-    for (size_t i = 0; i < m_videoTracks.size(); ++i)
-        if (!m_videoTracks[i]->ended())
+    }
+    for (auto it = m_videoTracks.begin(), end = m_videoTracks.end(); it != end; ++it) {
+        if (!(*it)->ended())
             return;
-    
+    }
+
     setEnded();
 }
 
@@ -351,8 +358,7 @@ void MediaStream::scheduledEventTimerFired(Timer<MediaStream>*)
     Vector<RefPtr<Event>> events;
     events.swap(m_scheduledEvents);
 
-    Vector<RefPtr<Event>>::iterator it = events.begin();
-    for (; it != events.end(); ++it)
+    for (auto it = events.begin(), end = events.end(); it != end; ++it)
         dispatchEvent((*it).release());
 
     events.clear();
@@ -374,6 +380,19 @@ Vector<RefPtr<MediaStreamTrack>>* MediaStream::trackVectorForType(MediaStreamSou
         ASSERT_NOT_REACHED();
     }
     return nullptr;
+}
+
+void MediaStream::addObserver(MediaStream::Observer* observer)
+{
+    if (m_observers.find(observer) == notFound)
+        m_observers.append(observer);
+}
+
+void MediaStream::removeObserver(MediaStream::Observer* observer)
+{
+    size_t pos = m_observers.find(observer);
+    if (pos != notFound)
+        m_observers.remove(pos);
 }
 
 } // namespace WebCore

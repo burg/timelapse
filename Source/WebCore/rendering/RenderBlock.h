@@ -25,49 +25,28 @@
 
 #include "ColumnInfo.h"
 #include "GapRects.h"
-#include "PODIntervalTree.h"
 #include "RenderBox.h"
-#include "RootInlineBox.h"
-#include "TextBreakIterator.h"
 #include "TextRun.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/ListHashSet.h>
 
-#if ENABLE(CSS_SHAPES)
-#include "ShapeInsideInfo.h"
-#include "ShapeValue.h"
-#endif
-
 namespace WebCore {
 
-class BidiContext;
-class InlineIterator;
-class LayoutStateMaintainer;
 class LineLayoutState;
-class LineWidth;
 class LogicalSelectionOffsetCaches;
 class RenderInline;
 class RenderText;
+#if ENABLE(CSS_SHAPES)
+class ShapeInsideInfo;
+class ShapeValue;
+#endif
 
 struct BidiRun;
 struct PaintInfo;
-class LineInfo;
-class RenderRubyRun;
-#if ENABLE(CSS_SHAPES)
-class BasicShape;
-#endif
-class TextLayout;
-class WordMeasurement;
 
-template <class Iterator, class Run> class BidiResolver;
-template <class Run> class BidiRunList;
-template <class Iterator> struct MidpointState;
-typedef BidiResolver<InlineIterator, BidiRun> InlineBidiResolver;
-typedef MidpointState<InlineIterator> LineMidpointState;
 typedef WTF::ListHashSet<RenderBox*, 16> TrackedRendererListHashSet;
 typedef WTF::HashMap<const RenderBlock*, OwnPtr<TrackedRendererListHashSet>> TrackedDescendantsMap;
 typedef WTF::HashMap<const RenderBox*, OwnPtr<HashSet<RenderBlock*>>> TrackedContainerMap;
-typedef Vector<WordMeasurement, 64> WordMeasurements;
 
 enum CaretType { CursorCaret, DragCaret };
 enum ContainingBlockState { NewContainingBlock, SameContainingBlock };
@@ -386,9 +365,9 @@ public:
 #endif
 
 #if ENABLE(CSS_SHAPES)
-    ShapeInsideInfo* ensureShapeInsideInfo();
+    ShapeInsideInfo& ensureShapeInsideInfo();
     ShapeInsideInfo* shapeInsideInfo() const;
-    void setShapeInsideInfo(PassOwnPtr<ShapeInsideInfo> value);
+    void setShapeInsideInfo(std::unique_ptr<ShapeInsideInfo>);
     
     void markShapeInsideDescendantsForLayout();
     ShapeInsideInfo* layoutShapeInsideInfo() const;
@@ -408,6 +387,8 @@ protected:
 
     void layoutPositionedObjects(bool relayoutChildren, bool fixedPositionObjectsOnly = false);
     void markFixedPositionObjectForLayoutIfNeeded(RenderObject& child);
+
+    LayoutUnit marginIntrinsicLogicalWidthForChild(RenderBox&) const;
 
     virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
     virtual void paintObject(PaintInfo&, const LayoutPoint&) OVERRIDE;
@@ -455,6 +436,9 @@ protected:
     virtual void simplifiedNormalFlowLayout();
 
     void setDesiredColumnCountAndWidth(int, LayoutUnit);
+
+    LayoutUnit logicalLeftSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
+    LayoutUnit logicalRightSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
 
 public:
     virtual void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false);
@@ -576,9 +560,7 @@ private:
         LayoutUnit& lastLogicalTop, LayoutUnit& lastLogicalLeft, LayoutUnit& lastLogicalRight, const LogicalSelectionOffsetCaches&, const PaintInfo*);
     LayoutRect blockSelectionGap(RenderBlock& rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
         LayoutUnit lastLogicalTop, LayoutUnit lastLogicalLeft, LayoutUnit lastLogicalRight, LayoutUnit logicalBottom, const LogicalSelectionOffsetCaches&, const PaintInfo*);
-    LayoutUnit logicalLeftSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
-    LayoutUnit logicalRightSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
-    
+
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
     virtual void clipOutFloatingObjects(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) { };
     friend class LogicalSelectionOffsetCaches;

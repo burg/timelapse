@@ -59,7 +59,7 @@ class RTCSessionDescriptionCallback;
 class RTCStatsCallback;
 class VoidCallback;
 
-class RTCPeerConnection FINAL : public RefCounted<RTCPeerConnection>, public ScriptWrappable, public RTCPeerConnectionHandlerClient, public EventTargetWithInlineData, public ActiveDOMObject {
+class RTCPeerConnection FINAL : public RefCounted<RTCPeerConnection>, public ScriptWrappable, public RTCPeerConnectionHandlerClient, public EventTargetWithInlineData, public ActiveDOMObject, public MediaStream::Observer {
 public:
     static PassRefPtr<RTCPeerConnection> create(ScriptExecutionContext&, const Dictionary& rtcConfiguration, const Dictionary& mediaConstraints, ExceptionCode&);
     ~RTCPeerConnection();
@@ -118,7 +118,7 @@ public:
     virtual void didChangeIceConnectionState(IceConnectionState) OVERRIDE;
     virtual void didAddRemoteStream(PassRefPtr<MediaStreamPrivate>) OVERRIDE;
     virtual void didRemoveRemoteStream(MediaStreamPrivate*) OVERRIDE;
-    virtual void didAddRemoteDataChannel(PassOwnPtr<RTCDataChannelHandler>) OVERRIDE;
+    virtual void didAddRemoteDataChannel(std::unique_ptr<RTCDataChannelHandler>) OVERRIDE;
 
     // EventTarget
     virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return RTCPeerConnectionEventTargetInterfaceType; }
@@ -126,6 +126,9 @@ public:
 
     // ActiveDOMObject
     virtual void stop() OVERRIDE;
+
+    // MediaStream::Observer
+    virtual void didAddOrRemoveTrack() OVERRIDE;
 
     using RefCounted<RTCPeerConnection>::ref;
     using RefCounted<RTCPeerConnection>::deref;
@@ -155,7 +158,7 @@ private:
 
     Vector<RefPtr<RTCDataChannel>> m_dataChannels;
 
-    OwnPtr<RTCPeerConnectionHandler> m_peerHandler;
+    std::unique_ptr<RTCPeerConnectionHandler> m_peerHandler;
 
     Timer<RTCPeerConnection> m_scheduledEventTimer;
     Vector<RefPtr<Event>> m_scheduledEvents;

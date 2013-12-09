@@ -504,7 +504,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
 
                 cachedCall.setThis(jsUndefined());
                 JSValue jsResult = cachedCall.call();
-                replacements.append(jsResult.toString(cachedCall.newCallFrame(exec))->value(exec));
+                replacements.append(jsResult.toString(exec)->value(exec));
                 if (exec->hadException())
                     break;
 
@@ -543,7 +543,7 @@ static NEVER_INLINE EncodedJSValue replaceUsingRegExpSearch(ExecState* exec, JSS
 
                 cachedCall.setThis(jsUndefined());
                 JSValue jsResult = cachedCall.call();
-                replacements.append(jsResult.toString(cachedCall.newCallFrame(exec))->value(exec));
+                replacements.append(jsResult.toString(exec)->value(exec));
                 if (exec->hadException())
                     break;
 

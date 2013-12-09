@@ -56,10 +56,10 @@ WebInspector.LiveRecordingContentView.StyleClassName = "live-recording";
 WebInspector.ReplayDashboardView.StopStyleClassName = "stop";
 
 WebInspector.LiveRecordingContentView.GraphBorderWidth = 1; // in pixels
-WebInspector.LiveRecordingContentView.GraphBorderStrokeColor = new WebInspector.Color("#999");
+WebInspector.LiveRecordingContentView.GraphBorderStrokeColor = new WebInspector.Color.fromString("#999");
 WebInspector.LiveRecordingContentView.MaxRecordLifetime = 10.0; // seconds
 WebInspector.LiveRecordingContentView.MaxBinsPerTimeline = 300;
-WebInspector.LiveRecordingContentView.LineGraphFillColor = new WebInspector.Color.fromRGBA(100, 100, 100, 0.6);
+WebInspector.LiveRecordingContentView.LineGraphFillColor = new WebInspector.Color(WebInspector.Color.Format.RGBA, [100, 100, 100, 0.6]);
 
 WebInspector.LiveRecordingContentView.prototype = {
     constructor: WebInspector.LiveRecordingContentView,
@@ -224,7 +224,7 @@ WebInspector.LiveRecordingContentView.prototype = {
 
         var currentData = this._timeline.data;
         ctx.lineJoin = "round";
-        ctx.fillStyle = WebInspector.LiveRecordingContentView.LineGraphFillColor.value;
+        ctx.fillStyle = WebInspector.LiveRecordingContentView.LineGraphFillColor.toString();
         drawLineGraph.call(this, currentData);
 
         //ctx.restore();

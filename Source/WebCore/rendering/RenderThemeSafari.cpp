@@ -807,17 +807,17 @@ void RenderThemeSafari::paintMenuListButtonGradients(RenderObject* o, const Pain
     paintInfo.context->restore();
 }
 
-bool RenderThemeSafari::paintMenuListButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeSafari::paintMenuListButtonDecorations(RenderObject* renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
-    IntRect bounds = IntRect(r.x() + o->style().borderLeftWidth(),
-                             r.y() + o->style().borderTopWidth(),
-                             r.width() - o->style().borderLeftWidth() - o->style().borderRightWidth(),
-                             r.height() - o->style().borderTopWidth() - o->style().borderBottomWidth());
+    IntRect bounds = IntRect(rect.x() + renderer->style().borderLeftWidth(),
+                             rect.y() + renderer->style().borderTopWidth(),
+                             rect.width() - renderer->style().borderLeftWidth() - renderer->style().borderRightWidth(),
+                             rect.height() - renderer->style().borderTopWidth() - renderer->style().borderBottomWidth());
     // Draw the gradients to give the styled popup menu a button appearance
-    paintMenuListButtonGradients(o, paintInfo, bounds);
-    
+    paintMenuListButtonGradients(renderer, paintInfo, bounds);
+
     // Since we actually know the size of the control here, we restrict the font scale to make sure the arrow will fit vertically in the bounds
-    float fontScale = min(o->style().fontSize() / baseFontSize, bounds.height() / baseArrowHeight);
+    float fontScale = min(renderer->style().fontSize() / baseFontSize, bounds.height() / baseArrowHeight);
     float centerY = bounds.y() + bounds.height() / 2.0f;
     float arrowHeight = baseArrowHeight * fontScale;
     float arrowWidth = baseArrowWidth * fontScale;
@@ -828,7 +828,7 @@ bool RenderThemeSafari::paintMenuListButton(RenderObject* o, const PaintInfo& pa
 
     paintInfo.context->save();
 
-    paintInfo.context->setFillColor(o->style().visitedDependentColor(CSSPropertyColor), ColorSpaceDeviceRGB);
+    paintInfo.context->setFillColor(renderer->style().visitedDependentColor(CSSPropertyColor), ColorSpaceDeviceRGB);
     paintInfo.context->setStrokeColor(NoStroke, ColorSpaceDeviceRGB);
 
     FloatPoint arrow[3];
@@ -841,13 +841,13 @@ bool RenderThemeSafari::paintMenuListButton(RenderObject* o, const PaintInfo& pa
 
     Color leftSeparatorColor(0, 0, 0, 40);
     Color rightSeparatorColor(255, 255, 255, 40);
-    
+
     // FIXME: Should the separator thickness and space be scaled up by fontScale?
     int separatorSpace = 2;
     int leftEdgeOfSeparator = static_cast<int>(leftEdge - arrowPaddingLeft); // FIXME: Round?
 
     // Draw the separator to the left of the arrows
-    paintInfo.context->setStrokeThickness(1.0f);
+    paintInfo.context->setStrokeThickness(1);
     paintInfo.context->setStrokeStyle(SolidStroke);
     paintInfo.context->setStrokeColor(leftSeparatorColor, ColorSpaceDeviceRGB);
     paintInfo.context->drawLine(IntPoint(leftEdgeOfSeparator, bounds.y()),
@@ -1109,26 +1109,26 @@ const IntSize* RenderThemeSafari::resultsButtonSizes() const
 }
 
 const int emptyResultsOffset = 9;
-void RenderThemeSafari::adjustSearchFieldDecorationStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeSafari::adjustSearchFieldDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     IntSize size = sizeForSystemFont(style, resultsButtonSizes());
     style->setWidth(Length(size.width() - emptyResultsOffset, Fixed));
     style->setHeight(Length(size.height(), Fixed));
 }
 
-bool RenderThemeSafari::paintSearchFieldDecoration(RenderObject*, const PaintInfo&, const IntRect&)
+bool RenderThemeSafari::paintSearchFieldDecorationPart(RenderObject*, const PaintInfo&, const IntRect&)
 {
     return false;
 }
 
-void RenderThemeSafari::adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeSafari::adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     IntSize size = sizeForSystemFont(style, resultsButtonSizes());
     style->setWidth(Length(size.width(), Fixed));
     style->setHeight(Length(size.height(), Fixed));
 }
 
-bool RenderThemeSafari::paintSearchFieldResultsDecoration(RenderObject* o, const PaintInfo& paintInfo, const IntRect&)
+bool RenderThemeSafari::paintSearchFieldResultsDecorationPart(RenderObject* o, const PaintInfo& paintInfo, const IntRect&)
 {
     ASSERT(SafariThemeLibrary());
 

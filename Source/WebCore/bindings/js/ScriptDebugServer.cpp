@@ -98,7 +98,7 @@ bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& b
     DebuggerCallFrame* debuggerCallFrame = currentDebuggerCallFrame();
     switch (breakpointAction.type) {
     case ScriptBreakpointActionTypeLog: {
-        DOMWindow& window = asJSDOMWindow(debuggerCallFrame->dynamicGlobalObject())->impl();
+        DOMWindow& window = asJSDOMWindow(debuggerCallFrame->vmEntryGlobalObject())->impl();
         if (PageConsole* console = window.pageConsole())
             console->addMessage(JSMessageSource, LogMessageLevel, breakpointAction.data);
         break;
@@ -314,10 +314,10 @@ void ScriptDebugServer::handleExceptionInBreakpointCondition(JSC::ExecState* exe
     reportException(exec, exception);
 }
 
-void ScriptDebugServer::handlePause(Debugger::ReasonForPause, JSGlobalObject* dynamicGlobalObject)
+void ScriptDebugServer::handlePause(Debugger::ReasonForPause, JSGlobalObject* vmEntryGlobalObject)
 {
-    dispatchFunctionToListeners(&ScriptDebugServer::dispatchDidPause, dynamicGlobalObject);
-    didPause(dynamicGlobalObject);
+    dispatchFunctionToListeners(&ScriptDebugServer::dispatchDidPause, vmEntryGlobalObject);
+    didPause(vmEntryGlobalObject);
 
     TimerBase::fireTimersInNestedEventLoop();
 
@@ -326,8 +326,8 @@ void ScriptDebugServer::handlePause(Debugger::ReasonForPause, JSGlobalObject* dy
     runEventLoopWhilePaused();
     m_runningNestedMessageLoop = false;
 
-    didContinue(dynamicGlobalObject);
-    dispatchFunctionToListeners(&ScriptDebugServer::dispatchDidContinue, dynamicGlobalObject);
+    didContinue(vmEntryGlobalObject);
+    dispatchFunctionToListeners(&ScriptDebugServer::dispatchDidContinue, vmEntryGlobalObject);
 }
 
 void ScriptDebugServer::recompileAllJSFunctionsSoon()

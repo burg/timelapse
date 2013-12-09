@@ -65,7 +65,6 @@ private:
     virtual bool dataChanged(bool allDataReceived) OVERRIDE;
 
     virtual void destroyDecodedData(bool /*destroyAll*/ = true) OVERRIDE;
-    virtual unsigned decodedSize() const OVERRIDE;
 
     virtual void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) OVERRIDE;
     virtual IntSize size() const OVERRIDE;
@@ -91,7 +90,7 @@ private:
     RetainPtr<CGPDFDocumentRef> m_document;
 #endif
 
-    OwnPtr<ImageBuffer> m_cachedImageBuffer;
+    std::unique_ptr<ImageBuffer> m_cachedImageBuffer;
     AffineTransform m_cachedTransform;
     FloatSize m_cachedDestinationSize;
     FloatRect m_cachedSourceRect;

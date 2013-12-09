@@ -289,7 +289,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     WebCore::Frame* frame = node->document().frame();
     if (!frame)
         return nil;
-    return [createDragImageForNode(*frame, node) autorelease];
+    return [createDragImageForNode(*frame, *node).leakRef() autorelease];
 }
 
 - (NSArray *)textRects
@@ -335,7 +335,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     if (!frame)
         return nil;
 
-    return [createDragImageForRange(*frame, range, forceBlackText) autorelease];
+    return [createDragImageForRange(*frame, *range, forceBlackText).leakRef() autorelease];
 }
 
 - (NSArray *)textRects

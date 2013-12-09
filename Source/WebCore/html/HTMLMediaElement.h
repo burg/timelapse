@@ -48,7 +48,9 @@
 #include "VideoTrack.h"
 #endif
 
-
+#if ENABLE(MEDIA_STREAM)
+#include "MediaStream.h"
+#endif
 
 namespace WebCore {
 
@@ -139,10 +141,15 @@ public:
 // error state
     PassRefPtr<MediaError> error() const;
 
-// network state
     void setSrc(const String&);
     const URL& currentSrc() const { return m_currentSrc; }
 
+#if ENABLE(MEDIA_STREAM)
+    MediaStream* srcObject() const { return m_mediaStreamSrcObject.get(); }
+    void setSrcObject(MediaStream*);
+#endif
+
+// network state
     enum NetworkState { NETWORK_EMPTY, NETWORK_IDLE, NETWORK_LOADING, NETWORK_NO_SOURCE };
     NetworkState networkState() const;
 
@@ -386,6 +393,11 @@ public:
     bool shouldUseVideoPluginProxy() const;
 #endif
 
+    unsigned long long fileSize() const;
+
+    void mediaLoadingFailed(MediaPlayer::NetworkState);
+    void mediaLoadingFailedFatally(MediaPlayer::NetworkState);
+
 protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool);
     virtual ~HTMLMediaElement();
@@ -554,14 +566,11 @@ private:
     void clearMediaPlayer(int flags);
     bool havePotentialSourceChild();
     void noneSupported();
-    void mediaEngineError(PassRefPtr<MediaError> err);
     void cancelPendingEventsAndCallbacks();
     void waitForSourceChange();
     void prepareToPlay();
 
     URL selectNextSourceChild(ContentType*, String* keySystem, InvalidURLAction);
-
-    void mediaLoadingFailed(MediaPlayer::NetworkState);
 
 #if ENABLE(VIDEO_TRACK)
     void updateActiveTextTrackCues(double);
@@ -796,6 +805,10 @@ private:
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
     RefPtr<MediaControlsHost> m_mediaControlsHost;
     RefPtr<DOMWrapperWorld> m_isolatedWorld;
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+    RefPtr<MediaStream> m_mediaStreamSrcObject;
 #endif
 };
 

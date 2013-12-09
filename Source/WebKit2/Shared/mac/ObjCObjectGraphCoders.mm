@@ -32,7 +32,6 @@
 // For UIProcess side encoding/decoding
 #import "WKAPICast.h"
 #import "WKBrowsingContextControllerInternal.h"
-#import "WKBrowsingContextControllerPrivate.h"
 #import "WebContextUserMessageCoders.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
@@ -41,7 +40,6 @@
 #import "InjectedBundleUserMessageCoders.h"
 #import "WKBundleAPICast.h"
 #import "WKWebProcessPlugInBrowserContextControllerInternal.h"
-#import "WKWebProcessPlugInBrowserContextControllerPrivate.h"
 #import "WKWebProcessPlugInInternal.h"
 #import "WebPage.h"
 #import "WebProcess.h"
@@ -92,7 +90,7 @@ static WebKitNSType typeFromObject(id object)
 template<typename Owner>
 class ObjCObjectGraphEncoder {
 public:
-    bool baseEncode(CoreIPC::ArgumentEncoder& encoder, WebKitNSType& type) const
+    bool baseEncode(CoreIPC::ArgumentEncoder& encoder, const Owner& coder, WebKitNSType& type) const
     {
         if (!m_root) {
             encoder << static_cast<uint32_t>(NullType);
@@ -118,7 +116,7 @@ public:
             encoder << static_cast<uint64_t>(size);
 
             for (NSUInteger i = 0; i < size; ++i)
-                encoder << Owner([array objectAtIndex:i]);
+                encoder << Owner(coder, [array objectAtIndex:i]);
             return true;
         }
         case NSDictionaryType: {
@@ -130,8 +128,8 @@ public:
             NSArray *keys = [dictionary allKeys];
             NSArray *values = [dictionary allValues];
             for (NSUInteger i = 0; i < size; ++i) {
-                encoder << Owner([keys objectAtIndex:i]);
-                encoder << Owner([values objectAtIndex:i]);
+                encoder << Owner(coder, [keys objectAtIndex:i]);
+                encoder << Owner(coder, [values objectAtIndex:i]);
             }
 
             return true;
@@ -269,15 +267,22 @@ class WebContextObjCObjectGraphEncoderImpl : public ObjCObjectGraphEncoder<WebCo
 public:
     typedef ObjCObjectGraphEncoder<WebContextObjCObjectGraphEncoderImpl> Base;
 
-    explicit WebContextObjCObjectGraphEncoderImpl(id root)
+    explicit WebContextObjCObjectGraphEncoderImpl(id root, WebProcessProxy& process)
         : Base(root)
+        , m_process(process)
+    {
+    }
+
+    WebContextObjCObjectGraphEncoderImpl(const WebContextObjCObjectGraphEncoderImpl& userMessageEncoder, id root)
+        : Base(root)
+        , m_process(userMessageEncoder.m_process)
     {
     }
 
     void encode(CoreIPC::ArgumentEncoder& encoder) const
     {
         WebKitNSType type = NullType;
-        if (baseEncode(encoder, type))
+        if (baseEncode(encoder, *this, type))
             return;
 
         switch (type) {
@@ -290,7 +295,7 @@ public:
         }
         case WKTypeRefWrapperType: {
             WKTypeRefWrapper *wrapper = static_cast<WKTypeRefWrapper *>(m_root);
-            encoder << WebContextUserMessageEncoder(toImpl(wrapper.object));
+            encoder << WebContextUserMessageEncoder(toImpl(wrapper.object), m_process);
             break;
         }
 #endif
@@ -299,6 +304,9 @@ public:
             break;
         }
     }
+
+private:
+    WebProcessProxy& m_process;
 };
 
 
@@ -306,7 +314,7 @@ class WebContextObjCObjectGraphDecoderImpl : public ObjCObjectGraphDecoder<WebCo
 public:
     typedef ObjCObjectGraphDecoder<WebContextObjCObjectGraphDecoderImpl> Base;
 
-    WebContextObjCObjectGraphDecoderImpl(RetainPtr<id>& root, WebProcessProxy* process)
+    WebContextObjCObjectGraphDecoderImpl(RetainPtr<id>& root, WebProcessProxy& process)
         : Base(root)
         , m_process(process)
     {
@@ -339,11 +347,11 @@ public:
             if (!decoder.decode(pageID))
                 return false;
 
-            WebPageProxy* webPage = coder.m_process->webPage(pageID);
+            WebPageProxy* webPage = coder.m_process.webPage(pageID);
             if (!webPage)
                 coder.m_root = [NSNull null];
             else 
-                coder.m_root = [WKBrowsingContextController _browsingContextControllerForPageRef:toAPI(webPage)];
+                coder.m_root = wrapper(*webPage);
             break;
         }
         case WKTypeRefWrapperType: {
@@ -363,7 +371,7 @@ public:
     }
 
 private:
-    WebProcessProxy* m_process;
+    WebProcessProxy& m_process;
 };
 
 
@@ -373,15 +381,22 @@ class InjectedBundleObjCObjectGraphEncoderImpl : public ObjCObjectGraphEncoder<I
 public:
     typedef ObjCObjectGraphEncoder<InjectedBundleObjCObjectGraphEncoderImpl> Base;
 
-    explicit InjectedBundleObjCObjectGraphEncoderImpl(id root)
+    explicit InjectedBundleObjCObjectGraphEncoderImpl(id root, WebProcess& process)
         : Base(root)
+        , m_process(process)
+    {
+    }
+
+    explicit InjectedBundleObjCObjectGraphEncoderImpl(const InjectedBundleObjCObjectGraphEncoderImpl& encoder, id root)
+        : Base(root)
+        , m_process(encoder.m_process)
     {
     }
 
     void encode(CoreIPC::ArgumentEncoder& encoder) const
     {
         WebKitNSType type = NullType;
-        if (baseEncode(encoder, type))
+        if (baseEncode(encoder, *this, type))
             return;
 
         switch (type) {
@@ -402,13 +417,16 @@ public:
             break;
         }
     }
+
+private:
+    WebProcess& m_process;
 };
 
 class InjectedBundleObjCObjectGraphDecoderImpl : public ObjCObjectGraphDecoder<InjectedBundleObjCObjectGraphDecoderImpl> {
 public:
     typedef ObjCObjectGraphDecoder<InjectedBundleObjCObjectGraphDecoderImpl> Base;
 
-    InjectedBundleObjCObjectGraphDecoderImpl(RetainPtr<id>& root, WebProcess* process)
+    InjectedBundleObjCObjectGraphDecoderImpl(RetainPtr<id>& root, WebProcess& process)
         : Base(root)
         , m_process(process)
     {
@@ -441,11 +459,11 @@ public:
             if (!decoder.decode(pageID))
                 return false;
 
-            WebPage* webPage = coder.m_process->webPage(pageID);
+            WebPage* webPage = coder.m_process.webPage(pageID);
             if (!webPage)
                 coder.m_root = [NSNull null];
             else 
-                coder.m_root = [[WKWebProcessPlugInController _shared] _browserContextControllerForBundlePageRef:toAPI(webPage)];
+                coder.m_root = wrapper(*webPage);
             break;
         }
         case WKTypeRefWrapperType: {
@@ -465,23 +483,24 @@ public:
     }
 
 private:
-    WebProcess* m_process;
+    WebProcess& m_process;
 };
 
 
 // Adaptors
 
-WebContextObjCObjectGraphEncoder::WebContextObjCObjectGraphEncoder(ObjCObjectGraph* objectGraph)
+WebContextObjCObjectGraphEncoder::WebContextObjCObjectGraphEncoder(ObjCObjectGraph* objectGraph, WebProcessProxy& process)
     : m_objectGraph(objectGraph)
+    , m_process(process)
 {
 }
 
 void WebContextObjCObjectGraphEncoder::encode(CoreIPC::ArgumentEncoder& encoder) const
 {
-    encoder << WebContextObjCObjectGraphEncoderImpl(m_objectGraph->rootObject());
+    encoder << WebContextObjCObjectGraphEncoderImpl(m_objectGraph->rootObject(), m_process);
 }
 
-WebContextObjCObjectGraphDecoder::WebContextObjCObjectGraphDecoder(RefPtr<ObjCObjectGraph>& objectGraph, WebProcessProxy* process)
+WebContextObjCObjectGraphDecoder::WebContextObjCObjectGraphDecoder(RefPtr<ObjCObjectGraph>& objectGraph, WebProcessProxy& process)
     : m_objectGraph(objectGraph)
     , m_process(process)
 {
@@ -498,17 +517,18 @@ bool WebContextObjCObjectGraphDecoder::decode(CoreIPC::ArgumentDecoder& decoder,
     return true;
 }
 
-InjectedBundleObjCObjectGraphEncoder::InjectedBundleObjCObjectGraphEncoder(ObjCObjectGraph* objectGraph)
+InjectedBundleObjCObjectGraphEncoder::InjectedBundleObjCObjectGraphEncoder(ObjCObjectGraph* objectGraph, WebProcess& process)
     : m_objectGraph(objectGraph)
+    , m_process(process)
 {
 }
 
 void InjectedBundleObjCObjectGraphEncoder::encode(CoreIPC::ArgumentEncoder& encoder) const
 {
-    encoder << InjectedBundleObjCObjectGraphEncoderImpl(m_objectGraph->rootObject());
+    encoder << InjectedBundleObjCObjectGraphEncoderImpl(m_objectGraph->rootObject(), m_process);
 }
 
-InjectedBundleObjCObjectGraphDecoder::InjectedBundleObjCObjectGraphDecoder(RefPtr<ObjCObjectGraph>& objectGraph, WebProcess* process)
+InjectedBundleObjCObjectGraphDecoder::InjectedBundleObjCObjectGraphDecoder(RefPtr<ObjCObjectGraph>& objectGraph, WebProcess& process)
     : m_objectGraph(objectGraph)
     , m_process(process)
 {

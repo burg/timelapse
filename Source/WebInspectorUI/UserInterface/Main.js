@@ -30,6 +30,16 @@ WebInspector.Notification = {
     PageArchiveEnded: "page-archive-ended"
 };
 
+WebInspector.ContentViewCookieType = {
+    ApplicationCache: "application-cache",
+    CookieStorage: "cookie-storage",
+    Database: "database",
+    DatabaseTable: "database-table",
+    DOMStorage: "dom-storage",
+    Resource: "resource", // includes Frame too.
+    Timelines: "timelines",
+};
+
 WebInspector.SelectedSidebarPanelCookieKey = "selected-sidebar-panel";
 WebInspector.TypeIdentifierCookieKey = "represented-object-type";
 
@@ -129,14 +139,14 @@ WebInspector.loaded = function()
     window.addEventListener("pagehide", this._pageHidden.bind(this));
 
     // Create settings.
+    this._lastInspectorViewStateCookieSetting = new WebInspector.Setting("last-content-view-state-cookie", {});
+
     this._navigationSidebarCollapsedSetting = new WebInspector.Setting("navigation-sidebar-collapsed", false);
     this._navigationSidebarWidthSetting = new WebInspector.Setting("navigation-sidebar-width", null);
 
     this._lastSelectedDetailsSidebarPanelSetting = new WebInspector.Setting("last-selected-details-sidebar-panel", null);
     this._detailsSidebarCollapsedSetting = new WebInspector.Setting("details-sidebar-collapsed", true);
     this._detailsSidebarWidthSetting = new WebInspector.Setting("details-sidebar-width", null);
-
-    this._lastInspectorViewStateCookieSetting = new WebInspector.Setting("last-content-view-state-cookie", {});
 
     this._toolbarDockedRightDisplayModeSetting = new WebInspector.Setting("toolbar-docked-right-display-mode", WebInspector.Toolbar.DisplayMode.IconAndLabelVertical);
     this._toolbarDockedRightSizeModeSetting = new WebInspector.Setting("toolbar-docked-right-size-mode",WebInspector.Toolbar.SizeMode.Normal);
@@ -1105,10 +1115,13 @@ WebInspector._restoreInspectorViewStateFromCookie = function(cookie, causedByRel
     const matchTypeOnlyDelayForReopen = 1000;
     var sidebarPanelIdentifier = cookie[WebInspector.SelectedSidebarPanelCookieKey];
     var sidebarPanel = WebInspector.navigationSidebar.findSidebarPanel(sidebarPanelIdentifier);
+    if (!sidebarPanel)
+        return;
+
     WebInspector.navigationSidebar.selectedSidebarPanel = sidebarPanel;
+
     var relaxMatchDelay = causedByReload ? matchTypeOnlyDelayForReload : matchTypeOnlyDelayForReopen;
     sidebarPanel.restoreStateFromCookie(cookie, relaxMatchDelay);
-
 }
 
 WebInspector._initializeWebSocketIfNeeded = function()

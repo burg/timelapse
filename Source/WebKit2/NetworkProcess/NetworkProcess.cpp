@@ -47,7 +47,7 @@
 #include <wtf/RunLoop.h>
 #include <wtf/text/CString.h>
 
-#if USE(SECURITY_FRAMEWORK)
+#if ENABLE(SEC_ITEM_SHIM)
 #include "SecItemShim.h"
 #endif
 
@@ -176,7 +176,7 @@ void NetworkProcess::initializeConnection(CoreIPC::Connection* connection)
 {
     ChildProcess::initializeConnection(connection);
 
-#if USE(SECURITY_FRAMEWORK)
+#if ENABLE(SEC_ITEM_SHIM)
     SecItemShim::shared().initializeConnection(connection);
 #endif
 

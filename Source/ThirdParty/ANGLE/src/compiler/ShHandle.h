@@ -70,6 +70,7 @@ public:
     TInfoSink& getInfoSink() { return infoSink; }
     const TVariableInfoList& getAttribs() const { return attribs; }
     const TVariableInfoList& getUniforms() const { return uniforms; }
+    const TVariableInfoList& getVaryings() const { return varyings; }
     int getMappedNameMaxLength() const;
 
     ShHashFunction64 getHashFunction() const { return hashFunction; }
@@ -90,14 +91,14 @@ protected:
     // Returns true if the given shader does not exceed the minimum
     // functionality mandated in GLSL 1.0 spec Appendix A.
     bool validateLimitations(TIntermNode* root);
-    // Collect info for all attribs and uniforms.
-    void collectAttribsUniforms(TIntermNode* root);
+    // Collect info for all attribs, uniforms, varyings.
+    void collectVariables(TIntermNode* root);
     // Map long variable names into shorter ones.
     void mapLongVariableNames(TIntermNode* root);
     // Translate to object code.
     virtual void translate(TIntermNode* root) = 0;
     // Returns true if, after applying the packing rules in the GLSL 1.017 spec
-    // Appendix A, section 7, the shader does not use too many uniforms.
+    // Appendix A, section 7, the shader does not use too many uniforms or varyings.
     bool enforcePackingRestrictions();
     // Returns true if the shader passes the restrictions that aim to prevent timing attacks.
     bool enforceTimingRestrictions(TIntermNode* root, bool outputGraph);
@@ -122,6 +123,7 @@ private:
     ShShaderSpec shaderSpec;
 
     int maxUniformVectors;
+    int maxVaryingVectors;
     int maxExpressionComplexity;
     int maxCallStackDepth;
 
@@ -142,6 +144,7 @@ private:
     TInfoSink infoSink;  // Output sink.
     TVariableInfoList attribs;  // Active attributes in the compiled shader.
     TVariableInfoList uniforms;  // Active uniforms in the compiled shader.
+    TVariableInfoList varyings;  // Varyings in the compiled shader.
 
     // Cached copy of the ref-counted singleton.
     LongNameMap* longNameMap;

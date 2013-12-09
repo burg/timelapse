@@ -58,6 +58,8 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
     case SH_ACTIVE_UNIFORMS:
         symbolMaxNameLengthType = SH_ACTIVE_UNIFORM_MAX_LENGTH;
         break;
+    case SH_VARYINGS:
+        symbolMaxNameLengthType = SH_VARYING_MAX_LENGTH;
     default:
         ASSERT_NOT_REACHED();
         return false;
@@ -80,14 +82,20 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
     for (ANGLEGetInfoType i = 0; i < numSymbols; ++i) {
         ANGLEShaderSymbol symbol;
         ANGLEGetInfoType nameLength = 0;
+        ShPrecisionType precision;
+        int staticUse;
         switch (symbolType) {
         case SH_ACTIVE_ATTRIBUTES:
             symbol.symbolType = SHADER_SYMBOL_TYPE_ATTRIBUTE;
-            ShGetActiveAttrib(compiler, i, &nameLength, &symbol.size, &symbol.dataType, nameBuffer.data(), mappedNameBuffer.data());
+            ShGetVariableInfo(compiler, symbolType, i, &nameLength, &symbol.size, &symbol.dataType, &precision, &staticUse, nameBuffer.data(), mappedNameBuffer.data());
             break;
         case SH_ACTIVE_UNIFORMS:
             symbol.symbolType = SHADER_SYMBOL_TYPE_UNIFORM;
-            ShGetActiveUniform(compiler, i, &nameLength, &symbol.size, &symbol.dataType, nameBuffer.data(), mappedNameBuffer.data());
+            ShGetVariableInfo(compiler, symbolType, i, &nameLength, &symbol.size, &symbol.dataType, &precision, &staticUse, nameBuffer.data(), mappedNameBuffer.data());
+            break;
+        case SH_VARYINGS:
+            symbol.symbolType = SHADER_SYMBOL_TYPE_VARYING;
+            ShGetVariableInfo(compiler, symbolType, i, &nameLength, &symbol.size, &symbol.dataType, &precision, &staticUse, nameBuffer.data(), mappedNameBuffer.data());
             break;
         default:
             ASSERT_NOT_REACHED();
@@ -117,6 +125,8 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
 
         symbol.name = name;
         symbol.mappedName = mappedName;
+        symbol.precision = precision;
+        symbol.staticUse = staticUse;
         symbols.append(symbol);
     
         if (symbol.isArray) {
@@ -191,7 +201,7 @@ bool ANGLEWebKitBridge::compileShaderSource(const char* shaderSource, ANGLEShade
 
     const char* const shaderSourceStrings[] = { shaderSource };
 
-    bool validateSuccess = ShCompile(compiler, shaderSourceStrings, 1, SH_OBJECT_CODE | SH_ATTRIBUTES_UNIFORMS | extraCompileOptions);
+    bool validateSuccess = ShCompile(compiler, shaderSourceStrings, 1, SH_OBJECT_CODE | SH_VARIABLES | extraCompileOptions);
     if (!validateSuccess) {
         int logSize = getValidationResultValue(compiler, SH_INFO_LOG_LENGTH);
         if (logSize > 1) {

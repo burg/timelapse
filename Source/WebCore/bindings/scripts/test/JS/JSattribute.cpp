@@ -120,32 +120,25 @@ bool JSattribute::getOwnPropertySlot(JSObject* object, ExecState* exec, Property
     return getStaticValueSlot<JSattribute, Base>(exec, JSattributeTable, thisObject, propertyName, slot);
 }
 
-JSValue jsattributeReadonly(ExecState* exec, JSValue slotBase, PropertyName)
+EncodedJSValue jsattributeReadonly(ExecState* exec, EncodedJSValue slotBase, EncodedJSValue, PropertyName)
 {
-    JSattribute* castedThis = jsCast<JSattribute*>(asObject(slotBase));
+    JSattribute* castedThis = jsDynamicCast<JSattribute*>(JSValue::decode(slotBase));
     UNUSED_PARAM(exec);
     attribute& impl = castedThis->impl();
     JSValue result = jsStringWithCache(exec, impl.readonly());
-    return result;
+    return JSValue::encode(result);
 }
 
 
-JSValue jsattributeConstructor(ExecState* exec, JSValue slotBase, PropertyName)
+EncodedJSValue jsattributeConstructor(ExecState* exec, EncodedJSValue slotBase, EncodedJSValue, PropertyName)
 {
-    JSattribute* domObject = jsCast<JSattribute*>(asObject(slotBase));
-    return JSattribute::getConstructor(exec->vm(), domObject->globalObject());
+    JSattribute* domObject = jsDynamicCast<JSattribute*>(JSValue::decode(slotBase));
+    return JSValue::encode(JSattribute::getConstructor(exec->vm(), domObject->globalObject()));
 }
 
 JSValue JSattribute::getConstructor(VM& vm, JSGlobalObject* globalObject)
 {
     return getDOMConstructor<JSattributeConstructor>(vm, jsCast<JSDOMGlobalObject*>(globalObject));
-}
-
-static inline bool isObservable(JSattribute* jsattribute)
-{
-    if (jsattribute->hasCustomProperties())
-        return true;
-    return false;
 }
 
 bool JSattributeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor)
@@ -202,7 +195,7 @@ JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, attribu
 
 attribute* toattribute(JSC::JSValue value)
 {
-    return value.inherits(JSattribute::info()) ? &jsCast<JSattribute*>(asObject(value))->impl() : 0;
+    return value.inherits(JSattribute::info()) ? &jsCast<JSattribute*>(value)->impl() : 0;
 }
 
 }

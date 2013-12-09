@@ -137,6 +137,11 @@ LayoutUnit RenderView::availableLogicalHeight(AvailableLogicalHeightType) const
     // If we have columns, then the available logical height is reduced to the column height.
     if (hasColumns())
         return columnInfo()->columnHeight();
+#if PLATFORM(IOS)
+    // Workaround for <rdar://problem/7166808>.
+    if (document().isPluginDocument() && frameView().useFixedLayout())
+        return frameView().fixedLayoutSize().height();
+#endif
     return isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth();
 }
 
@@ -363,6 +368,13 @@ LayoutUnit RenderView::pageOrViewLogicalHeight() const
     return viewLogicalHeight();
 }
 
+#if PLATFORM(IOS)
+static inline LayoutSize fixedPositionOffset(const FrameView& frameView)
+{
+    return frameView.useCustomFixedPositionLayoutRect() ? (frameView.customFixedPositionLayoutRect().location() - LayoutPoint()) : frameView->scrollOffset();
+}
+#endif
+
 void RenderView::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
 {
     // If a container was specified, and was not 0 or the RenderView,
@@ -377,7 +389,11 @@ void RenderView::mapLocalToContainer(const RenderLayerModelObject* repaintContai
     }
     
     if (mode & IsFixed)
+#if PLATFORM(IOS)
+        transformState.move(fixedPositionOffset(m_frameView));
+#else
         transformState.move(frameView().scrollOffsetForFixedPosition());
+#endif
 }
 
 const RenderObject* RenderView::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
@@ -386,7 +402,11 @@ const RenderObject* RenderView::pushMappingToContainer(const RenderLayerModelObj
     // then we should have found it by now.
     ASSERT_ARG(ancestorToStopAt, !ancestorToStopAt || ancestorToStopAt == this);
 
+#if PLATFORM(IOS)
+    LayoutSize scrollOffset = fixedPositionOffset(frameView());
+#else
     LayoutSize scrollOffset = frameView().scrollOffsetForFixedPosition();
+#endif
 
     if (!ancestorToStopAt && shouldUseTransformFromContainer(0)) {
         TransformationMatrix t;
@@ -401,7 +421,11 @@ const RenderObject* RenderView::pushMappingToContainer(const RenderLayerModelObj
 void RenderView::mapAbsoluteToLocalPoint(MapCoordinatesFlags mode, TransformState& transformState) const
 {
     if (mode & IsFixed)
+#if PLATFORM(IOS)
+        transformState.move(fixedPositionOffset(frameView()));
+#else
         transformState.move(frameView().scrollOffsetForFixedPosition());
+#endif
 
     if (mode & UseTransforms && shouldUseTransformFromContainer(0)) {
         TransformationMatrix t;
@@ -513,12 +537,17 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         rootFillsViewport = rootBox && !rootBox->x() && !rootBox->y() && rootBox->width() >= width() && rootBox->height() >= height();
         rootObscuresBackground = rendererObscuresBackground(rootRenderer);
     }
-    
+
+    bool hasTiledMargin = false;
+#if USE(ACCELERATED_COMPOSITING)
+    hasTiledMargin = compositor().mainFrameBackingIsTiledWithMargin();
+#endif
+
     Page* page = document().page();
     float pageScaleFactor = page ? page->pageScaleFactor() : 1;
 
     // If painting will entirely fill the view, no need to fill the background.
-    if (rootFillsViewport && rootObscuresBackground && pageScaleFactor >= 1)
+    if (!hasTiledMargin && rootFillsViewport && rootObscuresBackground && pageScaleFactor >= 1)
         return;
 
     // This code typically only executes if the root element's visibility has been set to hidden,
@@ -528,11 +557,11 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
     if (frameView().isTransparent()) // FIXME: This needs to be dynamic. We should be able to go back to blitting if we ever stop being transparent.
         frameView().setCannotBlitToWindow(); // The parent must show behind the child.
     else {
-        Color baseColor = frameView().baseBackgroundColor();
-        if (baseColor.alpha()) {
+        Color backgroundColor = hasTiledMargin ? frameView().documentBackgroundColor() : frameView().baseBackgroundColor();
+        if (backgroundColor.alpha()) {
             CompositeOperator previousOperator = paintInfo.context->compositeOperation();
             paintInfo.context->setCompositeOperation(CompositeCopy);
-            paintInfo.context->fillRect(paintInfo.rect, baseColor, style().colorSpace());
+            paintInfo.context->fillRect(paintInfo.rect, backgroundColor, style().colorSpace());
             paintInfo.context->setCompositeOperation(previousOperator);
         } else
             paintInfo.context->clearRect(paintInfo.rect);
@@ -567,7 +596,12 @@ void RenderView::repaintViewRectangle(const LayoutRect& ur, bool immediate) cons
         frameView().repaintContentRectangle(pixelSnappedIntRect(ur), immediate);
     else if (RenderBox* obj = elt->renderBox()) {
         LayoutRect vr = viewRect();
+#if PLATFORM(IOS)
+        // Don't clip using the visible rect since clipping is handled at a higher level on iPhone.
+        LayoutRect r = ur;
+#else
         LayoutRect r = intersection(ur, vr);
+#endif
         
         // Subtract out the contentsX and contentsY offsets to get our coords within the viewing
         // rectangle.
@@ -631,8 +665,13 @@ void RenderView::computeRectForRepaint(const RenderLayerModelObject* repaintCont
             rect.setX(viewWidth() - rect.maxX());
     }
 
-    if (fixed)
+    if (fixed) {
+#if PLATFORM(IOS)
+        rect.move(fixedPositionOffset(frameView()));
+#else
         rect.move(frameView().scrollOffsetForFixedPosition());
+#endif
+    }
         
     // Apply our transform if we have one (because of full page zooming).
     if (!repaintContainer && layer() && layer()->transform())
@@ -662,8 +701,6 @@ static RenderObject* rendererAfterPosition(RenderObject* object, unsigned offset
 
 IntRect RenderView::selectionBounds(bool clipToVisibleContent) const
 {
-    document().updateStyleIfNeeded();
-
     typedef HashMap<RenderObject*, OwnPtr<RenderSelectionInfo>> SelectionMap;
     SelectionMap selectedObjects;
 
@@ -704,8 +741,6 @@ IntRect RenderView::selectionBounds(bool clipToVisibleContent) const
 
 void RenderView::repaintSelection() const
 {
-    document().updateStyleIfNeeded();
-
     HashSet<RenderBlock*> processedBlocks;
 
     RenderObject* end = rendererAfterPosition(m_selectionEnd, m_selectionEndPos);
@@ -1154,6 +1189,24 @@ FlowThreadController& RenderView::flowThreadController()
 
     return *m_flowThreadController;
 }
+
+#if PLATFORM(IOS)
+static bool isFixedPositionInViewport(const RenderObject& renderer, const RenderObject* container)
+{
+    return (renderer.style().position() == FixedPosition) && renderer.container() == container;
+}
+
+bool RenderView::hasCustomFixedPosition(const RenderObject& renderer, ContainingBlockCheck checkContainer) const
+{
+    if (!frameView().useCustomFixedPositionLayoutRect())
+        return false;
+
+    if (checkContainer == CheckContainingBlock)
+        return isFixedPositionInViewport(renderer, this);
+
+    return renderer.style().position() == FixedPosition;
+}
+#endif
 
 void RenderView::pushLayoutStateForCurrentFlowThread(const RenderObject& object)
 {

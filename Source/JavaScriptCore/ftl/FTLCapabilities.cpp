@@ -91,7 +91,6 @@ inline CapabilityLevel canCompile(Node* node)
     case LoopHint:
     case Call:
     case Construct:
-    case GlobalVarWatchpoint:
     case GetMyScope:
     case SkipScope:
     case GetClosureRegisters:
@@ -103,6 +102,13 @@ inline CapabilityLevel canCompile(Node* node)
     case CheckFunction:
     case StringCharCodeAt:
     case AllocatePropertyStorage:
+    case FunctionReentryWatchpoint:
+    case TypedArrayWatchpoint:
+    case VariableWatchpoint:
+    case NotifyWrite:
+    case ValueToInt32:
+    case Branch:
+    case LogicalNot:
         // These are OK.
         break;
     case GetById:
@@ -144,8 +150,8 @@ inline CapabilityLevel canCompile(Node* node)
     case GetByVal:
         switch (node->arrayMode().type()) {
         case Array::ForceExit:
+        case Array::Generic:
         case Array::String:
-            return CanCompileAndOSREnter;
         case Array::Int32:
         case Array::Double:
         case Array::Contiguous:
@@ -155,19 +161,13 @@ inline CapabilityLevel canCompile(Node* node)
                 return CanCompileAndOSREnter;
             return CannotCompile;
         }
-        switch (node->arrayMode().speculation()) {
-        case Array::SaneChain:
-        case Array::InBounds:
-            break;
-        default:
-            return CannotCompile;
-        }
         break;
     case PutByVal:
     case PutByValAlias:
+    case PutByValDirect:
         switch (node->arrayMode().type()) {
         case Array::ForceExit:
-            return CanCompileAndOSREnter;
+        case Array::Generic:
         case Array::Int32:
         case Array::Double:
         case Array::Contiguous:
@@ -200,19 +200,6 @@ inline CapabilityLevel canCompile(Node* node)
         if (node->isBinaryUseKind(NumberUse))
             break;
         return CannotCompile;
-    case Branch:
-    case LogicalNot:
-        switch (node->child1().useKind()) {
-        case BooleanUse:
-        case Int32Use:
-        case NumberUse:
-        case StringUse:
-        case ObjectOrOtherUse:
-            break;
-        default:
-            return CannotCompile;
-        }
-        break;
     case Switch:
         switch (node->switchData()->kind) {
         case SwitchImm:
@@ -221,10 +208,6 @@ inline CapabilityLevel canCompile(Node* node)
         default:
             return CannotCompile;
         }
-        break;
-    case ValueToInt32:
-        if (node->child1().useKind() != BooleanUse)
-            return CannotCompile;
         break;
     default:
         // Don't know how to handle anything else.

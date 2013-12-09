@@ -59,7 +59,8 @@ namespace JSC {
     struct CallFrameClosure;
     struct HandlerInfo;
     struct Instruction;
-    
+    struct ProtoCallFrame;
+
     enum DebugHookID {
         WillExecuteProgram,
         DidExecuteProgram,
@@ -256,8 +257,8 @@ namespace JSC {
     private:
         enum ExecutionFlag { Normal, InitializeAndReturn };
 
-        CallFrameClosure prepareForRepeatCall(FunctionExecutable*, CallFrame*, JSFunction*, int argumentCountIncludingThis, JSScope*);
-        void endRepeatCall(CallFrameClosure&);
+        CallFrameClosure prepareForRepeatCall(FunctionExecutable*, CallFrame*, ProtoCallFrame*, JSFunction*, int argumentCountIncludingThis, JSScope*, JSValue*);
+
         JSValue execute(CallFrameClosure&);
 
         void getStackTrace(Vector<StackFrame>& results, size_t maxStackSize = std::numeric_limits<size_t>::max());
@@ -285,8 +286,8 @@ namespace JSC {
     };
 
     JSValue eval(CallFrame*);
-    CallFrame* loadVarargs(CallFrame*, JSStack*, JSValue thisValue, JSValue arguments, int firstFreeRegister);
-
+    CallFrame* sizeAndAllocFrameForVarargs(CallFrame*, JSStack*, JSValue, int);
+    void loadVarargs(CallFrame*, CallFrame*, JSValue, JSValue);
 } // namespace JSC
 
 #endif // Interpreter_h

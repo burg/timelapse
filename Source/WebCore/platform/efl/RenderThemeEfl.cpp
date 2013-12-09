@@ -42,8 +42,9 @@
 #include "RenderObject.h"
 #include "RenderProgress.h"
 #include "RenderSlider.h"
+#include "ScrollbarThemeEfl.h"
+#include "Settings.h"
 #include "UserAgentStyleSheets.h"
-
 #include <Ecore_Evas.h>
 #include <Edje.h>
 #include <new>
@@ -512,6 +513,10 @@ bool RenderThemeEfl::loadTheme()
     // Set new loaded theme, and apply it.
     m_edje = o;
 
+    const char* thickness = edje_object_data_get(m_edje.get(), "scrollbar.thickness");
+    if (thickness && !Settings::mockScrollbarsEnabled())
+        static_cast<ScrollbarThemeEfl*>(ScrollbarTheme::theme())->setScrollbarThickness(atoi(thickness));
+
     edje_object_signal_callback_add(edje(), "color_class,set", "webkit/selection/foreground", applyColorCallback, this);
     edje_object_signal_callback_add(edje(), "color_class,set", "webkit/selection/background", applyColorCallback, this);
     edje_object_signal_callback_add(edje(), "color_class,set", "webkit/focus_ring", applyColorCallback, this);
@@ -887,7 +892,7 @@ void RenderThemeEfl::adjustMenuListButtonStyle(StyleResolver* styleResolver, Ren
     adjustMenuListStyle(styleResolver, style, element);
 }
 
-bool RenderThemeEfl::paintMenuListButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeEfl::paintMenuListButtonDecorations(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
     return paintMenuList(object, info, rect);
 }
@@ -938,10 +943,10 @@ bool RenderThemeEfl::paintSearchFieldResultsButton(RenderObject* object, const P
     return paintThemePart(object, SearchFieldResultsButton, info, rect);
 }
 
-void RenderThemeEfl::adjustSearchFieldResultsDecorationStyle(StyleResolver* styleResolver, RenderStyle* style, Element* element) const
+void RenderThemeEfl::adjustSearchFieldResultsDecorationPartStyle(StyleResolver* styleResolver, RenderStyle* style, Element* element) const
 {
     if (!m_page && element && element->document().page()) {
-        static_cast<RenderThemeEfl*>(element->document().page()->theme())->adjustSearchFieldResultsDecorationStyle(styleResolver, style, element);
+        static_cast<RenderThemeEfl*>(element->document().page()->theme())->adjustSearchFieldResultsDecorationPartStyle(styleResolver, style, element);
         return;
     }
     adjustSizeConstraints(style, SearchFieldResultsDecoration);
@@ -955,7 +960,7 @@ void RenderThemeEfl::adjustSearchFieldResultsDecorationStyle(StyleResolver* styl
     style->setHeight(Length(decorationSize, Fixed));
 }
 
-bool RenderThemeEfl::paintSearchFieldResultsDecoration(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeEfl::paintSearchFieldResultsDecorationPart(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
     return paintThemePart(object, SearchFieldResultsDecoration, info, rect);
 }

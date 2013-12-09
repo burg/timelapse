@@ -28,6 +28,7 @@
 #include "InlineIterator.h"
 #include "LineInfo.h"
 #include "LineInlineHeaders.h"
+#include "TextBreakIterator.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -66,6 +67,12 @@ private:
     InlineIterator nextSegmentBreak(InlineBidiResolver&, LineInfo&, RenderTextInfo&, FloatingObject* lastFloatFromPreviousLine, unsigned consecutiveHyphenatedLines, WordMeasurements&);
     void skipTrailingWhitespace(InlineIterator&, const LineInfo&);
     void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&, FloatingObject* lastFloatFromPreviousLine, LineWidth&);
+
+    FloatingObject* insertFloatingObject(RenderBox& floatBox) { return m_block.insertFloatingObject(floatBox); }
+    bool positionNewFloatOnLine(FloatingObject* newFloat, FloatingObject* lastFloatFromPreviousLine, LineInfo& lineInfo, LineWidth& width)
+    {
+        return m_block.positionNewFloatOnLine(newFloat, lastFloatFromPreviousLine, lineInfo, width);
+    }
 
     RenderBlockFlow& m_block;
     bool m_hyphenated;

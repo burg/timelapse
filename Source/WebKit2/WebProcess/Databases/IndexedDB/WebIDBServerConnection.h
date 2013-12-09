@@ -30,16 +30,16 @@
 #if ENABLE(INDEXED_DATABASE) && ENABLE(DATABASE_PROCESS)
 
 #include "MessageSender.h"
+#include <WebCore/IDBDatabaseMetadata.h>
 #include <WebCore/IDBServerConnection.h>
 
 namespace WebKit {
 
+class AsyncRequest;
+
 class WebIDBServerConnection FINAL : public WebCore::IDBServerConnection, public CoreIPC::MessageSender {
 public:
-    static PassRefPtr<WebIDBServerConnection> create(const String& databaseName, const WebCore::SecurityOrigin& openingOrigin, const WebCore::SecurityOrigin& mainFrameOrigin)
-    {
-        return adoptRef(new WebIDBServerConnection(databaseName, openingOrigin, mainFrameOrigin));
-    }
+    static PassRefPtr<WebIDBServerConnection> create(const String& databaseName, const WebCore::SecurityOrigin& openingOrigin, const WebCore::SecurityOrigin& mainFrameOrigin);
 
     virtual ~WebIDBServerConnection();
 
@@ -47,10 +47,11 @@ public:
 
     typedef std::function<void (bool success)> BoolCallbackFunction;
 
-    // Database-level operations
-    typedef std::function<void (const WebCore::IDBDatabaseMetadata&, bool success)> GetIDBDatabaseMetadataFunction;
-    virtual void getOrEstablishIDBDatabaseMetadata(const String& name, GetIDBDatabaseMetadataFunction) OVERRIDE;
+    // Factory-level operations
     virtual void deleteDatabase(const String& name, BoolCallbackFunction successCallback) OVERRIDE;
+
+    // Database-level operations
+    virtual void getOrEstablishIDBDatabaseMetadata(GetIDBDatabaseMetadataFunction) OVERRIDE;
     virtual void close() OVERRIDE;
 
     // Transaction-level operations
@@ -80,14 +81,27 @@ public:
     virtual void cursorPrefetchIteration(WebCore::IDBCursorBackend&, const WebCore::CursorPrefetchIterationOperation&, std::function<void()> completionCallback) OVERRIDE;
     virtual void cursorPrefetchReset(WebCore::IDBCursorBackend&, int usedPrefetches) OVERRIDE;
 
+    // Message handlers.
+    void didReceiveWebIDBServerConnectionMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
+
+    // CoreIPC::MessageSender
+    virtual uint64_t messageSenderDestinationID() OVERRIDE { return m_serverConnectionIdentifier; }
+
 private:
     WebIDBServerConnection(const String& databaseName, const WebCore::SecurityOrigin& openingOrigin, const WebCore::SecurityOrigin& mainFrameOrigin);
 
     // CoreIPC::MessageSender
     virtual CoreIPC::Connection* messageSenderConnection() OVERRIDE;
-    virtual uint64_t messageSenderDestinationID() OVERRIDE { return m_backendIdentifier; }
 
-    uint64_t m_backendIdentifier;
+    void didGetOrEstablishIDBDatabaseMetadata(uint64_t requestID, bool success, const WebCore::IDBDatabaseMetadata&);
+
+    uint64_t m_serverConnectionIdentifier;
+
+    String m_databaseName;
+    Ref<WebCore::SecurityOrigin> m_openingOrigin;
+    Ref<WebCore::SecurityOrigin> m_mainFrameOrigin;
+
+    HashMap<uint64_t, RefPtr<AsyncRequest>> m_serverRequests;
 };
 
 } // namespace WebKit

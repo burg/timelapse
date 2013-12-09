@@ -29,11 +29,9 @@
 #if ENABLE(DRAG_SUPPORT)
 
 #include "Frame.h"
-#include "FrameSelection.h"
-#include "FrameSnapshot.h"
+#include "FrameSnapshotting.h"
 #include "FrameView.h"
 #include "ImageBuffer.h"
-#include "Page.h"
 #include "Range.h"
 #include "RenderObject.h"
 #include "RenderView.h"
@@ -72,193 +70,138 @@ DragImageRef fitDragImageToMaxSize(DragImageRef image, const IntSize& srcSize, c
     return scaleDragImage(image, FloatSize(scalex, scaley));
 }
 
-DragImageRef createDragImageForRange(Frame& frame, Range* range, bool forceBlackText)
+struct ScopedNodeDragEnabler {
+    ScopedNodeDragEnabler(Frame& frame, Node& node)
+        : frame(frame)
+        , node(node)
+    {
+        if (node.renderer())
+            node.renderer()->updateDragState(true);
+        frame.document()->updateLayout();
+    }
+
+    ~ScopedNodeDragEnabler()
+    {
+        if (node.renderer())
+            node.renderer()->updateDragState(false);
+    }
+
+    const Frame& frame;
+    const Node& node;
+};
+
+static DragImageRef createDragImageFromSnapshot(std::unique_ptr<ImageBuffer> snapshot, Node* node)
 {
-    frame.view()->setPaintBehavior(PaintBehaviorSelectionOnly | (forceBlackText ? PaintBehaviorForceBlackText : 0));
+    if (!snapshot)
+        return nullptr;
+
+    ImageOrientationDescription orientation;
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+    if (node) {
+        RenderObject* renderer = node->renderer();
+        if (!renderer)
+            return nullptr;
+
+        orientation.setRespectImageOrientation(renderer->shouldRespectImageOrientation());
+        orientation.setImageOrientationEnum(renderer->style().imageOrientation());
+    }
+#else
+    UNUSED_PARAM(node);
+#endif
+    RefPtr<Image> image = snapshot->copyImage(ImageBuffer::fastCopyImageMode());
+    if (!image)
+        return nullptr;
+    return createDragImageFromImage(image.get(), orientation);
+}
+
+DragImageRef createDragImageForNode(Frame& frame, Node& node)
+{
+    ScopedNodeDragEnabler enableDrag(frame, node);
+    return createDragImageFromSnapshot(snapshotNode(frame, node), &node);
+}
+
+DragImageRef createDragImageForSelection(Frame& frame, bool forceBlackText)
+{
+    SnapshotOptions options = forceBlackText ? SnapshotOptionsForceBlackText : SnapshotOptionsNone;
+    return createDragImageFromSnapshot(snapshotSelection(frame, options), nullptr);
+}
+
+struct ScopedFrameSelectionState {
+    ScopedFrameSelectionState(Frame& frame)
+        : frame(frame)
+    {
+        if (RenderView* root = frame.contentRenderer())
+            root->getSelection(startRenderer, startOffset, endRenderer, endOffset);
+    }
+
+    ~ScopedFrameSelectionState()
+    {
+        if (RenderView* root = frame.contentRenderer())
+            root->setSelection(startRenderer, startOffset, endRenderer, endOffset, RenderView::RepaintNothing);
+    }
+
+    const Frame& frame;
+    RenderObject* startRenderer;
+    RenderObject* endRenderer;
+    int startOffset;
+    int endOffset;
+};
+
+DragImageRef createDragImageForRange(Frame& frame, Range& range, bool forceBlackText)
+{
     frame.document()->updateLayout();
     RenderView* view = frame.contentRenderer();
     if (!view)
-        return nil;
+        return nullptr;
 
-    Position start = range->startPosition();
+    // To snapshot the range, temporarily select it and take selection snapshot.
+    Position start = range.startPosition();
     Position candidate = start.downstream();
     if (candidate.deprecatedNode() && candidate.deprecatedNode()->renderer())
         start = candidate;
 
-    Position end = range->endPosition();
+    Position end = range.endPosition();
     candidate = end.upstream();
     if (candidate.deprecatedNode() && candidate.deprecatedNode()->renderer())
         end = candidate;
 
     if (start.isNull() || end.isNull() || start == end)
-        return nil;
+        return nullptr;
 
-    RenderObject* savedStartRenderer;
-    int savedStartOffset;
-    RenderObject* savedEndRenderer;
-    int savedEndOffset;
-    view->getSelection(savedStartRenderer, savedStartOffset, savedEndRenderer, savedEndOffset);
+    const ScopedFrameSelectionState selectionState(frame);
 
     RenderObject* startRenderer = start.deprecatedNode()->renderer();
-    if (!startRenderer)
-        return nil;
-
     RenderObject* endRenderer = end.deprecatedNode()->renderer();
-    if (!endRenderer)
-        return nil;
+    if (!startRenderer || !endRenderer)
+        return nullptr;
 
+    SnapshotOptions options = SnapshotOptionsPaintSelectionOnly | (forceBlackText ? SnapshotOptionsForceBlackText : SnapshotOptionsNone);
     view->setSelection(startRenderer, start.deprecatedEditingOffset(), endRenderer, end.deprecatedEditingOffset(), RenderView::RepaintNothing);
-    DragImageRef result = createDragImageForRect(frame, view->selectionBounds(), false);
-    view->setSelection(savedStartRenderer, savedStartOffset, savedEndRenderer, savedEndOffset, RenderView::RepaintNothing);
-
-    frame.view()->setPaintBehavior(PaintBehaviorNormal);
-    return result;
+    // We capture using snapshotFrameRect() because we fake up the selection using
+    // FrameView but snapshotSelection() uses the selection from the Frame itself.
+    return createDragImageFromSnapshot(snapshotFrameRect(frame, view->selectionBounds(), options), nullptr);
 }
 
-DragImageRef createDragImageForRect(Frame& frame, const IntRect& imageRect, bool includeSelection)
+DragImageRef createDragImageForImage(Frame& frame, Node& node, IntRect& imageRect, IntRect& elementRect)
 {
-    OwnPtr<ImageBuffer> buffer = createImageFromFrameRect(frame, imageRect, includeSelection, true);
-    RefPtr<Image> image = buffer->copyImage();
-    return createDragImageFromImage(image.get(), ImageOrientationDescription());
-}
+    ScopedNodeDragEnabler enableDrag(frame, node);
 
-DragImageRef createDragImageForImage(Frame& frame, Node* node, IntRect& imageRect, IntRect& elementRect)
-{
-    RenderObject* renderer = node->renderer();
+    RenderObject* renderer = node.renderer();
     if (!renderer)
         return nullptr;
 
-    renderer->updateDragState(true);    // mark dragged nodes (so they pick up the right CSS)
-    frame.document()->updateLayout();  // forces style recalc - needed since changing the drag state might
-                                        // imply new styles, plus JS could have changed other things
-
-
-    // Document::updateLayout may have blown away the original RenderElement.
-    renderer = node->renderer();
-    if (!renderer)
-        return nullptr;
-
+    // Calculate image and element metrics for the client, then create drag image.
     LayoutRect topLevelRect;
     IntRect paintingRect = pixelSnappedIntRect(renderer->paintingRootRect(topLevelRect));
 
     if (paintingRect.isEmpty())
         return nullptr;
 
-    frame.view()->setNodeToDraw(node); // invoke special sub-tree drawing mode
-    DragImageRef result = createDragImageForRect(frame, paintingRect);
-    renderer->updateDragState(false);
-    frame.document()->updateLayout();
-    frame.view()->setNodeToDraw(nullptr);
-
     elementRect = pixelSnappedIntRect(topLevelRect);
     imageRect = paintingRect;
-    return result;
+
+    return createDragImageFromSnapshot(snapshotNode(frame, node), &node);
 }
-
-#if !PLATFORM(WIN)
-struct ScopedFramePaintingState {
-    ScopedFramePaintingState(Frame& frame, Node* node)
-    : frame(frame)
-    , node(node)
-    , paintBehavior(frame.view()->paintBehavior())
-    , backgroundColor(frame.view()->baseBackgroundColor())
-    {
-        ASSERT(!node || node->renderer());
-        if (node)
-            node->renderer()->updateDragState(true);
-    }
-
-    ~ScopedFramePaintingState()
-    {
-        if (node && node->renderer())
-            node->renderer()->updateDragState(false);
-        frame.view()->setPaintBehavior(paintBehavior);
-        frame.view()->setBaseBackgroundColor(backgroundColor);
-        frame.view()->setNodeToDraw(nullptr);
-    }
-
-    Frame& frame;
-    Node* node;
-    PaintBehavior paintBehavior;
-    Color backgroundColor;
-};
-
-DragImageRef createDragImageForFrameSelection(Frame& frame, bool forceBlackText)
-{
-    UNUSED_PARAM(forceBlackText);
-
-    if (!frame.selection().isRange())
-        return nullptr;
-
-    const ScopedFramePaintingState state(frame, nullptr);
-    frame.view()->setPaintBehavior(PaintBehaviorSelectionOnly | (forceBlackText ? PaintBehaviorForceBlackText : 0));
-    frame.document()->updateLayout();
-
-    IntRect paintingRect = enclosingIntRect(frame.selection().bounds());
-
-    float deviceScaleFactor = 1;
-    if (frame.page())
-        deviceScaleFactor = frame.page()->deviceScaleFactor();
-    paintingRect.setWidth(paintingRect.width() * deviceScaleFactor);
-    paintingRect.setHeight(paintingRect.height() * deviceScaleFactor);
-
-    OwnPtr<ImageBuffer> buffer(ImageBuffer::create(paintingRect.size(), deviceScaleFactor, ColorSpaceDeviceRGB));
-    if (!buffer)
-        return nullptr;
-    buffer->context()->translate(-paintingRect.x(), -paintingRect.y());
-    buffer->context()->clip(FloatRect(0, 0, paintingRect.maxX(), paintingRect.maxY()));
-
-    frame.view()->paintContents(buffer->context(), paintingRect);
-
-    RefPtr<Image> image = buffer->copyImage();
-    return createDragImageFromImage(image.get(), ImageOrientationDescription());
-}
-
-DragImageRef createDragImageForNode(Frame& frame, Node* node)
-{
-    if (!node->renderer())
-        return nullptr;
-
-    const ScopedFramePaintingState state(frame, node);
-
-    frame.view()->setPaintBehavior(state.paintBehavior | PaintBehaviorFlattenCompositingLayers);
-
-    // When generating the drag image for an element, ignore the document background.
-    frame.view()->setBaseBackgroundColor(Color::transparent);
-    frame.document()->updateLayout();
-    frame.view()->setNodeToDraw(node); // Enable special sub-tree drawing mode.
-
-    // Document::updateLayout may have blown away the original renderer.
-    auto renderer = node->renderer();
-    if (!renderer)
-        return nullptr;
-
-    LayoutRect topLevelRect;
-    IntRect paintingRect = pixelSnappedIntRect(renderer->paintingRootRect(topLevelRect));
-
-    float deviceScaleFactor = 1;
-    if (frame.page())
-        deviceScaleFactor = frame.page()->deviceScaleFactor();
-    paintingRect.setWidth(paintingRect.width() * deviceScaleFactor);
-    paintingRect.setHeight(paintingRect.height() * deviceScaleFactor);
-
-    OwnPtr<ImageBuffer> buffer(ImageBuffer::create(paintingRect.size(), deviceScaleFactor, ColorSpaceDeviceRGB));
-    if (!buffer)
-        return nullptr;
-    buffer->context()->translate(-paintingRect.x(), -paintingRect.y());
-    buffer->context()->clip(FloatRect(0, 0, paintingRect.maxX(), paintingRect.maxY()));
-
-    frame.view()->paintContents(buffer->context(), paintingRect);
-
-    RefPtr<Image> image = buffer->copyImage();
-
-    ImageOrientationDescription orientationDescription(renderer->shouldRespectImageOrientation());
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    orientationDescription.setImageOrientationEnum(renderer->style()->imageOrientation());
-#endif
-    return createDragImageFromImage(image.get(), orientationDescription);
-}
-#endif // !PLATFORM(WIN)
 
 #if !PLATFORM(MAC) && (!PLATFORM(WIN) || OS(WINCE))
 DragImageRef createDragImageForLink(URL&, const String&, FontRenderingMode)

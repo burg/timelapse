@@ -652,6 +652,12 @@ public:
         load8Signed(setupArmAddress(address), dest);
     }
 
+    void load8(const void* address, RegisterID dest)
+    {
+        move(TrustedImmPtr(address), dest);
+        load8(dest, dest);
+    }
+
     DataLabel32 load32WithAddressOffsetPatch(Address address, RegisterID dest)
     {
         DataLabel32 label = moveWithPatch(TrustedImm32(address.offset), dataTempRegister);
@@ -1068,23 +1074,6 @@ public:
         return failure;
     }
 
-    Jump branchTruncateDoubleToUint32(FPRegisterID src, RegisterID dest, BranchTruncateType branchType = BranchIfTruncateFailed)
-    {
-        m_assembler.vcvt_floatingPointToSigned(fpTempRegisterAsSingle(), src);
-        m_assembler.vmov(dest, fpTempRegisterAsSingle());
-        
-        Jump overflow = branch32(Equal, dest, TrustedImm32(0x7fffffff));
-        Jump success = branch32(GreaterThanOrEqual, dest, TrustedImm32(0));
-        overflow.link(this);
-
-        if (branchType == BranchIfTruncateSuccessful)
-            return success;
-        
-        Jump failure = jump();
-        success.link(this);
-        return failure;
-    }
-
     // Result is undefined if the value is outside of the integer range.
     void truncateDoubleToInt32(FPRegisterID src, RegisterID dest)
     {
@@ -1229,6 +1218,11 @@ public:
     void nop()
     {
         m_assembler.nop();
+    }
+    
+    void memoryFence()
+    {
+        m_assembler.dmbSY();
     }
     
     static void replaceWithJump(CodeLocationLabel instructionStart, CodeLocationLabel destination)

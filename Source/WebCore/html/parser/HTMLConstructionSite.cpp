@@ -411,10 +411,12 @@ void HTMLConstructionSite::insertHTMLFormElement(AtomicHTMLToken* token, bool is
 {
     RefPtr<Element> element = createHTMLElement(token);
     ASSERT(isHTMLFormElement(element.get()));
-    m_form = static_pointer_cast<HTMLFormElement>(element.release());
-    m_form->setDemoted(isDemoted);
-    attachLater(currentNode(), m_form);
-    m_openElements.push(HTMLStackItem::create(m_form, token));
+    RefPtr<HTMLFormElement> form = static_pointer_cast<HTMLFormElement>(element.release());
+    if (!insideTemplateElement())
+        m_form = form;
+    form->setDemoted(isDemoted);
+    attachLater(currentNode(), form);
+    m_openElements.push(HTMLStackItem::create(form.release(), token));
 }
 
 void HTMLConstructionSite::insertHTMLElement(AtomicHTMLToken* token)
@@ -537,13 +539,21 @@ inline Document& HTMLConstructionSite::ownerDocumentForCurrentNode()
     return currentNode()->document();
 }
 
+inline bool HTMLConstructionSite::insideTemplateElement()
+{
+    return !ownerDocumentForCurrentNode().frame();
+}
+
 PassRefPtr<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken* token)
 {
     QualifiedName tagName(nullAtom, token->name(), xhtmlNamespaceURI);
     // FIXME: This can't use HTMLConstructionSite::createElement because we
     // have to pass the current form element.  We should rework form association
     // to occur after construction to allow better code sharing here.
-    RefPtr<Element> element = HTMLElementFactory::createElement(tagName, ownerDocumentForCurrentNode(), form(), true);
+    // http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#create-an-element-for-the-token
+    Document& ownerDocument = ownerDocumentForCurrentNode();
+    bool insideTemplateElement = !ownerDocument.frame();
+    RefPtr<Element> element = HTMLElementFactory::createElement(tagName, ownerDocument, insideTemplateElement ? nullptr : form(), true);
     setAttributes(element.get(), token, m_parserContentPolicy);
     ASSERT(element->isHTMLElement());
     return element.release();

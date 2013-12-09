@@ -193,6 +193,10 @@ void RootInlineBox::paintCustomHighlight(PaintInfo& paintInfo, const LayoutPoint
 
 void RootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom)
 {
+    // Check if we are in the correct region.
+    if (paintInfo.renderRegion && containingRegion() && containingRegion() != paintInfo.renderRegion)
+        return;
+    
     InlineFlowBox::paint(paintInfo, paintOffset, lineTop, lineBottom);
     paintEllipsisBox(paintInfo, paintOffset, lineTop, lineBottom);
 #if PLATFORM(MAC)
@@ -842,7 +846,11 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
     bool setUsedFontWithLeading = false;
 
     const RenderStyle& boxLineStyle = box->lineStyle();
+#if PLATFORM(IOS)
+    if (usedFonts && !usedFonts->isEmpty() && (includeFont || (boxLineStyle.lineHeight().isNegative() && includeLeading)) && !box->renderer().document().settings()->alwaysUseBaselineOfPrimaryFont()) {
+#else
     if (usedFonts && !usedFonts->isEmpty() && (includeFont || (boxLineStyle.lineHeight().isNegative() && includeLeading))) {
+#endif
         usedFonts->append(boxLineStyle.font().primaryFont());
         for (size_t i = 0; i < usedFonts->size(); ++i) {
             const FontMetrics& fontMetrics = usedFonts->at(i)->fontMetrics();

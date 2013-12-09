@@ -50,12 +50,12 @@ public:
     void setFirstLetter(RenderBoxModelObject& firstLetter) { m_firstLetter = &firstLetter; }
 
     StringImpl* contentString() const { return m_contentString.impl(); }
-    virtual String originalText() const OVERRIDE;
 
     virtual void setText(const String&, bool force = false) OVERRIDE;
 
-    virtual void transformText() OVERRIDE;
-
+    const String& altText() const { return m_altText; }
+    void setAltText(const String& altText) { m_altText = altText; }
+    
 private:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
     virtual void willBeDestroyed() OVERRIDE;
@@ -65,6 +65,8 @@ private:
 
     unsigned m_start;
     unsigned m_end;
+    // Alternative description that can be used for accessibility instead of the native text.
+    String m_altText;
     String m_contentString;
     RenderBoxModelObject* m_firstLetter;
 };

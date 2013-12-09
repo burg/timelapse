@@ -1,6 +1,7 @@
 # Copyright (C) 2005, 2006, 2007, 2010, 2011, 2012, 2013 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
+# Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -94,6 +95,7 @@ my $isWinCE;
 my $isWinCairo;
 my $isWin64;
 my $isEfl;
+my $isNix;
 my $isBlackBerry;
 my $isInspectorFrontend;
 my $isWK2;
@@ -314,7 +316,7 @@ sub determineArchitecture
                 $architecture = 'armv7';
             }
         }
-    } elsif (isEfl()) {
+    } elsif (isEfl() || isNix()) {
         my $host_processor = "";
         $host_processor = `cmake --system-information | grep CMAKE_SYSTEM_PROCESSOR`;
         if ($host_processor =~ m/^CMAKE_SYSTEM_PROCESSOR \"([^"]+)\"/) {
@@ -324,13 +326,13 @@ sub determineArchitecture
         }
     }
 
-    if (!$architecture && (isGtk() || isAppleMacWebKit() || isEfl())) {
+    if (!$architecture && (isGtk() || isAppleMacWebKit() || isEfl() || isNix())) {
         # Fall back to output of `arch', if it is present.
         $architecture = `arch`;
         chomp $architecture;
     }
 
-    if (!$architecture && (isGtk() || isAppleMacWebKit() || isEfl())) {
+    if (!$architecture && (isGtk() || isAppleMacWebKit() || isEfl() || isNix())) {
         # Fall back to output of `uname -m', if it is present.
         $architecture = `uname -m`;
         chomp $architecture;
@@ -379,6 +381,7 @@ sub argumentsForConfiguration()
     push(@args, '--64-bit') if (isWin64());
     push(@args, '--gtk') if isGtk();
     push(@args, '--efl') if isEfl();
+    push(@args, '--nix') if isNix();
     push(@args, '--wincairo') if isWinCairo();
     push(@args, '--wince') if isWinCE();
     push(@args, '--blackberry') if isBlackBerry();
@@ -389,18 +392,14 @@ sub argumentsForConfiguration()
 sub determineXcodeSDK
 {
     return if defined $xcodeSDK;
-    for (my $i = 0; $i <= $#ARGV; $i++) {
-        my $opt = $ARGV[$i];
-        if ($opt =~ /^--sdk$/i) {
-            splice(@ARGV, $i, 1);
-            $xcodeSDK = splice(@ARGV, $i, 1);
-        } elsif ($opt =~ /^--device$/i) {
-            splice(@ARGV, $i, 1);
-            $xcodeSDK = 'iphoneos.internal';
-        } elsif ($opt =~ /^--sim(ulator)?/i) {
-            splice(@ARGV, $i, 1);
-            $xcodeSDK = 'iphonesimulator';
-        }
+    my $sdk;
+    if (checkForArgumentAndRemoveFromARGVGettingValue("--sdk", \$sdk)) {
+        $xcodeSDK = $sdk;
+    } elsif (checkForArgumentAndRemoveFromARGV("--device")) {
+        $xcodeSDK = 'iphoneos.internal';
+    } elsif (checkForArgumentAndRemoveFromARGV("--sim") ||
+        checkForArgumentAndRemoveFromARGV("--simulator")) {
+        $xcodeSDK = 'iphonesimulator';
     }
 }
 
@@ -533,7 +532,7 @@ sub productDir
 sub jscProductDir
 {
     my $productDir = productDir();
-    $productDir .= "/bin" if isEfl();
+    $productDir .= "/bin" if (isEfl() || isNix());
     $productDir .= "/Programs" if isGtk();
 
     return $productDir;
@@ -613,29 +612,17 @@ sub determinePassedConfiguration
 {
     return if $searchedForPassedConfiguration;
     $searchedForPassedConfiguration = 1;
-
-    for my $i (0 .. $#ARGV) {
-        my $opt = $ARGV[$i];
-        if ($opt =~ /^--debug$/i) {
-            splice(@ARGV, $i, 1);
-            $passedConfiguration = "Debug";
-            $passedConfiguration .= "_WinCairo" if (isWinCairo() && isCygwin());
-            return;
-        }
-        if ($opt =~ /^--release$/i) {
-            splice(@ARGV, $i, 1);
-            $passedConfiguration = "Release";
-            $passedConfiguration .= "_WinCairo" if (isWinCairo() && isCygwin());
-            return;
-        }
-        if ($opt =~ /^--profil(e|ing)$/i) {
-            splice(@ARGV, $i, 1);
-            $passedConfiguration = "Profiling";
-            $passedConfiguration .= "_WinCairo" if (isWinCairo() && isCygwin());
-            return;
-        }
-    }
     $passedConfiguration = undef;
+
+    if (checkForArgumentAndRemoveFromARGV("--debug")) {
+        $passedConfiguration = "Debug";
+    } elsif(checkForArgumentAndRemoveFromARGV("--release")) {
+        $passedConfiguration = "Release";
+    } elsif (checkForArgumentAndRemoveFromARGV("--profile") || checkForArgumentAndRemoveFromARGV("--profiling")) {
+        $passedConfiguration = "Profiling";
+    }
+
+    $passedConfiguration .= "_WinCairo" if (defined($passedConfiguration) && isWinCairo() && isCygwin());
 }
 
 sub passedConfiguration
@@ -665,18 +652,13 @@ sub determinePassedArchitecture
     return if $searchedForPassedArchitecture;
     $searchedForPassedArchitecture = 1;
 
-    for my $i (0 .. $#ARGV) {
-        my $opt = $ARGV[$i];
-        if ($opt =~ /^--32-bit$/i) {
-            splice(@ARGV, $i, 1);
-            if (isAppleMacWebKit()) {
-                $passedArchitecture = `arch`;
-                chomp $passedArchitecture;
-            }
-            return;
+    $passedArchitecture = undef;
+    if (checkForArgumentAndRemoveFromARGV("--32-bit")) {
+        if (isAppleMacWebKit()) {
+            $passedArchitecture = `arch`;
+            chomp $passedArchitecture;
         }
     }
-    $passedArchitecture = undef;
 }
 
 sub passedArchitecture
@@ -807,6 +789,9 @@ sub builtDylibPathForName
         }
         return "$configurationProductDir/lib/libewebkit.so";
     }
+    if (isNix()) {
+        return "$configurationProductDir/lib/libWebKitNix.so";
+    }
     if (isWinCE()) {
         return "$configurationProductDir/$libraryName";
     }
@@ -858,10 +843,19 @@ sub commandExists($)
     return `$command --version 2> $devnull`;
 }
 
-sub checkForArgumentAndRemoveFromARGV
+sub checkForArgumentAndRemoveFromARGV($)
 {
     my $argToCheck = shift;
     return checkForArgumentAndRemoveFromArrayRef($argToCheck, \@ARGV);
+}
+
+sub checkForArgumentAndRemoveFromARGVGettingValue($$)
+{
+    my ($argToCheck, $valueRef) = @_;
+    my @matchingIndices = findMatchingArguments($argToCheck, \@ARGV);
+    return 0 if ($#matchingIndices != 1);
+    splice(@ARGV, $matchingIndices[0], 1);
+    return $$valueRef = splice(@ARGV, $matchingIndices[0], 1);
 }
 
 sub findMatchingArguments($$)
@@ -888,8 +882,9 @@ sub checkForArgumentAndRemoveFromArrayRef
 {
     my ($argToCheck, $arrayRef) = @_;
     my @indicesToRemove = findMatchingArguments($argToCheck, $arrayRef);
+    my $removeOffset = 0;
     foreach my $index (@indicesToRemove) {
-        splice(@$arrayRef, $index, 1);
+        splice(@$arrayRef, $index - $removeOffset++, 1);
     }
     return scalar @indicesToRemove > 0;
 }
@@ -1050,6 +1045,17 @@ sub isEfl()
     return $isEfl;
 }
 
+sub determineIsNix()
+{
+    return if defined($isNix);
+    $isNix = checkForArgumentAndRemoveFromARGV("--nix");
+}
+
+sub isNix()
+{
+    determineIsNix();
+    return $isNix;
+}
 sub isGtk()
 {
     determineIsGtk();
@@ -1200,7 +1206,7 @@ sub isCrossCompilation()
 
 sub isAppleWebKit()
 {
-    return !(isGtk() or isEfl() or isWinCE() or isBlackBerry());
+    return !(isGtk() or isEfl() or isWinCE() or isBlackBerry() or isNix());
 }
 
 sub isAppleMacWebKit()
@@ -1391,7 +1397,7 @@ sub relativeScriptsDir()
 sub launcherPath()
 {
     my $relativeScriptsPath = relativeScriptsDir();
-    if (isGtk() || isEfl() || isWinCE()) {
+    if (isGtk() || isEfl() || isWinCE() || isNix()) {
         return "$relativeScriptsPath/run-launcher";
     } elsif (isAppleWebKit()) {
         return "$relativeScriptsPath/run-safari";
@@ -1408,6 +1414,8 @@ sub launcherName()
         return "EWebLauncher/MiniBrowser";
     } elsif (isWinCE()) {
         return "WinCELauncher";
+    } elsif (isNix()) {
+        return "MiniBrowser";
     }
 }
 
@@ -1430,7 +1438,7 @@ sub checkRequiredSystemConfig
             print "most likely fail. The latest Xcode is available from the App Store.\n";
             print "*************************************************************\n";
         }
-    } elsif (isGtk() or isEfl() or isWindows()) {
+    } elsif (isGtk() or isEfl() or isWindows() or isNix()) {
         my @cmds = qw(bison gperf flex);
         my @missing = ();
         my $oldPath = $ENV{PATH};
@@ -1566,6 +1574,11 @@ sub setupAppleWinEnv()
             print "         to be able build WebKit from within Visual Studio 2010 and newer.\n\n";
         }
     }
+    # FIXME (125180): Remove the following temporary 64-bit support once official support is available.
+    if (isWin64() and !$ENV{'WEBKIT_64_SUPPORT'}) {
+        print "Warning: You must set the 'WEBKIT_64_SUPPORT' environment variable\n";
+        print "         to be able run WebKit or JavaScriptCore tests.\n\n";
+    }
 }
 
 sub setupCygwinEnv()
@@ -1598,6 +1611,8 @@ sub setupCygwinEnv()
     print "Building results into: ", baseProductDir(), "\n";
     print "WEBKIT_OUTPUTDIR is set to: ", $ENV{"WEBKIT_OUTPUTDIR"}, "\n";
     print "WEBKIT_LIBRARIES is set to: ", $ENV{"WEBKIT_LIBRARIES"}, "\n";
+    # FIXME (125180): Remove the following temporary 64-bit support once official support is available.
+    print "WEBKIT_64_SUPPORT is set to: ", $ENV{"WEBKIT_64_SUPPORT"}, "\n" if isWin64();
 }
 
 sub dieIfWindowsPlatformSDKNotInstalled
@@ -1649,7 +1664,7 @@ sub copyInspectorFrontendFiles
         }
     } elsif (isAppleWinWebKit() || isWinCairo()) {
         $inspectorResourcesDirPath = $productDir . "/WebKit.resources/inspector";
-    } elsif (isGtk()) {
+    } elsif (isGtk() || isNix()) {
         my $prefix = $ENV{"WebKitInstallationPrefix"};
         $inspectorResourcesDirPath = (defined($prefix) ? $prefix : "/usr/share") . "/webkit-1.0/webinspector";
     } elsif (isEfl()) {
@@ -1830,7 +1845,7 @@ sub runAutogenForAutotoolsProjectIfNecessary($@)
     # between 32-bit and 64-bit architectures. The options are also
     # used on Chromium build.
     determineArchitecture();
-    if ($architecture ne "x86_64" && !isARM()) {
+    if ($architecture ne "x86_64" && !isARM() && !isCrossCompilation()) {
         $ENV{'CXXFLAGS'} = "-march=pentium4 -msse2 -mfpmath=sse " . ($ENV{'CXXFLAGS'} || "");
     }
 
@@ -2005,6 +2020,8 @@ sub jhbuildWrapperPrefixIfNeeded()
             push(@prefix, "--efl");
         } elsif (isGtk()) {
             push(@prefix, "--gtk");
+        } elsif (isNix()) {
+            push(@prefix, "--nix");
         }
         push(@prefix, "run");
 
@@ -2048,7 +2065,7 @@ sub generateBuildSystemFromCMakeProject
     # Compiler options to keep floating point values consistent
     # between 32-bit and 64-bit architectures.
     determineArchitecture();
-    if ($architecture ne "x86_64" && !isARM()) {
+    if ($architecture ne "x86_64" && !isARM() && !isCrossCompilation()) {
         $ENV{'CXXFLAGS'} = "-march=pentium4 -msse2 -mfpmath=sse " . ($ENV{'CXXFLAGS'} || "");
     }
 
@@ -2099,6 +2116,9 @@ sub buildCMakeProjectOrExit($$$$@)
         system("perl", "$sourceDir/Tools/Scripts/update-webkitefl-libs") == 0 or die $!;
     }
 
+    if (isNix() && checkForArgumentAndRemoveFromARGV("--update-nix")) {
+        system("perl", "$sourceDir/Tools/Scripts/update-webkitnix-libs") == 0 or die $!;
+    }
 
     $returnCode = exitStatus(generateBuildSystemFromCMakeProject($port, $prefixPath, @cmakeArgs));
     exit($returnCode) if $returnCode;
@@ -2122,6 +2142,7 @@ sub cmakeBasedPortName()
     return "BlackBerry" if isBlackBerry();
     return "Efl" if isEfl();
     return "WinCE" if isWinCE();
+    return "Nix" if isNix();
     return "";
 }
 
@@ -2147,6 +2168,11 @@ sub buildGtkProject
 
 sub appleApplicationSupportPath
 {
+    if (isWin64()) {
+        # FIXME (125180): Remove the following once official 64-bit Windows support is available.
+        return $ENV{"WEBKIT_64_SUPPORT"}, "\n" if isWin64();
+    }
+
     open INSTALL_DIR, "</proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Apple\ Inc./Apple\ Application\ Support/InstallDir";
     my $path = <INSTALL_DIR>;
     $path =~ s/[\r\n\x00].*//;

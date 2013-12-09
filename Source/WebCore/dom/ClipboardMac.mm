@@ -37,12 +37,12 @@ namespace WebCore {
 // Clipboard::dragImage in Clipboard.cpp does not handle correctly, so must resolve that as well.
 DragImageRef Clipboard::createDragImage(IntPoint& location) const
 {
-    NSImage *result = nil;
+    DragImageRef result = nil;
     if (m_dragImageElement) {
         if (Frame* frame = m_dragImageElement->document().frame()) {
             IntRect imageRect;
             IntRect elementRect;
-            result = [createDragImageForImage(*frame, m_dragImageElement.get(), imageRect, elementRect) autorelease];
+            result = createDragImageForImage(*frame, *m_dragImageElement, imageRect, elementRect);
             // Client specifies point relative to element, not the whole image, which may include child
             // layers spread out all over the place.
             location.setX(elementRect.x() - imageRect.x() + m_dragLocation.x());

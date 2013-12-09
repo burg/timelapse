@@ -1,3 +1,513 @@
+2013-12-05  Seokju Kwon  <seokju@webkit.org>
+
+        Web Inspector: Remove 'cookiesString' output from Page.getCookies
+        https://bugs.webkit.org/show_bug.cgi?id=125268
+
+        Reviewed by Timothy Hatcher.
+
+        Remove 'cookiesString' output from Page.getCookies protocol.
+        It is no longer meaningful because it is an unused parameter.
+
+        * UserInterface/CookieStorageContentView.js:
+        (WebInspector.CookieStorageContentView.prototype.update):
+        * UserInterface/InspectorBackendCommands.js:
+
+2013-12-05  Brian J. Burg  <burg@cs.washington.edu>
+
+        Web Inspector: expose node and frame snapshot capabilities.
+        https://bugs.webkit.org/show_bug.cgi?id=124326
+
+        Reviewed by Joseph Pecoraro.
+
+        Add method signatures for snapshotNode() and snapshotRect().
+        Remove method signature for unimplemented Page.captureScreenshot.
+
+        * UserInterface/InspectorBackendCommands.js:
+
+2013-12-05  Alexandru Chiculita  <achicu@adobe.com>
+
+        Web Inspector: [CSS Regions] Show a list of containing regions when clicking a node that is part of a flow
+        https://bugs.webkit.org/show_bug.cgi?id=124614
+
+        Reviewed by Timothy Hatcher.
+
+        Added a new function in DOMTreeManager called getNodeContentFlowInfo that can be used
+        to retrieve an object with the following structure:
+        {
+             "regionFlow": <Reference to the ContentFlow object referenced by the -webkit-flow-from property of the node>,
+             "contentFlow": <Reference to the ContentFlow object referenced by the -webkit-flow-into property of 
+                             the node or a parent of the node>,
+             "regions": [ list of DOMNodes representing the regions containers of the node. The node is split across all these regions. ]
+        }
+
+        Also, used this method to display a two new sections in the Computed Styles panel.
+        1. Section "Flows": can have up to two Simple Rows: "Region Flow" and "Content Flow".
+        2. Section "Container Regions" contains a DOMTreeDataGrid with the list of regions.
+
+        The sections are only visible when there's content to display.
+
+        Next to the "Region Flow" simple row I've added an arrow that will take the user to the "ContentFlowDOMTreeContentView" of the
+        ContentFlow. The same happens for the "Content Flow", but in this case the element will also be highlighted.
+
+        Part of the patch I've added the DOMTreeDataGridNode. LayerTreeDataGrid has a lot of CSS in common with it, so I
+        will make another patch to refactor LayerTreeDataGrid to use DOMTreeDataGridNode as a base class.
+
+        * Localizations/en.lproj/localizedStrings.js:
+        * UserInterface/ComputedStyleDetailsPanel.css: Added.
+        (.details-section > .content > .group > .row.simple.content-flow-link > .label):
+        (.details-section > .content > .group > .row.simple.content-flow-link > .value):
+        (.details-section > .content > .group > .row.simple.content-flow-link > .value > div):
+        (.details-section > .content > .group > .row.simple.content-flow-link > .value > div > .icon):
+        (.details-section > .content > .group > .row.simple.content-flow-link > .value > div > span):
+        (.details-section > .content > .group > .row.simple.content-flow-link > .value > div > .go-to-arrow):
+        (.details-section > .content > .group > .row.simple.content-flow-link:hover > .value > div > .go-to-arrow):
+        * UserInterface/ComputedStyleDetailsPanel.js:
+        (WebInspector.ComputedStyleDetailsPanel):
+        (WebInspector.ComputedStyleDetailsPanel.prototype.get regionFlow):
+        (WebInspector.ComputedStyleDetailsPanel.prototype.set regionFlow):
+        (WebInspector.ComputedStyleDetailsPanel.prototype.get contentFlow):
+        (WebInspector.ComputedStyleDetailsPanel.prototype.set contentFlow):
+        (WebInspector.ComputedStyleDetailsPanel.prototype.get containerRegions):
+        (WebInspector.ComputedStyleDetailsPanel.prototype.set containerRegions):
+        (WebInspector.ComputedStyleDetailsPanel.prototype.refresh):
+        (WebInspector.ComputedStyleDetailsPanel.prototype._computedStyleShowAllCheckboxValueChanged):
+        (WebInspector.ComputedStyleDetailsPanel.prototype._resetFlowDetails):
+        (WebInspector.ComputedStyleDetailsPanel.prototype._refreshFlowDetails.contentFlowInfoReady):
+        (WebInspector.ComputedStyleDetailsPanel.prototype._refreshFlowDetails):
+        (WebInspector.ComputedStyleDetailsPanel.prototype._goToRegionFlowArrowWasClicked):
+        (WebInspector.ComputedStyleDetailsPanel.prototype._goToContentFlowArrowWasClicked):
+        * UserInterface/DOMTreeDataGrid.css: Added.
+        (.dom-tree-data-grid .data-grid):
+        (.dom-tree-data-grid .data-grid table.data):
+        (.dom-tree-data-grid .data-container):
+        (.dom-tree-data-grid .data-container tr):
+        (.dom-tree-data-grid .data-container td > div):
+        (.dom-tree-data-grid .data-container .name-column):
+        (.dom-tree-data-grid .data-container .name-column .icon):
+        (.dom-tree-data-grid .data-container .name-column .label):
+        (.dom-tree-data-grid .data-container tr:hover .name-column .label):
+        (.dom-tree-data-grid .data-container .go-to-arrow):
+        (.dom-tree-data-grid .data-container tr:hover .go-to-arrow):
+        (.dom-tree-data-grid .data-container tbody > tr:nth-child(2n)):
+        (.dom-tree-data-grid .data-container tbody > tr:nth-child(2n+1)):
+        * UserInterface/DOMTreeDataGrid.js: Added.
+        (WebInspector.DOMTreeDataGrid):
+        (WebInspector.DOMTreeDataGrid.prototype._onmousemove):
+        (WebInspector.DOMTreeDataGrid.prototype._onmouseout):
+        * UserInterface/DOMTreeDataGridNode.js: Added.
+        (WebInspector.DOMTreeDataGridNode):
+        (WebInspector.DOMTreeDataGridNode.prototype.get domNode):
+        (WebInspector.DOMTreeDataGridNode.prototype.createCellContent):
+        (WebInspector.DOMTreeDataGridNode.prototype._updateNodeName):
+        (WebInspector.DOMTreeDataGridNode.prototype._makeNameCell):
+        (WebInspector.DOMTreeDataGridNode.prototype._updateNameCellData):
+        (WebInspector.DOMTreeDataGridNode.prototype._goToArrowWasClicked):
+        * UserInterface/DOMTreeManager.js:
+        (WebInspector.DOMTreeManager.prototype.unregisteredNamedFlowContentElement):
+        (WebInspector.DOMTreeManager.prototype.nodeRequested):
+        (WebInspector.DOMTreeManager.prototype._coerceRemoteArrayOfDOMNodes):
+        (WebInspector.DOMTreeManager.prototype.domNodeResolved):
+        (WebInspector.DOMTreeManager.prototype.regionNodesAvailable):
+        (WebInspector.DOMTreeManager.prototype.get if):
+        (WebInspector.DOMTreeManager.prototype.get var):
+        (WebInspector.DOMTreeManager.prototype.backendFunction.getComputedProperty):
+        (WebInspector.DOMTreeManager.prototype.backendFunction.getContentFlowName):
+        (WebInspector.DOMTreeManager.prototype.):
+        * UserInterface/DataGrid.css:
+        (.data-grid.no-header > table.header):
+        (.data-grid.no-header .data-container):
+        * UserInterface/DetailsSection.js:
+        (WebInspector.DetailsSection):
+        * UserInterface/InspectorBackend.js:
+        (InspectorBackendClass.prototype._wrap):
+        * UserInterface/Main.html:
+        * UserInterface/ResourceSidebarPanel.js:
+        (WebInspector.ResourceSidebarPanel.prototype.showContentFlowDOMTree):
+        * UserInterface/RuntimeManager.js:
+        (WebInspector.RuntimeManager.prototype.evaluateInInspectedWindow):
+        (WebInspector.RuntimeManager.prototype.getPropertiesForRemoteObject):
+
+2013-12-04  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: ColorWheel uses old Color constructor
+        https://bugs.webkit.org/show_bug.cgi?id=125260
+
+        Reviewed by Joseph Pecoraro.
+
+        Update to new WebInspector.Color constructor signature and use a clear color.
+
+        * UserInterface/ColorWheel.js:
+        (WebInspector.ColorWheel.prototype.get tintedColor):
+        (WebInspector.ColorWheel.prototype.get rawColor):
+
+2013-12-04  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: color picker doesn't work with "blue"
+        https://bugs.webkit.org/show_bug.cgi?id=125262
+
+        Reviewed by Joseph Pecoraro.
+
+        Under certain circumstances rounding issues would have us compare
+        two equal numbers that differ by 0.00000001 and sometime trip this
+        if statement and yield a null color. We now add a little fudge to
+        the test and also return a clear color rather than null to match what
+        we do in the getters for "tintedColor" and "rawColor".
+
+        * UserInterface/ColorWheel.js:
+        (WebInspector.ColorWheel.prototype._colorAtPointWithBrightness):
+
+2013-12-04  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: use only two decimals for opacity in rgba/hsla colors
+        https://bugs.webkit.org/show_bug.cgi?id=125261
+
+        Reviewed by Joseph Pecoraro.
+
+        * UserInterface/ColorPicker.js:
+        (WebInspector.ColorPicker.prototype._updateColor):
+
+2013-12-04  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: "data detectors" menu on hover for actionable tokens
+        https://bugs.webkit.org/show_bug.cgi?id=124363
+
+        Reviewed by Timothy Hatcher.
+
+        Add a new WebInspector.HoverMenu class to display an overlay menu that is presented
+        with respect to a target frame that it draws itself around adding a customizable
+        action button to its right. The menu uses fade animations as it's presented and
+        dismissed and a single delegation method is fired when the button is pressed. Finally,
+        just like a popover, it automatically dismisses itself upon scrolling anywhere
+        outside of its bounds.
+
+        * UserInterface/HoverMenu.css: Added.
+        * UserInterface/HoverMenu.js: Added.
+        (WebInspector.HoverMenu):
+        (WebInspector.HoverMenu.prototype.get element):
+        (WebInspector.HoverMenu.prototype.dismiss):
+        (WebInspector.HoverMenu.prototype.handleEvent):
+        (WebInspector.HoverMenu.prototype._handleClickEvent):
+        * UserInterface/Images/HoverMenuButton.png: Added.
+        * UserInterface/Images/HoverMenuButton@2x.png: Added.
+        * UserInterface/Main.html:
+
+2013-12-04  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: edited color should serialize back to original format when possible
+        https://bugs.webkit.org/show_bug.cgi?id=125244
+
+        Reviewed by Joseph Pecoraro.
+
+        Profoundly reworked WebInspector.Color to be more efficient and more flexible when
+        serializing the color to the various supported formats.
+
+        * UserInterface/CSSStyleDeclarationTextEditor.js:
+        (WebInspector.CSSStyleDeclarationTextEditor.prototype._createColorSwatches):
+        Use new WebInspector.Color.fromString() factory and check for a null return value
+        rather than an exception to identify invalid color tokens.
+
+        * UserInterface/Color.js:
+        (WebInspector.Color):
+        Rewrote WebInspector.Color such that it would have, at all times, a canonical
+        representation in terms of either RGBA or HSLA depending on the format used to
+        create the color. The new constructor parameters lets the user pass a format
+        and the RGBA or HSLA components, allowing to bypass the string-only creation
+        system which was sub-optimal for the new color picker. Additionally, the toString()
+        method now can provide the most accurate serialization of the color based on the
+        provided format with a fallback mechanism to RGB/RGBA in cases where the desired
+        format would incur a loss of fidelity. Finally, simplified the API to only feature
+        essential features.
+
+        (WebInspector.Color.fromString):
+        New factory method used to create a color from a string.
+
+        * UserInterface/ColorPicker.js:
+        (WebInspector.ColorPicker.prototype.set color):
+        Keep track of the original color format so that we can use it as the preferred format
+        when serializing the updated color in _updateColor().
+
+        (WebInspector.ColorPicker.prototype._updateColor):
+        Use the original color format as the prefered formation for color serialization. Also,
+        use the new WebInspector.Color constructor in lieu of the removed .fromRGBA factory.
+
+        (WebInspector.ColorPicker.prototype._updateSliders):
+        Use the new WebInspector.Color constructor in lieu of the removed .fromRGBA factory.
+
+        * UserInterface/ColorWheel.js:
+        (WebInspector.ColorWheel.prototype._colorAtPointWithBrightness):
+        Use the new WebInspector.Color constructor in lieu of the removed .fromRGB factory.
+
+2013-12-03  Seokju Kwon  <seokju@webkit.org>
+
+        Web Inspector: Remove '_attachedWindowHeight' property in InspectorFrontendHostStub.js
+        https://bugs.webkit.org/show_bug.cgi?id=125204
+
+        Reviewed by Timothy Hatcher.
+
+        '_attachedWindowHeight' property is not used anywhere, so remove it.
+
+        * UserInterface/InspectorFrontendHostStub.js:
+        (.WebInspector.InspectorFrontendHostStub):
+
+2013-12-03  Brian J. Burg  <burg@cs.washington.edu>
+
+        Web Inspector: restore navigation panel state across reloads and reopens
+        https://bugs.webkit.org/show_bug.cgi?id=122125
+
+        Reviewed by Timothy Hatcher.
+
+        The previous strategy for restoring content views after inspector
+        re-open did not consider the active sidebar and its selection, and
+        tried to recreate the appropriate selection from the saved content
+        view. However, doesn't work for tree elements in the sidebar panel
+        that don't change views when selected, such as script breakpoints,
+        special breakpoints, call stack, timeline sections, etc.
+
+        This patch implements a new strategy that saves the navigation
+        sidebar panel's view state by serializing the identity of the
+        selected element's represented object. Relevant represented
+        object classes implement the saveIdentityToCookie() method. Each
+        represented object class also adds a TypeIdentifier property to
+        its constructor, to aid inexact matching based on represented
+        object type, rather than its complete identity.
+
+        When restoring, the navigation sidebar attempts to match added
+        tree elements against the pending cookie, and selects the element
+        if it matches. A represented object matches if its serialized
+        identity matches the previously saved serialized identity.
+
+        The inspector view state is now only saved on the page hide event
+        (for saving across reopen) and when the main frame commits its
+        provisional load (for saving across same-page reloads). It
+        consolidates similar view state settings into a single setting.
+
+        * UserInterface/ApplicationCacheFrame.js:
+        (WebInspector.ApplicationCacheFrame): Add cookie keys and type identifier.
+        (WebInspector.ApplicationCacheFrame.prototype.saveIdentityToCookie): Added.
+        * UserInterface/ApplicationCacheManager.js: remove objectForCookie().
+        * UserInterface/Breakpoint.js:
+        (WebInspector.Breakpoint): Add cookie keys and type identifier.
+        (WebInspector.Breakpoint.prototype.saveIdentityToCookie):
+        * UserInterface/CookieStorageObject.js:
+        (WebInspector.CookieStorageObject.prototype.saveIdentityToCookie): Added.
+        * UserInterface/DOMStorageObject.js:
+        (WebInspector.DOMStorageObject): Add cookie keys and type identifier.
+        (WebInspector.DOMStorageObject.prototype.saveIdentityToCookie): Added.
+        * UserInterface/DatabaseObject.js:
+        (WebInspector.DatabaseObject): Add cookie keys and type identifier.
+        (WebInspector.DatabaseObject.prototype.saveIdentityToCookie): Added.
+        * UserInterface/DatabaseTableObject.js:
+        (WebInspector.DatabaseTableObject): Add cookie keys and type identifier.
+        (WebInspector.DatabaseTableObject.prototype.saveIdentityToCookie): Added.
+        * UserInterface/DebuggerSidebarPanel.js:
+        (WebInspector.DebuggerSidebarPanel.prototype.saveStateToCookie): Added.
+        (WebInspector.DebuggerSidebarPanel.prototype.restoreStateFromCookie): Added.
+        * UserInterface/Frame.js:
+        (WebInspector.Frame): Add cookie keys and type identifier.
+        (WebInspector.Frame.prototype.saveIdentityToCookie): Added.
+        * UserInterface/FrameResourceManager.js: remove objectForCookie().
+        * UserInterface/InstrumentSidebarPanel.js:
+        (WebInspector.InstrumentSidebarPanel.prototype.showTimelineForRecordType):
+        Return the shown timeline, if any.
+
+        (WebInspector.InstrumentSidebarPanel.prototype.saveStateToCookie): Added.
+        (WebInspector.InstrumentSidebarPanel.prototype.restoreStateFromCookie): Added.
+        (WebInspector.InstrumentSidebarPanel.prototype.showProfile):
+        Return the shown profile, if any.
+
+        * UserInterface/Main.js:
+        (WebInspector): Added cookie keys for the selected sidebar and
+        typeidentifier of the sidebar's selected tree element.
+
+        (WebInspector.contentLoaded): Remove callbacks for
+        resolveAndShowPendingContentViewCookie(). Consolidate all saved
+        inspector view state into one Setting. Move special-cased
+        restoring of the console to the restoration method. Move saving
+        of last opened navigation panel to the saving method.
+
+        (WebInspector._mainResourceDidChange): Try to restore saved view
+        state when the main resource changes.
+
+        (WebInspector._provisionalLoadCommitted): Update the saved view
+        state when the navigation commits. This is the last chance to save
+        it before the main resource changes and the navigation panel view
+        state is discarded and rebuilt.
+
+        (WebInspector._pageHidden): Update the saved view state when the
+        inspector page is hidden, but before state is discarded.
+
+        (WebInspector._navigationSidebarPanelSelected): Don't save last
+        navigation sidebar panel.
+        (WebInspector._updateCookieForInspectorViewState): Renamed from
+        _updateCurrentContentViewCookie. It delegates view state
+        serialization to the currently open navigation sidebar, rather
+        than the current content view.
+
+        (WebInspector._contentBrowserRepresentedObjectsDidChange): Don't
+        spuriously serialize the current view state cookie on every
+        ContentView change.
+
+        (WebInspector._restoreInspectorViewStateFromCookie): Renamed from
+        _showContentViewForCookie. It now restores a specific navigation
+        panel and delegates remaining view state restoration to the panel
+        itself. Last-resort selection of any tree element with the same
+        type identifier was moved to the navigation panel's restore method.
+
+        * UserInterface/NavigationSidebarPanel.js:
+        (WebInspector.NavigationSidebarPanel):
+        (WebInspector.NavigationSidebarPanel.prototype.set contentTreeOutline):
+        (WebInspector.NavigationSidebarPanel.prototype.createContentTreeOutline):
+        Save references to all created TreeOutlines in a Set, so we can
+        restore any tree's selection.
+
+        (WebInspector.NavigationSidebarPanel.prototype.saveStateToCookie):
+        Added. Find the selected tree element from all tree outlines and
+        ask it to serialize its identity.
+
+        (WebInspector.NavigationSidebarPanel.prototype.restoreStateFromCookie):
+        Added. Eagerly search existing tree elements for a matching
+        representedObject. If none exists, save the pending cookie and
+        schedule last-resort matching using the provided timeout interval.
+
+        (WebInspector.NavigationSidebarPanel.prototype._treeElementAddedOrChanged):
+        Check if the added tree element matches a pending view state
+        cookie, if one exists.
+
+        (WebInspector.NavigationSidebarPanel.prototype.treeElementMatchesCookie):
+        Added. Check if the tree element's representedObject matches the
+        pending view state cookie.
+
+        (WebInspector.NavigationSidebarPanel.prototype._checkElementsForPendingViewStateCookie):
+        Added. For each provided tree element, check if the tree
+        element's represented object produces the same serialized identity
+        as the pending view state cookie that we are trying to resolve.
+        If a match is found (possibly by relaxing to matching anything
+        with the same type), select the tree element and clear both the
+        pending view state cookie and last-resort selection timer.
+
+        * UserInterface/Resource.js:
+        (WebInspector.Resource): Add cookie keys and type identifier.
+        (WebInspector.Resource.prototype.saveIdentityToCookie): Added.
+
+        * UserInterface/ResourceClusterContentView.js:
+        (WebInspector.ResourceClusterContentView.prototype.saveToCookie):
+        (WebInspector.ResourceClusterContentView.prototype.restoreFromCookie):
+        Since identity state is serialized by the representedObject, these
+        methods only need to save view-specific state, such as the visible
+        subview. Remove extraneous state.
+
+        * UserInterface/Script.js:
+        (WebInspector.Script): Add cookie keys and type identifier.
+        (WebInspector.Script.prototype.saveIdentityToCookie): Added.
+        * UserInterface/StorageManager.js: remove objectForCookie().
+        * UserInterface/TimelineManager.js: remove objectForCookie().
+        * UserInterface/TimelinesContentView.js:
+        (WebInspector.TimelinesContentView.prototype.saveToCookie):
+        (WebInspector.TimelinesContentView.prototype.restoreFromCookie):
+        Since identity state is serialized by the representedObject, these
+        methods only need to save view-specific state, such as the visible
+        subview. Remove extraneous state.
+
+        * UserInterface/TreeOutline.js: Add TreeOutline.prototype.constructor
+        so other code can assume the constructor property exists.
+
+2013-12-02  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: popover can overlap target frame
+        https://bugs.webkit.org/show_bug.cgi?id=125069
+
+        Reviewed by Joseph Pecoraro.
+
+        Fix a regression introduced in http://trac.webkit.org/changeset/159286. We should only
+        offset the frame of the popover in the y-axis if the target edge is on the x-axis, and
+        vice versa. We also remove the needsToDrawBackground check since it incorrectly disregarded
+        the anchor point. We now always draw the background which is a lot safer and guarantees
+        we'll always draw an adequate frame and anchor point.
+
+        * UserInterface/Popover.js:
+        (WebInspector.Popover.prototype._update):
+        (WebInspector.Popover.prototype._bestMetricsForEdge):
+
+2013-12-02  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: add a method to add padding around a WebInspector.Rect
+        https://bugs.webkit.org/show_bug.cgi?id=125072
+
+        Reviewed by Joseph Pecoraro.
+
+        Add a new WebInspector.Rect.prototype.pad() method which does not alter
+        the rectangle it's called and returns a new rect much like .inset(). I've
+        checked all call sites and there was no reuse of the rectangle that was
+        padded so this patch won't have any side effects.
+
+        * UserInterface/Breakpoint.js:
+        (WebInspector.Breakpoint.prototype._showEditBreakpointPopover):
+        * UserInterface/CSSStyleDeclarationTextEditor.js:
+        * UserInterface/Geometry.js:
+        (WebInspector.Rect.prototype.pad):
+        * UserInterface/LayerTreeSidebarPanel.js:
+        (WebInspector.LayerTreeSidebarPanel.prototype._updatePopoverForSelectedNode):
+        * UserInterface/SourceCodeTextEditor.js:
+        (WebInspector.SourceCodeTextEditor.prototype._showPopover):
+        * UserInterface/TimelineDataGrid.js:
+        (WebInspector.TimelineDataGrid.prototype._updatePopoverForSelectedNode):
+
+2013-11-26  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: Allow showing a context menu on all mouse events.
+        https://bugs.webkit.org/show_bug.cgi?id=124747
+
+        Reviewed by Joseph Pecoraro.
+
+        Automatically dispatch a contextmenu event in case WebInspector.ContextMenu.prototype.show()
+        is called outside of a contextmenu event handler and would therefore not show the expected
+        context menu (except in the Remote Web Inspector where this already works). 
+
+        * UserInterface/ContextMenu.js:
+        (WebInspector.ContextMenu.prototype.show):
+        Check whether the event is a contextmenu event, and if not, add an event listener for a manually
+        dispatched contextmenu event such that we may then call InspectorFrontendHost.showContextMenu()
+        in a contextmenu event handler.
+
+        (WebInspector.ContextMenu.prototype.handleEvent):
+        Call InspectorFrontendHost.showContextMenu() now that we received the manually dispatched
+        contextmenu event.
+
+2013-11-25  Alexandru Chiculita  <achicu@adobe.com>
+
+        Web Inspector: [CSS Regions] A page with many flows should collapse the resources tree
+        https://bugs.webkit.org/show_bug.cgi?id=122926
+
+        Reviewed by Timothy Hatcher.
+
+        Refactored the code in FrameTreeElement._shouldGroupIntoFolders to make it easy to track
+        more types of resources. Added the content flows as another type of resource that would trigger the
+        collapsing.
+
+        * UserInterface/DOMTreeManager.js:
+        (WebInspector.DOMTreeManager.prototype.namedFlowRemoved): Added code to remove the content nodes from
+        a flow that has been removed.
+        * UserInterface/FrameTreeElement.js:
+        (WebInspector.FrameTreeElement.prototype._shouldGroupIntoFolders.pushCategory):
+        (WebInspector.FrameTreeElement.prototype._shouldGroupIntoFolders.pushResourceType):
+        (WebInspector.FrameTreeElement.prototype._shouldGroupIntoFolders):
+
+2013-11-25  Dan Bernstein  <mitz@apple.com>
+
+        Set the svn:ignore property on the Xcode project to ignore the workspace and user data.
+
+        * WebInspectorUI.xcodeproj: Added property svn:ignore.
+
+2013-11-21  Mark Rowe  <mrowe@apple.com>
+
+        <https://webkit.org/b/124702> Stop overriding VALID_ARCHS.
+
+        All modern versions of Xcode set it appropriately for our needs.
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Configurations/Base.xcconfig:
+
 2013-11-19  Antoine Quint  <graouts@apple.com>
 
         Web Inspector: layer info sidebar should convert to MB for very large layers

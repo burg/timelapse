@@ -237,8 +237,7 @@ struct CLoopRegister {
 // The llint C++ interpreter loop:
 //
 
-JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
-                       bool isInitializationPass)
+JSValue CLoop::execute(CallFrame* callFrame, Opcode entryOpcode, bool isInitializationPass)
 {
     #define CAST reinterpret_cast
     #define SIGN_BIT32(x) ((x) & 0x80000000)
@@ -309,7 +308,7 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
     // 2. 32 bit result values will be in the low 32-bit of t0.
     // 3. 64 bit result values will be in t0.
 
-    CLoopRegister t0, t1, t2, t3, a1;
+    CLoopRegister t0, t1, t2, t3;
 #if USE(JSVALUE64)
     CLoopRegister rBasePC, tagTypeNumber, tagMask;
 #endif
@@ -352,7 +351,7 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
     JSValue functionReturnValue;
     Opcode opcode;
 
-    opcode = LLInt::getOpcode(bootstrapOpcodeId);
+    opcode = entryOpcode;
 
     #if ENABLE(OPCODE_STATS)
         #define RECORD_OPCODE_STATS(__opcode) \
@@ -432,7 +431,7 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
             goto doReturnHelper;
         }
 
-        OFFLINE_ASM_GLUE_LABEL(ctiOpThrowNotCaught)
+        OFFLINE_ASM_GLUE_LABEL(returnFromJavaScript)
         {
             return vm->exception();
         }

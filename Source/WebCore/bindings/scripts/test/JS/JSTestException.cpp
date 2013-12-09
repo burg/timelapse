@@ -120,32 +120,25 @@ bool JSTestException::getOwnPropertySlot(JSObject* object, ExecState* exec, Prop
     return getStaticValueSlot<JSTestException, Base>(exec, JSTestExceptionTable, thisObject, propertyName, slot);
 }
 
-JSValue jsTestExceptionName(ExecState* exec, JSValue slotBase, PropertyName)
+EncodedJSValue jsTestExceptionName(ExecState* exec, EncodedJSValue slotBase, EncodedJSValue, PropertyName)
 {
-    JSTestException* castedThis = jsCast<JSTestException*>(asObject(slotBase));
+    JSTestException* castedThis = jsDynamicCast<JSTestException*>(JSValue::decode(slotBase));
     UNUSED_PARAM(exec);
     TestException& impl = castedThis->impl();
     JSValue result = jsStringWithCache(exec, impl.name());
-    return result;
+    return JSValue::encode(result);
 }
 
 
-JSValue jsTestExceptionConstructor(ExecState* exec, JSValue slotBase, PropertyName)
+EncodedJSValue jsTestExceptionConstructor(ExecState* exec, EncodedJSValue slotBase, EncodedJSValue, PropertyName)
 {
-    JSTestException* domObject = jsCast<JSTestException*>(asObject(slotBase));
-    return JSTestException::getConstructor(exec->vm(), domObject->globalObject());
+    JSTestException* domObject = jsDynamicCast<JSTestException*>(JSValue::decode(slotBase));
+    return JSValue::encode(JSTestException::getConstructor(exec->vm(), domObject->globalObject()));
 }
 
 JSValue JSTestException::getConstructor(VM& vm, JSGlobalObject* globalObject)
 {
     return getDOMConstructor<JSTestExceptionConstructor>(vm, jsCast<JSDOMGlobalObject*>(globalObject));
-}
-
-static inline bool isObservable(JSTestException* jsTestException)
-{
-    if (jsTestException->hasCustomProperties())
-        return true;
-    return false;
 }
 
 bool JSTestExceptionOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor)
@@ -202,7 +195,7 @@ JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestExc
 
 TestException* toTestException(JSC::JSValue value)
 {
-    return value.inherits(JSTestException::info()) ? &jsCast<JSTestException*>(asObject(value))->impl() : 0;
+    return value.inherits(JSTestException::info()) ? &jsCast<JSTestException*>(value)->impl() : 0;
 }
 
 }

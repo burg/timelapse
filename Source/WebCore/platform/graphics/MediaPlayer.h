@@ -43,8 +43,9 @@
 #include <runtime/Uint8Array.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
-#include <wtf/OwnPtr.h>
+#include <wtf/MediaTime.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/text/StringHash.h>
 
@@ -56,6 +57,7 @@
 #include "PlatformTextTrackMenu.h"
 #endif
 
+OBJC_CLASS AVAsset;
 OBJC_CLASS AVPlayer;
 OBJC_CLASS QTMovie;
 
@@ -86,7 +88,8 @@ struct PlatformMedia {
         ChromiumMediaPlayerType,
         QtMediaPlayerType,
         AVFoundationMediaPlayerType,
-        AVFoundationCFMediaPlayerType
+        AVFoundationCFMediaPlayerType,
+        AVFoundationAssetType,
     } type;
 
     union {
@@ -97,6 +100,7 @@ struct PlatformMedia {
         MediaPlayerPrivateInterface* qtMediaPlayer;
         AVPlayer* avfMediaPlayer;
         AVCFPlayer* avcfMediaPlayer;
+        AVAsset* avfAsset;
     } media;
 };
 
@@ -507,6 +511,8 @@ public:
     String languageOfPrimaryAudioTrack() const;
 
     size_t extraMemoryCost() const;
+
+    unsigned long long fileSize() const;
 
 private:
     MediaPlayer(MediaPlayerClient*);

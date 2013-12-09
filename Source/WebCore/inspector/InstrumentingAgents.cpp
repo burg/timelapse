@@ -69,9 +69,7 @@ InstrumentingAgents::InstrumentingAgents()
     , m_inspectorDOMDebuggerAgent(0)
     , m_inspectorProfilerAgent(0)
 #endif
-#if ENABLE(WORKERS)
     , m_inspectorWorkerAgent(0)
-#endif
     , m_inspectorCanvasAgent(0)
 {
 }
@@ -104,9 +102,7 @@ void InstrumentingAgents::reset()
     m_inspectorDOMDebuggerAgent = 0;
     m_inspectorProfilerAgent = 0;
 #endif
-#if ENABLE(WORKERS)
     m_inspectorWorkerAgent = 0;
-#endif
     m_inspectorCanvasAgent = 0;
 }
 
@@ -118,14 +114,12 @@ InstrumentingAgents* instrumentationForPage(Page* page)
     return 0;
 }
 
-#if ENABLE(WORKERS)
 InstrumentingAgents* instrumentationForWorkerGlobalScope(WorkerGlobalScope* workerGlobalScope)
 {
     if (WorkerInspectorController* controller = workerGlobalScope->workerInspectorController())
         return controller->m_instrumentingAgents.get();
     return 0;
 }
-#endif
 
 } // namespace WebCore
 

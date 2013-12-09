@@ -223,7 +223,7 @@ void RenderThemeGtk::adjustMenuListButtonStyle(StyleResolver* styleResolver, Ren
     adjustMenuListStyle(styleResolver, style, e);
 }
 
-bool RenderThemeGtk::paintMenuListButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeGtk::paintMenuListButtonDecorations(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
     return paintMenuList(object, info, rect);
 }
@@ -282,7 +282,7 @@ void RenderThemeGtk::adjustSearchFieldResultsButtonStyle(StyleResolver* styleRes
 
 bool RenderThemeGtk::paintSearchFieldResultsButton(RenderObject* o, const PaintInfo& i, const IntRect& rect)
 {
-    return paintSearchFieldResultsDecoration(o, i, rect);
+    return paintSearchFieldResultsDecorationPart(o, i, rect);
 }
 
 static void adjustSearchFieldIconStyle(RenderStyle* style)
@@ -303,7 +303,7 @@ static void adjustSearchFieldIconStyle(RenderStyle* style)
     style->setHeight(Length(height, Fixed));
 }
 
-void RenderThemeGtk::adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeGtk::adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     adjustSearchFieldIconStyle(style);
 }
@@ -328,7 +328,7 @@ static IntRect centerRectVerticallyInParentInputElement(RenderObject* renderObje
     return scaledRect;
 }
 
-bool RenderThemeGtk::paintSearchFieldResultsDecoration(RenderObject* renderObject, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeGtk::paintSearchFieldResultsDecorationPart(RenderObject* renderObject, const PaintInfo& paintInfo, const IntRect& rect)
 {
     IntRect iconRect = centerRectVerticallyInParentInputElement(renderObject, rect);
     if (iconRect.isEmpty())

@@ -94,7 +94,7 @@ WebInspector.ReplayInputGraph = function(inputProvider, calculator)
 }
 
 WebInspector.ReplayInputGraph.MaxBins = 300;
-WebInspector.ReplayInputGraph.LineFillColor = new WebInspector.Color.fromRGBA(100, 100, 100, 0.6);
+WebInspector.ReplayInputGraph.LineFillColor = new WebInspector.Color(WebInspector.Color.Format.RGBA, [100, 100, 100, 0.6]);
 WebInspector.ReplayInputGraph.StyleClassName = "line-graph";
 WebInspector.ReplayInputGraph.WindowScrollSpeedFactor = 0.001;
 WebInspector.ReplayInputGraph.WindowZoomSpeedFactor = 0.001;
@@ -413,7 +413,7 @@ WebInspector.ReplayInputGraph.prototype = {
         this._clearGraph(context);
 
         context.lineJoin = WebInspector.ReplayInputGraph.LineJoinStyle;
-        context.fillStyle = WebInspector.ReplayInputGraph.LineFillColor.value;
+        context.fillStyle = WebInspector.ReplayInputGraph.LineFillColor.toString();
         drawLineGraph.call(this, context, this._data);
     }
 };
