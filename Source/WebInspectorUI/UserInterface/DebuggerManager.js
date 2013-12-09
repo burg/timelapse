@@ -630,6 +630,9 @@ WebInspector.DebuggerManager.prototype = {
             return;
 
         // If the breakpoint exists in the backend, remove it.
+        // FIXME: several outstanding modifications may race as the first
+        // one triggers removal of the breakpoint.id, and subsequent
+        // modifications take the else branch and set the 'new' breakpoint first.
         if (breakpoint.id)
             this._removeBreakpoint(breakpoint, setNewBreakpoint.bind(this));
         else

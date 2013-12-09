@@ -1005,12 +1005,15 @@ WebInspector.TextEditor.prototype = {
                     }
                 }
 
-                // If we created the breakpoint just for the probe, default to auto-continue.
-                if (didCreateBreakpoint)
-                    foundBreakpoint.mode = WebInspector.Breakpoint.Mode.AutoContinue;
-
                 var newAction = foundBreakpoint.createAction(WebInspector.BreakpointAction.Type.Probe);
                 newAction.data = expression;
+
+                // If we created the breakpoint just for the probe, default to auto-continue (after action is added).
+                // FIXME: this is a horrible hack to mitigate protocol races on multiple breakpoint mutations. This could
+                // be fixed by adding lightweight mutation batching to Breakpoint, like CodeMirror does for DOM updates.
+                if (didCreateBreakpoint)
+                    setTimeout(function() { foundBreakpoint.mode = WebInspector.Breakpoint.Mode.AutoContinue; }, 100);
+
                 popover.dismiss();
             }
 

@@ -146,7 +146,10 @@ WebInspector.Breakpoint.prototype = {
         if (this._mode === mode)
             return;
 
-        this._mode = mode || WebInspector.Breakpoint.Mode.Enabled;
+        if (!mode || (mode === WebInspector.Breakpoint.Mode.AutoContinue && !this.actions.length))
+            mode = WebInspector.Breakpoint.Mode.Enabled;
+
+        this._mode = mode;
         this.dispatchEventToListeners(WebInspector.Breakpoint.Event.ModeDidChange);
     },
 
