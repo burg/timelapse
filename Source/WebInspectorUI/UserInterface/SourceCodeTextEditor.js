@@ -753,14 +753,13 @@ WebInspector.SourceCodeTextEditor.prototype = {
         }
 
         // Adding probe expressions directly.
-        function addProbeBreakpointAction(popover, event)
+        function addProbeBreakpointAction(popover, codeMirror)
         {
-            if (event.keyCode !== 13) // enter/return
+            var expression = codeMirror.getValue();
+            if (!expression) {
+                popover.dismiss();
                 return;
-
-            var expression = event.target.value;
-            if (!expression)
-                return;
+            }
 
             // If no breakpoints exist yet at this line, create one.
             if (!breakpoints.length)
@@ -793,18 +792,40 @@ WebInspector.SourceCodeTextEditor.prototype = {
         function promptForProbeExpression()
         {
             var popover = new WebInspector.Popover;
-            var content = document.createElement("div");
-            content.classList.add(WebInspector.ProbeSetDetailsSection.ProbePopoverElementStyleClassName);
-            content.createChild("div").textContent = WebInspector.UIString("Expression To Evaluate Here:");
-            var textBox = content.createChild("input");
-            textBox.addEventListener("keypress", addProbeBreakpointAction.bind(this, popover));
-            textBox.addEventListener("click", function (event) {event.target.select()});
-            textBox.type = "text";
-            textBox.value = WebInspector.UIString("Enter Expression");
-            popover.content = content;
+            var bodyElement = document.createElement("div");
+            bodyElement.classList.add(WebInspector.ProbeSetDetailsSection.ProbePopoverElementStyleClassName);
+            bodyElement.createChild("div").textContent = WebInspector.UIString("Expression To Evaluate Here:");
+
+            var editorElement = bodyElement.appendChild(document.createElement("div"));
+            editorElement.classList.add("breakpoint-action-eval-editor");
+            editorElement.classList.add(WebInspector.SyntaxHighlightedStyleClassName);
+
+            codeMirror = CodeMirror(editorElement, {
+                lineWrapping: true,
+                mode: "text/javascript",
+                indentWithTabs: true,
+                indentUnit: 4,
+                matchBrackets: true,
+                value: WebInspector.UIString("Enter Expression"),
+            });
+
+            codeMirror.on("viewportChange", popover.update.bind(popover));
+            codeMirror.on("blur", addProbeBreakpointAction.bind(this, popover, codeMirror));
+
+            var completionController = new WebInspector.CodeMirrorCompletionController(codeMirror);
+            completionController.addExtendedCompletionProvider("javascript", WebInspector.javaScriptRuntimeCompletionProvider);
+
+            // CodeMirror needs a refresh after the popover displays, to layout, otherwise it doesn't appear.
+            setTimeout(function() {
+                codeMirror.refresh();
+                codeMirror.focus();
+                codeMirror.setCursor({line: 0, ch: 0});
+                codeMirror.setSelection({line: codeMirror.firstLine(), ch: 0}, {line: codeMirror.lastLine()});
+            }.bind(this), 0);
+
+            popover.content = bodyElement;
             var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
             popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
-            textBox.select();
         }
 
         contextMenu.appendItem(WebInspector.UIString("Add Probe Expression"), promptForProbeExpression.bind(this));
