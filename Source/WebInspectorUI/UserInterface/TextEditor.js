@@ -981,58 +981,6 @@ WebInspector.TextEditor.prototype = {
         if (event.button !== 0 || event.ctrlKey)
             return;
 
-        // FIXME: this should be located in SourceCodeTextEditor.
-        if (event.shiftKey) {
-
-            function getInitialProbeExpression(popover, event)
-            {
-                if (event.keyCode !== 13)
-                    return;
-
-                var lineInfo = { lineNumber: lineNumber, columnNumber: 0 };
-                var expression = event.target.value;
-
-                var didCreateBreakpoint = tryCreateBreakpoint.call(this);
-                // We can't directly get the associated breakpoint, so look up from manager.
-                var breakpointCandidates = WebInspector.debuggerManager.breakpointsForSourceCode(this.sourceCode);
-                var foundBreakpoint = null;
-                // Return the first breakpoint with the same display line number.
-                for (var i = 0; i < breakpointCandidates.length; ++i) {
-                    var breakpoint = breakpointCandidates[i];
-                    if (breakpoint.sourceCodeLocation.displayLineNumber === lineNumber) {
-                        foundBreakpoint = breakpoint;
-                        break;
-                    }
-                }
-
-                var newAction = foundBreakpoint.createAction(WebInspector.BreakpointAction.Type.Probe);
-                newAction.data = expression;
-
-                // If we created the breakpoint just for the probe, default to auto-continue (after action is added).
-                // FIXME: this is a horrible hack to mitigate protocol races on multiple breakpoint mutations. This could
-                // be fixed by adding lightweight mutation batching to Breakpoint, like CodeMirror does for DOM updates.
-                if (didCreateBreakpoint)
-                    setTimeout(function() { foundBreakpoint.mode = WebInspector.Breakpoint.Mode.AutoContinue; }, 100);
-
-                popover.dismiss();
-            }
-
-            var popover = new WebInspector.Popover;
-            var content = document.createElement("div");
-            content.classList.add(WebInspector.ProbeSetDetailsSection.ProbePopoverElementStyleClassName);
-            content.createChild("div").textContent = WebInspector.UIString("Add Probe?");
-            var textBox = content.createChild("input");
-            textBox.addEventListener("keypress", getInitialProbeExpression.bind(this, popover));
-            textBox.addEventListener("click", function (event) {event.target.select()});
-            textBox.type = "text";
-            textBox.value = WebInspector.UIString("Enter Expression");
-            popover.content = content;
-            var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
-            popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
-            textBox.select();
-            return;
-        }
-
         if (tryCreateBreakpoint.call(this))
             return;
 

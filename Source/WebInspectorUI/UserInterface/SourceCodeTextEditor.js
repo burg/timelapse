@@ -746,14 +746,72 @@ WebInspector.SourceCodeTextEditor.prototype = {
                 breakpoints.push(breakpoint);
         }
 
-        // No breakpoints.
-        if (!breakpoints.length) {
-            function addBreakpoint()
-            {
-                var data = this.textEditorBreakpointAdded(this, lineNumber, columnNumber);
-                this.setBreakpointInfoForLineAndColumn(data.lineNumber, data.columnNumber, data.breakpointInfo);
+        function addBreakpoint()
+        {
+            var data = this.textEditorBreakpointAdded(this, lineNumber, columnNumber);
+            this.setBreakpointInfoForLineAndColumn(data.lineNumber, data.columnNumber, data.breakpointInfo);
+        }
+
+        // Adding probe expressions directly.
+        function addProbeBreakpointAction(popover, event)
+        {
+            if (event.keyCode !== 13) // enter/return
+                return;
+
+            var expression = event.target.value;
+            if (!expression)
+                return;
+
+            // If no breakpoints exist yet at this line, create one.
+            if (!breakpoints.length)
+                addBreakpoint.call(this);
+
+            // If the breakpoint was newly added then it won't be in the editor list. Re-fetch from the manager.
+            var breakpointCandidates = WebInspector.debuggerManager.breakpointsForSourceCode(this.sourceCode);
+            var foundBreakpoint = null;
+            // Return the first breakpoint with the same display line number.
+            for (var i = 0; i < breakpointCandidates.length; ++i) {
+                var breakpoint = breakpointCandidates[i];
+                if (breakpoint.sourceCodeLocation.displayLineNumber === lineNumber) {
+                    foundBreakpoint = breakpoint;
+                    break;
+                }
             }
 
+            var newAction = foundBreakpoint.createAction(WebInspector.BreakpointAction.Type.Probe);
+            newAction.data = expression;
+
+            // If we created the breakpoint just for the probe, default to auto-continue (after action is added).
+            // FIXME: this is a horrible hack to mitigate protocol races on multiple breakpoint mutations. This could
+            // be fixed by adding lightweight mutation batching to Breakpoint, like CodeMirror does for DOM updates.
+            if (foundBreakpoint.mode !== WebInspector.Breakpoint.Mode.AutoContinue)
+                setTimeout(function() { foundBreakpoint.mode = WebInspector.Breakpoint.Mode.AutoContinue; }, 100);
+
+            popover.dismiss();
+        }
+
+        function promptForProbeExpression()
+        {
+            var popover = new WebInspector.Popover;
+            var content = document.createElement("div");
+            content.classList.add(WebInspector.ProbeSetDetailsSection.ProbePopoverElementStyleClassName);
+            content.createChild("div").textContent = WebInspector.UIString("Expression To Evaluate Here:");
+            var textBox = content.createChild("input");
+            textBox.addEventListener("keypress", addProbeBreakpointAction.bind(this, popover));
+            textBox.addEventListener("click", function (event) {event.target.select()});
+            textBox.type = "text";
+            textBox.value = WebInspector.UIString("Enter Expression");
+            popover.content = content;
+            var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
+            popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
+            textBox.select();
+        }
+
+        contextMenu.appendItem(WebInspector.UIString("Add Probe Expression"), promptForProbeExpression.bind(this));
+        contextMenu.appendSeparator();
+
+        // No breakpoints.
+        if (!breakpoints.length) {
             contextMenu.appendItem(WebInspector.UIString("Add Breakpoint"), addBreakpoint.bind(this));
             contextMenu.show();
             return;
