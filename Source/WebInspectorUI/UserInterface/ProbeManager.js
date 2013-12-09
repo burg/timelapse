@@ -67,6 +67,11 @@ WebInspector.ProbeManager.prototype = {
         return ++this._nextProbeId;
     },
 
+    probeSetForBreakpoint: function(breakpoint)
+    {
+        return this._probeSetsByBreakpoint.get(breakpoint);
+    },
+
     // Protected (called by WebInspector.DebuggerObserver)
 
     didSampleProbe: function(sample)
@@ -159,6 +164,7 @@ WebInspector.ProbeManager.prototype = {
         }.bind(this));
     },
 
+    // This function will create a probe set for the specified breakpoint if it does not exist.
     _getProbeSetForBreakpoint: function(breakpoint)
     {
         if (this._probeSetsByBreakpoint.has(breakpoint))

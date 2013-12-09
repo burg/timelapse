@@ -39,6 +39,14 @@ WebInspector.BreakpointTreeElement = function(breakpoint, className, title)
     this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.ModeDidChange, this._updateStatus, this);
     this._breakpoint.addEventListener(WebInspector.Breakpoint.Event.ResolvedStateDidChange, this._updateStatus, this);
 
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeSetAdded, this._probeSetAdded, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeSetRemoved, this._probeSetRemoved, this);
+
+    // Search for a pre-existing probe set for this breakpoint.
+    var probeSet = WebInspector.probeManager.probeSetForBreakpoint(this._breakpoint);
+    if (probeSet)
+        this._probeSetAdded({data: probeSet});
+
     this._statusImageElement = document.createElement("img");
     this._statusImageElement.className = WebInspector.BreakpointTreeElement.StatusImageElementStyleClassName;
     this._statusImageElement.addEventListener("mousedown", this._statusImageElementMouseDown.bind(this));
@@ -59,6 +67,10 @@ WebInspector.BreakpointTreeElement.StatusImageResolvedStyleClassName = "resolved
 WebInspector.BreakpointTreeElement.StatusImageAutoContinueStyleClassName = "auto-continue";
 WebInspector.BreakpointTreeElement.StatusImageDisabledStyleClassName = "disabled";
 WebInspector.BreakpointTreeElement.FormattedLocationStyleClassName = "formatted-location";
+WebInspector.BreakpointTreeElement.ProbeDataUpdatedStyleClassName = "data-updated";
+
+WebInspector.BreakpointTreeElement.ProbeDataUpdatedAnimationDuration = 300; // milliseconds
+
 
 WebInspector.BreakpointTreeElement.prototype = {
     constructor: WebInspector.BreakpointTreeElement,
@@ -139,6 +151,43 @@ WebInspector.BreakpointTreeElement.prototype = {
             this._statusImageElement.classList.add(WebInspector.BreakpointTreeElement.StatusImageResolvedStyleClassName);
         else
             this._statusImageElement.classList.remove(WebInspector.BreakpointTreeElement.StatusImageResolvedStyleClassName);
+    },
+
+    _probeSetAdded: function(event)
+    {
+        var probeSet = event.data;
+        if (probeSet.breakpoint !== this.breakpoint)
+            return;
+
+        probeSet.dataTable.addEventListener(WebInspector.ProbeSetDataTable.Event.FrameInserted, this._dataUpdated, this);
+        probeSet.dataTable.addEventListener(WebInspector.ProbeSetDataTable.Event.FrameReplaced, this._dataUpdated, this);
+    },
+
+    _probeSetRemoved: function(event)
+    {
+        var probeSet = event.data;
+        if (probeSet.breakpoint !== this.breakpoint)
+            return;
+
+        probeSet.dataTable.removeEventListener(WebInspector.ProbeSetDataTable.Event.FrameInserted, this._dataUpdated, this);
+        probeSet.dataTable.removeEventListener(WebInspector.ProbeSetDataTable.Event.FrameReplaced, this._dataUpdated, this);
+    },
+
+    _dataUpdated: function()
+    {
+        if (this.element.classList.contains(WebInspector.BreakpointTreeElement.ProbeDataUpdatedStyleClassName)) {
+            clearTimeout(this._currentTimeout);
+            this.element.classList.remove(WebInspector.BreakpointTreeElement.ProbeDataUpdatedStyleClassName);
+            // We want to restart the animation, which can only be done by removing the class,
+            // performing layout, and re-adding the class. Try adding class back on next tick.
+            setTimeout(this._dataUpdated.bind(this));
+            return;
+        }
+
+        this.element.classList.add(WebInspector.BreakpointTreeElement.ProbeDataUpdatedStyleClassName);
+        this._currentTimeout = setTimeout(function() {
+            this.element.classList.remove(WebInspector.BreakpointTreeElement.ProbeDataUpdatedStyleClassName);
+        }.bind(this), WebInspector.BreakpointTreeElement.ProbeDataUpdatedAnimationDuration);
     },
 
     _breakpointLocationDidChange: function(event)
