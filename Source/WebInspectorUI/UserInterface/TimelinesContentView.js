@@ -29,7 +29,7 @@ WebInspector.TimelinesContentView = function(representedObject)
 
     this.element.classList.add(WebInspector.TimelinesContentView.StyleClassName);
 
-    this._timelineOverview = new WebInspector.TimelineOverview(this, [WebInspector.TimelineRecord.Type.Network, WebInspector.TimelineRecord.Type.Layout, WebInspector.TimelineRecord.Type.Script]);
+    this._timelineOverview = new WebInspector.TimelineOverview(this, [WebInspector.TimelineRecord.Type.Network, WebInspector.TimelineRecord.Type.Layout, WebInspector.TimelineRecord.Type.Script, WebInspector.TimelineRecord.Type.Screenshot]);
     this.element.appendChild(this._timelineOverview.element);
 
     function createPathComponent(displayName, className, representedObject)
@@ -42,11 +42,15 @@ WebInspector.TimelinesContentView = function(representedObject)
     var networkPathComponent = createPathComponent.call(this, WebInspector.UIString("Network Requests"), WebInspector.InstrumentSidebarPanel.NetworkIconStyleClass, WebInspector.TimelineRecord.Type.Network);
     var layoutPathComponent = createPathComponent.call(this, WebInspector.UIString("Layout & Rendering"), WebInspector.InstrumentSidebarPanel.ColorsIconStyleClass, WebInspector.TimelineRecord.Type.Layout);
     var scriptPathComponent = createPathComponent.call(this, WebInspector.UIString("JavaScript & Events"), WebInspector.InstrumentSidebarPanel.ScriptIconStyleClass, WebInspector.TimelineRecord.Type.Script);
+    var screenshotPathComponent = createPathComponent.call(this, WebInspector.UIString("Screenshots"), WebInspector.InstrumentSidebarPanel.ScreenshotIconStyleClass, WebInspector.TimelineRecord.Type.Screenshot);
 
     networkPathComponent.nextSibling = layoutPathComponent;
     layoutPathComponent.previousSibling = networkPathComponent;
     layoutPathComponent.nextSibling = scriptPathComponent;
     scriptPathComponent.previousSibling = layoutPathComponent;
+    scriptPathComponent.nextSibling = screenshotPathComponent;
+    screenshotPathComponent.previousSibling = scriptPathComponent;
+
 
     this._currentRecordType = null;
     this._currentRecordTypeSetting = new WebInspector.Setting("timeline-view-current-record-type", WebInspector.TimelineRecord.Type.Network);
@@ -147,6 +151,35 @@ WebInspector.TimelinesContentView = function(representedObject)
     scriptDataGridColumns.duration.width = "10%";
     scriptDataGridColumns.duration.aligned = "right";
 
+    var screenshotDataGridColumns = {eventType: {}, image: {}, x: {}, y: {}, width: {}, height: {}, area: {}, startTime: {}};
+
+    screenshotDataGridColumns.eventType.title = WebInspector.UIString("Type");
+    screenshotDataGridColumns.eventType.width = "15%";
+    screenshotDataGridColumns.eventType.scopeBar = this._makeColumnScopeBar("screenshot", WebInspector.ScreenshotTimelineRecord.EventType);
+
+    screenshotDataGridColumns.image.title = WebInspector.UIString("Image");
+    screenshotDataGridColumns.image.width = "25%";
+
+    screenshotDataGridColumns.x.title = WebInspector.UIString("X");
+    screenshotDataGridColumns.x.width = "8%";
+
+    screenshotDataGridColumns.y.title = WebInspector.UIString("Y");
+    screenshotDataGridColumns.y.width = "8%";
+
+    screenshotDataGridColumns.width.title = WebInspector.UIString("Width");
+    screenshotDataGridColumns.width.width = "8%";
+
+    screenshotDataGridColumns.height.title = WebInspector.UIString("Height");
+    screenshotDataGridColumns.width.width = "8%";
+
+    screenshotDataGridColumns.area.title = WebInspector.UIString("Area");
+    screenshotDataGridColumns.area.width = "12%";
+
+    screenshotDataGridColumns.startTime.title = WebInspector.UIString("Time");
+    screenshotDataGridColumns.startTime.width = "8%";
+    screenshotDataGridColumns.startTime.aligned = "right";
+    screenshotDataGridColumns.startTime.sort = "ascending";
+
     for (var column in networkDataGridColumns)
         networkDataGridColumns[column].sortable = true;
 
@@ -156,9 +189,13 @@ WebInspector.TimelinesContentView = function(representedObject)
     for (var column in scriptDataGridColumns)
         scriptDataGridColumns[column].sortable = true;
 
+    for (var column in screenshotDataGridColumns)
+        screenshotDataGridColumns[column].sortable = true;
+
     var networkDataGrid = new WebInspector.NetworkDataGrid(networkDataGridColumns);
     var layoutDataGrid = new WebInspector.LayoutTimelineDataGrid(layoutDataGridColumns);
     var scriptDataGrid = new WebInspector.ScriptTimelineDataGrid(scriptDataGridColumns);
+    var screenshotDataGrid = new WebInspector.ScreenshotTimelineDataGrid(screenshotDataGridColumns);
 
     networkDataGrid.addEventListener(WebInspector.DataGrid.Event.SelectedNodeChanged, this._selectedNodeChanged, this);
 
@@ -166,11 +203,13 @@ WebInspector.TimelinesContentView = function(representedObject)
     this._pathComponentMap[WebInspector.TimelineRecord.Type.Network] = networkPathComponent;
     this._pathComponentMap[WebInspector.TimelineRecord.Type.Layout] = layoutPathComponent;
     this._pathComponentMap[WebInspector.TimelineRecord.Type.Script] = scriptPathComponent;
+    this._pathComponentMap[WebInspector.TimelineRecord.Type.Screenshot] = screenshotPathComponent;
 
     this._dataGridMap = {};
     this._dataGridMap[WebInspector.TimelineRecord.Type.Network] = networkDataGrid;
     this._dataGridMap[WebInspector.TimelineRecord.Type.Layout] = layoutDataGrid;
     this._dataGridMap[WebInspector.TimelineRecord.Type.Script] = scriptDataGrid;
+    this._dataGridMap[WebInspector.TimelineRecord.Type.Screenshot] = screenshotDataGrid;
 
     for (var type in this._dataGridMap) {
         var dataGrid = this._dataGridMap[type];
@@ -658,6 +697,8 @@ WebInspector.TimelinesContentView.prototype = {
             return new WebInspector.LayoutTimelineDataGridNode(record, baseStartTime);
         case WebInspector.TimelineRecord.Type.Script:
             return new WebInspector.ScriptTimelineDataGridNode(record, baseStartTime);
+        case WebInspector.TimelineRecord.Type.Screenshot:
+            return new WebInspector.ScreenshotTimelineDataGridNode(record, baseStartTime);
         }
 
         console.error("Unknown record type: " + record.type);

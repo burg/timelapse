@@ -50,6 +50,7 @@ WebInspector.TimelineManager.Event = {
 WebInspector.TimelineManager.MaximumAutoRecordDuration = 90000; // 90 seconds
 WebInspector.TimelineManager.MaximumAutoRecordDurationAfterLoadEvent = 10000; // 10 seconds
 WebInspector.TimelineManager.DeadTimeRequiredToStopAutoRecordingEarly = 2000; // 2 seconds
+WebInspector.TimelineManager.ScreenshotTimeIntervalDelay = 1000; // 1 second
 
 WebInspector.TimelineManager.prototype = {
     constructor: WebInspector.TimelineManager,
@@ -299,6 +300,14 @@ WebInspector.TimelineManager.prototype = {
             this._loadEventTime = timestamp;
     },
 
+    setScreenshotInterval: function() {
+        this._timeInvervalIdentifier = setInterval(this._recordScreenshot.bind(this), WebInspector.TimelineManager.ScreenshotTimeIntervalDelay);
+    },
+
+    clearScreenshotInterval: function() {
+        clearInterval(this._timeInvervalIdentifier);
+    },
+
     // Private
 
     _clear: function()
@@ -434,6 +443,14 @@ WebInspector.TimelineManager.prototype = {
             return;
 
         this._addRecord(new WebInspector.ResourceTimelineRecord(event.data.resource));
+    },
+
+    _recordScreenshot: function()
+    {
+        PageAgent.snapshotRect(0, 0, document.width, document.height, "Viewport", function(error, dataURL) {
+            if (!error)
+                this._addRecord(new WebInspector.ScreenshotTimelineRecord((new Date().getTime()) / 1000, dataURL, 0, 0, document.width, document.height));
+        }.bind(this));
     }
 };
 

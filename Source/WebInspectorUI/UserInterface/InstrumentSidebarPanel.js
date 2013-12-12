@@ -75,10 +75,16 @@ WebInspector.InstrumentSidebarPanel = function()
     scriptTimelineTreeElement.twoLine = true;
     this._timelinesTreeOutline.appendChild(scriptTimelineTreeElement);
 
+    var screenshotTimelineTreeElement = new WebInspector.GeneralTreeElement(WebInspector.InstrumentSidebarPanel.ScreenshotIconStyleClass, WebInspector.UIString("Screenshots"), null, WebInspector.TimelineRecord.Type.Screenshot);
+    screenshotTimelineTreeElement.small = true;
+    screenshotTimelineTreeElement.twoLine = true;
+    this._timelinesTreeOutline.appendChild(screenshotTimelineTreeElement);
+
     this._timelineTreeElementMap = {};
     this._timelineTreeElementMap[WebInspector.TimelineRecord.Type.Network] = networkTimelineTreeElement;
     this._timelineTreeElementMap[WebInspector.TimelineRecord.Type.Layout] = layoutTimelineTreeElement;
     this._timelineTreeElementMap[WebInspector.TimelineRecord.Type.Script] = scriptTimelineTreeElement;
+    this._timelineTreeElementMap[WebInspector.TimelineRecord.Type.Screenshot] = screenshotTimelineTreeElement;
 
     var profilesTitleBarElement = document.createElement("div");
     profilesTitleBarElement.textContent = WebInspector.UIString("Profiles");
@@ -132,6 +138,8 @@ WebInspector.InstrumentSidebarPanel = function()
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingEnded, this._profilingEnded, this);
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingInterrupted, this._profilingInterrupted, this);
 
+    this._recordScreenshots = true;
+
     this.emptyContentPlaceholder = WebInspector.UIString("No Recorded Profiles");
 
     // Maps from profile titles -> tree elements.
@@ -154,6 +162,7 @@ WebInspector.InstrumentSidebarPanel.NetworkIconStyleClass = "network-icon";
 WebInspector.InstrumentSidebarPanel.ColorsIconStyleClass = "colors-icon";
 WebInspector.InstrumentSidebarPanel.ScriptIconStyleClass = "script-icon";
 WebInspector.InstrumentSidebarPanel.ProfileIconStyleClass = "profile-icon";
+WebInspector.InstrumentSidebarPanel.ScreenshotIconStyleClass = "screenshot-icon";
 WebInspector.InstrumentSidebarPanel.StartJavaScriptProfileValue = "start-javascript-profile";
 WebInspector.InstrumentSidebarPanel.StartCSSSelectorProfileValue = "start-css-selector-profile";
 WebInspector.InstrumentSidebarPanel.StartCanvasProfileValue = "start-canvas-profile";
@@ -411,10 +420,15 @@ WebInspector.InstrumentSidebarPanel.prototype = {
         // Add forced class to prevent the glyph from showing a confusing status after click.
         this._recordGlyphElement.classList.add(WebInspector.InstrumentSidebarPanel.RecordGlyphRecordingForcedStyleClass);
 
-        if (WebInspector.timelineManager.recording)
+        if (WebInspector.timelineManager.recording) {
             WebInspector.timelineManager.stopRecording();
-        else
+            if (this._recordScreenshots)
+                WebInspector.timelineManager.clearScreenshotInterval();
+        } else {
             WebInspector.timelineManager.startRecording();
+            if (this._recordScreenshots)
+                WebInspector.timelineManager.setScreenshotInterval();
+        }
     },
 
     _titleForProfile: function(profile)
