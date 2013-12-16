@@ -547,8 +547,6 @@ Document::~Document()
     if (m_domWindow)
         m_domWindow->resetUnlessSuspendedForPageCache();
 
-    m_scriptRunner = nullptr;
-
     histogramMutationEventUsage(m_listenerTypes);
 
     removeAllEventListeners();
@@ -4811,7 +4809,7 @@ void Document::suspendScheduledTasks(ActiveDOMObject::ReasonForSuspension reason
 
     suspendScriptedAnimationControllerCallbacks();
     suspendActiveDOMObjects(reason);
-    scriptRunner()->suspend();
+    scriptRunner().suspend();
     m_pendingTasksTimer.stop();
 
     // Deferring loading and suspending parser is necessary when we need to prevent re-entrant JavaScript execution
@@ -4835,7 +4833,7 @@ void Document::resumeScheduledTasks(ActiveDOMObject::ReasonForSuspension reason)
         m_parser->resumeScheduledTasks();
     if (!m_pendingTasks.isEmpty())
         m_pendingTasksTimer.startOneShot(0);
-    scriptRunner()->resume();
+    scriptRunner().resume();
     resumeActiveDOMObjects(reason);
     resumeScriptedAnimationControllerCallbacks();
 

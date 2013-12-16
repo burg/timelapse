@@ -64,9 +64,9 @@ void RanPendingScripts::dispatch(ReplayController& controller)
     Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
 
     // Call ScriptRunner timer callback manually.
-    ScriptRunner* scriptRunner = document->scriptRunner();
-    ASSERT(scriptRunner->hasPendingScripts());
-    scriptRunner->timerFired(&scriptRunner->m_timer);
+    ScriptRunner& scriptRunner = document->scriptRunner();
+    ASSERT(scriptRunner.hasPendingScripts());
+    scriptRunner.timerFired(&scriptRunner.m_timer);
 }
 
 void InputCoder<RanPendingScripts>::encode(EncoderContext& encoder, const RanPendingScripts& input)

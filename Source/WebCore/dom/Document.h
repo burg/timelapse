@@ -889,7 +889,7 @@ public:
     Document* parentDocument() const;
     Document* topDocument() const;
 
-    ScriptRunner* scriptRunner() { return m_scriptRunner.get(); }
+    ScriptRunner& scriptRunner() { return *m_scriptRunner; }
 
     HTMLScriptElement* currentScript() const { return !m_currentScriptStack.isEmpty() ? m_currentScriptStack.last().get() : 0; }
     void pushCurrentScript(PassRefPtr<HTMLScriptElement>);
@@ -1408,7 +1408,7 @@ private:
     double m_startTime;
     bool m_overMinimumLayoutThreshold;
 
-    std::unique_ptr<ScriptRunner> m_scriptRunner;
+    const std::unique_ptr<ScriptRunner> m_scriptRunner;
 
     Vector<RefPtr<HTMLScriptElement>> m_currentScriptStack;
 

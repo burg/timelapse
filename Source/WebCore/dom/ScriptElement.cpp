@@ -230,10 +230,10 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition, Legac
         m_readyToBeParserExecuted = true;
     } else if (hasSourceAttribute() && !asyncAttributeValue() && !m_forceAsync) {
         m_willExecuteInOrder = true;
-        document.scriptRunner()->queueScriptForExecution(this, m_cachedScript, ScriptRunner::IN_ORDER_EXECUTION);
+        document.scriptRunner().queueScriptForExecution(this, m_cachedScript, ScriptRunner::IN_ORDER_EXECUTION);
         m_cachedScript->addClient(this);
     } else if (hasSourceAttribute()) {
-        m_element->document().scriptRunner()->queueScriptForExecution(this, m_cachedScript, ScriptRunner::ASYNC_EXECUTION);
+        m_element->document().scriptRunner().queueScriptForExecution(this, m_cachedScript, ScriptRunner::ASYNC_EXECUTION);
         m_cachedScript->addClient(this);
     } else {
         // Reset line numbering for nested writes.
@@ -356,9 +356,9 @@ void ScriptElement::notifyFinished(CachedResource* resource)
     }
 
     if (m_willExecuteInOrder)
-        m_element->document().scriptRunner()->notifyScriptReady(this, ScriptRunner::IN_ORDER_EXECUTION);
+        m_element->document().scriptRunner().notifyScriptReady(this, ScriptRunner::IN_ORDER_EXECUTION);
     else
-        m_element->document().scriptRunner()->notifyScriptReady(this, ScriptRunner::ASYNC_EXECUTION);
+        m_element->document().scriptRunner().notifyScriptReady(this, ScriptRunner::ASYNC_EXECUTION);
 
     m_cachedScript = 0;
 }
