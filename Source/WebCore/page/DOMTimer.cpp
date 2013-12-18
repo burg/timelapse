@@ -38,8 +38,8 @@
 #if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
 #include "ReplayInputTypes.h"
-#include "TimerCreated.h"
-#include "TimerFired.h"
+#include "DOMTimerCreated.h"
+#include "DOMTimerFired.h"
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
 #endif
@@ -85,7 +85,7 @@ void InstrumentedDOMTimer::start(int timeout, bool singleShot)
     ASSERT(it && it->isCapturing());
 
     int frameIndex = frameIndexFromDocument(document);
-    it->storeInput(std::make_unique<TimerCreated>(m_timeoutId, frameIndex));
+    it->storeInput(std::make_unique<DOMTimerCreated>(m_timeoutId, frameIndex));
 }
 
 void InstrumentedDOMTimer::fired()
@@ -100,7 +100,7 @@ void InstrumentedDOMTimer::fired()
     ASSERT(it && it->isCapturing());
 
     int frameIndex = frameIndexFromDocument(document);
-    it->storeInput(std::make_unique<TimerFired>(m_timeoutId, frameIndex));
+    it->storeInput(std::make_unique<DOMTimerFired>(m_timeoutId, frameIndex));
 
     EventLoopInputExtent extent(it);
     DOMTimer::fired();
@@ -122,8 +122,8 @@ void DeterministicDOMTimer::start(int, bool)
     InputIterator* it = document ? document->inputIterator() : nullptr;
     ASSERT(it && it->isReplaying());
 
-    NondeterministicInput* input = it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().TimerCreated);
-    TimerCreated* castedInput = static_cast<TimerCreated*>(input);
+    NondeterministicInput* input = it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().DOMTimerCreated);
+    DOMTimerCreated* castedInput = static_cast<DOMTimerCreated*>(input);
     // Error handling case: if fetch failed, schedule normally.
     if (!castedInput)
         return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 University of Washington. All rights reserved.
+ * Copyright (C) 2011 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,35 +28,54 @@
  */
 
 #include "config.h"
-#include "TimerCreated.h"
+#include "DOMTimerFired.h"
 
 #if ENABLE(WEB_REPLAY)
 
+#include "DOMTimer.h"
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
-// For documentFromFrameIndex().
-#include "EventLoopInput.h"
+#include "ReplayController.h"
 #include "ReplayInputTypes.h"
+#include <wtf/replay/NondeterministicInput.h>
+#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
-const AtomicString& TimerCreated::type() const
+DOMTimerFired::DOMTimerFired(int timerId, int frameIndex)
+    : m_timerId(timerId)
+    , m_frameIndex(frameIndex)
 {
-    return inputTypes().TimerCreated;
 }
 
-Document* TimerCreated::document(Page* page) const
+const AtomicString& DOMTimerFired::type() const
 {
-    return documentFromFrameIndex(page, m_frameIndex);
+    return inputTypes().DOMTimerFired;
 }
 
-void InputCoder<TimerCreated>::encode(EncoderContext& encoder, const TimerCreated& input)
+String DOMTimerFired::toString() const
+{
+    return makeString("DOMTimerFired(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
+}
+
+void DOMTimerFired::dispatch(ReplayController& controller)
+{
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
+    DOMTimer* timer = document->findTimeout(m_timerId);
+    if (timer)
+        timer->fired();
+    else
+        LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find and fire DOM timer %d/%d.\n", "[ReplayController]", m_frameIndex, m_timerId);
+}
+
+void InputCoder<DOMTimerFired>::encode(EncoderContext& encoder, const DOMTimerFired& input)
 {
     encoder.put("timerId", input.timerId());
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<TimerCreated>::decode(DecoderContext& decoder, std::unique_ptr<TimerCreated>& input)
+bool InputCoder<DOMTimerFired>::decode(DecoderContext& decoder, std::unique_ptr<DOMTimerFired>& input)
 {
     int timerId;
     if (!decoder.get("timerId", timerId))
@@ -66,7 +85,7 @@ bool InputCoder<TimerCreated>::decode(DecoderContext& decoder, std::unique_ptr<T
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = std::make_unique<TimerCreated>(timerId, frameIndex);
+    input = std::make_unique<DOMTimerFired>(timerId, frameIndex);
     return true;
 }
 

@@ -62,8 +62,8 @@ namespace WebCore {
     macro(SendResizeEvent) \
     macro(SetPageVisibility) \
     macro(StopLoadingFrame) \
-    macro(TimerCreated) \
-    macro(TimerFired) \
+    macro(DOMTimerCreated) \
+    macro(DOMTimerFired) \
     macro(TryClosePage) \
     \
 // end of REPLAY_INPUT_TYPES_FOR_EACH

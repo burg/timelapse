@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +27,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TimerFired_h
-#define TimerFired_h
+#include "config.h"
+#include "DOMTimerCreated.h"
 
 #if ENABLE(WEB_REPLAY)
 
+#include "DecoderContext.h"
+#include "EncoderContext.h"
+// For documentFromFrameIndex().
 #include "EventLoopInput.h"
-#include "InputCoder.h"
+#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-class ReplayController;
+const AtomicString& DOMTimerCreated::type() const
+{
+    return inputTypes().DOMTimerCreated;
+}
 
-class TimerFired : public EventLoopInput {
-public:
-    TimerFired(int timerId, int frameIndex);
-    virtual ~TimerFired() { }
+Document* DOMTimerCreated::document(Page* page) const
+{
+    return documentFromFrameIndex(page, m_frameIndex);
+}
 
-    int timerId() const { return m_timerId; }
-    int frameIndex() const { return m_frameIndex; }
+void InputCoder<DOMTimerCreated>::encode(EncoderContext& encoder, const DOMTimerCreated& input)
+{
+    encoder.put("timerId", input.timerId());
+    encoder.put("frameIndex", input.frameIndex());
+}
 
-    // EventLoopInput API
-    virtual void dispatch(ReplayController&);
+bool InputCoder<DOMTimerCreated>::decode(DecoderContext& decoder, std::unique_ptr<DOMTimerCreated>& input)
+{
+    int timerId;
+    if (!decoder.get("timerId", timerId))
+        return false;
 
-    // NondeterministicInput API
-    virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const;
-    size_t memorySize() const OVERRIDE { return sizeof(TimerFired); }
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
 
-private:
-    int m_timerId;
-    int m_frameIndex;
-};
-
-template<> struct InputCoder<TimerFired> {
-    static void encode(EncoderContext&, const TimerFired& input);
-    static bool decode(DecoderContext&, std::unique_ptr<TimerFired>& input);
-};
+    input = std::make_unique<DOMTimerCreated>(timerId, frameIndex);
+    return true;
+}
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // TimerFired_h

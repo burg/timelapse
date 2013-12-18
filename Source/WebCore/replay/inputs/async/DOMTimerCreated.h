@@ -27,8 +27,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TimerCreated_h
-#define TimerCreated_h
+#ifndef DOMTimerCreated_h
+#define DOMTimerCreated_h
 
 #if ENABLE(WEB_REPLAY)
 
@@ -42,21 +42,21 @@ namespace WebCore {
 class Document;
 class Page;
 
-class TimerCreated : public NondeterministicInput {
+class DOMTimerCreated : public NondeterministicInput {
 public:
-    TimerCreated(int timerId, int frameIndex)
+    DOMTimerCreated(int timerId, int frameIndex)
         : m_timerId(timerId)
         , m_frameIndex(frameIndex) { }
-    virtual ~TimerCreated() { }
+    virtual ~DOMTimerCreated() { }
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE
     {
-        return makeString("TimerCreated(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
+        return makeString("DOMTimerCreated(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
     }
-    size_t memorySize() const OVERRIDE { return sizeof(TimerCreated); }
+    size_t memorySize() const OVERRIDE { return sizeof(DOMTimerCreated); }
 
     int timerId() const { return m_timerId; }
     int frameIndex() const { return m_frameIndex; }
@@ -66,13 +66,13 @@ private:
     int m_frameIndex;
 };
 
-template<> struct InputCoder<TimerCreated> {
-    static void encode(EncoderContext&, const TimerCreated& input);
-    static bool decode(DecoderContext&, std::unique_ptr<TimerCreated>& input);
+template<> struct InputCoder<DOMTimerCreated> {
+    static void encode(EncoderContext&, const DOMTimerCreated& input);
+    static bool decode(DecoderContext&, std::unique_ptr<DOMTimerCreated>& input);
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 
-#endif // TimerCreated_h
+#endif // DOMTimerCreated_h

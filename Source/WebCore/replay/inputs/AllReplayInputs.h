@@ -71,8 +71,8 @@
 #include "SentinelActions.h"
 #include "SetPageVisibility.h"
 #include "StopLoadingFrame.h"
-#include "TimerCreated.h"
-#include "TimerFired.h"
+#include "DOMTimerCreated.h"
+#include "DOMTimerFired.h"
 #include "TryClosePage.h"
 
 // JSC inputs.

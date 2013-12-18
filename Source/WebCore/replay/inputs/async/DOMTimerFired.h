@@ -27,68 +27,46 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "TimerFired.h"
+#ifndef DOMTimerFired_h
+#define DOMTimerFired_h
 
 #if ENABLE(WEB_REPLAY)
 
-#include "DOMTimer.h"
-#include "DecoderContext.h"
-#include "Document.h"
-#include "EncoderContext.h"
-#include "ReplayController.h"
-#include "ReplayInputTypes.h"
-#include <wtf/replay/NondeterministicInput.h>
-#include <wtf/text/StringConcatenate.h>
+#include "EventLoopInput.h"
+#include "InputCoder.h"
 
 namespace WebCore {
 
-TimerFired::TimerFired(int timerId, int frameIndex)
-    : m_timerId(timerId)
-    , m_frameIndex(frameIndex)
-{
-}
+class ReplayController;
 
-const AtomicString& TimerFired::type() const
-{
-    return inputTypes().TimerFired;
-}
+class DOMTimerFired : public EventLoopInput {
+public:
+    DOMTimerFired(int timerId, int frameIndex);
+    virtual ~DOMTimerFired() { }
 
-String TimerFired::toString() const
-{
-    return makeString("TimerFired(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
-}
+    int timerId() const { return m_timerId; }
+    int frameIndex() const { return m_frameIndex; }
 
-void TimerFired::dispatch(ReplayController& controller)
-{
-    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
-    DOMTimer* timer = document->findTimeout(m_timerId);
-    if (timer)
-        timer->fired();
-    else
-        LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find and fire timer %d/%d.\n", "[ReplayController]", m_frameIndex, m_timerId);
-}
+    // EventLoopInput API
+    virtual void dispatch(ReplayController&);
 
-void InputCoder<TimerFired>::encode(EncoderContext& encoder, const TimerFired& input)
-{
-    encoder.put("timerId", input.timerId());
-    encoder.put("frameIndex", input.frameIndex());
-}
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const;
+    size_t memorySize() const OVERRIDE { return sizeof(DOMTimerFired); }
 
-bool InputCoder<TimerFired>::decode(DecoderContext& decoder, std::unique_ptr<TimerFired>& input)
-{
-    int timerId;
-    if (!decoder.get("timerId", timerId))
-        return false;
+private:
+    int m_timerId;
+    int m_frameIndex;
+};
 
-    int frameIndex;
-    if (!decoder.get("frameIndex", frameIndex))
-        return false;
-
-    input = std::make_unique<TimerFired>(timerId, frameIndex);
-    return true;
-}
+template<> struct InputCoder<DOMTimerFired> {
+    static void encode(EncoderContext&, const DOMTimerFired& input);
+    static bool decode(DecoderContext&, std::unique_ptr<DOMTimerFired>& input);
+};
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
+
+#endif // DOMTimerFired_h
