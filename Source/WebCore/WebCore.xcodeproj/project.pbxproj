@@ -5329,6 +5329,8 @@
 		C481093D1705313100AB4BAA /* InterpretedKeyCommands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481093B1705313100AB4BAA /* InterpretedKeyCommands.cpp */; };
 		C481093E1705313100AB4BAA /* InterpretedKeyCommands.h in Headers */ = {isa = PBXBuildFile; fileRef = C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C48332401855467C0020AA8A /* PageConsole.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C493493717A432350054AC75 /* PageConsole.cpp */; };
+		C48A2524185E32FF00EE76D4 /* ReplayableTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = C48A2522185E32FF00EE76D4 /* ReplayableTimer.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C48A2525185E32FF00EE76D4 /* ReplayableTimer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48A2523185E32FF00EE76D4 /* ReplayableTimer.cpp */; };
 		C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */; };
 		C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA712171776FA001A8BB4 /* EventLoopInput.h */; };
 		C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA71517178087001A8BB4 /* FunctorInputIterator.h */; };
@@ -5338,6 +5340,8 @@
 		C4A11881185F7FEE00BD0009 /* DOMTimerFired.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A1187D185F7FEE00BD0009 /* DOMTimerFired.cpp */; };
 		C4A11882185F7FEE00BD0009 /* DOMTimerCreated.h in Headers */ = {isa = PBXBuildFile; fileRef = C4A1187E185F7FEE00BD0009 /* DOMTimerCreated.h */; };
 		C4A11883185F7FEE00BD0009 /* DOMTimerCreated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A1187F185F7FEE00BD0009 /* DOMTimerCreated.cpp */; };
+		C4A11886185F826A00BD0009 /* AsyncTimerFired.h in Headers */ = {isa = PBXBuildFile; fileRef = C4A11884185F826A00BD0009 /* AsyncTimerFired.h */; };
+		C4A11887185F826A00BD0009 /* AsyncTimerFired.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A11885185F826A00BD0009 /* AsyncTimerFired.cpp */; };
 		C4A898B017E3BC0400C74A2C /* StopLoadingFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */; };
 		C4A898B117E3BC0400C74A2C /* StopLoadingFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = C4A898AF17E3BC0400C74A2C /* StopLoadingFrame.h */; };
 		C4A898B417E3DDA300C74A2C /* LoadURLRequest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A898B217E3DDA300C74A2C /* LoadURLRequest.cpp */; };
@@ -12515,6 +12519,8 @@
 		C48108DC17052FF100AB4BAA /* SerializationMethods.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SerializationMethods.h; sourceTree = "<group>"; };
 		C481093B1705313100AB4BAA /* InterpretedKeyCommands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InterpretedKeyCommands.cpp; sourceTree = "<group>"; };
 		C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InterpretedKeyCommands.h; sourceTree = "<group>"; };
+		C48A2522185E32FF00EE76D4 /* ReplayableTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayableTimer.h; path = replay/ReplayableTimer.h; sourceTree = "<group>"; };
+		C48A2523185E32FF00EE76D4 /* ReplayableTimer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayableTimer.cpp; path = replay/ReplayableTimer.cpp; sourceTree = "<group>"; };
 		C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventLoopInput.cpp; sourceTree = "<group>"; };
 		C48EA712171776FA001A8BB4 /* EventLoopInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventLoopInput.h; sourceTree = "<group>"; };
 		C48EA71517178087001A8BB4 /* FunctorInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FunctorInputIterator.h; path = replay/FunctorInputIterator.h; sourceTree = "<group>"; };
@@ -12526,6 +12532,8 @@
 		C4A1187D185F7FEE00BD0009 /* DOMTimerFired.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DOMTimerFired.cpp; sourceTree = "<group>"; };
 		C4A1187E185F7FEE00BD0009 /* DOMTimerCreated.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOMTimerCreated.h; sourceTree = "<group>"; };
 		C4A1187F185F7FEE00BD0009 /* DOMTimerCreated.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DOMTimerCreated.cpp; sourceTree = "<group>"; };
+		C4A11884185F826A00BD0009 /* AsyncTimerFired.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AsyncTimerFired.h; sourceTree = "<group>"; };
+		C4A11885185F826A00BD0009 /* AsyncTimerFired.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AsyncTimerFired.cpp; sourceTree = "<group>"; };
 		C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StopLoadingFrame.cpp; path = navigation/StopLoadingFrame.cpp; sourceTree = "<group>"; };
 		C4A898AF17E3BC0400C74A2C /* StopLoadingFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StopLoadingFrame.h; path = navigation/StopLoadingFrame.h; sourceTree = "<group>"; };
 		C4A898B217E3DDA300C74A2C /* LoadURLRequest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LoadURLRequest.cpp; path = navigation/LoadURLRequest.cpp; sourceTree = "<group>"; };
@@ -20566,6 +20574,8 @@
 				C48EA71517178087001A8BB4 /* FunctorInputIterator.h */,
 				C4B991FC17122B750029CA63 /* InputStorage.cpp */,
 				C41D354C1711F57A00E40FB7 /* InputStorage.h */,
+				C48A2523185E32FF00EE76D4 /* ReplayableTimer.cpp */,
+				C48A2522185E32FF00EE76D4 /* ReplayableTimer.h */,
 				C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */,
 				C4F7F93D17060151005AB205 /* ReplayAgentStateMachine.h */,
 				C48108D217052FF100AB4BAA /* ReplayController.cpp */,
@@ -20607,6 +20617,8 @@
 		C481087F17052FF100AB4BAA /* async */ = {
 			isa = PBXGroup;
 			children = (
+				C4A11885185F826A00BD0009 /* AsyncTimerFired.cpp */,
+				C4A11884185F826A00BD0009 /* AsyncTimerFired.h */,
 				C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */,
 				C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */,
 				C4A1187F185F7FEE00BD0009 /* DOMTimerCreated.cpp */,
@@ -23513,6 +23525,7 @@
 				F7A034C4126BF6BE007DC19E /* FontOrientation.h in Headers */,
 				B5320D6B122A24E9002D1440 /* FontPlatformData.h in Headers */,
 				37ACCE420DA2980F0089E602 /* FontRenderingMode.h in Headers */,
+				C4A11886185F826A00BD0009 /* AsyncTimerFired.h in Headers */,
 				B2C3DA6B0D006CD600EF6F26 /* FontSelector.h in Headers */,
 				37202199106213C600F25C4B /* FontSmoothingMode.h in Headers */,
 				3784C34B0E11AA34007D8D48 /* FontTraitsMask.h in Headers */,
@@ -23603,6 +23616,7 @@
 				FD31609B12B026F700C1A359 /* HRTFDatabaseLoader.h in Headers */,
 				FD31609D12B026F700C1A359 /* HRTFElevation.h in Headers */,
 				FD31609F12B026F700C1A359 /* HRTFKernel.h in Headers */,
+				C48A2524185E32FF00EE76D4 /* ReplayableTimer.h in Headers */,
 				FD3160A112B026F700C1A359 /* HRTFPanner.h in Headers */,
 				BC97E23A109144950010D361 /* HTMLAllCollection.h in Headers */,
 				A8CFF7AB0A156978000A4234 /* HTMLAnchorElement.h in Headers */,
@@ -26787,6 +26801,7 @@
 				973DC63F145A9409002842C2 /* ExceptionCodeDescription.cpp in Sources */,
 				A7CACDB113CE875C00BBBE3F /* ExceptionCodePlaceholder.cpp in Sources */,
 				148AFDA60AF58360008CC700 /* ExceptionHandlers.mm in Sources */,
+				C4A11887185F826A00BD0009 /* AsyncTimerFired.cpp in Sources */,
 				A024575116CEAA27000E5671 /* EXTDrawBuffers.cpp in Sources */,
 				6E67D2A61280E8A4008758F7 /* Extensions3DOpenGL.cpp in Sources */,
 				44DAB5B115A623580097C1E4 /* Extensions3DOpenGLCommon.cpp in Sources */,
@@ -27041,6 +27056,7 @@
 				A871DB290A150BD600B12A68 /* HTMLTableColElement.cpp in Sources */,
 				A871DB280A150BD600B12A68 /* HTMLTableElement.cpp in Sources */,
 				A871DB2D0A150BD600B12A68 /* HTMLTablePartElement.cpp in Sources */,
+				C48A2525185E32FF00EE76D4 /* ReplayableTimer.cpp in Sources */,
 				A871DB300A150BD600B12A68 /* HTMLTableRowElement.cpp in Sources */,
 				93442CA00D2B336000338FF9 /* HTMLTableRowsCollection.cpp in Sources */,
 				A871DB260A150BD600B12A68 /* HTMLTableSectionElement.cpp in Sources */,

@@ -43,6 +43,7 @@
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
+#include "ReplayableTimer.h"
 #include "ResourceLoader.h"
 #include "ResourceRequest.h"
 
@@ -100,6 +101,10 @@ ReplayProxy::ReplayProxy(Page& page)
     : m_page(page)
     , m_mode(Open)
     , m_nextUniqueIdentifier(1)
+#if ENABLE(WEB_REPLAY)
+    , m_nextTimerIdentifier(1)
+    , m_timerMap(TimerMap())
+#endif
 {
 }
 
@@ -112,6 +117,9 @@ void ReplayProxy::setMode(ProxyMode mode)
     ASSERT(mode != m_mode);
     m_mode = mode;
     m_nextUniqueIdentifier = 1;
+#if ENABLE(WEB_REPLAY)
+    m_nextTimerIdentifier = 1;
+#endif
 }
 
 unsigned long ReplayProxy::createUniqueIdentifier()
@@ -156,6 +164,31 @@ unsigned long ReplayProxy::createUniqueIdentifierWithRequest(const ResourceReque
 #endif
     return identifier;
 }
+
+#if ENABLE(WEB_REPLAY)
+unsigned long ReplayProxy::registerTimer(ReplayableTimerBase* timer)
+{
+    ASSERT(timer);
+    unsigned long identifier = m_nextTimerIdentifier++;
+    m_timerMap.set(identifier, timer);
+    LOG(DeterministicReplay, "%-20s Registering async timer %p/%zu.\n", "ReplayController", (void*)this, identifier);
+    return identifier;
+}
+
+void ReplayProxy::unregisterTimer(ReplayableTimerBase* timer)
+{
+    ASSERT(timer);
+    ASSERT(m_timerMap.contains(timer->identifier()));
+    m_timerMap.remove(timer->identifier());
+    LOG(DeterministicReplay, "%-20s Unregistering timer %p/%zu.\n", "ReplayController", (void*)this, timer->identifier());
+}
+
+ReplayableTimerBase* ReplayProxy::findTimer(unsigned long identifier)
+{
+    TimerMap::iterator result = m_timerMap.find(identifier);
+    return result != m_timerMap.end() ? result->value : nullptr;
+}
+#endif // ENABLE(WEB_REPLAY)
 
 void ReplayProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEvent& fakeMouseMove, bool fromReplay)
 {

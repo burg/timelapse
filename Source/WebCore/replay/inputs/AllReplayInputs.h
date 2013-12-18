@@ -40,6 +40,7 @@
 
 // WebCore inputs.
 
+#include "AsyncTimerFired.h"
 #include "AutoMemoized.h"
 #include "DisableCache.h"
 #include "DispatchFakeMouseMove.h"

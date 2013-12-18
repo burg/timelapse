@@ -31,6 +31,7 @@
 namespace WebCore {
 
 #define REPLAY_INPUT_TYPES_FOR_EACH(macro) \
+    macro(AsyncTimerFired) \
     macro(BeginSentinel) \
     macro(DisableCache) \
     macro(DispatchFakeMouseMove) \
