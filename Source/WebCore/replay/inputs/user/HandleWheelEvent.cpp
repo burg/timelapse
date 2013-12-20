@@ -64,6 +64,7 @@ static String wheelEventPhaseToString(PlatformWheelEventPhase ty)
     case PlatformWheelEventPhaseChanged:    return "Changed";
     case PlatformWheelEventPhaseEnded:      return "Ended";
     case PlatformWheelEventPhaseCancelled:  return "Cancelled";
+    case PlatformWheelEventPhaseMayBegin:   return "MayBegin";
     default:
         ASSERT_NOT_REACHED();
         return String();
