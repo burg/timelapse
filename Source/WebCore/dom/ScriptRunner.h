@@ -27,6 +27,7 @@
 #define ScriptRunner_h
 
 #include "CachedResourceHandle.h"
+#include "ReplayableTimer.h"
 #include "Timer.h"
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
@@ -41,10 +42,6 @@ class Document;
 class PendingScript;
 class ScriptElement;
 
-#if ENABLE(WEB_REPLAY)
-class RanPendingScripts;
-#endif
-
 class ScriptRunner {
     WTF_MAKE_NONCOPYABLE(ScriptRunner); WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -57,21 +54,16 @@ public:
     void suspend();
     void resume();
     void notifyScriptReady(ScriptElement*, ExecutionType);
-
 private:
-    void timerFired(Timer<ScriptRunner>*);
+    void timerFired(ReplayableTimer<ScriptRunner>*);
 
     Document& m_document;
     Vector<PendingScript> m_scriptsToExecuteInOrder;
     Vector<PendingScript> m_scriptsToExecuteSoon; // http://www.whatwg.org/specs/web-apps/current-work/#set-of-scripts-that-will-execute-as-soon-as-possible
     HashMap<ScriptElement*, PendingScript> m_pendingAsyncScripts;
-    Timer<ScriptRunner> m_timer;
-
-#if ENABLE(WEB_REPLAY)
-    friend class RanPendingScripts;
-#endif
+    ReplayableTimer<ScriptRunner> m_timer;
 };
 
-}
+} // namespace WebCore
 
-#endif
+#endif // ScriptRunner_h

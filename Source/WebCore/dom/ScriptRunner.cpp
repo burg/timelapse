@@ -31,17 +31,11 @@
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
-#if ENABLE(WEB_REPLAY)
-#include "CaptureInputIterator.h"
-#include "RanPendingScripts.h"
-#include <wtf/replay/InputIterator.h>
-#endif
-
 namespace WebCore {
 
 ScriptRunner::ScriptRunner(Document& document)
     : m_document(document)
-    , m_timer(this, &ScriptRunner::timerFired)
+    , m_timer(this, &ScriptRunner::timerFired, &document)
 {
 }
 
@@ -84,12 +78,6 @@ void ScriptRunner::suspend()
 
 void ScriptRunner::resume()
 {
-#if ENABLE(WEB_REPLAY)
-    // timerFired will be called deterministically during replay, so don't start m_timer.
-    InputIterator* it = m_document.inputIterator();
-    if (it && it->isReplaying())
-        return;
-#endif
     if (hasPendingScripts())
         m_timer.startOneShot(0);
 }
@@ -106,26 +94,12 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         ASSERT(!m_scriptsToExecuteInOrder.isEmpty());
         break;
     }
-#if ENABLE(WEB_REPLAY)
-    // timerFired will be called deterministically during replay, so don't start m_timer.
-    InputIterator* it = m_document.inputIterator();
-    if (it && it->isReplaying())
-        return;
-#endif
     m_timer.startOneShot(0);
 }
 
-void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
+void ScriptRunner::timerFired(ReplayableTimer<ScriptRunner>* timer)
 {
     ASSERT_UNUSED(timer, timer == &m_timer);
-#if ENABLE(WEB_REPLAY)
-    InputIterator* it = m_document.inputIterator();
-    if (it && it->isCapturing()) {
-        int frameIndex = frameIndexFromDocument(&m_document);
-        it->storeInput(std::make_unique<RanPendingScripts>(frameIndex));
-    }
-    EventLoopInputExtent extent(it);
-#endif
 
     Ref<Document> protect(m_document);
 
@@ -147,4 +121,4 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
     }
 }
 
-}
+} // namespace WebCore

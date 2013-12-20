@@ -50,7 +50,6 @@ namespace WebCore {
     macro(LoadURLRequest) \
     macro(NavigateToPage) \
     macro(PlaybackError) \
-    macro(RanPendingScripts) \
     macro(ReloadFrame) \
     macro(ResourceDidFail) \
     macro(ResourceDidFinishLoading) \
