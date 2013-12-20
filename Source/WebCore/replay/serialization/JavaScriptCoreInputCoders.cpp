@@ -69,6 +69,6 @@ bool InputCoder<JSC::SetRandomSeed>::decode(DecoderContext& decoder, std::unique
     return true;
 }
 
-#endif // ENABLE(WEB_REPLAY)
+} // namespace WebCore
 
-}; // namespace WebCore
+#endif // ENABLE(WEB_REPLAY)

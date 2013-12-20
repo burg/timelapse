@@ -55,6 +55,6 @@ String SetRandomSeed::toString() const {
     return makeString("SetRandomSeed(", String::number(m_randomSeed), ")");
 }
 
-#endif // ENABLE(WEB_REPLAY)
-
 } // namespace JSC
+
+#endif // ENABLE(WEB_REPLAY)
