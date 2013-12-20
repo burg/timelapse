@@ -5271,8 +5271,6 @@
 		C44958FF180F57EF003BAF73 /* SendPendingEvents.h in Headers */ = {isa = PBXBuildFile; fileRef = C44958FD180F57EF003BAF73 /* SendPendingEvents.h */; };
 		C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C46ADBA017EB8B0600218391 /* EncoderContext.cpp */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
-		C48108E417052FF100AB4BAA /* DispatchFakeMouseMove.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */; };
-		C48108E517052FF100AB4BAA /* DispatchFakeMouseMove.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */; };
 		C48108EB17052FF100AB4BAA /* DisableCache.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088917052FF100AB4BAA /* DisableCache.h */; };
 		C48108EE17052FF100AB4BAA /* EnableCache.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088C17052FF100AB4BAA /* EnableCache.h */; };
 		C48108EF17052FF100AB4BAA /* AutoMemoized.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088E17052FF100AB4BAA /* AutoMemoized.h */; };
@@ -12460,8 +12458,6 @@
 		C44958FD180F57EF003BAF73 /* SendPendingEvents.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SendPendingEvents.h; sourceTree = "<group>"; };
 		C46ADBA017EB8B0600218391 /* EncoderContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EncoderContext.cpp; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
-		C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchFakeMouseMove.cpp; sourceTree = "<group>"; };
-		C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchFakeMouseMove.h; sourceTree = "<group>"; };
 		C481088917052FF100AB4BAA /* DisableCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DisableCache.h; sourceTree = "<group>"; };
 		C481088C17052FF100AB4BAA /* EnableCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EnableCache.h; sourceTree = "<group>"; };
 		C481088E17052FF100AB4BAA /* AutoMemoized.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AutoMemoized.h; sourceTree = "<group>"; };
@@ -20615,8 +20611,6 @@
 			children = (
 				C4A11885185F826A00BD0009 /* AsyncTimerFired.cpp */,
 				C4A11884185F826A00BD0009 /* AsyncTimerFired.h */,
-				C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */,
-				C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */,
 				C4A1187F185F7FEE00BD0009 /* DOMTimerCreated.cpp */,
 				C4A1187E185F7FEE00BD0009 /* DOMTimerCreated.h */,
 				C4A1187D185F7FEE00BD0009 /* DOMTimerFired.cpp */,
@@ -25772,7 +25766,6 @@
 				977E2E0F12F0FC9C00C13380 /* XSSAuditorDelegate.h in Headers */,
 				FD537353137B651800008DCE /* ZeroPole.h in Headers */,
 				C48108DF17052FF100AB4BAA /* CacheController.h in Headers */,
-				C48108E517052FF100AB4BAA /* DispatchFakeMouseMove.h in Headers */,
 				C48108EB17052FF100AB4BAA /* DisableCache.h in Headers */,
 				C48108EE17052FF100AB4BAA /* EnableCache.h in Headers */,
 				C48108EF17052FF100AB4BAA /* AutoMemoized.h in Headers */,
@@ -28943,7 +28936,6 @@
 				977E2E0E12F0FC9C00C13380 /* XSSAuditorDelegate.cpp in Sources */,
 				E172AF8F1811BC3700FBADB9 /* JSDOMPromise.cpp in Sources */,
 				FD537352137B651800008DCE /* ZeroPole.cpp in Sources */,
-				C48108E417052FF100AB4BAA /* DispatchFakeMouseMove.cpp in Sources */,
 				C48108F017052FF100AB4BAA /* InitializeFocus.cpp in Sources */,
 				C48108F217052FF100AB4BAA /* InitializeWindow.cpp in Sources */,
 				C48108F417052FF100AB4BAA /* PlaybackError.cpp in Sources */,

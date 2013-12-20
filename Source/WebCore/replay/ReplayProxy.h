@@ -80,7 +80,6 @@ public:
 #endif
 
     // User input APIs.
-    void dispatchFakeMouseMove(Frame&, const PlatformMouseEvent&, bool fromReplay = false);
     bool handleContextMenuEvent(const PlatformMouseEvent&, const Frame*, bool fromReplay = false);
     bool handleMousePressEvent(const PlatformMouseEvent&, bool fromReplay = false);
     bool handleMouseReleaseEvent(const PlatformMouseEvent&, bool fromReplay = false);

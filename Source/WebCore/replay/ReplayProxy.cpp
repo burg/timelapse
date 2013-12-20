@@ -50,7 +50,6 @@
 #if ENABLE(WEB_REPLAY)
 // For EventLoopInputExtent.
 #include "CaptureInputIterator.h"
-#include "DispatchFakeMouseMove.h"
 // For frameIndexFromFrame.
 #include "EventLoopInput.h"
 #include "FocusSetActive.h"
@@ -189,23 +188,6 @@ ReplayableTimerBase* ReplayProxy::findTimer(unsigned long identifier)
     return result != m_timerMap.end() ? result->value : nullptr;
 }
 #endif // ENABLE(WEB_REPLAY)
-
-void ReplayProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEvent& fakeMouseMove, bool fromReplay)
-{
-#if ENABLE(WEB_REPLAY)
-    if (mode() == ReplayProxy::Replaying && !fromReplay)
-        return;
-
-    InputIterator* it = m_page.replayController().activeIterator();
-    if (it && it->isCapturing())
-        it->storeInput(std::make_unique<DispatchFakeMouseMove>(fakeMouseMove, frameIndexFromFrame(&frame)));
-    EventLoopInputExtent extent(it);
-#else
-    UNUSED_PARAM(fromReplay);
-#endif
-
-    frame.eventHandler().mouseMoved(fakeMouseMove);
-}
 
 bool ReplayProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, const Frame* frame, bool fromReplay)
 {

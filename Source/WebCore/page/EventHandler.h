@@ -33,6 +33,7 @@
 #include "LayoutPoint.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
+#include "ReplayableTimer.h"
 #include "ScrollTypes.h"
 #include "TextEventInputType.h"
 #include "TextGranularity.h"
@@ -284,7 +285,7 @@ private:
     static bool isKeyboardOptionTab(KeyboardEvent*);
     static bool eventInvertsTabsToLinksClientCallResult(KeyboardEvent*);
 
-    void fakeMouseMoveEventTimerFired(Timer<EventHandler>*);
+    void fakeMouseMoveEventTimerFired(ReplayableTimer<EventHandler>*);
     void cancelFakeMouseMoveEvent();
 
     bool isInsideScrollbar(const IntPoint&) const;
@@ -407,7 +408,7 @@ private:
     bool m_mouseDownMayStartAutoscroll;
     bool m_mouseDownWasInSubframe;
 
-    Timer<EventHandler> m_fakeMouseMoveEventTimer;
+    ReplayableTimer<EventHandler> m_fakeMouseMoveEventTimer;
 
 #if ENABLE(SVG)
     bool m_svgPan;
