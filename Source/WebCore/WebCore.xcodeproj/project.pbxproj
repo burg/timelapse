@@ -5267,8 +5267,6 @@
 		C43BB648182443F600C22235 /* ResourceCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = C43BB646182443F600C22235 /* ResourceCallback.h */; };
 		C43BB64B18248BF900C22235 /* ResourceLoaderCreated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C43BB64918248BF900C22235 /* ResourceLoaderCreated.cpp */; };
 		C43BB64C18248BF900C22235 /* ResourceLoaderCreated.h in Headers */ = {isa = PBXBuildFile; fileRef = C43BB64A18248BF900C22235 /* ResourceLoaderCreated.h */; };
-		C44958FE180F57EF003BAF73 /* SendPendingEvents.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */; };
-		C44958FF180F57EF003BAF73 /* SendPendingEvents.h in Headers */ = {isa = PBXBuildFile; fileRef = C44958FD180F57EF003BAF73 /* SendPendingEvents.h */; };
 		C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C46ADBA017EB8B0600218391 /* EncoderContext.cpp */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
 		C48108EB17052FF100AB4BAA /* DisableCache.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088917052FF100AB4BAA /* DisableCache.h */; };
@@ -12454,8 +12452,6 @@
 		C43BB646182443F600C22235 /* ResourceCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResourceCallback.h; sourceTree = "<group>"; };
 		C43BB64918248BF900C22235 /* ResourceLoaderCreated.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceLoaderCreated.cpp; sourceTree = "<group>"; };
 		C43BB64A18248BF900C22235 /* ResourceLoaderCreated.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResourceLoaderCreated.h; sourceTree = "<group>"; };
-		C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SendPendingEvents.cpp; sourceTree = "<group>"; };
-		C44958FD180F57EF003BAF73 /* SendPendingEvents.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SendPendingEvents.h; sourceTree = "<group>"; };
 		C46ADBA017EB8B0600218391 /* EncoderContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EncoderContext.cpp; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
 		C481088917052FF100AB4BAA /* DisableCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DisableCache.h; sourceTree = "<group>"; };
@@ -20615,8 +20611,6 @@
 				C4A1187E185F7FEE00BD0009 /* DOMTimerCreated.h */,
 				C4A1187D185F7FEE00BD0009 /* DOMTimerFired.cpp */,
 				C4A1187C185F7FEE00BD0009 /* DOMTimerFired.h */,
-				C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */,
-				C44958FD180F57EF003BAF73 /* SendPendingEvents.h */,
 			);
 			path = async;
 			sourceTree = "<group>";
@@ -23758,7 +23752,6 @@
 				E125F856182C0F8300D84CD9 /* CryptoKeySerialization.h in Headers */,
 				CD641EC01819B36000EE4C41 /* MediaTimeMac.h in Headers */,
 				C0C054CD1118C8E400CE2636 /* IDLParser.pm in Headers */,
-				C44958FF180F57EF003BAF73 /* SendPendingEvents.h in Headers */,
 				C3CF17A515B0063F00276D39 /* IdTargetObserver.h in Headers */,
 				C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */,
 				8AB4BC77126FDB7100DEB727 /* IgnoreDestructiveWriteCountIncrementer.h in Headers */,
@@ -28228,7 +28221,6 @@
 				7EE6846E12D26E3800E79415 /* ResourceRequestCFNet.cpp in Sources */,
 				514C76530CE9234E007EF3CD /* ResourceRequestMac.mm in Sources */,
 				514C767E0CE923A1007EF3CD /* ResourceResponseBase.cpp in Sources */,
-				C44958FE180F57EF003BAF73 /* SendPendingEvents.cpp in Sources */,
 				7EE6847112D26E3800E79415 /* ResourceResponseCFNet.cpp in Sources */,
 				514C76550CE9234F007EF3CD /* ResourceResponseMac.mm in Sources */,
 				FD3160A412B026F700C1A359 /* Reverb.cpp in Sources */,

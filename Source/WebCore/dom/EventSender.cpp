@@ -30,33 +30,16 @@
 #include "Document.h"
 #include "EventSenderClient.h"
 
-#if ENABLE(WEB_REPLAY)
-#include "CaptureInputIterator.h"
-#include "SendPendingEvents.h"
-#endif
-
 namespace WebCore {
 
 EventSender::EventSender(Document& document)
-    : m_timer(this, &EventSender::timerFired)
-#if ENABLE(WEB_REPLAY)
-    , m_document(document)
-#endif
+    : m_timer(this, &EventSender::timerFired, &document)
 {
-#if !ENABLE(WEB_REPLAY)
-    UNUSED_PARAM(document);
-#endif
 }
 
 void EventSender::dispatchEventSoon(EventSenderClient* sender, const AtomicString& eventName)
 {
     m_dispatchSoonList.append(std::make_pair(sender, eventName));
-
-#if ENABLE(WEB_REPLAY)
-    // If we are replaying, don't use the timer to schedule the callbacks.
-    if (m_document.inputIterator() && m_document.inputIterator()->isReplaying())
-        return;
-#endif
 
     if (!m_timer.isActive())
         m_timer.startOneShot(0);
@@ -142,17 +125,8 @@ bool EventSender::hasPendingEventsForSender(const EventSenderClient* sender) con
     return false;
 }
 
-void EventSender::timerFired(Timer<EventSender>*)
+void EventSender::timerFired(ReplayableTimer<EventSender>*)
 {
-#if ENABLE(WEB_REPLAY)
-    InputIterator* it = m_document.inputIterator();
-    ASSERT(!it || !it->isReplaying());
-    if (it && it->isCapturing()) {
-        int frameIndex = frameIndexFromDocument(&m_document);
-        it->storeInput(std::make_unique<SendPendingEvents>(frameIndex));
-    }
-    EventLoopInputExtent extent(it);
-#endif
     m_timer.stop();
     dispatchAllPendingEvents();
 }

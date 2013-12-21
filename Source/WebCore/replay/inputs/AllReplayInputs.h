@@ -65,7 +65,6 @@
 #include "ResourceDidSendData.h"
 #include "ResourceLoaderCreated.h"
 #include "ScrollPage.h"
-#include "SendPendingEvents.h"
 #include "SendResizeEvent.h"
 #include "SentinelActions.h"
 #include "SetPageVisibility.h"

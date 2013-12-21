@@ -26,7 +26,7 @@
 #ifndef EventSender_h
 #define EventSender_h
 
-#include "Timer.h"
+#include "ReplayableTimer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
 
@@ -47,12 +47,10 @@ public:
     void dispatchAllPendingEvents();
     void dispatchPendingEventsWithType(const AtomicString&);
 private:
-    void timerFired(Timer<EventSender>*);
+    void timerFired(ReplayableTimer<EventSender>*);
 
-    Timer<EventSender> m_timer;
-#if ENABLE(WEB_REPLAY)
-    Document& m_document;
-#endif
+    ReplayableTimer<EventSender> m_timer;
+
     Vector<std::pair<EventSenderClient*, AtomicString>> m_dispatchSoonList;
     Vector<std::pair<EventSenderClient*, AtomicString>> m_dispatchingList;
 };

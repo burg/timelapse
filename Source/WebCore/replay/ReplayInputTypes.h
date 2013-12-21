@@ -57,7 +57,6 @@ namespace WebCore {
     macro(ResourceDidSendData) \
     macro(ResourceLoaderCreated) \
     macro(ScrollPage) \
-    macro(SendPendingEvents) \
     macro(SendResizeEvent) \
     macro(SetPageVisibility) \
     macro(StopLoadingFrame) \
