@@ -42,7 +42,6 @@
 #include "InspectorClient.h"
 #include "Page.h"
 #include "ResourceError.h"
-#include "ResourceHandleClient.h"
 
 /*
  This file holds empty Client stubs for use by WebCore.
@@ -582,13 +581,6 @@ public:
     virtual void setController(DeviceOrientationController*) OVERRIDE { }
     virtual DeviceOrientationData* lastOrientation() const OVERRIDE { return 0; }
     virtual void deviceOrientationControllerDestroyed() OVERRIDE { }
-};
-
-/* default empty implementations are provided by the client interface, but no constructor. */
-class EmptyResourceHandleClient : public ResourceHandleClient {
-public:
-    EmptyResourceHandleClient() { }
-    virtual ~EmptyResourceHandleClient() { }
 };
 
 void fillWithEmptyClients(Page::PageClients&);

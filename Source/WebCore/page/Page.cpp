@@ -105,7 +105,7 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 static void networkStateChanged(bool isOnLine)
 {
     Vector<Ref<Frame>> frames;
-
+    
     // Get all the frames of all the pages in all the page groups
     for (auto it = allPages->begin(), end = allPages->end(); it != end; ++it) {
         for (Frame* frame = &(*it)->mainFrame(); frame; frame = frame->tree().traverseNext())
@@ -206,7 +206,7 @@ Page::Page(PageClients& pageClients)
 
     if (!allPages) {
         allPages = new HashSet<Page*>;
-
+        
         networkStateNotifier().addNetworkStateChangeListener(networkStateChanged);
     }
 
@@ -227,7 +227,7 @@ Page::~Page()
     m_mainFrame->setView(0);
     setGroupName(String());
     allPages->remove(this);
-
+    
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         frame->willDetachPage();
         frame->detachFromPage();
@@ -373,7 +373,7 @@ BackForwardClient* Page::backForwardClient() const
 bool Page::goBack()
 {
     HistoryItem* item = backForward().backItem();
-
+    
     if (item) {
         goToItem(item, FrameLoadTypeBack);
         return true;
@@ -384,7 +384,7 @@ bool Page::goBack()
 bool Page::goForward()
 {
     HistoryItem* item = backForward().forwardItem();
-
+    
     if (item) {
         goToItem(item, FrameLoadTypeForward);
         return true;
@@ -507,12 +507,11 @@ void Page::refreshPlugins(bool reload)
 
     for (auto it = allPages->begin(), end = allPages->end(); it != end; ++it) {
         Page& page = **it;
-
         page.m_pluginData.clear();
 
         if (!reload)
             continue;
-
+        
         for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
             if (frame->loader().subframeLoader().containsPlugins())
                 framesNeedingReload.append(*frame);
@@ -830,7 +829,7 @@ void Page::lockAllOverlayScrollbarsToHidden(bool lockOverlayScrollbars)
         return;
 
     view->lockOverlayScrollbarStateToHidden(lockOverlayScrollbars);
-
+    
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         FrameView* frameView = frame->view();
         if (!frameView)
@@ -878,7 +877,7 @@ void Page::didMoveOnscreen()
         if (FrameView* frameView = frame->view())
             frameView->didMoveOnscreen();
     }
-
+    
     resumeScriptedAnimations();
 }
 
@@ -890,7 +889,7 @@ void Page::willMoveOffscreen()
         if (FrameView* frameView = frame->view())
             frameView->willMoveOffscreen();
     }
-
+    
     suspendScriptedAnimations();
 }
 
@@ -938,7 +937,7 @@ void Page::userStyleSheetLocationChanged()
     // FIXME: Eventually we will move to a model of just being handed the sheet
     // text instead of loading the URL ourselves.
     URL url = m_settings->userStyleSheetLocation();
-
+    
     // Allow any local file URL scheme to be loaded.
     if (SchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
         m_userStyleSheetPath = url.fileSystemPath();
@@ -950,7 +949,7 @@ void Page::userStyleSheetLocationChanged()
     m_userStyleSheetModificationTime = 0;
 
     // Data URLs with base64-encoded UTF-8 style sheets are common. We can process them
-    // synchronously and avoid using a loader.
+    // synchronously and avoid using a loader. 
     if (url.protocolIsData() && url.string().startsWith("data:text/css;charset=utf-8;base64,")) {
         m_didLoadUserStyleSheet = true;
 

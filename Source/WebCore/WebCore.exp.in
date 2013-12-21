@@ -2417,10 +2417,6 @@ _wkIsGB18030ComplianceRequired
 _wkSetLayerContentsScale
 #endif
 
-#if !LOG_DISABLED
-__ZN7WebCore20LogNotYetImplementedE
-#endif
-
 #if !defined(NDEBUG)
 __ZN7WebCore14SQLiteDatabase22disableThreadingChecksEv
 __ZNK7WebCore7Element26fastAttributeLookupAllowedERKNS_13QualifiedNameE

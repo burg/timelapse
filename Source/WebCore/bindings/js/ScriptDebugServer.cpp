@@ -61,9 +61,13 @@ ScriptDebugServer::ScriptDebugServer(bool isInWorkerThread)
     , m_hitCount(0)
     , m_callingListeners(false)
     , m_runningNestedMessageLoop(false)
-    , m_recompileTimer(this, &ScriptDebugServer::recompileAllJSFunctions) { }
+    , m_recompileTimer(this, &ScriptDebugServer::recompileAllJSFunctions)
+{
+}
 
-ScriptDebugServer::~ScriptDebugServer() { }
+ScriptDebugServer::~ScriptDebugServer()
+{
+}
 
 BreakpointID ScriptDebugServer::setBreakpoint(SourceID sourceID, const ScriptBreakpoint& scriptBreakpoint, unsigned* actualLineNumber, unsigned* actualColumnNumber)
 {

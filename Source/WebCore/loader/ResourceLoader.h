@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
+ *     notice, this list of conditions and the following disclaimer. 
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
+ *     documentation and/or other materials provided with the distribution. 
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ *     from this software without specific prior written permission. 
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -37,12 +37,7 @@
 
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
-
-#if ENABLE(WEB_REPLAY)
-namespace WTF {
-class InputIterator;
-}
-#endif
+#include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
 
@@ -65,12 +60,12 @@ public:
     FrameLoader* frameLoader() const;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
     const ResourceRequest& originalRequest() const { return m_originalRequest; }
-
+    
     virtual void cancel(const ResourceError&);
     ResourceError cancelledError();
     ResourceError blockedError();
     ResourceError cannotShowURLError();
-
+    
     virtual void setDefersLoading(bool);
     bool defersLoading() const { return m_defersLoading; }
 
@@ -81,9 +76,9 @@ public:
 
     ResourceBuffer* resourceData() const { return m_resourceData.get(); }
     void clearResourceData();
-
+    
     virtual bool isSubresourceLoader();
-
+    
     virtual void willSendRequest(ResourceRequest&, const ResourceResponse& redirectResponse);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
     virtual void didReceiveResponse(const ResourceResponse&);
@@ -119,8 +114,8 @@ public:
     virtual void willStopBufferingData(ResourceHandle*, const char* data, int length) OVERRIDE { willStopBufferingData(data, length); }
 #endif
     virtual bool shouldUseCredentialStorage(ResourceHandle*) OVERRIDE { return shouldUseCredentialStorage(); }
-    virtual void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge) OVERRIDE { didReceiveAuthenticationChallenge(challenge); }
-    virtual void didCancelAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge) OVERRIDE { didCancelAuthenticationChallenge(challenge); }
+    virtual void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge) OVERRIDE { didReceiveAuthenticationChallenge(challenge); } 
+    virtual void didCancelAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge) OVERRIDE { didCancelAuthenticationChallenge(challenge); } 
 #if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     virtual void didReceiveDataArray(ResourceHandle*, CFArrayRef dataArray) OVERRIDE;
 #endif
@@ -140,7 +135,7 @@ public:
     virtual bool shouldCacheResponse(ResourceHandle*, CFCachedURLResponseRef) OVERRIDE;
 #endif
 
-    const URL& url() const { return m_request.url(); }
+    const URL& url() const { return m_request.url(); } 
     ResourceHandle* handle() const { return m_handle.get(); }
     bool shouldSendResourceLoadCallbacks() const { return m_options.sendLoadCallbacks == SendCallbacks; }
     void setSendCallbackPolicy(SendCallbackPolicy sendLoadCallbacks) { m_options.sendLoadCallbacks = sendLoadCallbacks; }
@@ -178,7 +173,7 @@ protected:
     RefPtr<Frame> m_frame;
     RefPtr<DocumentLoader> m_documentLoader;
     ResourceResponse m_response;
-
+    
 private:
     virtual void willCancel(const ResourceError&) = 0;
     virtual void didCancel(const ResourceError&) = 0;
@@ -188,7 +183,7 @@ private:
     ResourceRequest m_request;
     ResourceRequest m_originalRequest; // Before redirects.
     RefPtr<ResourceBuffer> m_resourceData;
-
+    
     unsigned long m_identifier;
 
     bool m_reachedTerminalState;

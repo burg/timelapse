@@ -55,11 +55,11 @@ WebInspector.Object.addEventListener = function(eventType, listener, thisObject)
 {
     thisObject = thisObject || null;
 
-    console.assert(eventType, "Tried to add listener to ", thisObject, " for null event type ", eventType);
+    console.assert(eventType);
     if (!eventType)
         return;
 
-    console.assert(listener, "Tried to add null listener to ", thisObject, " for event type ", eventType);
+    console.assert(listener);
     if (!listener)
         return;
 

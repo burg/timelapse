@@ -541,7 +541,7 @@ void InspectorPageAgent::getCookies(ErrorString*, RefPtr<TypeBuilder::Array<Type
     // always return the same true/false value.
     bool rawCookiesImplemented = false;
 
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext(&m_page->mainFrame())) {
+    for (Frame* frame = mainFrame(); frame; frame = frame->tree().traverseNext(mainFrame())) {
         Document* document = frame->document();
         Vector<URL> allURLs = allResourcesURLsForFrame(frame);
         for (Vector<URL>::const_iterator it = allURLs.begin(); it != allURLs.end(); ++it) {

@@ -182,7 +182,7 @@ sub AddIncludesForTypeInImpl
 {
     my $type = shift;
     my $isCallback = @_ ? shift : 0;
-
+    
     AddIncludesForType($type, $isCallback, \%implIncludes);
 }
 
@@ -190,7 +190,7 @@ sub AddIncludesForTypeInHeader
 {
     my $type = shift;
     my $isCallback = @_ ? shift : 0;
-
+    
     AddIncludesForType($type, $isCallback, \%headerIncludes);
 }
 
@@ -216,7 +216,7 @@ sub AddIncludesForType
     my $includesRef = shift;
 
     return if SkipIncludeHeader($type);
-
+    
     # When we're finished with the one-file-per-class
     # reorganization, we won't need these special cases.
     if ($type eq "XPathNSResolver") {
@@ -595,7 +595,7 @@ sub GenerateHeader
     if ($hasParent && $interface->extendedAttributes->{"JSGenerateToNativeObject"}) {
         $headerIncludes{"$interfaceName.h"} = 1;
     }
-
+    
     $headerIncludes{"<runtime/JSObject.h>"} = 1;
     $headerIncludes{"SVGElement.h"} = 1 if $className =~ /^JSSVG/;
 
@@ -688,7 +688,7 @@ sub GenerateHeader
         $indexedGetterFunction
         || $interface->extendedAttributes->{"JSCustomGetOwnPropertySlotAndDescriptor"}
         || $hasImpureNamedGetter;
-
+    
     my $hasGetter = $numAttributes > 0 || !$interface->extendedAttributes->{"NoInterfaceObject"} || $hasComplexGetter;
 
     if ($hasImpureNamedGetter) {
@@ -716,7 +716,7 @@ sub GenerateHeader
         $interface->extendedAttributes->{"CustomPutFunction"}
         || $interface->extendedAttributes->{"CustomNamedSetter"}
         || $interface->extendedAttributes->{"CustomIndexedSetter"};
-
+        
     my $hasSetter = $hasReadWriteProperties || $hasComplexSetter;
 
     # Getters
@@ -772,7 +772,7 @@ sub GenerateHeader
     # Custom getOwnPropertyNames function
     if ($interface->extendedAttributes->{"CustomEnumerateProperty"} || $indexedGetterFunction) {
         push(@headerContent, "    static void getOwnPropertyNames(JSC::JSObject*, JSC::ExecState*, JSC::PropertyNameArray&, JSC::EnumerationMode mode = JSC::ExcludeDontEnumProperties);\n");
-        $structureFlags{"JSC::OverridesGetPropertyNames"} = 1;
+        $structureFlags{"JSC::OverridesGetPropertyNames"} = 1;       
     }
 
     # Custom defineOwnProperty function
@@ -962,7 +962,7 @@ sub GenerateHeader
     if ($usesToJSNewlyCreated{$interfaceName}) {
         push(@headerContent, "JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject*, $interfaceName*);\n");
     }
-
+    
     push(@headerContent, "\n");
 
     # Add prototype declaration.
@@ -1048,7 +1048,7 @@ sub GenerateHeader
             }
             push(@headerContent, "#endif\n") if $conditionalString;
         }
-
+        
         if (!$interface->extendedAttributes->{"NoInterfaceObject"}) {
             my $getter = "js" . $interfaceName . "Constructor";
             push(@headerContent, "JSC::EncodedJSValue ${getter}(JSC::ExecState*, JSC::EncodedJSValue, JSC::EncodedJSValue, JSC::PropertyName);\n");
@@ -1084,7 +1084,7 @@ sub GenerateAttributesHashTable($$)
     # FIXME: These should be functions on $interface.
     my $interfaceName = $interface->name;
     my $className = "JS$interfaceName";
-
+    
     # - Add all attributes in a hashtable definition
     my $numAttributes = @{$interface->attributes};
     $numAttributes++ if !$interface->extendedAttributes->{"NoInterfaceObject"};
@@ -1141,7 +1141,7 @@ sub GenerateAttributesHashTable($$)
             my $setter = "setJS" . $interfaceName . "Constructor";
             push(@hashValue2, $setter);
             push(@hashSpecials, "DontEnum | DontDelete");
-        } else {
+        } else {            
             push(@hashValue2, "0");
             push(@hashSpecials, "DontEnum | ReadOnly");
         }
@@ -1668,7 +1668,7 @@ sub GenerateImplementation
         push(@implContent, "    ${className}Prototype* thisObject = jsCast<${className}Prototype*>(object);\n");
 
         if ($numConstants eq 0 && $numFunctions eq 0) {
-            push(@implContent, "    return Base::getOwnPropertySlot(thisObject, exec, propertyName, slot);\n");
+            push(@implContent, "    return Base::getOwnPropertySlot(thisObject, exec, propertyName, slot);\n");        
         } elsif ($numConstants eq 0) {
             push(@implContent, "    return getStaticFunctionSlot<JSObject>(exec, " . prototypeHashTableAccessor($interface->extendedAttributes->{"JSNoStaticTables"}, $className) . ", thisObject, propertyName, slot);\n");
         } elsif ($numFunctions eq 0) {
@@ -1763,7 +1763,7 @@ sub GenerateImplementation
     }
 
     if (!$hasParent) {
-        # FIXME: This destroy function should not be necessary, as
+        # FIXME: This destroy function should not be necessary, as 
         # a finalizer should be called for each DOM object wrapper.
         # However, that seems not to be the case, so this has been
         # added back to avoid leaking while we figure out why the
@@ -1870,7 +1870,6 @@ sub GenerateImplementation
                 my $isNullable = $attribute->signature->isNullable;
                 $codeGenerator->AssertNotSequenceType($type);
                 my $getFunctionName = GetAttributeGetterName($interfaceName, $className, $attribute);
-
                 my $implGetterFunctionName = $codeGenerator->WK_lcfirst($attribute->signature->extendedAttributes->{"ImplementedAs"} || $name);
                 my $getterExceptions = $attribute->signature->extendedAttributes->{"GetterRaisesException"};
 
@@ -2068,6 +2067,7 @@ sub GenerateImplementation
                         push(@implContent, "    bool isNull = false;\n");
                         unshift(@arguments, "isNull");
                     }
+
                     unshift(@arguments, GenerateCallWith($attribute->signature->extendedAttributes->{"CallWith"}, \@implContent, "JSValue::encode(jsUndefined())"));
 
                     if ($svgPropertyOrListPropertyType) {
@@ -2145,7 +2145,7 @@ sub GenerateImplementation
                     push(@implContent, "    Base::put(thisObject, exec, propertyName, value, slot);\n");
                 }
                 push(@implContent, "}\n\n");
-
+                
                 if ($interface->extendedAttributes->{"CustomIndexedSetter"} || $interface->extendedAttributes->{"CustomNamedSetter"}) {
                     push(@implContent, "void ${className}::putByIndex(JSCell* cell, ExecState* exec, unsigned index, JSValue value, bool shouldThrow)\n");
                     push(@implContent, "{\n");
@@ -2158,14 +2158,14 @@ sub GenerateImplementation
                         push(@implContent, "        return;\n");
                         push(@implContent, "    }\n");
                     }
-
+                    
                     if ($interface->extendedAttributes->{"CustomNamedSetter"}) {
                         push(@implContent, "    PropertyName propertyName = Identifier::from(exec, index);\n");
                         push(@implContent, "    PutPropertySlot slot(shouldThrow);\n");
                         push(@implContent, "    if (thisObject->putDelegate(exec, propertyName, value, slot))\n");
                         push(@implContent, "        return;\n");
                     }
-
+    
                     push(@implContent, "    Base::putByIndex(cell, exec, index, value, shouldThrow);\n");
                     push(@implContent, "}\n\n");
                 }
@@ -3270,7 +3270,7 @@ sub GenerateImplementationFunctionCall()
 
         if ($svgPropertyType and !$function->isStatic) {
             if ($raisesException) {
-                push(@implContent, $indent . "if (!ec)\n");
+                push(@implContent, $indent . "if (!ec)\n"); 
                 push(@implContent, $indent . "    impl.commitChange();\n");
             } else {
                 push(@implContent, $indent . "impl.commitChange();\n");
@@ -3425,7 +3425,7 @@ sub GetSVGPropertyTypes
     my $svgNativeType;
 
     return ($svgPropertyType, $svgListPropertyType, $svgNativeType) if not $implType =~ /SVG/;
-
+    
     $svgNativeType = $codeGenerator->GetSVGTypeNeedingTearOff($implType);
     return ($svgPropertyType, $svgListPropertyType, $svgNativeType) if not $svgNativeType;
 
@@ -3523,7 +3523,7 @@ sub JSValueToNative
         AddToImplIncludes("JSDOMStringList.h", $conditional);
         return "toDOMStringList(exec, $value)";
     }
-
+    
     if ($codeGenerator->IsTypedArrayType($type)) {
         return "to$type($value)";
     }
@@ -3596,7 +3596,7 @@ sub NativeToJSValue
         AddToImplIncludes("<runtime/JSString.h>", $conditional);
         return "jsStringWithCache(exec, $value)";
     }
-
+    
     my $globalObject;
     if ($thisValue) {
         $globalObject = "$thisValue->globalObject()";
@@ -3781,7 +3781,7 @@ sub GenerateHashTable
             my $conditionalString = $codeGenerator->GenerateConditionalStringFromAttributeValue($conditional);
             push(@implContent, "#if ${conditionalString}\n");
         }
-
+        
         if ("@$specials[$i]" =~ m/Function/) {
             $targetType = "static_cast<NativeFunction>";
         } else {

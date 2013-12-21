@@ -29,7 +29,6 @@
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
-#include "Page.h"
 #include "Settings.h"
 
 #include "JSDOMWindowBase.h"

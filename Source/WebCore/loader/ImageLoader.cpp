@@ -199,7 +199,7 @@ void ImageLoader::updateFromElement()
         m_hasPendingErrorEvent = true;
         eventSender().dispatchEventSoon(this, eventNames().errorEvent);
     }
-
+    
     CachedImage* oldImage = m_image.get();
     if (newImage != oldImage) {
         if (m_hasPendingBeforeLoadEvent) {
@@ -364,7 +364,7 @@ void ImageLoader::updatedHasPendingEvent()
     } else {
         ASSERT(!m_derefElementTimer.isActive());
         m_derefElementTimer.startOneShot(0);
-    }
+    }   
 }
 
 void ImageLoader::timerFired(Timer<ImageLoader>*)
@@ -402,7 +402,7 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
 
     eventSender().cancelEventForSender(this, eventNames().loadEvent);
     m_hasPendingLoadEvent = false;
-
+    
     if (isHTMLObjectElement(m_element))
         toHTMLObjectElement(m_element)->renderFallbackContent();
 

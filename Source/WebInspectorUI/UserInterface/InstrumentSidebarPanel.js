@@ -85,7 +85,7 @@ WebInspector.InstrumentSidebarPanel = function()
     profilesTitleBarElement.classList.add(WebInspector.InstrumentSidebarPanel.TitleBarStyleClass);
     profilesTitleBarElement.classList.add(WebInspector.InstrumentSidebarPanel.ProfilesTitleBarStyleClass);
     this.element.appendChild(profilesTitleBarElement);
-
+    
     this._recordProfileGlyphElement = document.createElement("select");
     this._recordProfileGlyphElement.className = WebInspector.InstrumentSidebarPanel.RecordGlyphStyleClass;
     this._recordProfileGlyphElement.addEventListener("mouseover", this._recordProfileGlyphMousedOver.bind(this));
@@ -98,7 +98,7 @@ WebInspector.InstrumentSidebarPanel = function()
     startJavaScriptProfileOption.textContent = WebInspector.UIString("Start JavaScript Profile");
     startJavaScriptProfileOption.value = WebInspector.InstrumentSidebarPanel.StartJavaScriptProfileValue;
     startJavaScriptProfileOption.selected = false;
-
+    
     var startCSSSelectorProfileOption = document.createElement("option");
     startCSSSelectorProfileOption.textContent = WebInspector.UIString("Start CSS Selector Profile");
     startCSSSelectorProfileOption.value = WebInspector.InstrumentSidebarPanel.StartCSSSelectorProfileValue;
@@ -116,7 +116,7 @@ WebInspector.InstrumentSidebarPanel = function()
     profilesTitleBarElement.appendChild(this._recordProfileGlyphElement);
 
     this._recordProfileGlyphElement.selectedIndex = -1;
-
+    
     this._recordProfileStatusElement = document.createElement("div");
     this._recordProfileStatusElement.className = WebInspector.InstrumentSidebarPanel.RecordStatusStyleClass;
     profilesTitleBarElement.appendChild(this._recordProfileStatusElement);
@@ -127,7 +127,7 @@ WebInspector.InstrumentSidebarPanel = function()
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfileWasAdded, this._profileWasAdded, this);
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfileWasUpdated, this._profileWasUpdated, this);
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.Cleared, this._profilesCleared, this);
-
+    
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingStarted, this._profilingStarted, this);
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingEnded, this._profilingEnded, this);
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingInterrupted, this._profilingInterrupted, this);
@@ -321,12 +321,12 @@ WebInspector.InstrumentSidebarPanel.prototype = {
         else
             this._recordProfileStatusElement.textContent = "";
     },
-
+    
     _recordProfileGlyphMousedDown: function(event)
     {
         // Don't show any option as selected in the profile selector.
         this._recordProfileGlyphElement.selectedIndex = -1;
-
+        
         // We don't want to show the select if the user is currently profiling. In that case,
         // the user should just be able to click the record button to stop profiling.
         if (WebInspector.profileManager.isProfilingJavaScript() || WebInspector.profileManager.isProfilingCSSSelectors() || WebInspector.profileManager.isProfilingCanvas())
@@ -416,7 +416,7 @@ WebInspector.InstrumentSidebarPanel.prototype = {
         else
             WebInspector.timelineManager.startRecording();
     },
-
+    
     _titleForProfile: function(profile)
     {
         console.assert(profile instanceof WebInspector.ProfileObject);
@@ -433,10 +433,10 @@ WebInspector.InstrumentSidebarPanel.prototype = {
                 jsProfilesCount++;
             title = WebInspector.UIString("JavaScript Profile %d").format(jsProfilesCount);
         }
-
+        
         return title;
     },
-
+    
     _profileWasAdded: function(event)
     {
         var profile = event.data.profile;
@@ -458,7 +458,7 @@ WebInspector.InstrumentSidebarPanel.prototype = {
             this.contentTreeOutline.insertChild(profileTreeElement, 0);
             return;
         }
-
+        
         if (this._profileTreeElementMap[title] instanceof WebInspector.FolderTreeElement) {
             profileTreeElement.mainTitle = WebInspector.UIString("Run %d").format(this._profileTreeElementMap[title].children.length + 1);
             this._profileTreeElementMap[title].appendChild(profileTreeElement);
@@ -468,19 +468,19 @@ WebInspector.InstrumentSidebarPanel.prototype = {
         if (this._profileTreeElementMap[title] instanceof WebInspector.GeneralTreeElement) {
             var profileFolderElement = new WebInspector.FolderTreeElement(title, null, null);
             var oldProfileTreeElement = this._profileTreeElementMap[title];
-
+            
             var profileIndex = this.contentTreeOutline.children.indexOf(oldProfileTreeElement);
             this.contentTreeOutline.removeChild(oldProfileTreeElement);
-
+            
             this.contentTreeOutline.insertChild(profileFolderElement, profileIndex);
-
+            
             // Add the old tree element with the same title as the profile that was added, and the
             // profile that was added to the folder we are creating to track all profiles with the
             // given title. Add the old one as Run 1, and the new one as Run 2. Any additional profiles
             // with the same title will be added as Run n.
             oldProfileTreeElement.mainTitle = WebInspector.UIString("Run %d").format(1);
             profileTreeElement.mainTitle = WebInspector.UIString("Run %d").format(2);
-
+            
             profileFolderElement.appendChild(oldProfileTreeElement);
             profileFolderElement.appendChild(profileTreeElement);
 
@@ -507,7 +507,7 @@ WebInspector.InstrumentSidebarPanel.prototype = {
     {
         this.contentTreeOutline.removeChildren();
         this._profileTreeElementMap = {};
-
+        
         WebInspector.contentBrowser.contentViewContainer.closeAllContentViewsOfPrototype(WebInspector.JavaScriptProfileView);
         WebInspector.contentBrowser.contentViewContainer.closeAllContentViewsOfPrototype(WebInspector.CSSSelectorProfileView);
         WebInspector.contentBrowser.contentViewContainer.closeAllContentViewsOfPrototype(WebInspector.CanvasProfileView);

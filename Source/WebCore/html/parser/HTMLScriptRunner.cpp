@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
@@ -81,11 +81,6 @@ static URL documentURLForScriptExecution(Document* document)
     return document->frame()->document()->url();
 }
 
-inline PassRefPtr<Event> createScriptErrorEvent()
-{
-    return Event::create(eventNames().errorEvent, false, false);
-}
-
 inline PassRefPtr<Event> createScriptLoadEvent()
 {
     return Event::create(eventNames().loadEvent, false, false);
@@ -143,7 +138,7 @@ void HTMLScriptRunner::executePendingScriptAndDispatchEvent(PendingScript& pendi
         NestingLevelIncrementer nestingLevelIncrementer(m_scriptNestingLevel);
         IgnoreDestructiveWriteCountIncrementer ignoreDestructiveWriteCountIncrementer(m_document);
         if (errorOccurred)
-            element->dispatchEvent(createScriptErrorEvent());
+            scriptElement->dispatchErrorEvent();
         else {
             ASSERT(isExecutingScript());
             scriptElement->executeScript(sourceCode);

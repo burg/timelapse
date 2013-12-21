@@ -135,6 +135,8 @@ private:
     bool m_runningNestedMessageLoop;
     BreakpointIDToActionsMap m_breakpointIDToActions;
     Timer<ScriptDebugServer> m_recompileTimer;
+
+    friend class DebuggerCallFrameScope;
 };
 
 } // namespace WebCore

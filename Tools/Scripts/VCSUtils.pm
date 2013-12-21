@@ -66,8 +66,6 @@ BEGIN {
         &isGitSVN
         &isGitBranchBuild
         &isGitDirectory
-        &isHg
-        &isHgDirectory
         &isSVN
         &isSVNDirectory
         &isSVNVersion16OrNewer
@@ -103,7 +101,6 @@ my $gitRoot;
 my $isGit;
 my $isGitSVN;
 my $isGitBranchBuild;
-my $isHg;
 my $isSVN;
 my $svnVersion;
 
@@ -219,26 +216,12 @@ sub isGitDirectory($)
     return system("cd $dir && git rev-parse > " . File::Spec->devnull() . " 2>&1") == 0;
 }
 
-sub isHgDirectory($)
-{
-    my ($dir) = @_;
-    return system("cd $dir && hg root > " . File::Spec->devnull() . " 2>&1") == 0;
-}
-
 sub isGit()
 {
     return $isGit if defined $isGit;
 
     $isGit = isGitDirectory(".");
     return $isGit;
-}
-
-sub isHg()
-{
-    return $isHg if defined $isHg;
-
-    $isHg = isHgDirectory(".");
-    return $isHg;
 }
 
 sub isGitSVN()

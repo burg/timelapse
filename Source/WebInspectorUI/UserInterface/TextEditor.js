@@ -497,7 +497,7 @@ WebInspector.TextEditor.prototype = {
             if (WebInspector.probeManager.probeSets[lineKey])
                 this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeHighlightedStyleClassName);
             else
-                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.HighlightedStyleClassName);
+            this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.HighlightedStyleClassName);
 
             // Use a timeout instead of a webkitAnimationEnd event listener because the line element might
             // be removed if the user scrolls during the animation. In that case webkitAnimationEnd isn't

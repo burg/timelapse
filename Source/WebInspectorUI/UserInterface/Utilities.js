@@ -585,7 +585,7 @@ Object.defineProperty(String, "tokenizeFormatString",
     }
 });
 
-Object.defineProperty(String.prototype, "startsWith",
+Object.defineProperty(String.prototype, "startsWith", 
 {
     value: function(string)
     {

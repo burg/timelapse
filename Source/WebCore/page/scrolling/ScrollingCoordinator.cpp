@@ -285,7 +285,7 @@ void ScrollingCoordinator::scheduleUpdateMainFrameScrollPosition(const IntPoint&
             m_scheduledUpdateScrollPosition = scrollPosition;
             return;
         }
-
+    
         // If the parameters don't match what was previosly scheduled, dispatch immediately.
         m_updateMainFrameScrollPositionTimer.stop();
         updateMainFrameScrollPosition(m_scheduledUpdateScrollPosition, m_scheduledUpdateIsProgrammaticScroll, m_scheduledScrollingLayerPositionAction);

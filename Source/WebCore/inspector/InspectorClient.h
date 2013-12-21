@@ -91,10 +91,7 @@ public:
     virtual void getAllocatedObjects(HashSet<const void*>&) { }
     virtual void dumpUncountedAllocatedObjects(const HashMap<const void*, size_t>&) { }
 
-    virtual bool captureScreenshot(int /*x*/, int /*y*/, int /*width*/, int /*height*/, bool /*usePageCoordinates*/, String* /*outData*/)
-    {
-        return false;
-    }
+    virtual bool captureScreenshot(String*) { return false; }
 
     virtual bool handleJavaScriptDialog(bool, const String*) { return false; }
 

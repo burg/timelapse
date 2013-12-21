@@ -176,17 +176,6 @@ bool InspectorDebuggerAgent::isPaused()
     return scriptDebugServer().isPaused();
 }
 
-void InspectorDebuggerAgent::clearResources()
-{
-    // TODO: free any created probe samples.
-    /*
-    ScriptState* state = mainWorldExecState(&m_inspectedPage->mainFrame());
-    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
-        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
-    */
-}
-
 bool InspectorDebuggerAgent::runningNestedMessageLoop()
 {
     return scriptDebugServer().runningNestedMessageLoop();

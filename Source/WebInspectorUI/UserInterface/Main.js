@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
@@ -504,6 +503,7 @@ WebInspector.close = function()
         return;
 
     this._isClosing = true;
+
     InspectorFrontendHost.closeWindow();
 }
 

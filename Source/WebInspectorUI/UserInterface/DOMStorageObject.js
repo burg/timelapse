@@ -36,7 +36,7 @@ WebInspector.DOMStorageObject.LocalStorageCookieKey = "dom-storage-object-local-
 
 WebInspector.DOMStorageObject.prototype = {
     constructor: WebInspector.DOMStorageObject,
-
+    
     get id()
     {
         return this._id;

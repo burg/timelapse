@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
+ *     notice, this list of conditions and the following disclaimer. 
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
+ *     documentation and/or other materials provided with the distribution. 
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ *     from this software without specific prior written permission. 
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -236,8 +236,8 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response)
         RefPtr<ResourceBuffer> copiedData = ResourceBuffer::create(buffer->data(), buffer->size());
         m_resource->finishLoading(copiedData.get());
         clearResourceData();
-        // Since a subresource loader does not load multipart sections progressively, data was delivered to the loader all at once.
-        // After the first multipart section is complete, signal to delegates that this load is "finished"
+        // Since a subresource loader does not load multipart sections progressively, data was delivered to the loader all at once.        
+        // After the first multipart section is complete, signal to delegates that this load is "finished" 
         m_documentLoader->subresourceLoaderFinishedLoadingOnePart(this);
         didFinishLoadingOnePart(0);
     }

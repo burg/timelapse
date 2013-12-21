@@ -29,7 +29,6 @@ VPATH = \
     $(JavaScriptCore)/parser \
     $(JavaScriptCore)/docs \
     $(JavaScriptCore)/runtime \
-    $(JavaScriptCore)/instrumentation \
     $(JavaScriptCore)/interpreter \
     $(JavaScriptCore)/jit \
 #

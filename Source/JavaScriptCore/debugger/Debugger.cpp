@@ -49,7 +49,7 @@ public:
 private:
     typedef HashSet<FunctionExecutable*> FunctionExecutableSet;
     typedef HashMap<SourceProvider*, ExecState*> SourceProviderMap;
-
+    
     JSC::Debugger* m_debugger;
     FunctionExecutableSet m_functionExecutables;
     SourceProviderMap m_sourceProviders;
@@ -199,7 +199,7 @@ void Debugger::recompileAllJSFunctions(VM* vm)
     ASSERT(!vm->entryScope);
     if (vm->entryScope)
         return;
-
+    
     vm->prepareToDiscardCode();
 
     Recompiler recompiler(this);

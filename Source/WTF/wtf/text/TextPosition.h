@@ -26,8 +26,6 @@
 #define TextPosition_h
 
 #include <wtf/Assertions.h>
-#include <wtf/HashFunctions.h>
-#include <wtf/HashTraits.h>
 
 namespace WTF {
 
@@ -43,8 +41,8 @@ public:
     int zeroBasedInt() const { return m_zeroBasedValue; }
     int oneBasedInt() const { return m_zeroBasedValue + 1; }
 
-    bool operator==(OrdinalNumber other) const { return m_zeroBasedValue == other.m_zeroBasedValue; }
-    bool operator!=(OrdinalNumber other) const { return !((*this) == other); }
+    bool operator==(OrdinalNumber other) { return m_zeroBasedValue == other.m_zeroBasedValue; }
+    bool operator!=(OrdinalNumber other) { return !((*this) == other); }
 
     static OrdinalNumber first() { return OrdinalNumber(0); }
     static OrdinalNumber beforeFirst() { return OrdinalNumber(-1); }
@@ -54,19 +52,6 @@ private:
     int m_zeroBasedValue;
 };
 
-template<> struct IntHash<OrdinalNumber> {
-    static unsigned hash(const OrdinalNumber& number) { return IntHash<int>::hash(number.zeroBasedInt()); }
-    static bool equal(const OrdinalNumber& a, const OrdinalNumber& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-template<> struct DefaultHash<OrdinalNumber> { typedef IntHash<OrdinalNumber> Hash; };
-
-template<> struct HashTraits<OrdinalNumber> : GenericHashTraits<OrdinalNumber> {
-    static const bool emptyValueIsZero = true;
-    static const bool needsDestruction = false;
-    static void constructDeletedValue(OrdinalNumber& number) { number = OrdinalNumber::beforeFirst(); }
-    static bool isDeletedValue(const OrdinalNumber& number) { return number == OrdinalNumber::beforeFirst(); }
-};
 
 // TextPosition structure specifies coordinates within an text resource. It is used mostly
 // for saving script source position.
@@ -78,8 +63,8 @@ public:
     {
     }
     TextPosition() { }
-    bool operator==(const TextPosition& other) const { return m_line == other.m_line && m_column == other.m_column; }
-    bool operator!=(const TextPosition& other) const { return !((*this) == other); }
+    bool operator==(const TextPosition& other) { return m_line == other.m_line && m_column == other.m_column; }
+    bool operator!=(const TextPosition& other) { return !((*this) == other); }
 
     // A 'minimum' value of position, used as a default value.
     static TextPosition minimumPosition() { return TextPosition(OrdinalNumber::first(), OrdinalNumber::first()); }
@@ -89,21 +74,6 @@ public:
 
     OrdinalNumber m_line;
     OrdinalNumber m_column;
-};
-
-
-template<> struct IntHash<TextPosition> {
-    static unsigned hash(const TextPosition& position) { return pairIntHash(position.m_line.zeroBasedInt(), position.m_column.zeroBasedInt()); }
-    static bool equal(const TextPosition& a, const TextPosition& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-template<> struct DefaultHash<TextPosition> { typedef IntHash<TextPosition> Hash; };
-
-template<> struct HashTraits<TextPosition> : GenericHashTraits<TextPosition> {
-    static const bool emptyValueIsZero = true;
-    static const bool needsDestruction = false;
-    static void constructDeletedValue(TextPosition& position) { position = TextPosition::belowRangePosition(); }
-    static bool isDeletedValue(const TextPosition& position) { return position == TextPosition::belowRangePosition(); }
 };
 
 }

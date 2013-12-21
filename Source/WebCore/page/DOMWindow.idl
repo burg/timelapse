@@ -156,7 +156,7 @@
 
     WebKitPoint webkitConvertPointFromPageToNode([Default=Undefined] optional Node node,
                                                  [Default=Undefined] optional WebKitPoint p);
-    WebKitPoint webkitConvertPointFromNodeToPage([Default=Undefined] optional Node node,
+    WebKitPoint webkitConvertPointFromNodeToPage([Default=Undefined] optional Node node, 
                                                  [Default=Undefined] optional WebKitPoint p);
 
     [ReplayNotImplemented] readonly attribute DOMApplicationCache applicationCache;

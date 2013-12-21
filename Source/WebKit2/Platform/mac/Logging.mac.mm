@@ -37,6 +37,6 @@ String logLevelString()
     return [[NSUserDefaults standardUserDefaults] stringForKey:defaultsDomain];
 }
 
-#endif // !LOG_DISABLED
+#endif
 
 } // namespace WebKit

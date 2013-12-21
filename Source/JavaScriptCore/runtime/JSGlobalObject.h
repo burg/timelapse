@@ -39,7 +39,6 @@
 #include <JavaScriptCore/JSBase.h>
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
-#include <wtf/RefPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RandomNumber.h>
 
@@ -118,7 +117,7 @@ struct GlobalObjectMethodTable {
     typedef bool (*AllowsAccessFromFunctionPtr)(const JSGlobalObject*, ExecState*);
     AllowsAccessFromFunctionPtr allowsAccessFrom;
 
-    typedef bool (*SupportsProfilingFunctionPtr)(const JSGlobalObject*);
+    typedef bool (*SupportsProfilingFunctionPtr)(const JSGlobalObject*); 
     SupportsProfilingFunctionPtr supportsProfiling;
 
     typedef bool (*SupportsRichSourceInfoFunctionPtr)(const JSGlobalObject*);
@@ -151,7 +150,7 @@ private:
 
         WeakMapSet weakMaps;
         unsigned profileGroup;
-
+        
         OpaqueJSClassDataMap opaqueJSClassData;
     };
 
@@ -187,7 +186,7 @@ protected:
     WriteBarrier<Structure> m_activationStructure;
     WriteBarrier<Structure> m_nameScopeStructure;
     WriteBarrier<Structure> m_argumentsStructure;
-
+        
     // Lists the actual structures used for having these particular indexing shapes.
     WriteBarrier<Structure> m_originalArrayStructureForIndexingShape[NumberOfIndexingShapes];
     // Lists the structures we should use during allocation for these particular indexing shapes.
@@ -209,7 +208,7 @@ protected:
     WriteBarrier<Structure> m_regExpMatchesArrayStructure;
     WriteBarrier<Structure> m_regExpStructure;
     WriteBarrier<Structure> m_internalFunctionStructure;
-
+    
     WriteBarrier<Structure> m_iteratorResultStructure;
 
 #if ENABLE(PROMISES)
@@ -231,9 +230,9 @@ protected:
         WriteBarrier<JSObject> prototype;
         WriteBarrier<Structure> structure;
     };
-
+    
     FixedArray<TypedArrayData, NUMBER_OF_TYPED_ARRAY_TYPES> m_typedArrays;
-
+        
     void* m_specialPointers[Special::TableSize]; // Special pointers used by the LLInt and JIT.
 
     String m_name;
@@ -253,6 +252,7 @@ protected:
     RefPtr<WatchpointSet> m_varInjectionWatchpoint;
 
     OwnPtr<JSGlobalObjectRareData> m_rareData;
+
     WeakRandom m_weakRandom;
 
     bool m_evalEnabled;
@@ -268,7 +268,7 @@ protected:
             return;
         m_rareData = adoptPtr(new JSGlobalObjectRareData);
     }
-
+        
 public:
     typedef JSSegmentedVariableObject Base;
 
@@ -342,7 +342,7 @@ public:
     }
     void addFunction(ExecState*, const Identifier&, JSValue);
 
-    // The following accessors return pristine values, even if a script
+    // The following accessors return pristine values, even if a script 
     // replaces the global object's associated property.
 
     RegExpConstructor* regExpConstructor() const { return m_regExpConstructor.get(); }
@@ -396,12 +396,12 @@ public:
     {
         return arrayStructureForIndexingTypeDuringAllocation(ArrayAllocationProfile::selectIndexingTypeFor(profile));
     }
-
+        
     bool isOriginalArrayStructure(Structure* structure)
     {
         return originalArrayStructureForIndexingType(structure->indexingType() | IsArray) == structure;
     }
-
+        
     Structure* booleanObjectStructure() const { return m_booleanObjectStructure.get(); }
     Structure* callbackConstructorStructure() const { return m_callbackConstructorStructure.get(); }
     Structure* callbackFunctionStructure() const { return m_callbackFunctionStructure.get(); }
@@ -471,21 +471,21 @@ public:
     WatchpointSet* masqueradesAsUndefinedWatchpoint() { return m_masqueradesAsUndefinedWatchpoint.get(); }
     WatchpointSet* havingABadTimeWatchpoint() { return m_havingABadTimeWatchpoint.get(); }
     WatchpointSet* varInjectionWatchpoint() { return m_varInjectionWatchpoint.get(); }
-
+        
     bool isHavingABadTime() const
     {
         return m_havingABadTimeWatchpoint->hasBeenInvalidated();
     }
-
+        
     void haveABadTime(VM&);
-
+        
     bool objectPrototypeIsSane();
     bool arrayPrototypeChainIsSane();
     bool stringPrototypeChainIsSane();
 
     void setProfileGroup(unsigned value) { createRareDataIfNeeded(); m_rareData->profileGroup = value; }
     unsigned profileGroup() const
-    {
+    { 
         if (!m_rareData)
             return 0;
         return m_rareData->profileGroup;
@@ -577,7 +577,7 @@ protected:
 
 private:
     friend class LLIntOffsetsExtractor;
-
+        
     // FIXME: Fold reset into init.
     JS_EXPORT_PRIVATE void init(JSObject* thisValue);
     void reset(JSValue prototype);
@@ -619,7 +619,7 @@ inline JSArray* constructEmptyArray(ExecState* exec, ArrayAllocationProfile* pro
 {
     return constructEmptyArray(exec, profile, exec->lexicalGlobalObject(), initialLength);
 }
-
+ 
 inline JSArray* constructArray(ExecState* exec, ArrayAllocationProfile* profile, JSGlobalObject* globalObject, const ArgList& values)
 {
     return ArrayAllocationProfile::updateLastAllocationFor(profile, constructArray(exec, globalObject->arrayStructureForProfileDuringAllocation(profile), values));
@@ -651,12 +651,12 @@ inline JSArray* constructArrayNegativeIndexed(ExecState* exec, ArrayAllocationPr
 }
 
 inline JSObject* JSScope::globalThis()
-{
+{ 
     return globalObject()->globalThis();
 }
 
 inline JSObject* JSGlobalObject::globalThis() const
-{
+{ 
     return m_globalThis.get();
 }
 

@@ -1818,7 +1818,7 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
 
 - (NSImage *)_selectionDraggingImage
 {
-    if (![self _hasSelection] || ![self _frame])
+    if (![self _hasSelection])
         return nil;
 
     Frame* coreFrame = core([self _frame]);

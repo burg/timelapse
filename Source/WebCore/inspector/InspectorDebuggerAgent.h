@@ -74,8 +74,6 @@ public:
     virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) OVERRIDE;
     virtual void willDestroyFrontendAndBackend() OVERRIDE;
 
-    void clearResources();
-
     bool isPaused();
     bool runningNestedMessageLoop();
     void addMessageToConsole(MessageSource, MessageType);
@@ -127,7 +125,6 @@ public:
         virtual void stepInto() = 0;
         virtual void didPause() = 0;
     };
-
     void setListener(Listener* listener) { m_listener = listener; }
 
     virtual ScriptDebugServer& scriptDebugServer() = 0;

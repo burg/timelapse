@@ -116,7 +116,7 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
 
     return wrapper;
 }
-    
+
 #if ENABLE(TOUCH_EVENTS)
 JSValue JSDocument::createTouchList(ExecState* exec)
 {

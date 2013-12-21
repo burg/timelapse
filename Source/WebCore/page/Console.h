@@ -64,7 +64,6 @@ public:
     void trace(JSC::ExecState*, PassRefPtr<ScriptArguments>);
     void assertCondition(JSC::ExecState*, PassRefPtr<ScriptArguments>, bool condition);
     void count(JSC::ExecState*, PassRefPtr<ScriptArguments>);
-
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     const ProfilesArray& profiles() const { return m_profiles; }
     void profile(JSC::ExecState*, const String& = String());

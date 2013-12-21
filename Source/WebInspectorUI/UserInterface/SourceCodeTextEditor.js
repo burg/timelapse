@@ -275,6 +275,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
 
         if (this._supportsDebugging) {
             this._breakpointMap = {};
+
             var breakpoints = WebInspector.debuggerManager.breakpointsForSourceCode(this._sourceCode);
             for (var i = 0; i < breakpoints.length; ++i) {
                 var breakpoint = breakpoints[i];
@@ -685,7 +686,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
         return {resolved: breakpoint.resolved, mode: breakpoint.mode};
     },
 
-     get _supportsDebugging()
+    get _supportsDebugging()
     {
         if (this._sourceCode instanceof WebInspector.Resource)
             return this._sourceCode.type === WebInspector.Resource.Type.Document || this._sourceCode.type === WebInspector.Resource.Type.Script;

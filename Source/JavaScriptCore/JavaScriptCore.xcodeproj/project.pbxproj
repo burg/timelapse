@@ -6027,14 +6027,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(DEBUG_DEFINES)",
-					"HAVE_DTRACE=$(HAVE_DTRACE)",
-					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
-					HAVE_HEADER_DETECTION_H,
-					"$(GCC_PREPROCESSOR_DEFINITIONS)",
-					"$(FEATURE_DEFINES)",
-				);
 				INSTALL_PATH = "$(BUILT_PRODUCTS_DIR)";
 			};
 			name = Debug;
@@ -6043,14 +6035,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(DEBUG_DEFINES)",
-					"HAVE_DTRACE=$(HAVE_DTRACE)",
-					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
-					HAVE_HEADER_DETECTION_H,
-					"$(GCC_PREPROCESSOR_DEFINITIONS)",
-					"$(FEATURE_DEFINES)",
-				);
 				INSTALL_PATH = "$(BUILT_PRODUCTS_DIR)";
 			};
 			name = Release;
@@ -6060,14 +6044,6 @@
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
 				BUILD_VARIANTS = normal;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(DEBUG_DEFINES)",
-					"HAVE_DTRACE=$(HAVE_DTRACE)",
-					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
-					HAVE_HEADER_DETECTION_H,
-					"$(GCC_PREPROCESSOR_DEFINITIONS)",
-					"$(FEATURE_DEFINES)",
-				);
 			};
 			name = Production;
 		};
@@ -6120,7 +6096,6 @@
 				DEAD_CODE_STRIPPING = "$(DEAD_CODE_STRIPPING_debug)";
 				DEBUG_DEFINES = "$(DEBUG_DEFINES_debug)";
 				GCC_OPTIMIZATION_LEVEL = "$(GCC_OPTIMIZATION_LEVEL_debug)";
-				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 				STRIP_INSTALLED_PRODUCT = "$(STRIP_INSTALLED_PRODUCT_debug)";
 			};
 			name = Debug;
@@ -6129,7 +6104,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051440BA9E8A70081E9D0 /* DebugRelease.xcconfig */;
 			buildSettings = {
-				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Release;
@@ -6138,7 +6112,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051450BA9E8A70081E9D0 /* Base.xcconfig */;
 			buildSettings = {
-				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 			};
 			name = Production;
 		};
@@ -6244,7 +6217,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051440BA9E8A70081E9D0 /* DebugRelease.xcconfig */;
 			buildSettings = {
-				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Profiling;
@@ -6260,14 +6232,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(DEBUG_DEFINES)",
-					"HAVE_DTRACE=$(HAVE_DTRACE)",
-					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
-					HAVE_HEADER_DETECTION_H,
-					"$(GCC_PREPROCESSOR_DEFINITIONS)",
-					"$(FEATURE_DEFINES)",
-				);
 				INSTALL_PATH = "$(BUILT_PRODUCTS_DIR)";
 			};
 			name = Profiling;

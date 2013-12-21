@@ -254,10 +254,10 @@ void Frame::setView(PassRefPtr<FrameView> view)
     // these calls to work.
     if (!view && m_doc && m_doc->attached() && !m_doc->inPageCache())
         m_doc->prepareForDestruction();
-
+    
     if (m_view)
         m_view->unscheduleRelayout();
-
+    
     eventHandler().clear();
 
     m_view = view;
@@ -266,7 +266,7 @@ void Frame::setView(PassRefPtr<FrameView> view)
     // Since this part may be getting reused as a result of being
     // pulled from the back/forward cache, reset this flag.
     loader().resetMultipleFormSubmissionProtection();
-
+    
 #if USE(TILED_BACKING_STORE)
     if (m_view && tiledBackingStore())
         m_view->setPaintsEntireContents(true);
@@ -338,7 +338,7 @@ String Frame::searchForLabelsAboveCell(RegularExpression* regExp, HTMLTableCellE
     HTMLTableCellElement* aboveCell = cell->cellAbove();
     if (aboveCell) {
         // search within the above cell we found for a match
-        size_t lengthSearched = 0;
+        size_t lengthSearched = 0;    
         for (Text* textNode = TextNodeTraversal::firstWithin(aboveCell); textNode; textNode = TextNodeTraversal::next(textNode, aboveCell)) {
             if (!textNode->renderer() || textNode->renderer()->style().visibility() != VISIBLE)
                 continue;
@@ -376,7 +376,7 @@ String Frame::searchForLabelsBeforeElement(const Vector<String>& labels, Element
         *resultDistance = notFound;
     if (resultIsInCellAbove)
         *resultIsInCellAbove = false;
-
+    
     // walk backwards in the node tree, until another element, or form, or end of tree
     int unsigned lengthSearched = 0;
     Node* n;
@@ -434,7 +434,7 @@ static String matchLabelsAgainstString(const Vector<String>& labels, const Strin
     // Make numbers and _'s in field names behave like word boundaries, e.g., "address2"
     replace(mutableStringToMatch, RegularExpression("\\d", TextCaseSensitive), " ");
     mutableStringToMatch.replace('_', ' ');
-
+    
     OwnPtr<RegularExpression> regExp(createRegExpForLabels(labels));
     // Use the largest match we can find in the whole string
     int pos;
@@ -453,12 +453,12 @@ static String matchLabelsAgainstString(const Vector<String>& labels, const Strin
             start = pos + 1;
         }
     } while (pos != -1);
-
+    
     if (bestPos != -1)
         return mutableStringToMatch.substring(bestPos, bestLength);
     return String();
 }
-
+    
 String Frame::matchLabelsAgainstElement(const Vector<String>& labels, Element* element)
 {
     // Match against the name element, then against the id element if no match is found for the name element.
@@ -468,7 +468,7 @@ String Frame::matchLabelsAgainstElement(const Vector<String>& labels, Element* e
     String resultFromNameAttribute = matchLabelsAgainstString(labels, element->getNameAttribute());
     if (!resultFromNameAttribute.isEmpty())
         return resultFromNameAttribute;
-
+    
     return matchLabelsAgainstString(labels, element->getAttribute(idAttr));
 }
 
@@ -637,14 +637,14 @@ void Frame::disconnectOwnerElement()
         // frame is already detached (and can't access the top level AX cache).
         // However, we pass in the current document to clearTextMarkerNodesInUse so we can identify the
         // nodes inside this document that need to be removed from the cache.
-
+        
         // We don't clear the AXObjectCache here because we don't want to clear the top level cache
         // when a sub-frame is removed.
 #if HAVE(ACCESSIBILITY)
         if (AXObjectCache* cache = m_ownerElement->document().existingAXObjectCache())
             cache->clearTextMarkerNodesInUse(document());
 #endif
-
+        
         m_ownerElement->clearContentFrame();
         if (m_page)
             m_page->decrementSubframeCount();

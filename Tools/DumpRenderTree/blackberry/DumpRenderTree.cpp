@@ -929,7 +929,7 @@ void DumpRenderTree::didDecidePolicyForNavigationAction(const WebCore::Navigatio
     for (const WebCore::Event* event = action.event(); event; event = event->underlyingEvent()) {
         if (event->isMouseEvent()) {
             const WebCore::MouseEvent* mouseEvent = static_cast<const WebCore::MouseEvent*>(event);
-            node = frame->eventHandler().hitTestResultAtPoint(mouseEvent->absoluteLocation(), false).innerNonSharedNode();
+            node = frame->eventHandler()->hitTestResultAtPoint(mouseEvent->absoluteLocation(), false).innerNonSharedNode();
             break;
         }
     }

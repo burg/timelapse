@@ -86,7 +86,7 @@ public:
 private:
     InspectorDOMDebuggerAgent(InstrumentingAgents*, InspectorDOMAgent*, InspectorDebuggerAgent*, InspectorAgent*);
 
-    // InspectorDebuggerAgent::DebuggerAgentListener implementation.
+    // InspectorDebuggerAgent::Listener implementation.
     virtual void debuggerWasEnabled();
     virtual void debuggerWasDisabled();
     virtual void stepInto();

@@ -285,7 +285,7 @@ WebInspector.DashboardView.prototype = {
             container.recalculateStyles();
         } else
             container.addEventListener("webkitAnimationEnd", animationEnded);
-
+        
         container.classList.add("pulsing");
     },
 

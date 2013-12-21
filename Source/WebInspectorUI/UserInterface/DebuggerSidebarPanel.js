@@ -276,7 +276,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         this._debuggerPauseResumeButtonItem.enabled = true;
         this._debuggerPauseResumeButtonItem.toggled = true;
         this._debuggerStepOverButtonItem.enabled = true;
-        this._debuggerStepIntoButtonItem.enabled = true;
+        this._debuggerStepIntoButtonItem.enabled = true;        
     },
 
     _debuggerDidResume: function(event)
