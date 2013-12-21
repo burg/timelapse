@@ -71,7 +71,6 @@ WebInspector.loaded = function()
     if (InspectorBackend.registerRuntimeDispatcher)
         InspectorBackend.registerRuntimeDispatcher(new WebInspector.RuntimeObserver);
     InspectorBackend.registerReplayDispatcher(new WebInspector.ReplayObserver);
-    InspectorBackend.registerRecordingsDispatcher(new WebInspector.RecordingsObserver);
 
     // Enable agents.
     InspectorAgent.enable();
