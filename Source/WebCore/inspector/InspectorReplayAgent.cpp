@@ -280,35 +280,6 @@ void InspectorReplayAgent::stop()
         stopPlayback(&dummy, true);
 }
 
-void InspectorReplayAgent::isEnabled(ErrorString*, bool* result)
-{
-    *result = m_stateMachine.enabled();
-}
-
-void InspectorReplayAgent::enable(ErrorString*)
-{
-    if (m_stateMachine.enabled())
-        return;
-
-    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
-    m_instrumentingAgents->setInspectorReplayAgent(this);
-
-    if (m_frontendDispatcher)
-        m_frontendDispatcher->replayEnabled();
-}
-
-void InspectorReplayAgent::disable(ErrorString*)
-{
-    if (m_stateMachine.disabled())
-        return;
-
-    m_stateMachine.advanceTo(ReplayAgentStateMachine::Disabled);
-    m_instrumentingAgents->setInspectorReplayAgent(0);
-
-    if (m_frontendDispatcher)
-        m_frontendDispatcher->replayDisabled();
-}
-
 void InspectorReplayAgent::startCapture(ErrorString*)
 {
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForCapture);

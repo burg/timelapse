@@ -42,7 +42,6 @@ public:
     ReplayAgentStateMachine();
 
     enum State {
-        Disabled,
         RecordingUnloaded,
         RecordingLoaded,
         WaitingForCapture,
@@ -52,8 +51,6 @@ public:
         ReplayPaused
     };
 
-    bool disabled() const;
-    bool enabled() const;
     bool canCapture() const;
     bool canReplay() const;
     bool replayPaused() const;

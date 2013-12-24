@@ -34,16 +34,6 @@ WebInspector.ReplayObserver.prototype = {
 
     // Events defined by the "Replay" domain (see WebCore/inspector/Inspector.json).
 
-    replayEnabled: function()
-    {
-        // Not handled yet.
-    },
-
-    replayDisabled: function()
-    {
-        // Not handled yet.
-    },
-
     captureStarted: function()
     {
         WebInspector.replayManager.captureStarted();

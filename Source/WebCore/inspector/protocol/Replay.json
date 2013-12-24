@@ -51,18 +51,6 @@
     ],
     "commands": [
         {
-            "name": "enable"
-        },
-        {
-            "name": "disable"
-        },
-        {
-            "name": "isEnabled",
-            "returns": [
-                { "name": "state", "type": "boolean" }
-            ]
-        },
-        {
             "name": "startCapture",
             "description": "Starts capture of a program execution."
         },
@@ -143,12 +131,6 @@
     ],
 
     "events": [
-        {
-            "name": "replayEnabled"
-        },
-        {
-            "name": "replayDisabled"
-        },
         {
             "name": "captureStarted",
             "description": "Fired when capture has started."

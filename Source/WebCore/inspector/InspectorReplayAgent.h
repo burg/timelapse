@@ -100,12 +100,8 @@ public:
 
     // Figures out current state and stops everything.
     void stop();
-    bool enabled() const;
 
     // Calls from the frontend.
-    void enable(ErrorString*);
-    void disable(ErrorString*);
-    void isEnabled(ErrorString*, bool*);
     void startCapture(ErrorString*);
     void stopCapture(ErrorString*, bool*);
     void replayUpToMarkIndex(ErrorString*, int, bool);

@@ -38,7 +38,6 @@
 namespace WebCore {
 
 namespace ReplayAgentStateNames {
-static const char* Disabled = "Disabled";
 static const char* RecordingUnloaded = "RecordingUnloaded";
 static const char* RecordingLoaded =  "RecordingLoaded";
 static const char* WaitingForCapture = "WaitingForCapture";
@@ -51,9 +50,6 @@ static const char* ReplayPaused = "ReplayPaused";
 const char* ReplayAgentStateMachine::stateNameFor(ReplayAgentStateMachine::State state)
 {
     switch (state) {
-    case ReplayAgentStateMachine::Disabled:
-        return ReplayAgentStateNames::Disabled;
-
     case ReplayAgentStateMachine::RecordingUnloaded:
         return ReplayAgentStateNames::RecordingUnloaded;
 
@@ -80,18 +76,8 @@ const char* ReplayAgentStateMachine::stateNameFor(ReplayAgentStateMachine::State
 }
 
 ReplayAgentStateMachine::ReplayAgentStateMachine()
-    : m_state(Disabled)
+    : m_state(RecordingUnloaded)
 {
-}
-
-bool ReplayAgentStateMachine::disabled() const
-{
-    return inState(Disabled);
-}
-
-bool ReplayAgentStateMachine::enabled() const
-{
-    return !inState(Disabled);
 }
 
 bool ReplayAgentStateMachine::canCapture() const
@@ -122,12 +108,6 @@ bool ReplayAgentStateMachine::replaying() const
 void ReplayAgentStateMachine::advanceTo(State newState)
 {
     switch (newState) {
-    case Disabled:
-        if (inState(RecordingLoaded) || inState(RecordingUnloaded))
-            goto commit;
-
-        break;
-
     case RecordingUnloaded: // Can always get to this state; not idempotent.
         if (!inState(RecordingUnloaded))
             goto commit;

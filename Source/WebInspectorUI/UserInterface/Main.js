@@ -102,10 +102,6 @@ WebInspector.loaded = function()
     // Enable the Console Agent after creating the singleton managers.
     ConsoleAgent.enable();
 
-    // For now unconditionally enable replay.
-    if (ReplayAgent.enable)
-        ReplayAgent.enable();
-
     // Enable the RuntimeAgent to receive notification of execution contexts.
     if (RuntimeAgent.enable)
         RuntimeAgent.enable();
