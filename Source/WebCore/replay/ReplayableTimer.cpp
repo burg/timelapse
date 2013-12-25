@@ -60,7 +60,7 @@ void ReplayableTimerBase::timerFired(Timer<ReplayableTimerBase>*)
     if (it && it->isCapturing()) {
         it->storeInput(std::make_unique<AsyncTimerFired>(m_identifier));
         EventLoopInputExtent extent(it);
-        invokeCallback();
+        fired();
     }
 
     m_isActive = false;

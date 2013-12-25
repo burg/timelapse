@@ -58,7 +58,7 @@ public:
 
     unsigned long identifier() const { return m_identifier; }
 protected:
-    virtual void invokeCallback() =0;
+    virtual void fired() =0;
 private:
     void timerFired(Timer<ReplayableTimerBase>*);
     InputIterator* inputIterator() const;
@@ -79,7 +79,7 @@ public:
         , m_function(f) { }
 
 protected:
-    virtual void invokeCallback() OVERRIDE { (m_object->*m_function)(this); }
+    virtual void fired() OVERRIDE { (m_object->*m_function)(this); }
 
     TimerFiredClass* m_object;
     TimerFiredFunction m_function;

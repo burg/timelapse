@@ -62,7 +62,7 @@ void AsyncTimerFired::dispatch(ReplayController& controller)
 {
     ReplayableTimerBase* timer = controller.page().replayProxy().findTimer(m_identifier);
     if (timer)
-        timer->invokeCallback();
+        timer->fired();
     else
         LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find async timer _/%zu.\n", "[ReplayController]", m_identifier);
 }
