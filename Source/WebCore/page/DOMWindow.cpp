@@ -82,6 +82,7 @@
 #include "PageTransitionEvent.h"
 #include "Performance.h"
 #include "PlatformScreen.h"
+#include "ReplayableTimer.h"
 #include "RuntimeEnabledFeatures.h"
 #include "ScheduledAction.h"
 #include "Screen.h"
@@ -119,10 +120,11 @@
 
 namespace WebCore {
 
-class PostMessageTimer : public TimerBase {
+class PostMessageTimer : public ReplayableTimerBase {
 public:
     PostMessageTimer(DOMWindow* window, PassRefPtr<SerializedScriptValue> message, const String& sourceOrigin, PassRefPtr<DOMWindow> source, PassOwnPtr<MessagePortChannelArray> channels, SecurityOrigin* targetOrigin, PassRefPtr<ScriptCallStack> stackTrace)
-        : m_window(window)
+        : ReplayableTimerBase(window ? window->document() : nullptr)
+        , m_window(window)
         , m_message(message)
         , m_origin(sourceOrigin)
         , m_source(source)

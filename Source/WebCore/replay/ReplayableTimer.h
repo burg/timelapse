@@ -87,6 +87,12 @@ protected:
 
 #else // !ENABLE(WEB_REPLAY)
 
+// Preserve API compatibility with custom timer subclasses that should be deterministic.
+class ReplayableTimerBase : public TimerBase {
+public:
+    ReplayableTimerBase(Document*) { }
+};
+
 // This is the same definition as in Timer.h, but takes a Document argument
 // so that clients need not manually instantiate different Timers based on guards.
 template <typename TimerFiredClass> class ReplayableTimer : public TimerBase {
