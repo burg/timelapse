@@ -38,6 +38,7 @@
 #include "IconURL.h"
 #include "LayoutMilestones.h"
 #include "MixedContentChecker.h"
+#include "ReplayableTimer.h"
 #include "ResourceHandleTypes.h"
 #include "ResourceLoadNotifier.h"
 #include "SecurityContext.h"
@@ -295,7 +296,7 @@ private:
 
     bool allChildrenAreComplete() const; // immediate children, not all descendants
 
-    void checkTimerFired(Timer<FrameLoader>*);
+    void checkTimerFired(ReplayableTimer<FrameLoader>*);
     
     void loadSameDocumentItem(HistoryItem*);
     void loadDifferentDocumentItem(HistoryItem*, FrameLoadType, FormSubmissionCacheLoadPolicy);
@@ -425,7 +426,7 @@ private:
 
     URL m_submittedFormURL;
 
-    Timer<FrameLoader> m_checkTimer;
+    ReplayableTimer<FrameLoader> m_checkTimer;
     bool m_shouldCallCheckCompleted;
     bool m_shouldCallCheckLoadComplete;
 
