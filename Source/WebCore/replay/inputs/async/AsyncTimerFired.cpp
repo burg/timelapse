@@ -33,9 +33,10 @@
 #if ENABLE(WEB_REPLAY)
 
 #include "DecoderContext.h"
+#include "Document.h"
 #include "EncoderContext.h"
 #include "Page.h"
-#include "ReplayableTimer.h"
+#include "ReplayableTimers.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include <wtf/replay/NondeterministicInput.h>
@@ -43,8 +44,9 @@
 
 namespace WebCore {
 
-AsyncTimerFired::AsyncTimerFired(unsigned long identifier)
-    : m_identifier(identifier)
+AsyncTimerFired::AsyncTimerFired(int frameIndex, unsigned int identifier)
+    : m_frameIndex(frameIndex)
+    , m_identifier(identifier)
 {
 }
 
@@ -55,30 +57,33 @@ const AtomicString& AsyncTimerFired::type() const
 
 String AsyncTimerFired::toString() const
 {
-    return makeString("AsyncTimerFired(_/", String::number(m_identifier), ")");
+    return makeString("AsyncTimerFired(", String::number(m_frameIndex), "/", String::number(m_identifier), ")");
 }
 
 void AsyncTimerFired::dispatch(ReplayController& controller)
 {
-    ReplayableTimerBase* timer = controller.page().replayProxy().findTimer(m_identifier);
-    if (timer)
-        timer->fired();
-    else
-        LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find async timer _/%zu.\n", "[ReplayController]", m_identifier);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
+    if (!document || !document->replayableTimers().fireTimer(m_identifier))
+        LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find async timer %d/%u.\n", "[ReplayController]", m_frameIndex, m_identifier);
 }
 
 void InputCoder<AsyncTimerFired>::encode(EncoderContext& encoder, const AsyncTimerFired& input)
 {
+    encoder.put("frameIndex", input.frameIndex());
     encoder.put("identifier", input.identifier());
 }
 
 bool InputCoder<AsyncTimerFired>::decode(DecoderContext& decoder, std::unique_ptr<AsyncTimerFired>& input)
 {
-    unsigned long identifier;
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    unsigned int identifier;
     if (!decoder.get("identifier", identifier))
         return false;
 
-    input = std::make_unique<AsyncTimerFired>(identifier);
+    input = std::make_unique<AsyncTimerFired>(frameIndex, identifier);
     return true;
 }
 

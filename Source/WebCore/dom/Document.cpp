@@ -203,6 +203,10 @@
 #include "CaptionUserPreferences.h"
 #endif
 
+#if ENABLE(WEB_REPLAY)
+#include "ReplayableTimers.h"
+#endif
+
 using namespace WTF;
 using namespace Unicode;
 
@@ -471,6 +475,7 @@ Document::Document(Frame* frame, const URL& url, unsigned documentClasses)
 #endif
 #if ENABLE(WEB_REPLAY)
     , m_inputIterator(nullptr)
+    , m_replayableTimers(std::make_unique<ReplayableTimers>())
 #endif
     , m_didAssociateFormControlsTimer(this, &Document::didAssociateFormControlsTimerFired)
     , m_hasInjectedPlugInsScript(false)

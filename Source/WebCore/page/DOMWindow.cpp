@@ -123,7 +123,7 @@ namespace WebCore {
 class PostMessageTimer : public ReplayableTimerBase {
 public:
     PostMessageTimer(DOMWindow* window, PassRefPtr<SerializedScriptValue> message, const String& sourceOrigin, PassRefPtr<DOMWindow> source, PassOwnPtr<MessagePortChannelArray> channels, SecurityOrigin* targetOrigin, PassRefPtr<ScriptCallStack> stackTrace)
-        : ReplayableTimerBase(window ? window->document() : nullptr)
+        : ReplayableTimerBase()
         , m_window(window)
         , m_message(message)
         , m_origin(sourceOrigin)
@@ -139,6 +139,13 @@ public:
         OwnPtr<MessagePortArray> messagePorts = MessagePort::entanglePorts(*context, m_channels.release());
         return MessageEvent::create(messagePorts.release(), m_message, m_origin, String(), m_source);
     }
+
+    void startOneShot(double interval)
+    {
+        ASSERT(m_window);
+        ReplayableTimerBase::startOneShot(interval, m_window->document());
+    }
+
     SecurityOrigin* targetOrigin() const { return m_targetOrigin.get(); }
     ScriptCallStack* stackTrace() const { return m_stackTrace.get(); }
 

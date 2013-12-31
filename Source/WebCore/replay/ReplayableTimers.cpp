@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +27,61 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AsyncTimerFired_h
-#define AsyncTimerFired_h
+#include "config.h"
+#include "ReplayableTimers.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "EventLoopInput.h"
-#include "InputCoder.h"
+#include "ReplayableTimer.h"
+#include "Logging.h"
 
 namespace WebCore {
 
-class ReplayController;
+ReplayableTimers::ReplayableTimers()
+    : m_map(TimerMap())
+    , m_nextIdentifier(1)
+{
+}
 
-class AsyncTimerFired : public EventLoopInput {
-public:
-    AsyncTimerFired(int frameIndex, unsigned int identifier);
-    virtual ~AsyncTimerFired() { }
+ReplayableTimers::~ReplayableTimers()
+{
+}
 
-    int frameIndex() const { return m_frameIndex; }
-    unsigned int identifier() const { return m_identifier; }
+unsigned int ReplayableTimers::registerTimer(ReplayableTimerBase* timer)
+{
+    ASSERT(timer);
 
-    // EventLoopInput API
-    virtual void dispatch(ReplayController&);
+    bool needsNewIdentifier = false;
+    if (!timer->identifier())
+        needsNewIdentifier = true;
+    else {
+        TimerMap::const_iterator it = m_map.find(timer->identifier());
+        needsNewIdentifier |= it == m_map.end() || it->value != timer;
+    }
 
-    // NondeterministicInput API
-    virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const;
-    size_t memorySize() const OVERRIDE { return sizeof(AsyncTimerFired); }
+    if (!needsNewIdentifier)
+        return timer->identifier();
 
-private:
-    int m_frameIndex;
-    unsigned int m_identifier;
-};
+    unsigned long identifier = m_nextIdentifier++;
+    TimerMap::AddResult result = m_map.set(identifier, timer);
+    ASSERT_UNUSED(result, result.isNewEntry);
 
-template<> struct InputCoder<AsyncTimerFired> {
-    static void encode(EncoderContext&, const AsyncTimerFired& input);
-    static bool decode(DecoderContext&, std::unique_ptr<AsyncTimerFired>& input);
-};
+    LOG(DeterministicReplay, "%-20s Registering async timer %p/%zu.\n", "ReplayableTimers", (void*)this, identifier);
+    return identifier;
+}
+
+bool ReplayableTimers::fireTimer(unsigned int identifier)
+{
+    ASSERT(identifier);
+
+    TimerMap::iterator result = m_map.find(identifier);
+    if (result == m_map.end())
+        return false;
+
+    result->value->fired();
+    return true;
+}
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // AsyncTimerFired_h

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +27,34 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AsyncTimerFired_h
-#define AsyncTimerFired_h
+#ifndef ReplayableTimers_h
+#define ReplayableTimers_h
 
 #if ENABLE(WEB_REPLAY)
 
-#include "EventLoopInput.h"
-#include "InputCoder.h"
+#include <wtf/HashMap.h>
+#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
-class ReplayController;
+class ReplayableTimerBase;
 
-class AsyncTimerFired : public EventLoopInput {
+class ReplayableTimers {
+    WTF_MAKE_NONCOPYABLE(ReplayableTimers);
 public:
-    AsyncTimerFired(int frameIndex, unsigned int identifier);
-    virtual ~AsyncTimerFired() { }
+    ReplayableTimers();
+    virtual ~ReplayableTimers();
 
-    int frameIndex() const { return m_frameIndex; }
-    unsigned int identifier() const { return m_identifier; }
-
-    // EventLoopInput API
-    virtual void dispatch(ReplayController&);
-
-    // NondeterministicInput API
-    virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const;
-    size_t memorySize() const OVERRIDE { return sizeof(AsyncTimerFired); }
-
+    unsigned int registerTimer(ReplayableTimerBase*);
+    bool fireTimer(unsigned int identifier);
 private:
-    int m_frameIndex;
-    unsigned int m_identifier;
-};
-
-template<> struct InputCoder<AsyncTimerFired> {
-    static void encode(EncoderContext&, const AsyncTimerFired& input);
-    static bool decode(DecoderContext&, std::unique_ptr<AsyncTimerFired>& input);
+    typedef HashMap<unsigned int, ReplayableTimerBase*> TimerMap;
+    TimerMap m_map;
+    unsigned int m_nextIdentifier;
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 
-#endif // AsyncTimerFired_h
+#endif // ReplayableTimers_h

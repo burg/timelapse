@@ -31,7 +31,6 @@
 #define ReplayProxy_h
 
 #include "ScrollTypes.h"
-#include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 
 #if ENABLE(PAGE_VISIBILITY_API)
@@ -47,7 +46,6 @@ class Page;
 class PlatformKeyboardEvent;
 class PlatformMouseEvent;
 class PlatformWheelEvent;
-class ReplayableTimerBase;
 class ReplayController;
 class ResourceLoader;
 class ResourceRequest;
@@ -71,13 +69,6 @@ public:
     unsigned long createUniqueIdentifier();
     // This is used to find differing ResourceRequest details during replay.
     unsigned long createUniqueIdentifierWithRequest(const ResourceRequest&);
-
-#if ENABLE(WEB_REPLAY)
-    // Async APIs.
-    unsigned long registerTimer(ReplayableTimerBase*);
-    void unregisterTimer(ReplayableTimerBase*);
-    ReplayableTimerBase* findTimer(unsigned long identifier);
-#endif
 
     // User input APIs.
     bool handleContextMenuEvent(const PlatformMouseEvent&, const Frame*, bool fromReplay = false);
@@ -109,13 +100,6 @@ private:
 
     // For numbering resource loaders.
     unsigned long m_nextUniqueIdentifier;
-
-#if ENABLE(WEB_REPLAY)
-    // For numbering timers.
-    unsigned long m_nextTimerIdentifier;
-    typedef HashMap<unsigned long, ReplayableTimerBase*> TimerMap;
-    TimerMap m_timerMap;
-#endif
 };
 
 } // namespace WebCore

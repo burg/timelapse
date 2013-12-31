@@ -5349,6 +5349,8 @@
 		C4CA5C031829C173002C2A3F /* ReplayProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CA5C011829C173002C2A3F /* ReplayProxy.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C4CD629A18383766007EBAF1 /* FrameSnapshotting.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CD629818383766007EBAF1 /* FrameSnapshotting.cpp */; };
 		C4CD629B18383766007EBAF1 /* FrameSnapshotting.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CD629918383766007EBAF1 /* FrameSnapshotting.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C4CF82D71870ADC5007A6ADB /* ReplayableTimers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CF82D51870ADC5007A6ADB /* ReplayableTimers.cpp */; };
+		C4CF82D81870ADC5007A6ADB /* ReplayableTimers.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CF82D61870ADC5007A6ADB /* ReplayableTimers.h */; };
 		C4D8039118208D85003B3050 /* AllReplayInputs.h in Headers */ = {isa = PBXBuildFile; fileRef = C4D8039018208D85003B3050 /* AllReplayInputs.h */; };
 		C4D8039418209DD3003B3050 /* TryClosePage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4D8039218209DD3003B3050 /* TryClosePage.cpp */; };
 		C4D8039518209DD3003B3050 /* TryClosePage.h in Headers */ = {isa = PBXBuildFile; fileRef = C4D8039318209DD3003B3050 /* TryClosePage.h */; };
@@ -12535,6 +12537,8 @@
 		C4CA5C011829C173002C2A3F /* ReplayProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayProxy.h; path = replay/ReplayProxy.h; sourceTree = "<group>"; };
 		C4CD629818383766007EBAF1 /* FrameSnapshotting.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameSnapshotting.cpp; sourceTree = "<group>"; };
 		C4CD629918383766007EBAF1 /* FrameSnapshotting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FrameSnapshotting.h; sourceTree = "<group>"; };
+		C4CF82D51870ADC5007A6ADB /* ReplayableTimers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayableTimers.cpp; path = replay/ReplayableTimers.cpp; sourceTree = "<group>"; };
+		C4CF82D61870ADC5007A6ADB /* ReplayableTimers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayableTimers.h; path = replay/ReplayableTimers.h; sourceTree = "<group>"; };
 		C4D8039018208D85003B3050 /* AllReplayInputs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AllReplayInputs.h; sourceTree = "<group>"; };
 		C4D8039218209DD3003B3050 /* TryClosePage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TryClosePage.cpp; path = navigation/TryClosePage.cpp; sourceTree = "<group>"; };
 		C4D8039318209DD3003B3050 /* TryClosePage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TryClosePage.h; path = navigation/TryClosePage.h; sourceTree = "<group>"; };
@@ -20564,6 +20568,8 @@
 				C41D354C1711F57A00E40FB7 /* InputStorage.h */,
 				C48A2523185E32FF00EE76D4 /* ReplayableTimer.cpp */,
 				C48A2522185E32FF00EE76D4 /* ReplayableTimer.h */,
+				C4CF82D51870ADC5007A6ADB /* ReplayableTimers.cpp */,
+				C4CF82D61870ADC5007A6ADB /* ReplayableTimers.h */,
 				C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */,
 				C4F7F93D17060151005AB205 /* ReplayAgentStateMachine.h */,
 				C48108D217052FF100AB4BAA /* ReplayController.cpp */,
@@ -24208,6 +24214,7 @@
 				B2FA3D570AB75A6F000E5AC4 /* JSSVGAnimationElement.h in Headers */,
 				B2FA3D590AB75A6F000E5AC4 /* JSSVGCircleElement.h in Headers */,
 				B2FA3D5B0AB75A6F000E5AC4 /* JSSVGClipPathElement.h in Headers */,
+				C4CF82D81870ADC5007A6ADB /* ReplayableTimers.h in Headers */,
 				076306D817E149D0005A7C4E /* SourceInfo.h in Headers */,
 				B2FA3D5D0AB75A6F000E5AC4 /* JSSVGColor.h in Headers */,
 				B2FA3D5F0AB75A6F000E5AC4 /* JSSVGComponentTransferFunctionElement.h in Headers */,
@@ -27311,6 +27318,7 @@
 				BC6090200E91B8EC000C68B5 /* JSEventTargetCustom.cpp in Sources */,
 				3314ACEB10892086000F0E56 /* JSExceptionBase.cpp in Sources */,
 				6EBF0E7612A9868800DB170A /* JSEXTDrawBuffers.cpp in Sources */,
+				C4CF82D71870ADC5007A6ADB /* ReplayableTimers.cpp in Sources */,
 				7728698314FD9ADA00F484DC /* JSEXTTextureFilterAnisotropic.cpp in Sources */,
 				BC00F0140E0A189500FD04E3 /* JSFile.cpp in Sources */,
 				2E3BC0CA117D3E0800B9409A /* JSFileError.cpp in Sources */,

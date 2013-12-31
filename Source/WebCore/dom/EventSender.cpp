@@ -33,7 +33,8 @@
 namespace WebCore {
 
 EventSender::EventSender(Document& document)
-    : m_timer(this, &EventSender::timerFired, &document)
+    : m_document(document)
+    , m_timer(this, &EventSender::timerFired)
 {
 }
 
@@ -42,7 +43,7 @@ void EventSender::dispatchEventSoon(EventSenderClient* sender, const AtomicStrin
     m_dispatchSoonList.append(std::make_pair(sender, eventName));
 
     if (!m_timer.isActive())
-        m_timer.startOneShot(0);
+        m_timer.startOneShot(0, &m_document);
 }
 
 void EventSender::cancelEventForSender(EventSenderClient* sender, const AtomicString& eventName)

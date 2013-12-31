@@ -190,6 +190,10 @@ class DOMSecurityPolicy;
 class FontLoader;
 #endif
 
+#if ENABLE(WEB_REPLAY)
+class ReplayableTimers;
+#endif
+
 typedef int ExceptionCode;
 
 #if ENABLE(IOS_TEXT_AUTOSIZING)
@@ -422,6 +426,7 @@ public:
 #if ENABLE(WEB_REPLAY)
     InputIterator* inputIterator() const { return m_inputIterator; }
     void setInputIterator(InputIterator* iterator) { m_inputIterator = iterator; }
+    ReplayableTimers& replayableTimers() const { return *m_replayableTimers; }
 #endif
 
     virtual URL baseURI() const OVERRIDE;
@@ -1579,6 +1584,7 @@ private:
 
 #if ENABLE(WEB_REPLAY)
     InputIterator* m_inputIterator;
+    std::unique_ptr<ReplayableTimers> m_replayableTimers;
 #endif
 
     Timer<Document> m_didAssociateFormControlsTimer;

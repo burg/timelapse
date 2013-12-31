@@ -329,7 +329,7 @@ EventHandler::EventHandler(Frame& frame)
     , m_autoscrollController(adoptPtr(new AutoscrollController))
     , m_mouseDownMayStartAutoscroll(false)
     , m_mouseDownWasInSubframe(false)
-    , m_fakeMouseMoveEventTimer(this, &EventHandler::fakeMouseMoveEventTimerFired, frame.document())
+    , m_fakeMouseMoveEventTimer(this, &EventHandler::fakeMouseMoveEventTimerFired)
 #if ENABLE(SVG)
     , m_svgPan(false)
 #endif
@@ -2743,10 +2743,10 @@ void EventHandler::dispatchFakeMouseMoveEventSoon()
     if (m_maxMouseMovedDuration > fakeMouseMoveDurationThreshold) {
         if (m_fakeMouseMoveEventTimer.isActive())
             m_fakeMouseMoveEventTimer.stop();
-        m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveLongInterval);
+        m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveLongInterval, m_frame.document());
     } else {
         if (!m_fakeMouseMoveEventTimer.isActive())
-            m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveShortInterval);
+            m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveShortInterval, m_frame.document());
     }
 }
 

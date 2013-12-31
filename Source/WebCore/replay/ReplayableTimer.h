@@ -29,16 +29,12 @@
 
 #include "Timer.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/Threading.h>
-#include <wtf/Vector.h>
 #include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
 
-class AsyncTimerFired;
 class Document;
-
-// Time intervals are all in seconds.
+class ReplayableTimers;
 
 #if ENABLE(WEB_REPLAY)
 
@@ -46,35 +42,34 @@ class ReplayableTimerBase {
     WTF_MAKE_NONCOPYABLE(ReplayableTimerBase);
     WTF_FASTMALLOC_OPERATORS;
 
-friend class AsyncTimerFired;
+friend class ReplayableTimers;
 
 public:
-    ReplayableTimerBase(Document*);
+    ReplayableTimerBase();
     virtual ~ReplayableTimerBase();
 
-    void startOneShot(double interval);
+    void startOneShot(double interval, Document* document = nullptr);
     void stop();
-    bool isActive() const;
 
-    unsigned long identifier() const { return m_identifier; }
+    bool isActive() const { return m_document; }
+    unsigned int identifier() const { return m_identifier; }
 protected:
     virtual void fired() =0;
 private:
     void timerFired(Timer<ReplayableTimerBase>*);
-    InputIterator* inputIterator() const;
 
     Timer<ReplayableTimerBase> m_timer;
-    unsigned long m_identifier;
     Document* m_document;
-    bool m_isActive;
+    // Identifier is zero until the first startOneShot() is requested.
+    unsigned int m_identifier;
 };
 
 template <typename TimerFiredClass> class ReplayableTimer : public ReplayableTimerBase {
 public:
     typedef void (TimerFiredClass::*TimerFiredFunction)(ReplayableTimer*);
 
-    ReplayableTimer(TimerFiredClass* o, TimerFiredFunction f, Document* document)
-        : ReplayableTimerBase(document)
+    ReplayableTimer(TimerFiredClass* o, TimerFiredFunction f)
+        : ReplayableTimerBase()
         , m_object(o)
         , m_function(f) { }
 
@@ -90,16 +85,19 @@ protected:
 // Preserve API compatibility with custom timer subclasses that should be deterministic.
 class ReplayableTimerBase : public TimerBase {
 public:
-    ReplayableTimerBase(Document*) { }
+    void startOneShot(double interval, Document*)
+    {
+        TimerBase::startOneShot(interval);
+    }
 };
 
-// This is the same definition as in Timer.h, but takes a Document argument
+// This is the same definition as in Timer.h, but takes arguments
 // so that clients need not manually instantiate different Timers based on guards.
-template <typename TimerFiredClass> class ReplayableTimer : public TimerBase {
+template <typename TimerFiredClass> class ReplayableTimer : public ReplayableTimerBase {
 public:
     typedef void (TimerFiredClass::*TimerFiredFunction)(ReplayableTimer*);
 
-    ReplayableTimer(TimerFiredClass* o, TimerFiredFunction f, Document*)
+    ReplayableTimer(TimerFiredClass* o, TimerFiredFunction f)
         : m_object(o), m_function(f) { }
 
 private:

@@ -35,7 +35,7 @@ namespace WebCore {
 
 ScriptRunner::ScriptRunner(Document& document)
     : m_document(document)
-    , m_timer(this, &ScriptRunner::timerFired, &document)
+    , m_timer(this, &ScriptRunner::timerFired)
 {
 }
 
@@ -79,7 +79,7 @@ void ScriptRunner::suspend()
 void ScriptRunner::resume()
 {
     if (hasPendingScripts())
-        m_timer.startOneShot(0);
+        m_timer.startOneShot(0, &m_document);
 }
 
 void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType executionType)
@@ -94,7 +94,7 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         ASSERT(!m_scriptsToExecuteInOrder.isEmpty());
         break;
     }
-    m_timer.startOneShot(0);
+    m_timer.startOneShot(0, &m_document);
 }
 
 void ScriptRunner::timerFired(ReplayableTimer<ScriptRunner>* timer)

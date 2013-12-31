@@ -31,69 +31,71 @@
 #include "AsyncTimerFired.h"
 #include "CaptureInputIterator.h"
 #include "Document.h"
-#include "Page.h"
-#include "ReplayProxy.h"
+#include "EventLoopInput.h"
+#include "Logging.h"
+#include "ReplayableTimers.h"
 #include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
 
-ReplayableTimerBase::ReplayableTimerBase(Document* document)
+ReplayableTimerBase::ReplayableTimerBase()
     : m_timer(this, &ReplayableTimerBase::timerFired)
-    , m_document(document)
-    , m_isActive(false)
+    , m_document(nullptr)
+    , m_identifier(0)
 {
-    if (document && document->page())
-    m_identifier = (document && document->page()) ? document->page()->replayProxy().registerTimer(this) : 0;
 }
 
 ReplayableTimerBase::~ReplayableTimerBase()
 {
-    if (!m_document || !m_document->page())
-        return;
-
-    m_document->page()->replayProxy().unregisterTimer(this);
 }
 
 void ReplayableTimerBase::timerFired(Timer<ReplayableTimerBase>*)
 {
-    InputIterator* it = inputIterator();
-    if (it && it->isCapturing()) {
-        it->storeInput(std::make_unique<AsyncTimerFired>(m_identifier));
+    LOG(DeterministicReplay, "ReplayableTimer(%p)::timerFired m_document=%p", (void*)this, (void*)m_document);
+
+    ASSERT(m_document);
+    Document* document = m_document;
+    m_document = nullptr;
+
+    InputIterator* it = document->inputIterator();
+    if (!it)
+        fired();
+    else if (it->isCapturing()) {
+        it->storeInput(std::make_unique<AsyncTimerFired>(frameIndexFromDocument(document), m_identifier));
         EventLoopInputExtent extent(it);
         fired();
     }
-
-    m_isActive = false;
 }
 
-void ReplayableTimerBase::startOneShot(double interval)
+void ReplayableTimerBase::startOneShot(double interval, Document* document)
 {
-    if (inputIterator() && inputIterator()->isCapturing())
-        m_timer.startOneShot(interval);
+    LOG(DeterministicReplay, "ReplayableTimer(%p)::startOneShot interval=%f, document=%p", (void*)this, interval, (void*)document);
 
-    m_isActive = true;
+    ASSERT(document);
+    m_document = document;
+    // Reassign identifier on every request. It will be a new identifier
+    // if the document's timer map has never seen this timer before.
+    m_identifier = document->replayableTimers().registerTimer(this);
+
+    InputIterator* it = document->inputIterator();
+    if (!it || it->isCapturing())
+        m_timer.startOneShot(interval);
 }
 
 void ReplayableTimerBase::stop()
 {
-    if (inputIterator() && inputIterator()->isCapturing())
+    LOG(DeterministicReplay, "ReplayableTimer(%p)::stop m_document=%p", (void*)this, (void*)m_document);
+
+    if (!m_document) {
+        m_timer.stop();
+        return;
+    }
+
+    InputIterator* it = m_document->inputIterator();
+    if (!it || it->isCapturing())
         m_timer.stop();
 
-    m_isActive = false;
-}
-
-bool ReplayableTimerBase::isActive() const
-{
-    InputIterator* it = inputIterator();
-    if (!it || (it && it->isCapturing()))
-        return m_timer.isActive();
-
-    return m_isActive;
-}
-
-InputIterator* ReplayableTimerBase::inputIterator() const
-{
-    return m_document ? m_document->inputIterator() : nullptr;
+    m_document = nullptr;
 }
 
 } // namespace WebCore

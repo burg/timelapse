@@ -49,6 +49,7 @@ public:
 private:
     void timerFired(ReplayableTimer<EventSender>*);
 
+    Document& m_document;
     ReplayableTimer<EventSender> m_timer;
 
     Vector<std::pair<EventSenderClient*, AtomicString>> m_dispatchSoonList;
