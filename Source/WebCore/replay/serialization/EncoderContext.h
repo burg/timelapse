@@ -34,6 +34,7 @@
 
 #include "InputCoder.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/replay/NondeterministicInput.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -52,6 +53,8 @@ public:
     // Templatized interface to encode values succinctly.
     template<typename T> void put(const String&, const T&);
     template<typename T> void append(const T&);
+
+    bool encodeInput(const NondeterministicInput*);
 
 protected:
     // Virtual methods to be overridden by the specific encoder context.

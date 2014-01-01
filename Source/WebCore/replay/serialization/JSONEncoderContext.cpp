@@ -32,11 +32,9 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "AllReplayInputs.h"
+#include "EventLoopInput.h"
 #include "FunctorInputIterator.h"
-#include "JavaScriptCoreInputCoders.h"
 #include "Logging.h"
-#include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
 #include <inspector/InspectorValues.h>
 #include <wtf/RefPtr.h>
@@ -55,38 +53,6 @@ static const char* queueTypeToString(NondeterministicInput::QueueType queue)
 }
 
 namespace WebCore {
-
-static bool dispatchTypeSpecificEncodeMethod(EncoderContext& encoder, const NondeterministicInput* input)
-{
-    const AtomicString& type = input->type();
-
-#define INPUT_SPECIFIC_DISPATCH_CHECK(name) \
-    if (type == inputTypes().name) { \
-        InputCoder<name>::encode(encoder, *(static_cast<const name*>(input))); \
-        return true; \
-    } \
-
-    REPLAY_INPUT_TYPES_FOR_EACH(INPUT_SPECIFIC_DISPATCH_CHECK)
-
-    // We must hardcode these cases because they aren't macro-friendly.
-    // Make sure they match the special cases as defined in ReplayInputTypes.h.
-    INPUT_SPECIFIC_DISPATCH_CHECK(GetCurrentTime)
-#if PLATFORM(MAC)
-    INPUT_SPECIFIC_DISPATCH_CHECK(InterpretedKeyCommands)
-#endif
-    INPUT_SPECIFIC_DISPATCH_CHECK(SetRandomSeed)
-
-#undef INPUT_SPECIFIC_DISPATCH_CHECK
-
-    if (type == inputTypes().AutoMemoized) {
-        static_cast<const AutoMemoizedBase*>(input)->encode(encoder);
-        return true;
-    }
-
-    // FIXME: disambiguate AutoMemoized encode methods based on the serialized ctype.
-    // https://github.com/burg/timelapse/issues/277
-    return false;
-}
 
 JSONMapEncoder::JSONMapEncoder()
     : m_object(Inspector::InspectorObject::create())
@@ -251,7 +217,7 @@ PassRefPtr<Inspector::TypeBuilder::Replay::ReplayInput> JSONCoder::serializeInpu
         static_cast<const EventLoopInput*>(input)->serializeDispatchInfo(*encodedInput);
 
     // Abort if we couldn't perform type-specific encoding based on the tag.
-    if (!dispatchTypeSpecificEncodeMethod(*encodedInput, input))
+    if (!encodedInput->encodeInput(input))
         return 0;
 
     RefPtr<Inspector::TypeBuilder::Replay::ReplayInput> serializedInput = Inspector::TypeBuilder::Replay::ReplayInput::create()

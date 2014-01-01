@@ -32,7 +32,43 @@
 
 #if ENABLE(WEB_REPLAY)
 
+#include "AllReplayInputs.h"
+#include "JavaScriptCoreInputCoders.h"
+#include "ReplayInputTypes.h"
+
 namespace WebCore {
+
+bool EncoderContext::encodeInput(const NondeterministicInput* input)
+{
+    const AtomicString& type = input->type();
+
+#define INPUT_SPECIFIC_DISPATCH_CHECK(name) \
+    if (type == inputTypes().name) { \
+        InputCoder<name>::encode(*this, *(static_cast<const name*>(input))); \
+        return true; \
+    } \
+
+    REPLAY_INPUT_TYPES_FOR_EACH(INPUT_SPECIFIC_DISPATCH_CHECK)
+
+    // We must hardcode these cases because they aren't macro-friendly.
+    // Make sure they match the special cases as defined in ReplayInputTypes.h.
+    INPUT_SPECIFIC_DISPATCH_CHECK(GetCurrentTime)
+#if PLATFORM(MAC)
+    INPUT_SPECIFIC_DISPATCH_CHECK(InterpretedKeyCommands)
+#endif
+    INPUT_SPECIFIC_DISPATCH_CHECK(SetRandomSeed)
+
+#undef INPUT_SPECIFIC_DISPATCH_CHECK
+
+    if (type == inputTypes().AutoMemoized) {
+        static_cast<const AutoMemoizedBase*>(input)->encode(*this);
+        return true;
+    }
+
+    // FIXME: disambiguate AutoMemoized encode methods based on the serialized ctype.
+    // https://github.com/burg/timelapse/issues/277
+    return false;
+}
 
 void EncoderContext::putBoolean(const String&, bool)
 {
