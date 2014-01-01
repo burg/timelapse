@@ -54,7 +54,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE { return String("DisableCache"); }
-    virtual size_t memorySize() const OVERRIDE { return sizeof(DisableCache); }
 };
 
 template<> struct InputCoder<DisableCache> {

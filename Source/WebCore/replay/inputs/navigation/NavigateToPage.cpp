@@ -84,14 +84,6 @@ String NavigateToPage::toString() const
     return sb.toString();
 }
 
-size_t NavigateToPage::memorySize() const
-{
-    size_t size = sizeof(NavigateToPage);
-    size += (!m_url.isEmpty()) ? m_url.impl()->cost() : 0;
-    size += (!m_referrer.isEmpty()) ? m_referrer.impl()->cost() : 0;
-    return size;
-}
-
 void InputCoder<SecurityOrigin>::encode(EncoderContext& encoder, const SecurityOrigin& input)
 {
     encoder.put("origin", input.toString());

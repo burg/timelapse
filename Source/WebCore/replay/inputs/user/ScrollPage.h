@@ -64,7 +64,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE { return sizeof(ScrollPage); }
 
     bool isLogicalScroll() const { return m_isLogicalScroll; }
     ScrollDirection scrollDirection() const { ASSERT(!isLogicalScroll()); return m_direction.normal; }

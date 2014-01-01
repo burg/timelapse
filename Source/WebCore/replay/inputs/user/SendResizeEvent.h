@@ -44,17 +44,16 @@ public:
     SendResizeEvent(int width, int height, int frameIndex);
     virtual ~SendResizeEvent() { }
 
-    int width() const { return m_width; }
-    int height() const { return m_height; }
-    int frameIndex() const { return m_frameIndex; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE { return sizeof(SendResizeEvent); }
+
+    int width() const { return m_width; }
+    int height() const { return m_height; }
+    int frameIndex() const { return m_frameIndex; }
 private:
     int m_width;
     int m_height;

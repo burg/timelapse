@@ -53,7 +53,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE { return String("TryClosePage"); }
-    virtual size_t memorySize() const OVERRIDE { return sizeof(TryClosePage); }
 };
 
 template<> struct InputCoder<TryClosePage> {

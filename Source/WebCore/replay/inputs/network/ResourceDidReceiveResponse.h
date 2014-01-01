@@ -53,7 +53,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE;
 
     const ResourceResponse& response() const { return *m_response; }
 private:

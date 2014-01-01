@@ -46,16 +46,14 @@ public:
         : m_toState(toState) { }
     virtual ~FocusSetActive() { }
 
-    bool toState() const { return m_toState; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE { return sizeof(FocusSetActive); }
 
+    bool toState() const { return m_toState; }
 private:
     bool m_toState;
 };

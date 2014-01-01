@@ -71,11 +71,6 @@ String ResourceDidSendData::toString() const
     return sb.toString();
 }
 
-size_t ResourceDidSendData::memorySize() const
-{
-    return sizeof(ResourceDidSendData);
-}
-
 void InputCoder<ResourceDidSendData>::encode(EncoderContext& encoder, const ResourceDidSendData& input)
 {
     encoder.put("identifier", input.identifier());

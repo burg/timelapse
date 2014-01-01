@@ -77,12 +77,6 @@ String ResourceLoaderCreated::toString() const
     return builder.toString();
 }
 
-size_t ResourceLoaderCreated::memorySize() const
-{
-    // Copied from ResourceResponse::memoryUsage().
-    return sizeof(ResourceLoaderCreated) + 1280 + 256;
-}
-
 void InputCoder<ResourceLoaderCreated>::encode(EncoderContext& encoder, const ResourceLoaderCreated& input)
 {
     encoder.put("identifier", input.identifier());

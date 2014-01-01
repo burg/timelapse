@@ -106,15 +106,6 @@ String HandleKeyPress::toString() const
     return sb.toString();
 }
 
-size_t HandleKeyPress::memorySize() const
-{
-    size_t size = sizeof(HandleKeyPress);
-    size += (!m_platformEvent.text().isEmpty()) ? m_platformEvent.text().impl()->cost() : 0;
-    size += (!m_platformEvent.unmodifiedText().isEmpty()) ? m_platformEvent.unmodifiedText().impl()->cost() : 0;
-    size += (!m_platformEvent.keyIdentifier().isEmpty()) ? m_platformEvent.keyIdentifier().impl()->cost() : 0;
-    return size;
-}
-
 void HandleKeyPress::dispatch(ReplayController& controller)
 {
     controller.page().replayProxy().handleKeyPressEvent(platformEvent(), true);

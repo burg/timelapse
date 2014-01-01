@@ -51,7 +51,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE { return sizeof(ReloadFrame); }
 
     int frameIndex() const { return m_frameIndex; }
     bool endToEndReload() const { return m_endToEndReload; }

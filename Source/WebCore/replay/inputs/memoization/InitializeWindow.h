@@ -45,8 +45,8 @@ public:
     InitializeWindow(int width, int height)
         : m_width(width)
         , m_height(height) { }
-
     virtual ~InitializeWindow() { }
+    static std::unique_ptr<InitializeWindow> createFromPage(const Page&);
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -55,11 +55,9 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
 
     int width() const { return m_width; }
     int height() const { return m_height; }
-    static std::unique_ptr<InitializeWindow> createFromPage(const Page&);
 private:
     int m_width;
     int m_height;

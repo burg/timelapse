@@ -49,8 +49,6 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE;
-    void serialize(EncoderContext&) const;
 
     const Vector<KeypressCommand>& commands() const { return m_commands; }
 private:

@@ -83,15 +83,6 @@ String ResourceDidFail::toString() const
     return sb.toString();
 }
 
-size_t ResourceDidFail::memorySize() const
-{
-    size_t size = sizeof(ResourceDidFail);
-    size += !m_error.domain().isEmpty() ? m_error.domain().impl()->cost() : 0;
-    size += !m_error.failingURL().isEmpty() ? m_error.failingURL().impl()->cost() : 0;
-    size += !m_error.localizedDescription().isEmpty() ? m_error.localizedDescription().impl()->cost() : 0;
-    return size;
-}
-
 void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const ResourceDidFail& input)
 {
     encoder.put("identifier", input.identifier());

@@ -47,12 +47,10 @@ public:
 
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE { return sizeof(HandleMouseBase); }
 
     const PlatformMouseEvent& platformEvent() const { return m_platformEvent; }
     static String mouseButtonToString(MouseButton);
     static String mouseEventTypeToString(PlatformEvent::Type);
-
 private:
     PlatformMouseEvent m_platformEvent;
 };

@@ -43,7 +43,6 @@
             "properties": [
                 { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
                 { "name": "dateCreated", "type": "number", "description": "Creation time of recording, in milliseconds since the epoch." },
-                { "name": "memorySize", "type": "number", "description": "Approximate size of in-memory recording representation." },
                 { "name": "queues", "type": "array", "items": { "$ref": "ReplayInputQueue"} }
             ],
             "description": "A replay recording serialized to JSON."

@@ -46,7 +46,6 @@ class PlaybackError : public EventLoopInput {
 public:
     PlaybackError(String errorMessage)
         : m_errorMessage(errorMessage) { }
-
     virtual ~PlaybackError() { }
 
     // EventLoopInput API
@@ -56,7 +55,6 @@ public:
 
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE { return sizeof(PlaybackError); }
 
     String errorMessage() const { return m_errorMessage; }
 private:

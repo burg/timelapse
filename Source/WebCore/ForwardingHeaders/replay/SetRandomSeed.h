@@ -30,6 +30,8 @@
 #ifndef SetRandomSeed_h
 #define SetRandomSeed_h
 
+#if ENABLE(WEB_REPLAY)
+
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace JSC {
@@ -44,14 +46,14 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE { return sizeof(SetRandomSeed); }
 
     uint64_t randomSeed() const { return m_randomSeed; }
-
 private:
     uint64_t m_randomSeed;
 };
 
 } // namespace JSC
+
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // SetRandomSeed_h

@@ -52,10 +52,8 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE;
 
     const PlatformWheelEvent& platformEvent() const { return m_platformEvent; }
-
 private:
     PlatformWheelEvent m_platformEvent;
 };

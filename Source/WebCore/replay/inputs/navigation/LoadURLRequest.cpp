@@ -80,12 +80,6 @@ String LoadURLRequest::toString() const
     return sb.toString();
 }
 
-size_t LoadURLRequest::memorySize() const
-{
-    // This is inaccurate, since we don't count the size of the request, origin, or substitute data.
-    return sizeof(LoadURLRequest);
-}
-
 void InputCoder<FrameLoadRequest>::encode(EncoderContext& encoder, const FrameLoadRequest& request)
 {
     encoder.put("securityOrigin", request.requester()->toString());

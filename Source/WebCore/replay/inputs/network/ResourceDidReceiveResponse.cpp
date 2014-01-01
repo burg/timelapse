@@ -79,11 +79,6 @@ String ResourceDidReceiveResponse::toString() const
     return sb.toString();
 }
 
-size_t ResourceDidReceiveResponse::memorySize() const
-{
-    return sizeof(ResourceDidReceiveResponse) + m_response->memoryUsage();
-}
-
 void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, const ResourceDidReceiveResponse& input)
 {
     encoder.put("identifier", input.identifier());

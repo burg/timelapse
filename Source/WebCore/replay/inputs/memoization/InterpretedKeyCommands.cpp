@@ -64,18 +64,6 @@ String InterpretedKeyCommands::toString() const
     return sb.toString();
 }
 
-size_t InterpretedKeyCommands::memorySize() const
-{
-    size_t size = sizeof(InterpretedKeyCommands);
-    for (size_t i = 0; i < m_commands.size(); i++) {
-        if (!m_commands[i].commandName.isEmpty())
-            size += m_commands[i].commandName.impl()->cost();
-        if (!m_commands[i].text.isEmpty())
-            size += m_commands[i].text.impl()->cost();
-    }
-    return size;
-}
-
 void InputCoder<InterpretedKeyCommands>::encode(EncoderContext& encoder, const InterpretedKeyCommands& input)
 {
     const Vector<KeypressCommand>& commands = input.commands();

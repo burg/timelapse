@@ -56,7 +56,6 @@ public:
     {
         return makeString("DOMTimerCreated(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
     }
-    size_t memorySize() const OVERRIDE { return sizeof(DOMTimerCreated); }
 
     int timerId() const { return m_timerId; }
     int frameIndex() const { return m_frameIndex; }

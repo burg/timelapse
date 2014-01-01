@@ -47,8 +47,8 @@ public:
         : m_focus(isFocused)
         , m_active(isActive)
         , m_frameIndex(frameIndex) { }
-
     virtual ~InitializeFocus() { }
+    static std::unique_ptr<InitializeFocus> createFromPage(const Page&);
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -57,12 +57,10 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE { return sizeof(InitializeFocus); }
 
     bool isFocused() const { return m_focus; }
     bool isActive() const { return m_active; }
     int frameIndex() const { return m_frameIndex; }
-    static std::unique_ptr<InitializeFocus> createFromPage(const Page&);
 private:
     bool m_focus;
     bool m_active;

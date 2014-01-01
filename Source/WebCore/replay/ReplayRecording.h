@@ -51,7 +51,6 @@ public:
 
     int uid() const { return m_uid; }
     double creationTimestamp() const { return m_timestamp; }
-    size_t memorySize();
 
     std::unique_ptr<CaptureInputIterator> createCaptureIterator(Page&);
     std::unique_ptr<ReplayInputIterator> createReplayIterator(Page&, EventLoopInputDispatcherClient*);

@@ -47,10 +47,6 @@ public:
     NavigateToPage(PassRefPtr<SecurityOrigin>, const String& url, const String& referrer);
     virtual ~NavigateToPage();
 
-    PassRefPtr<SecurityOrigin> securityOrigin() const;
-    const String& url() const { return m_url; }
-    const String& referrer() const { return m_referrer; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
@@ -58,8 +54,10 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE;
 
+    PassRefPtr<SecurityOrigin> securityOrigin() const;
+    const String& url() const { return m_url; }
+    const String& referrer() const { return m_referrer; }
 private:
     RefPtr<SecurityOrigin> m_securityOrigin;
     String m_url;

@@ -53,8 +53,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const;
-    size_t memorySize() const OVERRIDE { return sizeof(DOMTimerFired); }
-
 private:
     int m_timerId;
     int m_frameIndex;

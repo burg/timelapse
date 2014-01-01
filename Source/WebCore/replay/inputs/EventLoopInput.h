@@ -85,7 +85,6 @@ public:
 
     // NondeterministicInput
     virtual String toString() const =0;
-    virtual size_t memorySize() const =0;
 
     virtual void dispatch(ReplayController&) =0;
 

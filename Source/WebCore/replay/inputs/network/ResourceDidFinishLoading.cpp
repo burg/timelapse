@@ -70,11 +70,6 @@ String ResourceDidFinishLoading::toString() const
     return builder.toString();
 }
 
-size_t ResourceDidFinishLoading::memorySize() const
-{
-    return sizeof(ResourceDidFinishLoading);
-}
-
 void InputCoder<ResourceDidFinishLoading>::encode(EncoderContext& encoder, const ResourceDidFinishLoading& input)
 {
     encoder.put("identifier", input.identifier());

@@ -237,7 +237,6 @@ PassRefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> JSONCoder::serialize
     RefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> recordingObject = Inspector::TypeBuilder::Replay::ReplayRecording::create()
         .setUid(recording->uid())
         .setDateCreated(recording->creationTimestamp())
-        .setMemorySize(recording->memorySize())
         .setQueues(queues.release());
 
     return recordingObject;

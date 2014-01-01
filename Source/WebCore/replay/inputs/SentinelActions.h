@@ -54,7 +54,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE { return String("Begin"); }
-    size_t memorySize() const OVERRIDE { return sizeof(BeginSentinel); }
 };
 
 template<> struct InputCoder<BeginSentinel> {
@@ -75,7 +74,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE { return String("End"); }
-    size_t memorySize() const OVERRIDE { return sizeof(EndSentinel); }
 };
 
 template<> struct InputCoder<EndSentinel> {

@@ -30,6 +30,8 @@
 #ifndef GetCurrentTime_h
 #define GetCurrentTime_h
 
+#if ENABLE(WEB_REPLAY)
+
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace JSC {
@@ -44,14 +46,14 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE { return sizeof(GetCurrentTime); }
 
     double currentTime() const { return m_currentTime; }
-
 private:
     double m_currentTime;
 };
 
 } // namespace JSC
+
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // GetCurrentTime_h

@@ -50,10 +50,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE
-    {
-        return HandleMouseBase::memorySize() + (sizeof(HandleMouseMove) - sizeof(HandleMouseBase));
-    }
 
     bool scrollbarTargeted() const { return m_scrollbarTargeted; }
 

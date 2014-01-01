@@ -48,7 +48,6 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::LoaderMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE;
 
     unsigned long identifier() const { return m_identifier; }
     const ResourceRequest& request() const { return *m_request; }

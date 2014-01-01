@@ -134,11 +134,6 @@ void HandleWheelEvent::dispatch(ReplayController& controller)
     controller.page().replayProxy().handleWheelEvent(const_cast<PlatformWheelEvent&>(platformEvent()), true);
 }
 
-size_t HandleWheelEvent::memorySize() const
-{
-    return sizeof(HandleWheelEvent);
-}
-
 void InputCoder<PlatformWheelEvent>::encode(EncoderContext& encoder, const PlatformWheelEvent& input)
 {
     encoder.put("positionX", input.position().x());

@@ -67,7 +67,6 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE;
 private:
     String m_attribute;
     T m_result;
@@ -136,13 +135,6 @@ template<typename T> inline const AtomicString& AutoMemoized<T>::type() const
 template<typename T> inline String AutoMemoized<T>::toString() const
 {
     return makeString("AutoMemoized(attribute=", attributeName(), ";result=", resultString(), ")");
-}
-
-template<typename T> inline size_t AutoMemoized<T>::memorySize() const
-{
-    size_t size = sizeof(AutoMemoized);
-    size += m_attribute.impl()->cost();
-    return size;
 }
 
 template<typename T> inline void InputCoder<AutoMemoized<T> >::encode(EncoderContext& encoder, const AutoMemoized<T>& input)

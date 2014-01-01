@@ -48,17 +48,15 @@ public:
         , m_isInitialState(isInitialState) { }
     virtual ~SetPageVisibility() { }
 
-    PageVisibilityState visibilityState() const { return m_visibilityState; }
-    bool isInitialState() const { return m_isInitialState; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE { return sizeof(SetPageVisibility); }
 
+    PageVisibilityState visibilityState() const { return m_visibilityState; }
+    bool isInitialState() const { return m_isInitialState; }
 private:
     PageVisibilityState m_visibilityState;
     bool m_isInitialState;

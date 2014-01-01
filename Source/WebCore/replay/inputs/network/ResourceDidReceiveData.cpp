@@ -76,11 +76,6 @@ String ResourceDidReceiveData::toString() const
     return builder.toString();
 }
 
-size_t ResourceDidReceiveData::memorySize() const
-{
-    return sizeof(ResourceDidReceiveData) + m_buffer.size();
-}
-
 void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const ResourceDidReceiveData& input)
 {
     encoder.put("identifier", input.identifier());
