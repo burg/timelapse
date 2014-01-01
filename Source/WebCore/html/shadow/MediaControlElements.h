@@ -49,8 +49,10 @@ public:
     void makeOpaque();
     void makeTransparent();
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseMoveEvents() OVERRIDE { return true; }
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
 private:
     explicit MediaControlPanelElement(Document&);
@@ -112,7 +114,7 @@ private:
     explicit MediaControlTimelineContainerElement(Document&);
     virtual const AtomicString& shadowPseudoId() const OVERRIDE;
 
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
 };
 
 // ----------------------------
@@ -121,7 +123,9 @@ class MediaControlVolumeSliderContainerElement : public MediaControlDivElement {
 public:
     static PassRefPtr<MediaControlVolumeSliderContainerElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseMoveEvents() OVERRIDE { return true; }
+#endif
 
 private:
     explicit MediaControlVolumeSliderContainerElement(Document&);
@@ -129,7 +133,7 @@ private:
     virtual const AtomicString& shadowPseudoId() const OVERRIDE;
     virtual void defaultEventHandler(Event*) OVERRIDE;
 
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
 };
 
 // ----------------------------
@@ -154,7 +158,9 @@ class MediaControlPanelMuteButtonElement FINAL : public MediaControlMuteButtonEl
 public:
     static PassRefPtr<MediaControlPanelMuteButtonElement> create(Document&, MediaControls*);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseMoveEvents() OVERRIDE { return true; }
+#endif
 
 private:
     explicit MediaControlPanelMuteButtonElement(Document&, MediaControls*);
@@ -183,7 +189,10 @@ class MediaControlPlayButtonElement FINAL : public MediaControlInputElement {
 public:
     static PassRefPtr<MediaControlPlayButtonElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
+
     virtual void updateDisplayType() OVERRIDE;
 
 private:
@@ -240,7 +249,9 @@ class MediaControlRewindButtonElement : public MediaControlInputElement {
 public:
     static PassRefPtr<MediaControlRewindButtonElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
 private:
     explicit MediaControlRewindButtonElement(Document&);
@@ -255,7 +266,9 @@ class MediaControlReturnToRealtimeButtonElement : public MediaControlInputElemen
 public:
     static PassRefPtr<MediaControlReturnToRealtimeButtonElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
 private:
     explicit MediaControlReturnToRealtimeButtonElement(Document&);
@@ -270,7 +283,9 @@ class MediaControlToggleClosedCaptionsButtonElement FINAL : public MediaControlI
 public:
     static PassRefPtr<MediaControlToggleClosedCaptionsButtonElement> create(Document&, MediaControls*);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
     virtual void updateDisplayType() OVERRIDE;
 
@@ -291,7 +306,9 @@ class MediaControlClosedCaptionsContainerElement FINAL : public MediaControlDivE
 public:
     static PassRefPtr<MediaControlClosedCaptionsContainerElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
 private:
     MediaControlClosedCaptionsContainerElement(Document&);
@@ -304,7 +321,9 @@ class MediaControlClosedCaptionsTrackListElement FINAL : public MediaControlDivE
 public:
     static PassRefPtr<MediaControlClosedCaptionsTrackListElement> create(Document&, MediaControls*);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
     void updateDisplay();
 
@@ -331,7 +350,9 @@ class MediaControlTimelineElement FINAL : public MediaControlInputElement {
 public:
     static PassRefPtr<MediaControlTimelineElement> create(Document&, MediaControls*);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE;
+#endif
 
     void setPosition(double);
     void setDuration(double);
@@ -351,7 +372,9 @@ class MediaControlFullscreenButtonElement FINAL : public MediaControlInputElemen
 public:
     static PassRefPtr<MediaControlFullscreenButtonElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
     virtual void setIsFullscreen(bool);
 
@@ -389,7 +412,9 @@ class MediaControlFullscreenVolumeMinButtonElement : public MediaControlInputEle
 public:
     static PassRefPtr<MediaControlFullscreenVolumeMinButtonElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
 private:
     explicit MediaControlFullscreenVolumeMinButtonElement(Document&);
@@ -403,7 +428,9 @@ class MediaControlFullscreenVolumeMaxButtonElement : public MediaControlInputEle
 public:
     static PassRefPtr<MediaControlFullscreenVolumeMaxButtonElement> create(Document&);
 
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#endif
 
 private:
     explicit MediaControlFullscreenVolumeMaxButtonElement(Document&);
@@ -455,7 +482,7 @@ private:
     explicit MediaControlTextTrackContainerElement(Document&);
     virtual const AtomicString& shadowPseudoId() const OVERRIDE;
 
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
 
     virtual PassRefPtr<Image> createTextTrackRepresentationImage() OVERRIDE;
     virtual void textTrackRepresentationBoundsChanged(const IntRect&) OVERRIDE;

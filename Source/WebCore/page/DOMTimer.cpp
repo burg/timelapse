@@ -35,6 +35,14 @@
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 
+#if PLATFORM(IOS)
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "Frame.h"
+#include "Page.h"
+#include "WKContentObservation.h"
+#endif
+
 #if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
 #include "ReplayInputTypes.h"
@@ -161,7 +169,6 @@ DOMTimer::~DOMTimer()
 
 void DOMTimer::start(int interval, bool singleShot)
 {
-
     // Keep asking for the next id until we're given one that we don't already have.
     do {
         m_timeoutId = scriptExecutionContext()->circularSequentialID();
@@ -176,7 +183,7 @@ void DOMTimer::start(int interval, bool singleShot)
 
 int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int timeout, bool singleShot)
 {
-    DOMTimer* timer = 0;
+    DOMTimer* timer = nullptr;
 #if ENABLE(WEB_REPLAY)
     do {
         if (!context->isDocument())
@@ -195,6 +202,17 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     // DOMTimer::start() links the new timer into a list of ActiveDOMObjects held by the 'context'.
     // The timer is deleted when context is deleted (DOMTimer::contextDestroyed) or explicitly via DOMTimer::removeById(),
     // or if it is a one-time timer and it has fired (DOMTimer::fired).
+#if PLATFORM(IOS)
+    if (context->isDocument()) {
+        Document& document = toDocument(*context);
+        bool didDeferTimeout = document.frame() && document.frame()->timersPaused();
+        if (!didDeferTimeout && timeout <= 100 && singleShot) {
+            WKSetObservedContentChange(WKContentIndeterminateChange);
+            WebThreadAddObservedContentModifier(timer); // Will only take affect if not already visibility change.
+        }
+    }
+#endif
+
     timer->start(timeout, singleShot);
     timer->suspendIfNeeded();
     InspectorInstrumentation::didInstallTimer(context, timer->m_timeoutId, timeout, singleShot);
@@ -218,6 +236,14 @@ void DOMTimer::removeById(ScriptExecutionContext* context, int timeoutId)
 void DOMTimer::fired()
 {
     ScriptExecutionContext* context = scriptExecutionContext();
+    ASSERT(context);
+#if PLATFORM(IOS)
+    Document* document = nullptr;
+    if (!context->isDocument()) {
+        document = toDocument(context);
+        ASSERT(!document->frame()->timersPaused());
+    }
+#endif
     timerNestingLevel = m_nestingLevel;
     ASSERT(!isSuspended());
     ASSERT(!context->activeDOMObjectsAreSuspended());
@@ -233,7 +259,7 @@ void DOMTimer::fired()
         // if it is a non-one-shot timer. It will be cleaned by destroyContext().
         m_action->execute(context);
     } else if (isActive()) {
-    // For non-one-shot timers, update the interval and fire the action.
+        // For non-one-shot timers, update the interval and fire the action.
         double minimumInterval = context->minimumTimerInterval();
         if (repeatInterval() && repeatInterval() < minimumInterval) {
             m_nestingLevel++;
@@ -243,17 +269,50 @@ void DOMTimer::fired()
 
         // No access to member variables after this point, it can delete the timer.
         m_action->execute(context);
-    } else {
-        // Delete timer before executing the action for one-shot timers.
-        OwnPtr<ScheduledAction> action = m_action.release();
 
-        // No access to member variables after this point.
-        delete this;
-        action->execute(context);
-        timerNestingLevel = 0;
+        InspectorInstrumentation::didFireTimer(cookie);
+
+        return;
     }
 
+    // Delete timer before executing the action for one-shot timers.
+    OwnPtr<ScheduledAction> action = m_action.release();
+
+    // No access to member variables after this point.
+    delete this;
+
+#if PLATFORM(IOS)
+    bool shouldReportLackOfChanges;
+    bool shouldBeginObservingChanges;
+    if (document) {
+        shouldReportLackOfChanges = WebThreadCountOfObservedContentModifiers() == 1;
+        shouldBeginObservingChanges = WebThreadContainsObservedContentModifier(this);
+    } else {
+        shouldReportLackOfChanges = false;
+        shouldBeginObservingChanges = false;
+    }
+
+    if (shouldBeginObservingChanges) {
+        WKBeginObservingContentChanges(false);
+        WebThreadRemoveObservedContentModifier(this);
+    }
+#endif
+
+    action->execute(context);
+
+#if PLATFORM(IOS)
+    if (shouldBeginObservingChanges) {
+        WKStopObservingContentChanges();
+
+        if (WKObservedContentChange() == WKContentVisibilityChange || shouldReportLackOfChanges)
+            if (document && document->page())
+                document->page()->chrome().client().observedContentChange(document->frame());
+    }
+#endif
+
     InspectorInstrumentation::didFireTimer(cookie);
+
+    timerNestingLevel = 0;
 }
 
 void DOMTimer::contextDestroyed()

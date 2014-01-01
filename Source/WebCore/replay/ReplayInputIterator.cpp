@@ -52,7 +52,6 @@ namespace WebCore {
 
 ReplayInputIterator::ReplayInputIterator(InputStorage* storage, Page* page, EventLoopInputDispatcherClient* client)
     : m_storage(storage)
-    , m_isActive(true)
     , m_dispatcher(std::make_unique<EventLoopInputDispatcher>(page, this, client))
     , m_positions(Vector<size_t>())
 {
@@ -105,7 +104,7 @@ NondeterministicInput* ReplayInputIterator::loadInput(NondeterministicInput::Que
 
 NondeterministicInput* ReplayInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType queue)
 {
-    ASSERT(m_isActive);
+    ASSERT(isActive());
     // Callers should check for errors before requesting inputs.
     // If an error exists, the caller should call reset() or clearError().
     ASSERT(!hasError());
@@ -155,12 +154,6 @@ String ReplayInputIterator::errorMessage() const
     }
 
     return sb.toString();
-}
-
-void ReplayInputIterator::setIsActive(bool state)
-{
-    ASSERT(m_isActive != state);
-    m_isActive = state;
 }
 
 }; // namespace WebCore

@@ -65,7 +65,7 @@ public:
 
     // InputIterator
     virtual bool isCapturing() const { return false; }
-    virtual bool isReplaying() const { return m_isActive; }
+    virtual bool isReplaying() const { return isActive(); }
 
     virtual void incrementExecutionTicks() OVERRIDE;
 
@@ -73,8 +73,6 @@ public:
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
     virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
 
-    // Used for temporary deactivation; e.g. when injected scripts are evaluated.
-    void setIsActive(bool);
     EventLoopInputDispatcher& dispatcher() const { return *m_dispatcher; }
 
     bool hasError() const { return m_errorData.error != NoReplayError; }
@@ -85,7 +83,6 @@ public:
 private:
     InputStorage* m_storage;
 
-    bool m_isActive;
     std::unique_ptr<EventLoopInputDispatcher> m_dispatcher;
     ReplayErrorData m_errorData;
     Vector<size_t> m_positions;

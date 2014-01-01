@@ -4,6 +4,9 @@
     <Filter Include="assembler">
       <UniqueIdentifier>{429783a1-5d6a-4019-ad1a-ddb2c98f9b6c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="bindings">
+      <UniqueIdentifier>{0bace123-4582-eebc-9314-7819b376c198}</UniqueIdentifier>
+    </Filter>
     <Filter Include="bytecode">
       <UniqueIdentifier>{766088a0-1216-4854-aa43-560c5e283668}</UniqueIdentifier>
     </Filter>
@@ -276,8 +279,20 @@
     <ClCompile Include="..\heap\WeakSet.cpp">
       <Filter>heap</Filter>
     </ClCompile>
+    <ClCompile Include="..\heap\WriteBarrierBuffer.cpp">
+      <Filter>heap</Filter>
+    </ClCompile>
     <ClCompile Include="..\heap\WriteBarrierSupport.cpp">
       <Filter>heap</Filter>
+    </ClCompile>
+    <ClCompile Include="..\inspector\InspectorAgentRegistry.cpp">
+      <Filter>inspector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\inspector\InspectorBackendDispatcher.cpp">
+      <Filter>inspector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\inspector\InspectorValues.cpp">
+      <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\interpreter\AbstractPC.cpp">
       <Filter>interpreter</Filter>
@@ -1137,6 +1152,9 @@
     <ClCompile Include="..\dfg\DFGStackLayoutPhase.cpp">
       <Filter>dfg</Filter>
     </ClCompile>
+    <ClCompile Include="..\dfg\DFGStoreBarrierElisionPhase.cpp">
+      <Filter>dfg</Filter>
+    </ClCompile>
     <ClCompile Include="..\dfg\DFGThunks.cpp">
       <Filter>dfg</Filter>
     </ClCompile>
@@ -1265,6 +1283,33 @@
     </ClCompile>
     <ClCompile Include="..\bytecode\ProfiledCodeBlockJettisoningWatchpoint.cpp">
       <Filter>bytecode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bindings\ScriptValue.cpp">
+      <Filter>bindings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bindings\ScriptFunctionCall.cpp">
+      <Filter>bindings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bindings\ScriptObject.cpp">
+      <Filter>bindings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dfg\DFGSSALoweringPhase.cpp">
+      <Filter>dfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dfg\DFGStrengthReductionPhase.cpp">
+      <Filter>dfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\runtime\ArrayBufferNeuteringWatchpoint.cpp">
+      <Filter>runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorJSBackendDispatchers.cpp">
+      <Filter>Derived Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorJSFrontendDispatchers.cpp">
+      <Filter>Derived Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorJSTypeBuilders.cpp">
+      <Filter>Derived Sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1667,6 +1712,9 @@
     <ClInclude Include="..\heap\MarkStackInlines.h">
       <Filter>heap</Filter>
     </ClInclude>
+    <ClInclude Include="..\heap\RecursiveAllocationScope.h">
+      <Filter>heap</Filter>
+    </ClInclude>
     <ClInclude Include="..\heap\Region.h">
       <Filter>heap</Filter>
     </ClInclude>
@@ -1712,10 +1760,28 @@
     <ClInclude Include="..\heap\WeakSetInlines.h">
       <Filter>heap</Filter>
     </ClInclude>
+    <ClInclude Include="..\heap\WriteBarrierBuffer.h">
+      <Filter>heap</Filter>
+    </ClInclude>
     <ClInclude Include="..\heap\WriteBarrierSupport.h">
       <Filter>heap</Filter>
     </ClInclude>
+    <ClInclude Include="..\inspector\InspectorAgentBase.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inspector\InspectorAgentRegistry.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inspector\InspectorBackendDispatcher.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
     <ClInclude Include="..\inspector\InspectorFrontendChannel.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inspector\InspectorTypeBuilder.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inspector\InspectorValues.h">
       <Filter>inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\interpreter\AbstractPC.h">
@@ -2400,6 +2466,15 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\HeaderDetection.h">
       <Filter>Derived Sources</Filter>
     </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorJSBackendDispatchers.h">
+      <Filter>Derived Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorJSFrontendDispatchers.h">
+      <Filter>Derived Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorJSTypeBuilders.h">
+      <Filter>Derived Sources</Filter>
+    </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSGlobalObject.lut.h">
       <Filter>Derived Sources</Filter>
     </ClInclude>
@@ -2991,6 +3066,9 @@
     <ClInclude Include="..\dfg\DFGStackLayoutPhase.h">
       <Filter>dfg</Filter>
     </ClInclude>
+    <ClInclude Include="..\dfg\DFGStoreBarrierElisionPhase.h">
+      <Filter>dfg</Filter>
+    </ClInclude>
     <ClInclude Include="..\dfg\DFGStructureAbstractValue.h">
       <Filter>dfg</Filter>
     </ClInclude>
@@ -3158,6 +3236,27 @@
     </ClInclude>
     <ClInclude Include="..\bytecode\VariableWatchpointSet.h">
       <Filter>bytecode</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bindings\ScriptFunctionCall.h">
+      <Filter>bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bindings\ScriptObject.h">
+      <Filter>bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bindings\ScriptValue.h">
+      <Filter>bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\DFGStrengthReductionPhase.h">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dfg\DFGSSALoweringPhase.h">
+      <Filter>dfg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\runtime\ArrayBufferNeuteringWatchpoint.h">
+      <Filter>runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="..\runtime\ConstantMode.h">
+      <Filter>runtime</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

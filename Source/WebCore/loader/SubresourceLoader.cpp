@@ -44,6 +44,10 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
+#if PLATFORM(IOS)
+#include <RuntimeApplicationChecksIOS.h>
+#endif
+
 #if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
 #include "ReplayController.h"
@@ -94,10 +98,31 @@ SubresourceLoader::~SubresourceLoader()
 PassRefPtr<SubresourceLoader> SubresourceLoader::create(Frame* frame, CachedResource* resource, const ResourceRequest& request, const ResourceLoaderOptions& options)
 {
     RefPtr<SubresourceLoader> subloader(adoptRef(new SubresourceLoader(frame, resource, options)));
+#if PLATFORM(IOS)
+    if (!applicationIsWebProcess()) {
+        // On iOS, do not invoke synchronous resource load delegates while resource load scheduling
+        // is disabled to avoid re-entering style selection from a different thread (see <rdar://problem/9121719>).
+        // FIXME: This should be fixed for all ports in <https://bugs.webkit.org/show_bug.cgi?id=56647>.
+        subloader->m_iOSOriginalRequest = request;
+        return subloader.release();
+    }
+#endif
     if (!subloader->init(request))
-        return 0;
+        return nullptr;
     return subloader.release();
 }
+    
+#if PLATFORM(IOS)
+bool SubresourceLoader::startLoading()
+{
+    ASSERT(!applicationIsWebProcess());
+    if (!init(m_iOSOriginalRequest))
+        return false;
+    m_iOSOriginalRequest = ResourceRequest();
+    start();
+    return true;
+}
+#endif
 
 CachedResource* SubresourceLoader::cachedResource()
 {
@@ -307,6 +332,11 @@ void SubresourceLoader::didFinishLoading(double finishTime)
 
     Ref<SubresourceLoader> protect(*this);
 
+#if PLATFORM(IOS)
+    if (resourceData())
+        resourceData()->setShouldUsePurgeableMemory(true);
+#endif
+
 #if ENABLE(WEB_REPLAY)
     InputIterator* it = activeIterator();
     if (it && it->isCapturing())
@@ -363,13 +393,24 @@ void SubresourceLoader::didFail(const ResourceError& error)
 
 void SubresourceLoader::willCancel(const ResourceError& error)
 {
+#if PLATFORM(IOS)
+    // Since we defer initialization to scheduling time on iOS but
+    // CachedResourceLoader stores resources in the memory cache immediately,
+    // m_resource might be cached despite its loader not being initialized.
+    if (m_state != Initialized && m_state != Uninitialized)
+#else
     if (m_state != Initialized)
+#endif
         return;
     ASSERT(!reachedTerminalState());
     LOG(ResourceLoading, "Cancelled load of '%s'.\n", m_resource->url().string().latin1().data());
 
     Ref<SubresourceLoader> protect(*this);
+#if PLATFORM(IOS)
+    m_state = m_state == Uninitialized ? CancelledWhileInitializing : Finishing;
+#else
     m_state = Finishing;
+#endif
     if (m_resource->resourceToRevalidate())
         memoryCache()->revalidationFailed(m_resource);
     m_resource->setResourceError(error);
@@ -391,7 +432,11 @@ void SubresourceLoader::notifyDone()
         return;
 
     m_requestCountTracker.clear();
+#if PLATFORM(IOS)
+    m_documentLoader->cachedResourceLoader().loadDone(m_resource, m_state != CancelledWhileInitializing);
+#else
     m_documentLoader->cachedResourceLoader().loadDone(m_resource);
+#endif
     if (reachedTerminalState())
         return;
     m_documentLoader->removeSubresourceLoader(this);
@@ -400,7 +445,11 @@ void SubresourceLoader::notifyDone()
 void SubresourceLoader::releaseResources()
 {
     ASSERT(!reachedTerminalState());
+#if PLATFORM(IOS)
+    if (m_state != Uninitialized && m_state != CancelledWhileInitializing)
+#else
     if (m_state != Uninitialized)
+#endif
         m_resource->clearLoader();
     m_resource = 0;
     ResourceLoader::releaseResources();

@@ -38,8 +38,9 @@ class SVGScriptElement FINAL : public SVGElement
 public:
     static PassRefPtr<SVGScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser);
 
-    String type() const;
-    void setType(const String&);
+#ifndef NDEBUG
+    virtual bool isAnimatableAttribute(const QualifiedName&) const;
+#endif
 
 private:
     SVGScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
@@ -83,7 +84,6 @@ private:
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 
-    String m_type;
     Timer<SVGElement> m_svgLoadEventTimer;
 };
 

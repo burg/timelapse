@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ScrollingTree.h"
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "PlatformWheelEvent.h"
 #include "ScrollingCoordinator.h"
@@ -283,14 +283,14 @@ void ScrollingTree::setMainFrameIsRubberBanding(bool isRubberBanding)
     m_mainFrameIsRubberBanding = isRubberBanding;
 }
 
-void ScrollingTree::setCanRubberBandState(bool canRubberBandsAtLeft, bool canRubberBandsAtRight, bool canRubberBandsAtTop, bool canRubberBandsAtBottom)
+void ScrollingTree::setCanRubberBandState(bool canRubberBandAtLeft, bool canRubberBandAtRight, bool canRubberBandAtTop, bool canRubberBandAtBottom)
 {
     MutexLocker locker(m_swipeStateMutex);
 
-    m_rubberBandsAtLeft = canRubberBandsAtLeft;
-    m_rubberBandsAtRight = canRubberBandsAtRight;
-    m_rubberBandsAtTop = canRubberBandsAtTop;
-    m_rubberBandsAtBottom = canRubberBandsAtBottom;
+    m_rubberBandsAtLeft = canRubberBandAtLeft;
+    m_rubberBandsAtRight = canRubberBandAtRight;
+    m_rubberBandsAtTop = canRubberBandAtTop;
+    m_rubberBandsAtBottom = canRubberBandAtBottom;
 }
 
 bool ScrollingTree::rubberBandsAtLeft()
@@ -366,4 +366,4 @@ bool ScrollingTree::scrollingPerformanceLoggingEnabled()
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_SCROLLING)
+#endif // ENABLE(ASYNC_SCROLLING)

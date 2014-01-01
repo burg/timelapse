@@ -240,6 +240,7 @@
     <ClCompile Include="..\wtf\text\cf\StringImplCF.cpp">
       <Filter>text</Filter>
     </ClCompile>
+    <ClCompile Include="..\wtf\FastBitVector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\wtf\dtoa\utils.h">
@@ -362,9 +363,6 @@
     <ClInclude Include="..\wtf\AVLTree.h">
       <Filter>wtf</Filter>
     </ClInclude>
-    <ClInclude Include="..\wtf\BitArray.h">
-      <Filter>wtf</Filter>
-    </ClInclude>
     <ClInclude Include="..\wtf\Bitmap.h">
       <Filter>wtf</Filter>
     </ClInclude>
@@ -425,9 +423,6 @@
     <ClInclude Include="..\wtf\Encoder.h">
       <Filter>wtf</Filter>
     </ClInclude>
-    <ClInclude Include="..\wtf\EnumClass.h">
-      <Filter>wtf</Filter>
-    </ClInclude>
     <ClInclude Include="..\wtf\FastBitVector.h">
       <Filter>wtf</Filter>
     </ClInclude>
@@ -437,7 +432,7 @@
     <ClInclude Include="..\wtf\FilePrintStream.h">
       <Filter>wtf</Filter>
     </ClInclude>
-    <ClInclude Include="..\wtf\FixedArray.h">
+    <ClInclude Include="..\wtf\FilterIterator.h">
       <Filter>wtf</Filter>
     </ClInclude>
     <ClInclude Include="..\wtf\Forward.h">
@@ -474,6 +469,9 @@
       <Filter>wtf</Filter>
     </ClInclude>
     <ClInclude Include="..\wtf\HexNumber.h">
+      <Filter>wtf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\wtf\IteratorPair.h">
       <Filter>wtf</Filter>
     </ClInclude>
     <ClInclude Include="..\wtf\ListHashSet.h">

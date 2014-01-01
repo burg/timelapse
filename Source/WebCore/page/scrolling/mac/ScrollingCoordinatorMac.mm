@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 
 #import "ScrollingCoordinatorMac.h"
 
@@ -135,7 +135,15 @@ void ScrollingCoordinatorMac::frameViewLayoutUpdated(FrameView* frameView)
     Scrollbar* horizontalScrollbar = frameView->horizontalScrollbar();
     setScrollbarPaintersFromScrollbarsForNode(verticalScrollbar, horizontalScrollbar, node);
 
-    ScrollParameters scrollParameters;
+    node->setFrameScaleFactor(frameView->frame().frameScaleFactor());
+    node->setHeaderHeight(frameView->headerHeight());
+    node->setFooterHeight(frameView->footerHeight());
+
+    node->setScrollOrigin(frameView->scrollOrigin());
+    node->setViewportRect(IntRect(IntPoint(), frameView->visibleContentRect().size()));
+    node->setTotalContentsSize(frameView->totalContentsSize());
+
+    ScrollableAreaParameters scrollParameters;
     scrollParameters.horizontalScrollElasticity = frameView->horizontalScrollElasticity();
     scrollParameters.verticalScrollElasticity = frameView->verticalScrollElasticity();
     scrollParameters.hasEnabledHorizontalScrollbar = horizontalScrollbar && horizontalScrollbar->enabled();
@@ -143,14 +151,8 @@ void ScrollingCoordinatorMac::frameViewLayoutUpdated(FrameView* frameView)
     scrollParameters.horizontalScrollbarMode = frameView->horizontalScrollbarMode();
     scrollParameters.verticalScrollbarMode = frameView->verticalScrollbarMode();
 
-    scrollParameters.scrollOrigin = frameView->scrollOrigin();
-    scrollParameters.viewportRect = IntRect(IntPoint(), frameView->visibleContentRect().size());
-    scrollParameters.totalContentsSize = frameView->totalContentsSize();
-    scrollParameters.frameScaleFactor = frameView->frame().frameScaleFactor();
-    scrollParameters.headerHeight = frameView->headerHeight();
-    scrollParameters.footerHeight = frameView->footerHeight();
-
-    setScrollParametersForNode(scrollParameters, node);
+    node->setScrollableAreaParameters(scrollParameters);
+    scheduleTreeStateCommit();
 }
 
 void ScrollingCoordinatorMac::recomputeWheelEventHandlerCountForFrameView(FrameView* frameView)
@@ -298,25 +300,6 @@ void ScrollingCoordinatorMac::setNonFastScrollableRegionForNode(const Region& re
     scheduleTreeStateCommit();
 }
 
-void ScrollingCoordinatorMac::setScrollParametersForNode(const ScrollParameters& scrollParameters, ScrollingStateScrollingNode* node)
-{
-    node->setHorizontalScrollElasticity(scrollParameters.horizontalScrollElasticity);
-    node->setVerticalScrollElasticity(scrollParameters.verticalScrollElasticity);
-    node->setHasEnabledHorizontalScrollbar(scrollParameters.hasEnabledHorizontalScrollbar);
-    node->setHasEnabledVerticalScrollbar(scrollParameters.hasEnabledVerticalScrollbar);
-    node->setHorizontalScrollbarMode(scrollParameters.horizontalScrollbarMode);
-    node->setVerticalScrollbarMode(scrollParameters.verticalScrollbarMode);
-
-    node->setScrollOrigin(scrollParameters.scrollOrigin);
-    node->setViewportRect(scrollParameters.viewportRect);
-    node->setTotalContentsSize(scrollParameters.totalContentsSize);
-    node->setFrameScaleFactor(scrollParameters.frameScaleFactor);
-    node->setHeaderHeight(scrollParameters.headerHeight);
-    node->setFooterHeight(scrollParameters.footerHeight);
-
-    scheduleTreeStateCommit();
-}
-
 void ScrollingCoordinatorMac::setWheelEventHandlerCountForNode(unsigned wheelEventHandlerCount, ScrollingStateScrollingNode* node)
 {
     node->setWheelEventHandlerCount(wheelEventHandlerCount);
@@ -329,7 +312,7 @@ void ScrollingCoordinatorMac::setScrollBehaviorForFixedElementsForNode(ScrollBeh
     scheduleTreeStateCommit();
 }
 
-void ScrollingCoordinatorMac::setShouldUpdateScrollLayerPositionOnMainThread(MainThreadScrollingReasons reasons)
+void ScrollingCoordinatorMac::setSynchronousScrollingReasons(SynchronousScrollingReasons reasons)
 {
     if (!m_scrollingStateTree->rootStateNode())
         return;
@@ -339,7 +322,7 @@ void ScrollingCoordinatorMac::setShouldUpdateScrollLayerPositionOnMainThread(Mai
     // in order to avoid layer positioning bugs.
     if (reasons)
         updateMainFrameScrollLayerPosition();
-    m_scrollingStateTree->rootStateNode()->setShouldUpdateScrollLayerPositionOnMainThread(reasons);
+    m_scrollingStateTree->rootStateNode()->setSynchronousScrollingReasons(reasons);
     scheduleTreeStateCommit();
 }
 
@@ -444,12 +427,12 @@ void ScrollingCoordinatorMac::commitTreeState()
         return;
 
     ScrollingModeIndication indicatorMode;
-    if (shouldUpdateScrollLayerPositionOnMainThread())
-        indicatorMode = MainThreadScrollingBecauseOfStyleIndication;
+    if (shouldUpdateScrollLayerPositionSynchronously())
+        indicatorMode = SynchronousScrollingBecauseOfStyleIndication;
     else if (m_scrollingStateTree->rootStateNode() && m_scrollingStateTree->rootStateNode()->wheelEventHandlerCount())
-        indicatorMode =  MainThreadScrollingBecauseOfEventHandlersIndication;
+        indicatorMode =  SynchronousScrollingBecauseOfEventHandlersIndication;
     else
-        indicatorMode = ThreadedScrollingIndication;
+        indicatorMode = AsyncScrollingIndication;
     
     tiledBacking->setScrollingModeIndication(indicatorMode);
 }
@@ -464,4 +447,4 @@ String ScrollingCoordinatorMac::scrollingStateTreeAsText() const
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_SCROLLING)
+#endif // ENABLE(ASYNC_SCROLLING)

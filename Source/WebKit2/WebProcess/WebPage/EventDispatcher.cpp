@@ -36,7 +36,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 #include <WebCore/ScrollingCoordinator.h>
 #include <WebCore/ScrollingThread.h>
 #include <WebCore/ScrollingTree.h>
@@ -60,7 +60,7 @@ EventDispatcher::~EventDispatcher()
 {
 }
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 void EventDispatcher::addScrollingTreeForPage(WebPage* webPage)
 {
     MutexLocker locker(m_scrollingTreesMutex);
@@ -79,14 +79,14 @@ void EventDispatcher::removeScrollingTreeForPage(WebPage* webPage)
 }
 #endif
 
-void EventDispatcher::initializeConnection(CoreIPC::Connection* connection)
+void EventDispatcher::initializeConnection(IPC::Connection* connection)
 {
     connection->addWorkQueueMessageReceiver(Messages::EventDispatcher::messageReceiverName(), m_queue.get(), this);
 }
 
-void EventDispatcher::wheelEvent(uint64_t pageID, const WebWheelEvent& wheelEvent, bool canRubberBandsAtLeft, bool canRubberBandsAtRight, bool canRubberBandsAtTop, bool canRubberBandsAtBottom)
+void EventDispatcher::wheelEvent(uint64_t pageID, const WebWheelEvent& wheelEvent, bool canRubberBandAtLeft, bool canRubberBandAtRight, bool canRubberBandAtTop, bool canRubberBandAtBottom)
 {
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
     MutexLocker locker(m_scrollingTreesMutex);
     if (ScrollingTree* scrollingTree = m_scrollingTrees.get(pageID)) {
         PlatformWheelEvent platformWheelEvent = platform(wheelEvent);
@@ -96,7 +96,7 @@ void EventDispatcher::wheelEvent(uint64_t pageID, const WebWheelEvent& wheelEven
         // scrolling tree can be notified.
         // We only need to do this at the beginning of the gesture.
         if (platformWheelEvent.phase() == PlatformWheelEventPhaseBegan)
-            ScrollingThread::dispatch(bind(&ScrollingTree::setCanRubberBandState, scrollingTree, canRubberBandsAtLeft, canRubberBandsAtRight, canRubberBandsAtTop, canRubberBandsAtBottom));
+            ScrollingThread::dispatch(bind(&ScrollingTree::setCanRubberBandState, scrollingTree, canRubberBandAtLeft, canRubberBandAtRight, canRubberBandAtTop, canRubberBandAtBottom));
 
         ScrollingTree::EventResult result = scrollingTree->tryToHandleWheelEvent(platformWheelEvent);
         if (result == ScrollingTree::DidHandleEvent || result == ScrollingTree::DidNotHandleEvent) {
@@ -105,10 +105,10 @@ void EventDispatcher::wheelEvent(uint64_t pageID, const WebWheelEvent& wheelEven
         }
     }
 #else
-    UNUSED_PARAM(canRubberBandsAtLeft);
-    UNUSED_PARAM(canRubberBandsAtRight);
-    UNUSED_PARAM(canRubberBandsAtTop);
-    UNUSED_PARAM(canRubberBandsAtBottom);
+    UNUSED_PARAM(canRubberBandAtLeft);
+    UNUSED_PARAM(canRubberBandAtRight);
+    UNUSED_PARAM(canRubberBandAtTop);
+    UNUSED_PARAM(canRubberBandAtBottom);
 #endif
 
     RunLoop::main()->dispatch(bind(&EventDispatcher::dispatchWheelEvent, this, pageID, wheelEvent));
@@ -125,7 +125,7 @@ void EventDispatcher::dispatchWheelEvent(uint64_t pageID, const WebWheelEvent& w
     webPage->wheelEvent(wheelEvent);
 }
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 void EventDispatcher::sendDidReceiveEvent(uint64_t pageID, const WebEvent& event, bool didHandleEvent)
 {
     WebProcess::shared().parentProcessConnection()->send(Messages::WebPageProxy::DidReceiveEvent(static_cast<uint32_t>(event.type()), didHandleEvent), pageID);

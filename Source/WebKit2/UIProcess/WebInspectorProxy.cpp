@@ -29,6 +29,7 @@
 
 #if ENABLE(INSPECTOR)
 
+#include "APIURLRequest.h"
 #include "WebFramePolicyListenerProxy.h"
 #include "WebFrameProxy.h"
 #include "WebInspectorMessages.h"
@@ -38,8 +39,8 @@
 #include "WebPageProxy.h"
 #include "WebPreferences.h"
 #include "WebProcessProxy.h"
-#include "WebURLRequest.h"
 #include <WebCore/SchemeRegistry.h>
+#include <wtf/NeverDestroyed.h>
 
 #if ENABLE(INSPECTOR_SERVER)
 #include "WebInspectorServer.h"
@@ -62,7 +63,7 @@ class WebInspectorPageGroups {
 public:
     static WebInspectorPageGroups& shared()
     {
-        DEFINE_STATIC_LOCAL(WebInspectorPageGroups, instance, ());
+        static NeverDestroyed<WebInspectorPageGroups> instance;
         return instance;
     }
 
@@ -140,7 +141,7 @@ WebInspectorProxy::WebInspectorProxy(WebPageProxy* page)
 #endif
 {
     m_level = WebInspectorPageGroups::shared().inspectorLevel(m_page->pageGroup());
-    m_page->process().addMessageReceiver(Messages::WebInspectorProxy::messageReceiverName(), m_page->pageID(), this);
+    m_page->process().addMessageReceiver(Messages::WebInspectorProxy::messageReceiverName(), m_page->pageID(), *this);
 }
 
 WebInspectorProxy::~WebInspectorProxy()
@@ -365,7 +366,7 @@ static bool isMainInspectorPage(const WebInspectorProxy* webInspectorProxy, WKUR
 {
     // Use URL so we can compare just the paths.
     URL inspectorURL(URL(), webInspectorProxy->inspectorPageURL());
-    URL requestURL(URL(), toImpl(requestRef)->url());
+    URL requestURL(URL(), toImpl(requestRef)->resourceRequest().url());
 
     ASSERT(WebCore::SchemeRegistry::shouldTreatURLSchemeAsLocal(inspectorURL.protocol()));
 

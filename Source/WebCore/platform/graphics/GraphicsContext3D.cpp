@@ -43,6 +43,13 @@
 #include <runtime/ArrayBufferView.h>
 #include <wtf/StdLibExtras.h>
 
+// Visual Studio crashes with a C1063 Fatal Error if everything is inlined.
+#if COMPILER(MSVC)
+#define ALWAYS_INLINE_EXCEPT_MSVC
+#else
+#define ALWAYS_INLINE_EXCEPT_MSVC ALWAYS_INLINE
+#endif
+
 namespace WebCore {
 
 namespace {
@@ -1607,7 +1614,7 @@ ALWAYS_INLINE void FormatConverter::convert(GraphicsContext3D::AlphaOp alphaOp)
 }
 
 template<GraphicsContext3D::DataFormat SrcFormat, GraphicsContext3D::DataFormat DstFormat, GraphicsContext3D::AlphaOp alphaOp>
-ALWAYS_INLINE void FormatConverter::convert()
+ALWAYS_INLINE_EXCEPT_MSVC void FormatConverter::convert()
 {
     // Many instantiations of this template function will never be entered, so we try
     // to return immediately in these cases to avoid the compiler to generate useless code.
@@ -1791,25 +1798,6 @@ unsigned GraphicsContext3D::getChannelBitsByFormat(GC3Denum format)
         return 0;
     }
 }
-
-#if !PLATFORM(BLACKBERRY) && !PLATFORM(GTK) && !PLATFORM(EFL) && !PLATFORM(MAC) && !PLATFORM(WIN) && !PLATFORM(NIX)
-PlatformGraphicsContext3D GraphicsContext3D::platformGraphicsContext3D() const
-{
-    return NullPlatformGraphicsContext3D;
-}
-
-Platform3DObject GraphicsContext3D::platformTexture() const
-{
-    return NullPlatform3DObject;
-}
-
-#if USE(ACCELERATED_COMPOSITING)
-PlatformLayer* GraphicsContext3D::platformLayer() const
-{
-    return 0;
-}
-#endif
-#endif
 
 } // namespace WebCore
 

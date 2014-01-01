@@ -137,7 +137,7 @@ void HTMLFormControlElement::parseAttribute(const QualifiedName& name, const Ato
             setNeedsWillValidateCheck();
             setNeedsStyleRecalc();
             if (renderer() && renderer()->style().hasAppearance())
-                renderer()->theme()->stateChanged(renderer(), ReadOnlyState);
+                renderer()->theme().stateChanged(renderer(), ReadOnlyState);
         }
     } else if (name == requiredAttr) {
         bool wasRequired = m_isRequired;
@@ -157,7 +157,7 @@ void HTMLFormControlElement::disabledAttributeChanged()
     setNeedsWillValidateCheck();
     didAffectSelector(AffectedSelectorDisabled | AffectedSelectorEnabled);
     if (renderer() && renderer()->style().hasAppearance())
-        renderer()->theme()->stateChanged(renderer(), EnabledState);
+        renderer()->theme().stateChanged(renderer(), EnabledState);
 }
 
 void HTMLFormControlElement::requiredAttributeChanged()
@@ -170,9 +170,11 @@ void HTMLFormControlElement::requiredAttributeChanged()
 
 static bool shouldAutofocus(HTMLFormControlElement* element)
 {
+    if (!element->renderer())
+        return false;
     if (!element->fastHasAttribute(autofocusAttr))
         return false;
-    if (!element->renderer())
+    if (!element->inDocument() || !element->document().renderView())
         return false;
     if (element->document().ignoreAutofocus())
         return false;
@@ -200,10 +202,10 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
     return false;
 }
 
-static void focusPostAttach(Node* element, unsigned)
+static void focusPostAttach(Node& element, unsigned)
 { 
-    toElement(element)->focus(); 
-    element->deref(); 
+    toElement(element).focus();
+    element.deref();
 }
 
 void HTMLFormControlElement::didAttachRenderers()
@@ -217,7 +219,7 @@ void HTMLFormControlElement::didAttachRenderers()
     if (shouldAutofocus(this)) {
         setAutofocused();
         ref();
-        queuePostAttachCallback(focusPostAttach, this);
+        queuePostAttachCallback(focusPostAttach, *this);
     }
 }
 
@@ -285,9 +287,9 @@ bool HTMLFormControlElement::isRequired() const
     return m_isRequired;
 }
 
-static void updateFromElementCallback(Node* node, unsigned)
+static void updateFromElementCallback(Node& node, unsigned)
 {
-    if (auto renderer = toHTMLFormControlElement(node)->renderer())
+    if (auto renderer = toHTMLFormControlElement(node).renderer())
         renderer->updateFromElement();
 }
 
@@ -296,7 +298,7 @@ void HTMLFormControlElement::didRecalcStyle(Style::Change)
     // updateFromElement() can cause the selection to change, and in turn
     // trigger synchronous layout, so it must not be called during style recalc.
     if (renderer())
-        queuePostAttachCallback(updateFromElementCallback, this);
+        queuePostAttachCallback(updateFromElementCallback, *this);
 }
 
 bool HTMLFormControlElement::supportsFocus() const
@@ -468,6 +470,45 @@ bool HTMLFormControlElement::isDefaultButtonForForm() const
 {
     return isSuccessfulSubmitButton() && form() && form()->defaultButton() == this;
 }
+
+#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+// FIXME: We should look to share these methods with class HTMLFormElement instead of duplicating them.
+
+bool HTMLFormControlElement::autocorrect() const
+{
+    const AtomicString& autocorrectValue = fastGetAttribute(autocorrectAttr);
+    if (!autocorrectValue.isEmpty())
+        return !equalIgnoringCase(autocorrectValue, "off");
+    if (HTMLFormElement* form = this->form())
+        return form->autocorrect();
+    return true;
+}
+
+void HTMLFormControlElement::setAutocorrect(bool autocorrect)
+{
+    setAttribute(autocorrectAttr, autocorrect ? AtomicString("on", AtomicString::ConstructFromLiteral) : AtomicString("off", AtomicString::ConstructFromLiteral));
+}
+
+WebAutocapitalizeType HTMLFormControlElement::autocapitalizeType() const
+{
+    WebAutocapitalizeType type = autocapitalizeTypeForAttributeValue(fastGetAttribute(autocapitalizeAttr));
+    if (type == WebAutocapitalizeTypeDefault) {
+        if (HTMLFormElement* form = this->form())
+            return form->autocapitalizeType();
+    }
+    return type;
+}
+
+const AtomicString& HTMLFormControlElement::autocapitalize() const
+{
+    return stringForAutocapitalizeType(autocapitalizeType());
+}
+
+void HTMLFormControlElement::setAutocapitalize(const AtomicString& value)
+{
+    setAttribute(autocapitalizeAttr, value);
+}
+#endif
 
 HTMLFormControlElement* HTMLFormControlElement::enclosingFormControlElement(Node* node)
 {

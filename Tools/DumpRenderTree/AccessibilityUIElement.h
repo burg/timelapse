@@ -67,7 +67,7 @@ public:
     AccessibilityUIElement(const AccessibilityUIElement&);
     ~AccessibilityUIElement();
 
-    PlatformUIElement platformUIElement() { return m_element; }
+    PlatformUIElement platformUIElement() const { return m_element; }
 
     static JSObjectRef makeJSAccessibilityUIElement(JSContextRef, const AccessibilityUIElement&);
 
@@ -211,6 +211,14 @@ public:
     void increaseTextSelection();
     void decreaseTextSelection();
     AccessibilityUIElement linkedElement();
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(EFL)
+    // Text-specific
+    JSStringRef characterAtOffset(int offset);
+    JSStringRef wordAtOffset(int offset);
+    JSStringRef lineAtOffset(int offset);
+    JSStringRef sentenceAtOffset(int offset);
 #endif
 
     // Table-specific

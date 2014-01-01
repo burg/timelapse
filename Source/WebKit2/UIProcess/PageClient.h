@@ -43,10 +43,6 @@ OBJC_CLASS CALayer;
 OBJC_CLASS WKView;
 OBJC_CLASS NSTextAlternatives;
 #endif
-
-#if PLATFORM(IOS)
-OBJC_CLASS UIWKView;
-#endif
 #endif
 
 namespace WebCore {
@@ -59,14 +55,20 @@ namespace WebKit {
 class DrawingAreaProxy;
 class FindIndicator;
 class NativeWebKeyboardEvent;
-#if ENABLE(TOUCH_EVENTS)
-class NativeWebTouchEvent;
-#endif
 class WebContextMenuProxy;
 class WebEditCommandProxy;
 class WebPopupMenuProxy;
+
+#if ENABLE(TOUCH_EVENTS)
+class NativeWebTouchEvent;
+#endif
+
 #if ENABLE(INPUT_TYPE_COLOR)
 class WebColorPicker;
+#endif
+
+#if ENABLE(FULLSCREEN_API)
+class WebFullScreenManagerProxyClient;
 #endif
 
 #if PLATFORM(MAC)
@@ -109,8 +111,10 @@ public:
     // Return whether the view is in a window.
     virtual bool isViewInWindow() = 0;
 
-    // Return the layer hosting mode for the view.
-    virtual LayerHostingMode viewLayerHostingMode() { return LayerHostingModeDefault; }
+#if HAVE(LAYER_HOSTING_IN_WINDOW_SERVER)
+    // Return whether the layer is window server hosted.
+    virtual bool isLayerWindowServerHosted() = 0;
+#endif
 
     virtual void processDidCrash() = 0;
     virtual void didRelaunchProcess() = 0;
@@ -161,7 +165,7 @@ public:
     virtual bool canUndoRedo(WebPageProxy::UndoOrRedo) = 0;
     virtual void executeUndoRedo(WebPageProxy::UndoOrRedo) = 0;
 #if PLATFORM(MAC)
-    virtual void accessibilityWebProcessTokenReceived(const CoreIPC::DataReference&) = 0;
+    virtual void accessibilityWebProcessTokenReceived(const IPC::DataReference&) = 0;
     virtual bool interpretKeyEvent(const NativeWebKeyboardEvent&, Vector<WebCore::KeypressCommand>&) = 0;
     virtual bool executeSavedCommandBySelector(const String& selector) = 0;
     virtual void setDragImage(const WebCore::IntPoint& clientPosition, PassRefPtr<ShareableBitmap> dragImage, bool isLinkDrag) = 0;
@@ -241,6 +245,11 @@ public:
     virtual void stopAssistingNode() = 0;
     virtual void selectionDidChange() = 0;
     virtual bool interpretKeyEvent(const NativeWebKeyboardEvent&, bool isCharEvent) = 0;
+#endif
+
+    // Auxiliary Client Creation
+#if ENABLE(FULLSCREEN_API)
+    virtual WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() = 0;
 #endif
 };
 

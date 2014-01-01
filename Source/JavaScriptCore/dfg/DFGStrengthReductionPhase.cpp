@@ -70,14 +70,40 @@ private:
     {
         switch (m_node->op()) {
         case BitOr:
-            // Optimize X|0 -> X.
+            if (m_node->child1()->isConstant()) {
+                JSValue op1 = m_graph.valueOfJSConstant(m_node->child1().node());
+                if (op1.isInt32() && !op1.asInt32()) {
+                    convertToIdentityOverChild2();
+                    break;
+                }
+            }
             if (m_node->child2()->isConstant()) {
-                JSValue C2 = m_graph.valueOfJSConstant(m_node->child2().node());
-                if (C2.isInt32() && !C2.asInt32()) {
-                    m_insertionSet.insertNode(
-                        m_nodeIndex, SpecNone, Phantom, m_node->codeOrigin,
-                        m_node->child2());
-                    m_node->children.removeEdge(1);
+                JSValue op2 = m_graph.valueOfJSConstant(m_node->child2().node());
+                if (op2.isInt32() && !op2.asInt32()) {
+                    convertToIdentityOverChild1();
+                    break;
+                }
+            }
+            break;
+            
+        case BitLShift:
+        case BitRShift:
+        case BitURShift:
+            if (m_node->child2()->isConstant()) {
+                JSValue op2 = m_graph.valueOfJSConstant(m_node->child2().node());
+                if (op2.isInt32() && !(op2.asInt32() & 0x1f)) {
+                    convertToIdentityOverChild1();
+                    break;
+                }
+            }
+            break;
+            
+        case UInt32ToNumber:
+            if (m_node->child1()->op() == BitURShift
+                && m_node->child1()->child2()->isConstant()) {
+                JSValue shiftAmount = m_graph.valueOfJSConstant(
+                    m_node->child1()->child2().node());
+                if (shiftAmount.isInt32() && (shiftAmount.asInt32() & 0x1f)) {
                     m_node->convertToIdentity();
                     m_changed = true;
                     break;
@@ -95,22 +121,61 @@ private:
                 foldTypedArrayPropertyToConstant(view, jsNumber(view->byteOffset()));
             break;
             
-        // FIXME: The constant-folding of GetIndexedPropertyStorage should be expressed
-        // as an IR transformation in this phase.
-        // https://bugs.webkit.org/show_bug.cgi?id=125395
+        case GetIndexedPropertyStorage:
+            if (JSArrayBufferView* view = m_graph.tryGetFoldableViewForChild1(m_node)) {
+                if (view->mode() != FastTypedArray) {
+                    prepareToFoldTypedArray(view);
+                    m_node->convertToConstantStoragePointer(view->vector());
+                    m_changed = true;
+                    break;
+                } else {
+                    // FIXME: It would be awesome to be able to fold the property storage for
+                    // these GC-allocated typed arrays. For now it doesn't matter because the
+                    // most common use-cases for constant typed arrays involve large arrays with
+                    // aliased buffer views.
+                    // https://bugs.webkit.org/show_bug.cgi?id=125425
+                }
+            }
+            break;
             
         default:
             break;
         }
     }
+            
+    void convertToIdentityOverChild(unsigned childIndex)
+    {
+        m_insertionSet.insertNode(
+            m_nodeIndex, SpecNone, Phantom, m_node->codeOrigin, m_node->children);
+        m_node->children.removeEdge(childIndex ^ 1);
+        m_node->convertToIdentity();
+        m_changed = true;
+    }
+    
+    void convertToIdentityOverChild1()
+    {
+        convertToIdentityOverChild(0);
+    }
+    
+    void convertToIdentityOverChild2()
+    {
+        convertToIdentityOverChild(1);
+    }
     
     void foldTypedArrayPropertyToConstant(JSArrayBufferView* view, JSValue constant)
+    {
+        prepareToFoldTypedArray(view);
+        m_graph.convertToConstant(m_node, constant);
+        m_changed = true;
+    }
+    
+    void prepareToFoldTypedArray(JSArrayBufferView* view)
     {
         m_insertionSet.insertNode(
             m_nodeIndex, SpecNone, TypedArrayWatchpoint, m_node->codeOrigin,
             OpInfo(view));
-        m_graph.convertToConstant(m_node, constant);
-        m_changed = true;
+        m_insertionSet.insertNode(
+            m_nodeIndex, SpecNone, Phantom, m_node->codeOrigin, m_node->children);
     }
     
     InsertionSet m_insertionSet;

@@ -25,6 +25,8 @@
 
 // This all-in-one cpp file cuts down on template bloat to allow us to build our Windows release build.
 
+#include "CommandLineAPIHost.cpp"
+#include "CommandLineAPIModule.cpp"
 #include "ConsoleMessage.cpp"
 #include "ContentSearchUtils.cpp"
 #include "DOMEditor.cpp"
@@ -37,9 +39,7 @@
 #include "InjectedScriptManager.cpp"
 #include "InjectedScriptModule.cpp"
 #include "InspectorAgent.cpp"
-#include "InspectorAgentRegistry.cpp"
 #include "InspectorApplicationCacheAgent.cpp"
-#include "InspectorBackendDispatcher.cpp"
 #include "InspectorCSSAgent.cpp"
 #include "InspectorCanvasAgent.cpp"
 #include "InspectorClient.cpp"
@@ -70,12 +70,12 @@
 #include "InspectorStyleSheet.cpp"
 #include "InspectorStyleTextEditor.cpp"
 #include "InspectorTimelineAgent.cpp"
-#include "InspectorValues.cpp"
 #include "InspectorWorkerAgent.cpp"
 #include "InstrumentingAgents.cpp"
 #include "NetworkResourcesData.cpp"
 #include "PageConsoleAgent.cpp"
 #include "PageDebuggerAgent.cpp"
+#include "PageInjectedScriptManager.cpp"
 #include "PageRuntimeAgent.cpp"
 #include "ScriptArguments.cpp"
 #include "ScriptCallFrame.cpp"

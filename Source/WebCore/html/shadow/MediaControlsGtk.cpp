@@ -94,82 +94,82 @@ bool MediaControlsGtk::initializeControls(Document& document)
 
     RefPtr<MediaControlPlayButtonElement> playButton = MediaControlPlayButtonElement::create(document);
     m_playButton = playButton.get();
-    panel->appendChild(playButton.release(), exceptionCode, AttachLazily);
+    panel->appendChild(playButton.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     RefPtr<MediaControlTimelineElement> timeline = MediaControlTimelineElement::create(document, this);
     m_timeline = timeline.get();
-    panel->appendChild(timeline.release(), exceptionCode, AttachLazily);
+    panel->appendChild(timeline.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     RefPtr<MediaControlCurrentTimeDisplayElement> currentTimeDisplay = MediaControlCurrentTimeDisplayElement::create(document);
     m_currentTimeDisplay = currentTimeDisplay.get();
     m_currentTimeDisplay->hide();
-    panel->appendChild(currentTimeDisplay.release(), exceptionCode, AttachLazily);
+    panel->appendChild(currentTimeDisplay.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     RefPtr<MediaControlTimeRemainingDisplayElement> durationDisplay = MediaControlTimeRemainingDisplayElement::create(document);
     m_durationDisplay = durationDisplay.get();
-    panel->appendChild(durationDisplay.release(), exceptionCode, AttachLazily);
+    panel->appendChild(durationDisplay.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
-    if (document.page()->theme()->supportsClosedCaptioning()) {
+    if (document.page()->theme().supportsClosedCaptioning()) {
         RefPtr<MediaControlClosedCaptionsContainerElement> closedCaptionsContainer = MediaControlClosedCaptionsContainerElement::create(document);
 
         RefPtr<MediaControlClosedCaptionsTrackListElement> closedCaptionsTrackList = MediaControlClosedCaptionsTrackListElement::create(document, this);
         m_closedCaptionsTrackList = closedCaptionsTrackList.get();
-        closedCaptionsContainer->appendChild(closedCaptionsTrackList.release(), exceptionCode, AttachLazily);
+        closedCaptionsContainer->appendChild(closedCaptionsTrackList.release(), exceptionCode);
         if (exceptionCode)
             return false;
 
         RefPtr<MediaControlToggleClosedCaptionsButtonElement> toggleClosedCaptionsButton = MediaControlToggleClosedCaptionsButtonElement::create(document, this);
         m_toggleClosedCaptionsButton = toggleClosedCaptionsButton.get();
-        panel->appendChild(toggleClosedCaptionsButton.release(), exceptionCode, AttachLazily);
+        panel->appendChild(toggleClosedCaptionsButton.release(), exceptionCode);
         if (exceptionCode)
             return false;
 
         m_closedCaptionsContainer = closedCaptionsContainer.get();
-        appendChild(closedCaptionsContainer.release(), exceptionCode, AttachLazily);
+        appendChild(closedCaptionsContainer.release(), exceptionCode);
         if (exceptionCode)
             return false;
     }
 
     RefPtr<MediaControlFullscreenButtonElement> fullscreenButton = MediaControlFullscreenButtonElement::create(document);
     m_fullScreenButton = fullscreenButton.get();
-    panel->appendChild(fullscreenButton.release(), exceptionCode, AttachLazily);
+    panel->appendChild(fullscreenButton.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     RefPtr<MediaControlPanelMuteButtonElement> panelMuteButton = MediaControlPanelMuteButtonElement::create(document, this);
     m_panelMuteButton = panelMuteButton.get();
-    panel->appendChild(panelMuteButton.release(), exceptionCode, AttachLazily);
+    panel->appendChild(panelMuteButton.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     RefPtr<MediaControlVolumeSliderContainerElement> sliderContainer = MediaControlVolumeSliderContainerElement::create(document);
     m_volumeSliderContainer = sliderContainer.get();
-    panel->appendChild(sliderContainer.release(), exceptionCode, AttachLazily);
+    panel->appendChild(sliderContainer.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     RefPtr<MediaControlPanelVolumeSliderElement> slider = MediaControlPanelVolumeSliderElement::create(document);
     m_volumeSlider = slider.get();
     m_volumeSlider->setClearMutedOnUserInteraction(true);
-    m_volumeSliderContainer->appendChild(slider.release(), exceptionCode, AttachLazily);
+    m_volumeSliderContainer->appendChild(slider.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     m_panel = panel.get();
-    enclosure->appendChild(panel.release(), exceptionCode, AttachLazily);
+    enclosure->appendChild(panel.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
     m_enclosure = enclosure.get();
-    appendChild(enclosure.release(), exceptionCode, AttachLazily);
+    appendChild(enclosure.release(), exceptionCode);
     if (exceptionCode)
         return false;
 
@@ -200,7 +200,7 @@ void MediaControlsGtk::reset()
         return;
 
     double duration = m_mediaController->duration();
-    m_durationDisplay->setInnerText(page->theme()->formatMediaControlsTime(duration), ASSERT_NO_EXCEPTION);
+    m_durationDisplay->setInnerText(page->theme().formatMediaControlsTime(duration), ASSERT_NO_EXCEPTION);
     m_durationDisplay->setCurrentValue(duration);
 
     if (m_toggleClosedCaptionsButton) {
@@ -238,7 +238,7 @@ void MediaControlsGtk::updateCurrentTimeDisplay()
 
     // Allow the theme to format the time.
     ExceptionCode exceptionCode;
-    m_currentTimeDisplay->setInnerText(page->theme()->formatMediaControlsCurrentTime(now, duration), exceptionCode);
+    m_currentTimeDisplay->setInnerText(page->theme().formatMediaControlsCurrentTime(now, duration), exceptionCode);
     m_currentTimeDisplay->setCurrentValue(now);
 }
 
@@ -285,7 +285,7 @@ void MediaControlsGtk::createTextTrackDisplay()
         m_textDisplayContainer->setMediaController(m_mediaController);
 
     // Insert it before the first controller element so it always displays behind the controls.
-    insertBefore(textDisplayContainer.release(), m_enclosure, ASSERT_NO_EXCEPTION, AttachLazily);
+    insertBefore(textDisplayContainer.release(), m_enclosure, ASSERT_NO_EXCEPTION);
 }
 #endif
 

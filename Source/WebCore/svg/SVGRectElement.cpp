@@ -138,12 +138,12 @@ void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
 
     if (isLengthAttribute) {
         renderer->setNeedsShapeUpdate();
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
     if (SVGLangSpace::isKnownAttribute(attrName) || SVGExternalResourcesRequired::isKnownAttribute(attrName)) {
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
@@ -160,9 +160,9 @@ bool SVGRectElement::selfHasRelativeLengths() const
         || ry().isRelative();
 }
 
-RenderElement* SVGRectElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGRectElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderSVGRect(*this, std::move(style));
+    return createRenderer<RenderSVGRect>(*this, std::move(style));
 }
 
 }

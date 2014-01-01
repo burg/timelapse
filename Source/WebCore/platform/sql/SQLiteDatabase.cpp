@@ -32,6 +32,7 @@
 #include "SQLiteFileSystem.h"
 #include "SQLiteStatement.h"
 #include <sqlite3.h>
+#include <thread>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -140,7 +141,7 @@ void SQLiteDatabase::interrupt()
         if (!m_db)
             return;
         sqlite3_interrupt(m_db);
-        yield();
+        std::this_thread::yield();
     }
 
     m_lockingMutex.unlock();
@@ -191,11 +192,7 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
     SQLiteStatement statement(*this, "PRAGMA max_page_count = " + String::number(newMaxPageCount));
     statement.prepare();
     if (statement.step() != SQLResultRow)
-#if OS(WINDOWS)
-        LOG_ERROR("Failed to set maximum size of database to %I64i bytes", static_cast<long long>(size));
-#else
         LOG_ERROR("Failed to set maximum size of database to %lli bytes", static_cast<long long>(size));
-#endif
 
     enableAuthorizer(true);
 

@@ -85,21 +85,27 @@ void ImageInputType::handleDOMActivateEvent(Event* event)
     if (element->isDisabledFormControl() || !element->form())
         return;
     element->setActivatedSubmit(true);
-    if (event->underlyingEvent() && event->underlyingEvent()->isMouseEvent()) {
-        MouseEvent* mouseEvent = static_cast<MouseEvent*>(event->underlyingEvent());
-        m_clickLocation = IntPoint(mouseEvent->offsetX(), mouseEvent->offsetY());
-    } else
-        m_clickLocation = IntPoint();
+
+    m_clickLocation = IntPoint();
+    if (event->underlyingEvent()) {
+        Event& underlyingEvent = *event->underlyingEvent();
+        if (underlyingEvent.isMouseEvent()) {
+            MouseEvent& mouseEvent = toMouseEvent(underlyingEvent);
+            if (!mouseEvent.isSimulated())
+                m_clickLocation = IntPoint(mouseEvent.offsetX(), mouseEvent.offsetY());
+        }
+    }
+
     element->form()->prepareForSubmission(event); // Event handlers can run.
     element->setActivatedSubmit(false);
     event->setDefaultHandled();
 }
 
-RenderElement* ImageInputType::createRenderer(PassRef<RenderStyle> style) const
+RenderPtr<RenderElement> ImageInputType::createInputRenderer(PassRef<RenderStyle> style)
 {
-    RenderImage* image = new RenderImage(element(), std::move(style));
+    auto image = createRenderer<RenderImage>(element(), std::move(style));
     image->setImageResource(RenderImageResource::create());
-    return image;
+    return std::move(image);
 }
 
 void ImageInputType::altAttributeChanged()
@@ -186,7 +192,7 @@ unsigned ImageInputType::height() const
     element->document().updateLayout();
 
     RenderBox* box = element->renderBox();
-    return box ? adjustForAbsoluteZoom(box->contentHeight(), box) : 0;
+    return box ? adjustForAbsoluteZoom(box->contentHeight(), *box) : 0;
 }
 
 unsigned ImageInputType::width() const
@@ -210,7 +216,7 @@ unsigned ImageInputType::width() const
     element->document().updateLayout();
 
     RenderBox* box = element->renderBox();
-    return box ? adjustForAbsoluteZoom(box->contentWidth(), box) : 0;
+    return box ? adjustForAbsoluteZoom(box->contentWidth(), *box) : 0;
 }
 
 } // namespace WebCore

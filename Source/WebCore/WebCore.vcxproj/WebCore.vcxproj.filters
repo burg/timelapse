@@ -175,6 +175,9 @@
     <Filter Include="crypto">
       <UniqueIdentifier>{02334427-19d6-44c8-a5d1-e1a67a9c4997}</UniqueIdentifier>
     </Filter>
+    <Filter Include="crypto\keys">
+      <UniqueIdentifier>{edd0faa6-bb8c-4c0e-b28a-064bde7e1eba}</UniqueIdentifier>
+    </Filter>
     <Filter Include="css">
       <UniqueIdentifier>{353b76ca-c49a-41da-88da-33dc422325ef}</UniqueIdentifier>
     </Filter>
@@ -252,6 +255,9 @@
     </Filter>
     <Filter Include="ForwardingHeaders">
       <UniqueIdentifier>{95216a70-a3b2-453c-a66f-a81cc1abefee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ForwardingHeaders\bindings">
+      <UniqueIdentifier>{21343124-1234-4542-a8aa-ebac87812312}</UniqueIdentifier>
     </Filter>
     <Filter Include="ForwardingHeaders\yarr">
       <UniqueIdentifier>{3b9b1819-1b31-4771-b12a-32c210f8476d}</UniqueIdentifier>
@@ -1881,6 +1887,9 @@
     <ClCompile Include="..\platform\network\cf\ResourceHandleCFNet.cpp">
       <Filter>platform\network\cf</Filter>
     </ClCompile>
+    <ClCompile Include="..\platform\network\cf\ResourceHandleCFURLConnectionDelegate.cpp">
+      <Filter>platform\network\cf</Filter>
+    </ClCompile>
     <ClCompile Include="..\platform\network\cf\ResourceRequestCFNet.cpp">
       <Filter>platform\network\cf</Filter>
     </ClCompile>
@@ -1891,6 +1900,9 @@
       <Filter>platform\network\cf</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\cf\SynchronousLoaderClientCFNet.cpp">
+      <Filter>platform\network\cf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\network\cf\SynchronousResourceHandleCFURLConnectionDelegate.cpp">
       <Filter>platform\network\cf</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\win\DownloadBundleWin.cpp">
@@ -2289,9 +2301,6 @@
     <ClCompile Include="..\css\StyleMedia.cpp">
       <Filter>css</Filter>
     </ClCompile>
-    <ClCompile Include="..\css\StylePropertySet.cpp">
-      <Filter>css</Filter>
-    </ClCompile>
     <ClCompile Include="..\css\StylePropertyShorthand.cpp">
       <Filter>css</Filter>
     </ClCompile>
@@ -2362,6 +2371,9 @@
       <Filter>css</Filter>
     </ClCompile>
     <ClCompile Include="..\css\WebKitCSSViewportRule.cpp">
+      <Filter>css</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cssjit\SelectorCompiler.cpp">
       <Filter>css</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\AutoTableLayout.cpp">
@@ -4308,6 +4320,9 @@
     <ClCompile Include="..\bindings\js\JSClipboardCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
+    <ClCompile Include="..\bindings\js\JSCommandLineAPIHostCustom.cpp">
+      <Filter>bindings\js</Filter>
+    </ClCompile>
     <ClCompile Include="..\bindings\js\JSCSSRuleCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
@@ -4563,10 +4578,7 @@
     <ClCompile Include="..\bindings\js\ScriptDebugServer.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
-    <ClCompile Include="..\bindings\js\ScriptFunctionCall.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
-    <ClCompile Include="..\bindings\js\ScriptObject.cpp">
+    <ClCompile Include="..\bindings\js\ScriptGlobalObject.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\ScriptProfile.cpp">
@@ -4576,9 +4588,6 @@
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\ScriptState.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
-    <ClCompile Include="..\bindings\js\ScriptValue.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\SerializedScriptValue.cpp">
@@ -4788,6 +4797,12 @@
     <ClCompile Include="..\bridge\runtime_root.cpp">
       <Filter>bridge</Filter>
     </ClCompile>
+    <ClCompile Include="..\inspector\CommandLineAPIHost.cpp">
+      <Filter>inspector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\inspector\CommandLineAPIModule.cpp">
+      <Filter>inspector</Filter>
+    </ClCompile>
     <ClCompile Include="..\inspector\ConsoleMessage.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
@@ -4824,16 +4839,10 @@
     <ClCompile Include="..\inspector\InspectorAgent.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
-    <ClCompile Include="..\inspector\InspectorAgentRegistry.cpp">
-      <Filter>inspector</Filter>
-    </ClCompile>
     <ClCompile Include="..\inspector\InspectorAllInOne.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\InspectorApplicationCacheAgent.cpp">
-      <Filter>inspector</Filter>
-    </ClCompile>
-    <ClCompile Include="..\inspector\InspectorBackendDispatcher.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\InspectorCanvasAgent.cpp">
@@ -4867,9 +4876,6 @@
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\InspectorDOMDebuggerAgent.cpp">
-      <Filter>inspector</Filter>
-    </ClCompile>
-    <ClCompile Include="..\inspector\InspectorDOMNodeAgent.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\InspectorDOMStorageAgent.cpp">
@@ -4926,9 +4932,6 @@
     <ClCompile Include="..\inspector\InspectorTimelineAgent.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
-    <ClCompile Include="..\inspector\InspectorValues.cpp">
-      <Filter>inspector</Filter>
-    </ClCompile>
     <ClCompile Include="..\inspector\InspectorWorkerAgent.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
@@ -4942,6 +4945,9 @@
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\PageDebuggerAgent.cpp">
+      <Filter>inspector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\inspector\PageInjectedScriptManager.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\inspector\PageRuntimeAgent.cpp">
@@ -5281,13 +5287,13 @@
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\HTMLNames.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorBackendDispatchers.cpp">
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorWebBackendDispatchers.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorFrontend.cpp">
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorWebFrontendDispatchers.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorTypeBuilder.cpp">
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorWebTypeBuilders.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\WebCore\DerivedSources\JSAbstractWorker.cpp">
@@ -5330,6 +5336,9 @@
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSClipboard.cpp">
+      <Filter>DerivedSources</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSCommandLineAPIHost.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSComment.cpp">
@@ -7117,6 +7126,11 @@
     <ClCompile Include="..\platform\graphics\gstreamer\WebKitWebSourceGStreamer.cpp">
       <Filter>platform\graphics\gstreamer</Filter>
     </ClCompile>
+    <ClCompile Include="..\css\StyleProperties.cpp" />
+    <ClCompile Include="..\rendering\line\LineBreaker.cpp" />
+    <ClCompile Include="..\rendering\line\LineInfo.cpp" />
+    <ClCompile Include="..\rendering\line\TrailingObjects.cpp" />
+    <ClCompile Include="..\inspector\InspectorNodeFinder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Modules\geolocation\Coordinates.h">
@@ -9231,9 +9245,6 @@
     <ClInclude Include="..\css\StyleMedia.h">
       <Filter>css</Filter>
     </ClInclude>
-    <ClInclude Include="..\css\StylePropertySet.h">
-      <Filter>css</Filter>
-    </ClInclude>
     <ClInclude Include="..\css\StylePropertyShorthand.h">
       <Filter>css</Filter>
     </ClInclude>
@@ -9295,6 +9306,18 @@
       <Filter>css</Filter>
     </ClInclude>
     <ClInclude Include="..\css\WebKitCSSViewportRule.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cssjit\FunctionCall.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cssjit\RegisterAllocator.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cssjit\SelectorCompiler.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cssjit\StackAllocator.h">
       <Filter>css</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\AutoTableLayout.h">
@@ -11406,9 +11429,6 @@
     <ClInclude Include="..\bindings\js\ArrayValue.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
-    <ClInclude Include="..\bindings\js\BreakpointID.h">
-      <Filter>bindings\js</Filter>
-    </ClInclude>
     <ClInclude Include="..\bindings\js\CachedScriptSourceProvider.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
@@ -11511,13 +11531,10 @@
     <ClInclude Include="..\bindings\js\ScriptDebugServer.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
-    <ClInclude Include="..\bindings\js\ScriptFunctionCall.h">
-      <Filter>bindings\js</Filter>
-    </ClInclude>
     <ClInclude Include="..\bindings\js\ScriptHeapSnapshot.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
-    <ClInclude Include="..\bindings\js\ScriptObject.h">
+    <ClInclude Include="..\bindings\js\ScriptGlobalObject.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\ScriptProfile.h">
@@ -11535,16 +11552,10 @@
     <ClInclude Include="..\bindings\js\ScriptState.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
-    <ClInclude Include="..\bindings\js\ScriptValue.h">
-      <Filter>bindings\js</Filter>
-    </ClInclude>
     <ClInclude Include="..\bindings\js\ScriptWrappable.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\SerializedScriptValue.h">
-      <Filter>bindings\js</Filter>
-    </ClInclude>
-    <ClInclude Include="..\bindings\js\SourceID.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\WebCoreJSClientData.h">
@@ -12195,6 +12206,15 @@
     <ClInclude Include="..\svg\properties\SVGTransformListPropertyTearOff.h">
       <Filter>rendering\svg\properties</Filter>
     </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\bindings\ScriptFunctionCall.h">
+      <Filter>ForwardingHeaders\bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\bindings\ScriptObject.h">
+      <Filter>ForwardingHeaders\bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\bindings\ScriptValue.h">
+      <Filter>ForwardingHeaders\bindings</Filter>
+    </ClInclude>
     <ClInclude Include="..\ForwardingHeaders\runtime\ArgList.h">
       <Filter>ForwardingHeaders\runtime</Filter>
     </ClInclude>
@@ -12240,7 +12260,31 @@
     <ClInclude Include="..\ForwardingHeaders\heap\Strong.h">
       <Filter>ForwardingHeaders\heap</Filter>
     </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorAgentBase.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorAgentRegistry.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorBackendDispatcher.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
     <ClInclude Include="..\ForwardingHeaders\inspector\InspectorFrontendChannel.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorJSBackendDispatchers.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorJSFrontendDispatchers.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorJSTypeBuilders.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorTypeBuilder.h">
+      <Filter>ForwardingHeaders\inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ForwardingHeaders\inspector\InspectorValues.h">
       <Filter>ForwardingHeaders\inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\history\BackForwardClient.h">
@@ -12354,6 +12398,12 @@
     <ClInclude Include="..\inspector\BindingVisitors.h">
       <Filter>inspector</Filter>
     </ClInclude>
+    <ClInclude Include="..\inspector\CommandLineAPIHost.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inspector\CommandLineAPIModule.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
     <ClInclude Include="..\inspector\ConsoleAPITypes.h">
       <Filter>inspector</Filter>
     </ClInclude>
@@ -12394,12 +12444,6 @@
       <Filter>inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\inspector\InspectorApplicationCacheAgent.h">
-      <Filter>inspector</Filter>
-    </ClInclude>
-    <ClInclude Include="..\inspector\InspectorBackendDispatcher.h">
-      <Filter>inspector</Filter>
-    </ClInclude>
-    <ClInclude Include="..\inspector\InspectorBaseAgent.h">
       <Filter>inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\inspector\InspectorCanvasAgent.h">
@@ -12507,7 +12551,7 @@
     <ClInclude Include="..\inspector\InspectorTimelineAgent.h">
       <Filter>inspector</Filter>
     </ClInclude>
-    <ClInclude Include="..\inspector\InspectorValues.h">
+    <ClInclude Include="..\inspector\InspectorWebAgentBase.h">
       <Filter>inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\inspector\InspectorWorkerAgent.h">
@@ -12526,6 +12570,9 @@
       <Filter>inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\inspector\PageDebuggerAgent.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inspector\PageInjectedScriptManager.h">
       <Filter>inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\inspector\PageRuntimeAgent.h">
@@ -13031,6 +13078,9 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\CSSGrammar.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\CommandLineAPIModuleSource.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\EventHeaders.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
@@ -13064,16 +13114,16 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InjectedScriptSource.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorBackendDispatchers.h">
-      <Filter>DerivedSources</Filter>
-    </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorFrontend.h">
-      <Filter>DerivedSources</Filter>
-    </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorOverlayPage.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorTypeBuilder.h">
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorWebBackendDispatchers.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorWebFrontendDispatchers.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\InspectorWebTypeBuilders.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\WebCore\DerivedSources\JSAbstractWorker.h">
@@ -13116,6 +13166,9 @@
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSClipboard.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSCommandLineAPIHost.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSComment.h">
@@ -14531,6 +14584,12 @@
     <ClInclude Include="..\html\canvas\EXTTextureFilterAnisotropic.h">
       <Filter>html\canvas</Filter>
     </ClInclude>
+    <ClInclude Include="..\platform\audio\AudioSession.h">
+      <Filter>platform\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platform\audio\AudioSessionListener.h">
+      <Filter>platform\audio</Filter>
+    </ClInclude>
     <ClInclude Include="..\platform\graphics\ANGLEWebKitBridge.h">
       <Filter>platform\graphics</Filter>
     </ClInclude>
@@ -14704,9 +14763,6 @@
     </ClInclude>
     <ClInclude Include="..\rendering\line\LineLayoutState.h">
       <Filter>rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="..\rendering\line\LineWidth.h">
-      <Filter>rendering\line</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\FloatPolygon.h">
       <Filter>platform\graphics</Filter>
@@ -14966,6 +15022,13 @@
     <ClInclude Include="..\platform\graphics\gstreamer\WebKitWebSourceGStreamer.h">
       <Filter>platform\graphics\gstreamer</Filter>
     </ClInclude>
+    <ClInclude Include="..\Modules\plugins\PluginReplacement.h" />
+    <ClInclude Include="..\css\StyleProperties.h" />
+    <ClInclude Include="..\rendering\line\BreakingContextInlineHeaders.h" />
+    <ClInclude Include="..\rendering\line\LineBreaker.h" />
+    <ClInclude Include="..\rendering\line\LineInlineHeaders.h" />
+    <ClInclude Include="..\rendering\line\LineWidth.h" />
+    <ClInclude Include="..\rendering\line\TrailingObjects.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\css\CSSGrammar.y.in">
@@ -15092,6 +15155,9 @@
     <CustomBuildStep Include="..\platform\network\cf\ResourceError.h">
       <Filter>platform\network\cf</Filter>
     </CustomBuildStep>
+    <CustomBuildStep Include="..\platform\network\cf\ResourceHandleCFURLConnectionDelegate.h">
+      <Filter>platform\network\cf</Filter>
+    </CustomBuildStep>
     <CustomBuildStep Include="..\platform\network\cf\ResourceRequest.h">
       <Filter>platform\network\cf</Filter>
     </CustomBuildStep>
@@ -15099,6 +15165,9 @@
       <Filter>platform\network\cf</Filter>
     </CustomBuildStep>
     <CustomBuildStep Include="..\platform\network\cf\ResourceResponse.h">
+      <Filter>platform\network\cf</Filter>
+    </CustomBuildStep>
+    <CustomBuildStep Include="..\platform\network\cf\SynchronousResourceHandleCFURLConnectionDelegate.h">
       <Filter>platform\network\cf</Filter>
     </CustomBuildStep>
     <CustomBuildStep Include="..\platform\network\curl\AuthenticationChallenge.h">

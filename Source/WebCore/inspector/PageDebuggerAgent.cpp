@@ -40,6 +40,9 @@
 #include "Page.h"
 #include "PageConsole.h"
 #include "PageScriptDebugServer.h"
+#include "ScriptState.h"
+
+using namespace Inspector;
 
 namespace WebCore {
 

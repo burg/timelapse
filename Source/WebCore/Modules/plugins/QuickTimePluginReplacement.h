@@ -28,7 +28,7 @@
 
 #include "PluginReplacement.h"
 #include "ScriptState.h"
-#include "ScriptValue.h"
+#include <bindings/ScriptObject.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -53,7 +53,7 @@ public:
     virtual JSC::JSObject* scriptObject() OVERRIDE { return m_scriptObject; }
 
     virtual bool willCreateRenderer() OVERRIDE { return m_mediaElement; }
-    virtual RenderElement* createRenderer(HTMLPlugInElement&, PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(HTMLPlugInElement&, PassRef<RenderStyle>) OVERRIDE;
 
     unsigned long long movieSize() const;
     void postEvent(const String&);

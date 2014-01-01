@@ -74,6 +74,7 @@ public:
         , m_structureCheckHoistingFailed(false)
         , m_checkArrayHoistingFailed(false)
         , m_isProfitableToUnbox(false)
+        , m_isLoadedFrom(false)
         , m_doubleFormatState(EmptyDoubleFormatState)
     {
         clearVotes();
@@ -328,6 +329,9 @@ public:
     {
         ASSERT(find() == this);
         
+        if (isArgumentsAlias())
+            return FlushedArguments;
+        
         if (!shouldUnboxIfPossible())
             return FlushedJSValue;
         
@@ -354,7 +358,7 @@ public:
     {
         return FlushedAt(flushFormat(), machineLocal());
     }
-    
+
 private:
     // This is slightly space-inefficient, since anything we're unified with
     // will have the same operand and should have the same prediction. But

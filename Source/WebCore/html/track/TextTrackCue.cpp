@@ -176,9 +176,9 @@ const AtomicString& TextTrackCueBox::textTrackCueBoxShadowPseudoId()
     return trackDisplayBoxShadowPseudoId;
 }
 
-RenderElement* TextTrackCueBox::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> TextTrackCueBox::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderTextTrackCue(*this, std::move(style));
+    return createRenderer<RenderTextTrackCue>(*this, std::move(style));
 }
 
 // ----------------------------
@@ -571,6 +571,9 @@ void TextTrackCue::setIsActive(bool active)
     m_isActive = active;
 
     if (!active) {
+        if (!hasDisplayTree())
+            return;
+
         // Remove the display tree as soon as the cue becomes inactive.
         displayTreeInternal()->remove(ASSERT_NO_EXCEPTION);
     }
@@ -822,7 +825,7 @@ TextTrackCueBox* TextTrackCue::getDisplayTree(const IntSize& videoSize)
 
     // Note: This is contained by default in m_cueBackgroundBox.
     m_cueBackgroundBox->setPseudo(cueShadowPseudoId());
-    displayTree->appendChild(m_cueBackgroundBox, ASSERT_NO_EXCEPTION, AttachLazily);
+    displayTree->appendChild(m_cueBackgroundBox, ASSERT_NO_EXCEPTION);
 
     // FIXME(BUG 79916): Runs of children of WebVTT Ruby Objects that are not
     // WebVTT Ruby Text Objects must be wrapped in anonymous boxes whose
@@ -846,6 +849,8 @@ TextTrackCueBox* TextTrackCue::getDisplayTree(const IntSize& videoSize)
 
 void TextTrackCue::removeDisplayTree()
 {
+    if (!hasDisplayTree())
+        return;
     displayTreeInternal()->remove(ASSERT_NO_EXCEPTION);
 }
 

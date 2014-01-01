@@ -35,20 +35,25 @@
 namespace WebCore {
 
 StyleGridItemData::StyleGridItemData()
-    : m_gridColumnStart(RenderStyle::initialGridPosition())
-    , m_gridColumnEnd(RenderStyle::initialGridPosition())
-    , m_gridRowStart(RenderStyle::initialGridPosition())
-    , m_gridRowEnd(RenderStyle::initialGridPosition())
+    : m_gridColumnStart(RenderStyle::initialGridItemColumnStart())
+    , m_gridColumnEnd(RenderStyle::initialGridItemColumnEnd())
+    , m_gridRowStart(RenderStyle::initialGridItemRowStart())
+    , m_gridRowEnd(RenderStyle::initialGridItemRowEnd())
 {
 }
 
-StyleGridItemData::StyleGridItemData(const StyleGridItemData& o)
+inline StyleGridItemData::StyleGridItemData(const StyleGridItemData& o)
     : RefCounted<StyleGridItemData>()
     , m_gridColumnStart(o.m_gridColumnStart)
     , m_gridColumnEnd(o.m_gridColumnEnd)
     , m_gridRowStart(o.m_gridRowStart)
     , m_gridRowEnd(o.m_gridRowEnd)
 {
+}
+
+PassRef<StyleGridItemData> StyleGridItemData::copy() const
+{
+    return adoptRef(*new StyleGridItemData(*this));
 }
 
 } // namespace WebCore

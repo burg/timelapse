@@ -212,17 +212,17 @@ void SVGTRefElement::svgAttributeChanged(const QualifiedName& attrName)
 
     if (SVGURIReference::isKnownAttribute(attrName)) {
         buildPendingResource();
-        if (RenderObject* renderer = this->renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        if (auto renderer = this->renderer())
+            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
     ASSERT_NOT_REACHED();
 }
 
-RenderElement* SVGTRefElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGTRefElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderSVGInline(*this, std::move(style));
+    return createRenderer<RenderSVGInline>(*this, std::move(style));
 }
 
 bool SVGTRefElement::childShouldCreateRenderer(const Node& child) const

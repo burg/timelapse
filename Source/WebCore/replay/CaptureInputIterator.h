@@ -59,7 +59,7 @@ public:
     virtual ~CaptureInputIterator();
 
     // InputIterator
-    virtual bool isCapturing() const { return m_isActive; }
+    virtual bool isCapturing() const { return isActive(); }
     virtual bool isReplaying() const { return false; }
     virtual void incrementExecutionTicks() OVERRIDE;
 
@@ -67,8 +67,6 @@ public:
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
     virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
 
-    // Used for temporary deactivation; e.g. when injected scripts are evaluated.
-    void setIsActive(bool);
 protected:
     void setWithinInputExtent(bool withinInputExtent) { m_withinInputExtent = withinInputExtent; }
     bool withinInputExtent() const { return m_withinInputExtent; }
@@ -80,7 +78,6 @@ private:
 
     EventLoopInput* m_previousEventLoopInput;
     int m_elapsedTicks;
-    bool m_isActive;
     bool m_withinInputExtent;
 };
 

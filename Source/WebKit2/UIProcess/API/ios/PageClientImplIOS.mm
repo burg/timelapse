@@ -191,7 +191,7 @@ void PageClientImpl::executeUndoRedo(WebPageProxy::UndoOrRedo)
     notImplemented();
 }
 
-void PageClientImpl::accessibilityWebProcessTokenReceived(const CoreIPC::DataReference&)
+void PageClientImpl::accessibilityWebProcessTokenReceived(const IPC::DataReference&)
 {
     notImplemented();
 }
@@ -340,5 +340,41 @@ void PageClientImpl::stopAssistingNode()
 {
     [m_view _stopAssistingNode];
 }
+
+#if ENABLE(FULLSCREEN_API)
+
+WebFullScreenManagerProxyClient& PageClientImpl::fullScreenManagerProxyClient()
+{
+    return *this;
+}
+
+// WebFullScreenManagerProxyClient
+
+void PageClientImpl::closeFullScreenManager()
+{
+}
+
+bool PageClientImpl::isFullScreen()
+{
+    return false;
+}
+
+void PageClientImpl::enterFullScreen()
+{
+}
+
+void PageClientImpl::exitFullScreen()
+{
+}
+
+void PageClientImpl::beganEnterFullScreen(const IntRect&, const IntRect&)
+{
+}
+
+void PageClientImpl::beganExitFullScreen(const IntRect&, const IntRect&)
+{
+}
+
+#endif // ENABLE(FULLSCREEN_API)
 
 } // namespace WebKit

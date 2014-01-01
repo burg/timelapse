@@ -186,30 +186,6 @@ GPRReg SpeculativeJIT::fillJSValue(Edge edge)
     }
 }
 
-void SpeculativeJIT::nonSpeculativeUInt32ToNumber(Node* node)
-{
-    SpeculateInt32Operand op1(this, node->child1());
-    FPRTemporary boxer(this);
-    GPRTemporary result(this, Reuse, op1);
-    
-    JITCompiler::Jump positive = m_jit.branch32(MacroAssembler::GreaterThanOrEqual, op1.gpr(), TrustedImm32(0));
-    
-    m_jit.convertInt32ToDouble(op1.gpr(), boxer.fpr());
-    m_jit.addDouble(JITCompiler::AbsoluteAddress(&AssemblyHelpers::twoToThe32), boxer.fpr());
-    
-    boxDouble(boxer.fpr(), result.gpr());
-    
-    JITCompiler::Jump done = m_jit.jump();
-    
-    positive.link(&m_jit);
-    
-    m_jit.or64(GPRInfo::tagTypeNumberRegister, op1.gpr(), result.gpr());
-    
-    done.link(&m_jit);
-    
-    jsValueResult(result.gpr(), m_currentNode);
-}
-
 void SpeculativeJIT::cachedGetById(CodeOrigin codeOrigin, GPRReg baseGPR, GPRReg resultGPR, unsigned identifierNumber, JITCompiler::Jump slowPathTarget, SpillRegistersMode spillMode)
 {
     JITGetByIdGenerator gen(
@@ -230,10 +206,8 @@ void SpeculativeJIT::cachedGetById(CodeOrigin codeOrigin, GPRReg baseGPR, GPRReg
     addSlowPathGenerator(slowPath.release());
 }
 
-void SpeculativeJIT::cachedPutById(CodeOrigin codeOrigin, GPRReg baseGPR, GPRReg valueGPR, Edge valueUse, GPRReg scratchGPR, unsigned identifierNumber, PutKind putKind, JITCompiler::Jump slowPathTarget)
+void SpeculativeJIT::cachedPutById(CodeOrigin codeOrigin, GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, unsigned identifierNumber, PutKind putKind, JITCompiler::Jump slowPathTarget)
 {
-    writeBarrier(baseGPR, valueGPR, valueUse, WriteBarrierForPropertyAccess, scratchGPR);
-
     JITPutByIdGenerator gen(
         m_jit.codeBlock(), codeOrigin, usedRegisters(), GPRInfo::callFrameRegister,
         JSValueRegs(baseGPR), JSValueRegs(valueGPR), scratchGPR, false,
@@ -486,6 +460,7 @@ private:
 
 void SpeculativeJIT::nonSpeculativeNonPeepholeCompare(Node* node, MacroAssembler::RelationalCondition cond, S_JITOperation_EJJ helperFunction)
 {
+    ASSERT(node->isBinaryUseKind(UntypedUse));
     JSValueOperand arg1(this, node->child1());
     JSValueOperand arg2(this, node->child2());
     GPRReg arg1GPR = arg1.gpr();
@@ -1496,6 +1471,23 @@ JITCompiler::Jump SpeculativeJIT::convertToDouble(GPRReg value, FPRReg result, G
     return notNumber;
 }
 
+void SpeculativeJIT::compileBaseValueStoreBarrier(Edge& baseEdge, Edge& valueEdge)
+{
+#if ENABLE(GGC)
+    ASSERT(!isKnownNotCell(valueEdge.node()));
+
+    SpeculateCellOperand base(this, baseEdge);
+    JSValueOperand value(this, valueEdge);
+    GPRTemporary scratch1(this);
+    GPRTemporary scratch2(this);
+
+    writeBarrier(base.gpr(), value.gpr(), valueEdge, scratch1.gpr(), scratch2.gpr());
+#else
+    UNUSED_PARAM(baseEdge);
+    UNUSED_PARAM(valueEdge);
+#endif
+}
+
 void SpeculativeJIT::compileObjectEquality(Node* node)
 {
     SpeculateCellOperand op1(this, node->child1());
@@ -2244,24 +2236,14 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
         
-    case MovHintAndCheck: {
-        compileMovHintAndCheck(node);
-        break;
-    }
-        
     case MovHint:
-    case ZombieHint: {
+    case ZombieHint:
+    case Check: {
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
 
     case SetLocal: {
-        // SetLocal doubles as a hint as to where a node will be stored and
-        // as a speculation point. So before we speculate make sure that we
-        // know where the child of this node needs to go in the virtual
-        // stack.
-        compileMovHint(node);
-        
         switch (node->variableAccessData()->flushFormat()) {
         case FlushedDouble: {
             SpeculateDoubleOperand value(this, node->child1());
@@ -2307,20 +2289,12 @@ void SpeculativeJIT::compile(Node* node)
             break;
         }
             
-        case FlushedJSValue: {
+        case FlushedJSValue:
+        case FlushedArguments: {
             JSValueOperand value(this, node->child1());
             m_jit.store64(value.gpr(), JITCompiler::addressFor(node->machineLocal()));
             noResult(node);
-            
             recordSetLocal(DataFormatJS);
-            
-            // If we're storing an arguments object that has been optimized away,
-            // our variable event stream for OSR exit now reflects the optimized
-            // value (JSValue()). On the slow path, we want an arguments object
-            // instead. We add an additional move hint to show OSR exit that it
-            // needs to reconstruct the arguments object.
-            if (node->child1()->op() == PhantomArguments)
-                compileMovHint(node);
             break;
         }
             
@@ -2930,11 +2904,6 @@ void SpeculativeJIT::compile(Node* node)
                     m_jit.branch64(
                         MacroAssembler::Below, valueReg, GPRInfo::tagTypeNumberRegister));
             }
-        
-            if (arrayMode.type() == Array::Contiguous && Heap::isWriteBarrierEnabled()) {
-                GPRTemporary scratch(this);
-                writeBarrier(baseReg, value.gpr(), child3, WriteBarrierForPropertyAccess, scratch.gpr());
-            }
 
             StorageOperand storage(this, child4);
             GPRReg storageReg = storage.gpr();
@@ -2956,7 +2925,7 @@ void SpeculativeJIT::compile(Node* node)
             
             if (arrayMode.isInBounds()) {
                 speculationCheck(
-                    StoreToHoleOrOutOfBounds, JSValueRegs(), 0,
+                    OutOfBounds, JSValueRegs(), 0,
                     m_jit.branch32(MacroAssembler::AboveOrEqual, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength())));
             } else {
                 MacroAssembler::Jump inBounds = m_jit.branch32(MacroAssembler::Below, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength()));
@@ -3010,11 +2979,6 @@ void SpeculativeJIT::compile(Node* node)
         
             if (!m_compileOkay)
                 return;
-        
-            if (Heap::isWriteBarrierEnabled()) {
-                GPRTemporary scratch(this);
-                writeBarrier(baseReg, value.gpr(), child3, WriteBarrierForPropertyAccess, scratch.gpr());
-            }
 
             StorageOperand storage(this, child4);
             GPRReg storageReg = storage.gpr();
@@ -3115,7 +3079,7 @@ void SpeculativeJIT::compile(Node* node)
                     MacroAssembler::NonZero,
                     MacroAssembler::Address(
                         baseReg, Arguments::offsetOfSlowArgumentData())));
-    
+
             m_jit.move(propertyReg, scratch2Reg);
             m_jit.signExtend32ToPtr(scratch2Reg, scratch2Reg);
             m_jit.loadPtr(
@@ -3216,11 +3180,6 @@ void SpeculativeJIT::compile(Node* node)
                         MacroAssembler::Below, valueGPR, GPRInfo::tagTypeNumberRegister));
             }
 
-            if (node->arrayMode().type() != Array::Int32 && Heap::isWriteBarrierEnabled()) {
-                GPRTemporary scratch(this);
-                writeBarrier(baseGPR, valueGPR, node->child2(), WriteBarrierForPropertyAccess, scratch.gpr(), storageLengthGPR);
-            }
-            
             m_jit.load32(MacroAssembler::Address(storageGPR, Butterfly::offsetOfPublicLength()), storageLengthGPR);
             MacroAssembler::Jump slowPath = m_jit.branch32(MacroAssembler::AboveOrEqual, storageLengthGPR, MacroAssembler::Address(storageGPR, Butterfly::offsetOfVectorLength()));
             m_jit.store64(valueGPR, MacroAssembler::BaseIndex(storageGPR, storageLengthGPR, MacroAssembler::TimesEight));
@@ -3264,11 +3223,6 @@ void SpeculativeJIT::compile(Node* node)
         case Array::ArrayStorage: {
             JSValueOperand value(this, node->child2());
             GPRReg valueGPR = value.gpr();
-
-            if (Heap::isWriteBarrierEnabled()) {
-                GPRTemporary scratch(this);
-                writeBarrier(baseGPR, valueGPR, node->child2(), WriteBarrierForPropertyAccess, scratch.gpr(), storageLengthGPR);
-            }
 
             m_jit.load32(MacroAssembler::Address(storageGPR, ArrayStorage::lengthOffset()), storageLengthGPR);
         
@@ -4002,18 +3956,15 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
     case PutClosureVar: {
-        SpeculateCellOperand scope(this, node->child1());
         StorageOperand registers(this, node->child2());
         JSValueOperand value(this, node->child3());
-        GPRTemporary scratchRegister(this);
 
-        GPRReg scopeGPR = scope.gpr();
         GPRReg registersGPR = registers.gpr();
         GPRReg valueGPR = value.gpr();
-        GPRReg scratchGPR = scratchRegister.gpr();
+
+        speculate(node, node->child1());
 
         m_jit.store64(valueGPR, JITCompiler::Address(registersGPR, node->varNumber() * sizeof(Register)));
-        writeBarrier(scopeGPR, valueGPR, node->child3(), WriteBarrierForVariableAccess, scratchGPR);
         noResult(node);
         break;
     }
@@ -4202,13 +4153,9 @@ void SpeculativeJIT::compile(Node* node)
         m_jit.jitCode()->common.notifyCompilingStructureTransition(m_jit.graph().m_plan, m_jit.codeBlock(), node);
 
         SpeculateCellOperand base(this, node->child1());
+        GPRTemporary scratch1(this);
+        GPRTemporary scratch2(this);
         GPRReg baseGPR = base.gpr();
-        
-        
-#if ENABLE(WRITE_BARRIER_PROFILING)
-        // Must always emit this write barrier as the structure transition itself requires it
-        writeBarrier(baseGPR, node->structureTransitionData().newStructure, WriteBarrierForGenericAccess);
-#endif
         
         m_jit.storePtr(MacroAssembler::TrustedImmPtr(node->structureTransitionData().newStructure), MacroAssembler::Address(baseGPR, JSCell::structureOffset()));
         
@@ -4242,6 +4189,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
         
+    case ConstantStoragePointer: {
+        compileConstantStoragePointer(node);
+        break;
+    }
+        
     case GetTypedArrayByteOffset: {
         compileGetTypedArrayByteOffset(node);
         break;
@@ -4263,23 +4215,20 @@ void SpeculativeJIT::compile(Node* node)
     }
         
     case PutByOffset: {
-#if ENABLE(WRITE_BARRIER_PROFILING)
-        SpeculateCellOperand base(this, node->child2());
-#endif
         StorageOperand storage(this, node->child1());
         JSValueOperand value(this, node->child3());
+        GPRTemporary scratch1(this);
+        GPRTemporary scratch2(this);
 
         GPRReg storageGPR = storage.gpr();
         GPRReg valueGPR = value.gpr();
-        
-#if ENABLE(WRITE_BARRIER_PROFILING)
-        writeBarrier(base.gpr(), value.gpr(), node->child3(), WriteBarrierForPropertyAccess);
-#endif
+
+        speculate(node, node->child2());
 
         StorageAccessData& storageAccessData = m_jit.graph().m_storageAccessData[node->storageAccessDataIndex()];
         
         m_jit.store64(valueGPR, JITCompiler::Address(storageGPR, offsetRelativeToBase(storageAccessData.offset)));
-        
+
         noResult(node);
         break;
     }
@@ -4293,12 +4242,9 @@ void SpeculativeJIT::compile(Node* node)
         GPRReg valueGPR = value.gpr();
         GPRReg scratchGPR = scratch.gpr();
         
-        base.use();
-        value.use();
+        cachedPutById(node->codeOrigin, baseGPR, valueGPR, scratchGPR, node->identifierNumber(), NotDirect);
 
-        cachedPutById(node->codeOrigin, baseGPR, valueGPR, node->child2(), scratchGPR, node->identifierNumber(), NotDirect);
-        
-        noResult(node, UseChildrenCalledExplicitly);
+        noResult(node);
         break;
     }
 
@@ -4311,12 +4257,9 @@ void SpeculativeJIT::compile(Node* node)
         GPRReg valueGPR = value.gpr();
         GPRReg scratchGPR = scratch.gpr();
         
-        base.use();
-        value.use();
+        cachedPutById(node->codeOrigin, baseGPR, valueGPR, scratchGPR, node->identifierNumber(), Direct);
 
-        cachedPutById(node->codeOrigin, baseGPR, valueGPR, node->child2(), scratchGPR, node->identifierNumber(), Direct);
-
-        noResult(node, UseChildrenCalledExplicitly);
+        noResult(node);
         break;
     }
 
@@ -4331,14 +4274,7 @@ void SpeculativeJIT::compile(Node* node)
 
     case PutGlobalVar: {
         JSValueOperand value(this, node->child1());
-        
-        if (Heap::isWriteBarrierEnabled()) {
-            GPRTemporary scratch(this);
-            GPRReg scratchReg = scratch.gpr();
-            
-            writeBarrier(m_jit.globalObjectFor(node->codeOrigin), value.gpr(), node->child1(), WriteBarrierForVariableAccess, scratchReg);
-        }
-        
+
         m_jit.store64(value.gpr(), node->registerPointer());
 
         noResult(node);
@@ -4991,6 +4927,13 @@ void SpeculativeJIT::compile(Node* node)
         RELEASE_ASSERT_NOT_REACHED();
         break;
 
+    case StoreBarrier:
+    case ConditionalStoreBarrier:
+    case StoreBarrierWithNullCheck: {
+        compileStoreBarrier(node);
+        break;
+    }
+
 #if ENABLE(FTL_JIT)        
     case CheckTierUpInLoop: {
         MacroAssembler::Jump done = m_jit.branchAdd32(
@@ -5059,6 +5002,7 @@ void SpeculativeJIT::compile(Node* node)
     case Upsilon:
     case GetArgument:
     case ExtractOSREntryLocal:
+    case CheckInBounds:
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
@@ -5069,6 +5013,36 @@ void SpeculativeJIT::compile(Node* node)
     if (node->hasResult() && node->mustGenerate())
         use(node);
 }
+
+#if ENABLE(GGC)
+void SpeculativeJIT::writeBarrier(GPRReg ownerGPR, GPRReg valueGPR, Edge valueUse, GPRReg scratch1, GPRReg scratch2)
+{
+    JITCompiler::Jump isNotCell;
+    if (!isKnownCell(valueUse.node()))
+        isNotCell = m_jit.branchTest64(JITCompiler::NonZero, valueGPR, GPRInfo::tagMaskRegister);
+
+    JITCompiler::Jump definitelyNotMarked = genericWriteBarrier(m_jit, ownerGPR, scratch1, scratch2);
+    storeToWriteBarrierBuffer(ownerGPR, scratch1, scratch2);
+    definitelyNotMarked.link(&m_jit);
+
+    if (!isKnownCell(valueUse.node()))
+        isNotCell.link(&m_jit);
+}
+
+void SpeculativeJIT::writeBarrier(JSCell* owner, GPRReg valueGPR, Edge valueUse, GPRReg scratch1, GPRReg scratch2)
+{
+    JITCompiler::Jump isNotCell;
+    if (!isKnownCell(valueUse.node()))
+        isNotCell = m_jit.branchTest64(JITCompiler::NonZero, valueGPR, GPRInfo::tagMaskRegister);
+
+    JITCompiler::Jump definitelyNotMarked = genericWriteBarrier(m_jit, owner);
+    storeToWriteBarrierBuffer(owner, scratch1, scratch2);
+    definitelyNotMarked.link(&m_jit);
+
+    if (!isKnownCell(valueUse.node()))
+        isNotCell.link(&m_jit);
+}
+#endif // ENABLE(GGC)
 
 #endif
 

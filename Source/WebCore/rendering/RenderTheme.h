@@ -73,8 +73,7 @@ public:
     // metrics and defaults given the contents of the style.  This includes sophisticated operations like
     // selection of control size based off the font, the disabling of appearance when certain other properties like
     // "border" are set, or if the appearance is not supported by the theme.
-    void adjustStyle(StyleResolver*, RenderStyle*, Element*,  bool UAHasAppearance,
-                     const BorderData&, const FillLayer&, const Color& backgroundColor);
+    void adjustStyle(StyleResolver&, RenderStyle&, Element*,  bool UAHasAppearance, const BorderData&, const FillLayer&, const Color& backgroundColor);
 
     // This method is called to paint the widget as a background of the RenderObject.  A widget's foreground, e.g., the
     // text of a button, is always rendered by the engine itself.  The boolean return value indicates
@@ -239,6 +238,9 @@ public:
     virtual String fileListDefaultLabel(bool multipleFilesAllowed) const;
     virtual String fileListNameForWidth(const FileList*, const Font&, int width, bool multipleFilesAllowed) const;
 
+    enum FileUploadDecorations { SingleFile, MultipleFiles };
+    virtual bool paintFileUploadIconDecorations(RenderObject* /*inputRenderer*/, RenderObject* /*buttonRenderer*/, const PaintInfo&, const IntRect&, Icon*, FileUploadDecorations) { return true; }
+
 protected:
     // The platform selection color.
     virtual Color platformActiveSelectionBackgroundColor() const;
@@ -294,9 +296,6 @@ protected:
     virtual bool paintPushButtonDecorations(RenderObject*, const PaintInfo&, const IntRect&) { return true; }
     virtual bool paintSquareButtonDecorations(RenderObject*, const PaintInfo&, const IntRect&) { return true; }
 
-    enum FileUploadDecorations { SingleFile, MultipleFiles };
-    virtual bool paintFileUploadIconDecorations(RenderObject* /*inputRenderer*/, RenderObject* /*buttonRenderer*/, const PaintInfo&, const IntRect&, Icon*, FileUploadDecorations) { return true; }
-    
 #if ENABLE(METER_ELEMENT)
     virtual void adjustMeterStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintMeter(RenderObject*, const PaintInfo&, const IntRect&);

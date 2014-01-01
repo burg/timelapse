@@ -23,6 +23,25 @@ import sys
 
 script_dir = None
 build_dir = None
+library_build_dir = None
+is_cmake = None
+
+
+def is_cmake_build():
+    global is_cmake
+    if is_cmake is None:
+        is_cmake = os.path.exists(build_path('CMakeCache.txt'))
+    return is_cmake
+
+
+def library_build_path(*args):
+    global library_build_dir
+    if not library_build_dir:
+        if is_cmake_build():
+            library_build_dir = build_path('lib', *args)
+        else:
+            library_build_dir = build_path('.libs', *args)
+    return library_build_dir
 
 
 def script_path(*args):
@@ -36,14 +55,18 @@ def top_level_path(*args):
     return os.path.join(*((os.path.join(os.path.dirname(__file__), '..', '..'),) + args))
 
 
-def get_build_path(build_types=('Release', 'Debug')):
+def get_build_path(build_types=('Release', 'Debug'), fatal=True):
     global build_dir
     if build_dir:
         return build_dir
 
     def is_valid_build_directory(path):
         return os.path.exists(os.path.join(path, 'GNUmakefile')) or \
-            os.path.exists(os.path.join(path, 'Programs', 'DumpRenderTree'))
+            os.path.exists(os.path.join(path, 'Programs', 'GtkLauncher')) or \
+            os.path.exists(os.path.join(path, 'Programs', 'MiniBrowser')) or \
+            os.path.exists(os.path.join(path, 'CMakeCache.txt')) or \
+            os.path.exists(os.path.join(path, 'bin/GtkLauncher')) or \
+            os.path.exists(os.path.join(path, 'bin/MiniBrowser'))
 
     if len(sys.argv[1:]) > 1 and os.path.exists(sys.argv[-1]) and is_valid_build_directory(sys.argv[-1]):
         return sys.argv[-1]
@@ -76,7 +99,8 @@ def get_build_path(build_types=('Release', 'Debug')):
         return build_dir
 
     print('Could not determine build directory.')
-    sys.exit(1)
+    if fatal:
+        sys.exit(1)
 
 
 def build_path_for_build_types(build_types, *args):

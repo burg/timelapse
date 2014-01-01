@@ -278,7 +278,7 @@ void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     if (renderer)
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
 }
 
 void SVGPathElement::invalidateMPathDependencies()
@@ -286,10 +286,9 @@ void SVGPathElement::invalidateMPathDependencies()
     // <mpath> can only reference <path> but this dependency is not handled in
     // markForLayoutAndParentResourceInvalidation so we update any mpath dependencies manually.
     if (HashSet<SVGElement*>* dependencies = document().accessSVGExtensions()->setOfElementsReferencingTarget(this)) {
-        HashSet<SVGElement*>::iterator end = dependencies->end();
-        for (HashSet<SVGElement*>::iterator it = dependencies->begin(); it != end; ++it) {
-            if ((*it)->hasTagName(SVGNames::mpathTag))
-                toSVGMPathElement(*it)->targetPathChanged();
+        for (auto element : *dependencies) {
+            if (element->hasTagName(SVGNames::mpathTag))
+                toSVGMPathElement(element)->targetPathChanged();
         }
     }
 }
@@ -388,7 +387,7 @@ void SVGPathElement::pathSegListChanged(SVGPathSegRole role, ListModification li
         return;
 
     renderer->setNeedsShapeUpdate();
-    RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+    RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
 }
 
 FloatRect SVGPathElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
@@ -405,10 +404,10 @@ FloatRect SVGPathElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
     return renderer->path().boundingRect();
 }
 
-RenderElement* SVGPathElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGPathElement::createElementRenderer(PassRef<RenderStyle> style)
 {
     // By default, any subclass is expected to do path-based drawing
-    return new RenderSVGPath(*this, std::move(style));
+    return createRenderer<RenderSVGPath>(*this, std::move(style));
 }
 
 }

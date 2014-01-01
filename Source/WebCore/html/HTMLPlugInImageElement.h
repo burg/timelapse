@@ -73,6 +73,10 @@ public:
     // Public for FrameView::addWidgetToUpdate()
     bool needsWidgetUpdate() const { return m_needsWidgetUpdate; }
     void setNeedsWidgetUpdate(bool needsWidgetUpdate) { m_needsWidgetUpdate = needsWidgetUpdate; }
+    
+#if PLATFORM(IOS)
+    void createShadowIFrameSubtree(const String& src);
+#endif
 
     void userDidClickSnapshot(PassRefPtr<MouseEvent>, bool forwardEvent);
     void checkSnapshotStatus();
@@ -109,7 +113,9 @@ protected:
     String m_url;
     URL m_loadedUrl;
 
-    static void updateWidgetCallback(Node*, unsigned = 0);
+    static void updateWidgetCallback(Node&, unsigned);
+    static void startLoadingImageCallback(Node&, unsigned);
+
     virtual void didAttachRenderers() OVERRIDE;
     virtual void willDetachRenderers() OVERRIDE;
 
@@ -127,7 +133,7 @@ protected:
     virtual bool requestObject(const String& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues) OVERRIDE;
 
 private:
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual bool willRecalcStyle(Style::Change) OVERRIDE;
 
     virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
@@ -135,6 +141,7 @@ private:
     virtual void finishParsingChildren() OVERRIDE;
 
     void updateWidgetIfNecessary();
+    void startLoadingImage();
 
     virtual void updateSnapshot(PassRefPtr<Image>) OVERRIDE;
     virtual void dispatchPendingMouseClick() OVERRIDE;

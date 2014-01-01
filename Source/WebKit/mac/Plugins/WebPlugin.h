@@ -26,8 +26,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 #import <JavaScriptCore/WebKitAvailability.h>
+
+#if !TARGET_OS_IPHONE
+#import <AppKit/AppKit.h>
+#endif
 
 /*!
     WebPlugIn is an informal protocol that enables interaction between an application
@@ -76,22 +80,24 @@
 */
 - (void)webPlugInDestroy;
 
+#if !TARGET_OS_IPHONE
 /*!
     @method webPlugInSetIsSelected:
     @discusssion Informs the plug-in whether or not it is selected.  This is typically
     used to allow the plug-in to alter it's appearance when selected.
 */
 - (void)webPlugInSetIsSelected:(BOOL)isSelected;
+#endif
 
 /*!
-    @method objectForWebScript
+    @property objectForWebScript
     @discussion objectForWebScript is used to expose a plug-in's scripting interface.  The 
     methods of the object are exposed to the script environment.  See the WebScripting
     informal protocol for more details.
     @result Returns the object that exposes the plug-in's interface.  The class of this
     object can implement methods from the WebScripting informal protocol.
 */
-- (id)objectForWebScript;
+@property (nonatomic, readonly, strong) id objectForWebScript;
 
 /*!
     @method webPlugInMainResourceDidReceiveResponse:

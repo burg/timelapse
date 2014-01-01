@@ -225,14 +225,14 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
 
     SVGElementInstance::InvalidationGuard invalidationGuard(this);
 
-    RenderObject* renderer = this->renderer();
+    auto renderer = this->renderer();
     if (attrName == SVGNames::xAttr
         || attrName == SVGNames::yAttr
         || attrName == SVGNames::widthAttr
         || attrName == SVGNames::heightAttr) {
         updateRelativeLengthsInformation();
         if (renderer)
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
@@ -257,9 +257,6 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
         return;
     }
 
-    if (!renderer)
-        return;
-
     if (SVGLangSpace::isKnownAttribute(attrName)
         || SVGExternalResourcesRequired::isKnownAttribute(attrName)) {
         invalidateShadowTree();
@@ -269,11 +266,10 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
     ASSERT_NOT_REACHED();
 }
 
-bool SVGUseElement::willRecalcStyle(Style::Change)
+void SVGUseElement::willAttachRenderers()
 {
-    if (!m_wasInsertedByParser && m_needsShadowTreeRecreation && renderer() && needsStyleRecalc())
+    if (m_needsShadowTreeRecreation)
         buildPendingResource();
-    return true;
 }
 
 #ifdef DUMP_INSTANCE_TREE
@@ -369,9 +365,8 @@ static bool isDisallowedElement(const Element& element)
 
 static bool subtreeContainsDisallowedElement(SVGElement& start)
 {
-    auto descendants = elementDescendants(start);
-    for (auto element = descendants.begin(), end = descendants.end(); element != end; ++element) {
-        if (isDisallowedElement(*element))
+    for (auto& element : elementDescendants(start)) {
+        if (isDisallowedElement(element))
             return true;
     }
 
@@ -524,9 +519,9 @@ void SVGUseElement::buildShadowAndInstanceTree(SVGElement* target)
 #endif
 }
 
-RenderElement* SVGUseElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGUseElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderSVGTransformableContainer(*this, std::move(style));
+    return createRenderer<RenderSVGTransformableContainer>(*this, std::move(style));
 }
 
 static bool isDirectReference(const Node* node)
@@ -606,19 +601,18 @@ void SVGUseElement::buildInstanceTree(SVGElement* target, SVGElementInstance* ta
     // is the SVGGElement object for the 'g', and then two child SVGElementInstance objects, each of which has
     // its correspondingElement that is an SVGRectElement object.
 
-    auto svgChildren = childrenOfType<SVGElement>(*target);
-    for (auto element = svgChildren.begin(), end = svgChildren.end(); element != end; ++element) {
+    for (auto& element : childrenOfType<SVGElement>(*target)) {
         // Skip any non-svg nodes or any disallowed element.
-        if (isDisallowedElement(*element))
+        if (isDisallowedElement(element))
             continue;
 
         // Create SVGElementInstance object, for both container/non-container nodes.
-        RefPtr<SVGElementInstance> instance = SVGElementInstance::create(this, 0, &*element);
+        RefPtr<SVGElementInstance> instance = SVGElementInstance::create(this, 0, &element);
         SVGElementInstance* instancePtr = instance.get();
         targetInstance->appendChild(instance.release());
 
         // Enter recursion, appending new instance tree nodes to the "instance" object.
-        buildInstanceTree(&*element, instancePtr, foundProblem, foundUse);
+        buildInstanceTree(&element, instancePtr, foundProblem, foundUse);
         if (foundProblem)
             return;
     }
@@ -891,10 +885,10 @@ SVGElementInstance* SVGUseElement::instanceForShadowTreeElement(Node* element, S
 
 void SVGUseElement::invalidateShadowTree()
 {
-    if (!renderer() || m_needsShadowTreeRecreation)
+    if (m_needsShadowTreeRecreation)
         return;
     m_needsShadowTreeRecreation = true;
-    setNeedsStyleRecalc();
+    setNeedsStyleRecalc(ReconstructRenderTree);
     invalidateDependentShadowTrees();
 }
 

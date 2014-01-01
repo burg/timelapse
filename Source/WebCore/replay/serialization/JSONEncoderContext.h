@@ -33,27 +33,30 @@
 #if ENABLE(WEB_REPLAY)
 
 #include "EncoderContext.h"
-#include "InspectorTypeBuilder.h"
+#include "InspectorWebTypeBuilders.h"
 #include <wtf/replay/InputIterator.h>
 
-namespace WebCore {
-
+namespace Inspector {
 class InspectorArray;
 class InspectorObject;
 class InspectorValue;
+}
+
+namespace WebCore {
+
 class ReplayRecording;
 
 class JSONCoder {
 public:
-    static PassRefPtr<TypeBuilder::Replay::ReplayRecording> serialize(PassRefPtr<ReplayRecording>);
-    static PassRefPtr<TypeBuilder::Replay::ReplayInput> serializeInput(const NondeterministicInput*, int index = 0);
+    static PassRefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> serialize(PassRefPtr<ReplayRecording>);
+    static PassRefPtr<Inspector::TypeBuilder::Replay::ReplayInput> serializeInput(const NondeterministicInput*, int index = 0);
     static std::unique_ptr<EncoderContext> createMap();
     static std::unique_ptr<EncoderContext> createList();
 };
 
 class JSONEncoderContext : public EncoderContext {
 public:
-    virtual PassRefPtr<InspectorValue> encodedValue() const =0;
+    virtual PassRefPtr<Inspector::InspectorValue> encodedValue() const =0;
     virtual std::unique_ptr<EncoderContext> createMap() OVERRIDE
     {
         return JSONCoder::createMap();
@@ -85,9 +88,9 @@ public:
 
     virtual void putBytes(const String&, const char* data, int length) OVERRIDE;
 
-    virtual PassRefPtr<InspectorValue> encodedValue() const { return m_object; }
+    virtual PassRefPtr<Inspector::InspectorValue> encodedValue() const { return m_object; }
 private:
-    RefPtr<InspectorObject> m_object;
+    RefPtr<Inspector::InspectorObject> m_object;
 };
 
 class JSONListEncoder : public JSONEncoderContext {
@@ -100,9 +103,9 @@ public:
     virtual void appendString(const String&) OVERRIDE;
     virtual void appendUInt32(uint32_t) OVERRIDE;
 
-    virtual PassRefPtr<InspectorValue> encodedValue() const { return m_array; }
+    virtual PassRefPtr<Inspector::InspectorValue> encodedValue() const { return m_array; }
 private:
-    RefPtr<InspectorArray> m_array;
+    RefPtr<Inspector::InspectorArray> m_array;
 };
 
 } // namespace WebCore

@@ -117,4 +117,13 @@
 
     [Reflect, TreatNullAs=NullString] attribute DOMString mediaGroup;
     [CustomSetter] attribute MediaController controller;
+
+#if !defined(LANGUAGE_GOBJECT) || !LANGUAGE_GOBJECT
+    [Conditional=MEDIA_SOURCE] VideoPlaybackQuality getVideoPlaybackQuality();
+#endif
+
+    [Conditional=IOS_AIRPLAY] void webkitShowPlaybackTargetPicker();
+    [Conditional=IOS_AIRPLAY] readonly attribute boolean webkitCurrentPlaybackTargetIsWireless;
+    [Conditional=IOS_AIRPLAY] attribute EventListener onwebkitcurrentplaybacktargetiswirelesschanged;
+    [Conditional=IOS_AIRPLAY] attribute EventListener onwebkitplaybacktargetavailabilitychanged;
 };

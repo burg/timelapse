@@ -39,6 +39,7 @@
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "FrameView.h"
 #include "HTMLBRElement.h"
 #include "HTMLCollection.h"
 #include "HTMLDocument.h"
@@ -162,6 +163,11 @@ bool HTMLElement::isPresentationAttribute(const QualifiedName& name) const
     return StyledElement::isPresentationAttribute(name);
 }
 
+static bool isLTROrRTLIgnoringCase(const AtomicString& dirAttributeValue)
+{
+    return equalIgnoringCase(dirAttributeValue, "rtl") || equalIgnoringCase(dirAttributeValue, "ltr");
+}
+
 void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
@@ -175,11 +181,17 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitLineBreak, CSSValueAfterWhiteSpace);
+#if PLATFORM(IOS)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitTextSizeAdjust, CSSValueNone);
+#endif
         } else if (equalIgnoringCase(value, "plaintext-only")) {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserModify, CSSValueReadWritePlaintextOnly);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitLineBreak, CSSValueAfterWhiteSpace);
+#if PLATFORM(IOS)
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitTextSizeAdjust, CSSValueNone);
+#endif
         } else if (equalIgnoringCase(value, "false"))
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserModify, CSSValueReadOnly);
     } else if (name == hiddenAttr) {
@@ -194,7 +206,8 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
         if (equalIgnoringCase(value, "auto"))
             addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
         else {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyDirection, value);
+            if (isLTROrRTLIgnoringCase(value))
+                addPropertyToPresentationAttributeStyle(style, CSSPropertyDirection, value);
             if (!hasTagName(bdiTag) && !hasTagName(bdoTag) && !hasTagName(outputTag))
                 addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, CSSValueEmbed);
         }
@@ -278,6 +291,11 @@ static NEVER_INLINE void populateEventNameForAttributeLocalNameMap(HashMap<Atomi
         &onvolumechangeAttr,
         &onwaitingAttr,
         &onwheelAttr,
+#if ENABLE(IOS_GESTURE_EVENTS)
+        &ongesturechangeAttr,
+        &ongestureendAttr,
+        &ongesturestartAttr,
+#endif
 #if ENABLE(FULLSCREEN_API)
         &onwebkitfullscreenchangeAttr,
         &onwebkitfullscreenerrorAttr,
@@ -461,7 +479,7 @@ void HTMLElement::setInnerText(const String& text, ExceptionCode& ec)
     // FIXME: Can the renderer be out of date here? Do we need to call updateStyleIfNeeded?
     // For example, for the contents of textarea elements that are display:none?
     auto r = renderer();
-    if (r && r->style().preserveNewline()) {
+    if ((r && r->style().preserveNewline()) || (inDocument() && isTextControlInnerTextElement())) {
         if (!text.contains('\r')) {
             replaceChildrenWithText(*this, text, ec);
             return;
@@ -644,7 +662,7 @@ bool HTMLElement::hasCustomFocusLogic() const
 
 bool HTMLElement::supportsFocus() const
 {
-    return Element::supportsFocus() || (rendererIsEditable() && parentNode() && !parentNode()->rendererIsEditable());
+    return Element::supportsFocus() || (hasEditableStyle() && parentNode() && !parentNode()->hasEditableStyle());
 }
 
 String HTMLElement::contentEditable() const
@@ -744,9 +762,8 @@ TranslateAttributeMode HTMLElement::translateAttributeMode() const
 
 bool HTMLElement::translate() const
 {
-    auto lineage = lineageOfType<HTMLElement>(*this);
-    for (auto element = lineage.begin(), end = lineage.end(); element != end; ++element) {
-        TranslateAttributeMode mode = element->translateAttributeMode();
+    for (auto& element : lineageOfType<HTMLElement>(*this)) {
+        TranslateAttributeMode mode = element.translateAttributeMode();
         if (mode == TranslateAttributeInherit)
             continue;
         ASSERT(mode == TranslateAttributeYes || mode == TranslateAttributeNo);
@@ -781,10 +798,10 @@ bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
     return StyledElement::rendererIsNeeded(style);
 }
 
-RenderElement* HTMLElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLElement::createElementRenderer(PassRef<RenderStyle> style)
 {
     if (hasLocalName(wbrTag))
-        return new RenderLineBreak(*this, std::move(style));
+        return createRenderer<RenderLineBreak>(*this, std::move(style));
     return RenderElement::createFor(*this, std::move(style));
 }
 
@@ -793,9 +810,9 @@ HTMLFormElement* HTMLElement::virtualForm() const
     return HTMLFormElement::findClosestFormAncestor(*this);
 }
 
-static inline bool elementAffectsDirectionality(const Node* node)
+static inline bool elementAffectsDirectionality(const Node& node)
 {
-    return node->isHTMLElement() && (node->hasTagName(bdiTag) || toHTMLElement(node)->hasAttribute(dirAttr));
+    return node.isHTMLElement() && (node.hasTagName(bdiTag) || toHTMLElement(node).hasAttribute(dirAttr));
 }
 
 static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastNode = nullptr)
@@ -808,7 +825,7 @@ static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastN
         if (node->selfOrAncestorHasDirAutoAttribute() == flag)
             return;
 
-        if (elementAffectsDirectionality(node)) {
+        if (elementAffectsDirectionality(*node)) {
             if (node == lastNode)
                 return;
             node = NodeTraversal::nextSkippingChildren(node, firstNode);
@@ -867,7 +884,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
         // Skip elements with valid dir attribute
         if (node->isElementNode()) {
             AtomicString dirAttributeValue = toElement(node)->fastGetAttribute(dirAttr);
-            if (equalIgnoringCase(dirAttributeValue, "rtl") || equalIgnoringCase(dirAttributeValue, "ltr") || equalIgnoringCase(dirAttributeValue, "auto")) {
+            if (isLTROrRTLIgnoringCase(dirAttributeValue) || equalIgnoringCase(dirAttributeValue, "auto")) {
                 node = NodeTraversal::nextSkippingChildren(node, this);
                 continue;
             }
@@ -908,10 +925,9 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildAttributeChanged(Element
     setHasDirAutoFlagRecursively(child, false);
     if (!renderer() || renderer()->style().direction() == textDirection)
         return;
-    auto lineage = elementLineage(this);
-    for (auto elementToAdjust = lineage.begin(), end = lineage.end(); elementToAdjust != end; ++elementToAdjust) {
-        if (elementAffectsDirectionality(&*elementToAdjust)) {
-            elementToAdjust->setNeedsStyleRecalc();
+    for (auto& elementToAdjust : elementLineage(this)) {
+        if (elementAffectsDirectionality(elementToAdjust)) {
+            elementToAdjust.setNeedsStyleRecalc();
             return;
         }
     }
@@ -932,7 +948,7 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
     if (document().renderView() && (changeType == ElementRemoved || changeType == TextRemoved)) {
         Node* node = beforeChange ? beforeChange->nextSibling() : nullptr;
         for (; node; node = node->nextSibling()) {
-            if (elementAffectsDirectionality(node))
+            if (elementAffectsDirectionality(*node))
                 continue;
 
             setHasDirAutoFlagRecursively(node, false);
@@ -946,15 +962,14 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
     if (beforeChange)
         oldMarkedNode = changeType == ElementInserted ? ElementTraversal::nextSibling(beforeChange) : beforeChange->nextSibling();
 
-    while (oldMarkedNode && elementAffectsDirectionality(oldMarkedNode))
+    while (oldMarkedNode && elementAffectsDirectionality(*oldMarkedNode))
         oldMarkedNode = oldMarkedNode->nextSibling();
     if (oldMarkedNode)
         setHasDirAutoFlagRecursively(oldMarkedNode, false);
 
-    auto lineage = lineageOfType<HTMLElement>(*this);
-    for (auto elementToAdjust = lineage.begin(), end = lineage.end(); elementToAdjust != end; ++elementToAdjust) {
-        if (elementAffectsDirectionality(&*elementToAdjust)) {
-            elementToAdjust->calculateAndAdjustDirectionality();
+    for (auto& elementToAdjust : lineageOfType<HTMLElement>(*this)) {
+        if (elementAffectsDirectionality(elementToAdjust)) {
+            elementToAdjust.calculateAndAdjustDirectionality();
             return;
         }
     }
@@ -1072,6 +1087,21 @@ void HTMLElement::addHTMLColorToStyle(MutableStyleProperties& style, CSSProperty
         parsedColor.setRGB(parseColorStringWithCrazyLegacyRules(colorString));
 
     style.setProperty(propertyID, cssValuePool().createColorValue(parsedColor.rgb()));
+}
+
+bool HTMLElement::willRespondToMouseMoveEvents()
+{
+    return !isDisabledFormControl() && Element::willRespondToMouseMoveEvents();
+}
+
+bool HTMLElement::willRespondToMouseWheelEvents()
+{
+    return !isDisabledFormControl() && Element::willRespondToMouseWheelEvents();
+}
+
+bool HTMLElement::willRespondToMouseClickEvents()
+{
+    return !isDisabledFormControl() && Element::willRespondToMouseClickEvents();
 }
 
 } // namespace WebCore

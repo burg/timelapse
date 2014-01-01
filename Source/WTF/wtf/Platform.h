@@ -169,7 +169,7 @@
 #define WTF_CPU_ARM_HARDFP 1
 #endif
 
-#if defined(__ARMEB__) || (COMPILER(RVCT) && defined(__BIG_ENDIAN))
+#if defined(__ARMEB__)
 #define WTF_CPU_BIG_ENDIAN 1
 
 #elif !defined(__ARM_EABI__) \
@@ -569,7 +569,7 @@
 #endif
 
 #if !defined(HAVE_VASPRINTF)
-#if !COMPILER(MSVC) && !COMPILER(RVCT) && !COMPILER(MINGW) && !(COMPILER(GCC) && OS(QNX))
+#if !COMPILER(MSVC) && !COMPILER(MINGW) && !(COMPILER(GCC) && OS(QNX))
 #define HAVE_VASPRINTF 1
 #endif
 #endif
@@ -788,6 +788,11 @@
 #define ENABLE_VERBOSE_VALUE_PROFILE 0
 #endif
 
+/* Generational collector for JSC */
+#if !defined(ENABLE_GGC)
+#define ENABLE_GGC 0
+#endif
+
 /* Counts uses of write barriers using sampling counters. Be sure to also
    set ENABLE_SAMPLING_COUNTERS to 1. */
 #if !defined(ENABLE_WRITE_BARRIER_PROFILING)
@@ -824,7 +829,7 @@
 #endif
 
 /* Configure the interpreter */
-#if COMPILER(GCC) || (COMPILER(RVCT) && defined(__GNUC__))
+#if COMPILER(GCC)
 #define HAVE_COMPUTED_GOTO 1
 #endif
 
@@ -883,6 +888,11 @@
 #endif
 #endif
 
+/* CSS Selector JIT Compiler */
+#if !defined(ENABLE_CSS_SELECTOR_JIT)
+#define ENABLE_CSS_SELECTOR_JIT 0
+#endif
+
 /* Accelerated compositing */
 #if PLATFORM(MAC) || PLATFORM(IOS) || (PLATFORM(WIN) && !USE(WINGDI) && !PLATFORM(WIN_CAIRO))
 #define WTF_USE_ACCELERATED_COMPOSITING 1
@@ -896,7 +906,12 @@
 #define WTF_USE_OPENGL 1
 #define WTF_USE_OPENGL_ES_2 1
 #define WTF_USE_EGL 1
-#define WTF_USE_GRAPHICS_SURFACE 1
+#endif
+
+#if ENABLE(VIDEO) && PLATFORM(WIN_CAIRO)
+#define WTF_USE_GLIB 1
+#define WTF_USE_GSTREAMER 1
+#define GST_API_VERSION_1 1
 #endif
 
 #if USE(TEXTURE_MAPPER) && USE(3D_GRAPHICS) && !defined(WTF_USE_TEXTURE_MAPPER_GL)
@@ -939,7 +954,7 @@
    since most ports try to support sub-project independence, adding new headers
    to WTF causes many ports to break, and so this way we can address the build
    breakages one port at a time. */
-#if !defined(WTF_USE_EXPORT_MACROS) && (PLATFORM(MAC) || (PLATFORM(WIN) && (defined(_MSC_VER) && _MSC_VER >= 1600)))
+#if !defined(WTF_USE_EXPORT_MACROS) && (PLATFORM(MAC) || PLATFORM(WIN))
 #define WTF_USE_EXPORT_MACROS 1
 #endif
 
@@ -1054,6 +1069,17 @@
 #if PLATFORM(GTK) || PLATFORM(EFL)
 #undef ENABLE_OPENTYPE_VERTICAL
 #define ENABLE_OPENTYPE_VERTICAL 1
+#endif
+
+#if ENABLE(CSS3_TEXT_DECORATION) && PLATFORM(MAC)
+#define ENABLE_CSS3_TEXT_DECORATION_SKIP_INK 1
+#endif
+
+#if COMPILER(MSVC)
+#undef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
+#undef _HAS_EXCEPTIONS
+#define _HAS_EXCEPTIONS 1
 #endif
 
 #endif /* WTF_Platform_h */

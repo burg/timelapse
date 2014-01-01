@@ -85,12 +85,7 @@ class WebNetworkInfoManagerProxy;
 struct NetworkProcessCreationParameters;
 #endif
 
-#if PLATFORM(MAC)
-extern NSString *SchemeForCustomProtocolRegisteredNotificationName;
-extern NSString *SchemeForCustomProtocolUnregisteredNotificationName;
-#endif
-
-class WebContext : public API::TypedObject<API::Object::Type::Context>, private CoreIPC::MessageReceiver
+class WebContext : public API::ObjectImpl<API::Object::Type::Context>, private IPC::MessageReceiver
 #if ENABLE(NETSCAPE_PLUGIN_API)
     , private PluginInfoStoreClient
 #endif
@@ -100,10 +95,6 @@ public:
 
     static PassRefPtr<WebContext> create(const String& injectedBundlePath);
     virtual ~WebContext();
-
-#if PLATFORM(IOS)
-    static WebContext *sharedProcessContext();
-#endif
 
     static const Vector<WebContext*>& allContexts();
 
@@ -119,12 +110,12 @@ public:
         m_supplements.add(T::supplementName(), T::create(this));
     }
 
-    void addMessageReceiver(CoreIPC::StringReference messageReceiverName, CoreIPC::MessageReceiver*);
-    void addMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID, CoreIPC::MessageReceiver*);
-    void removeMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID);
+    void addMessageReceiver(IPC::StringReference messageReceiverName, IPC::MessageReceiver&);
+    void addMessageReceiver(IPC::StringReference messageReceiverName, uint64_t destinationID, IPC::MessageReceiver&);
+    void removeMessageReceiver(IPC::StringReference messageReceiverName, uint64_t destinationID);
 
-    bool dispatchMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    bool dispatchSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&);
+    bool dispatchMessage(IPC::Connection*, IPC::MessageDecoder&);
+    bool dispatchSyncMessage(IPC::Connection*, IPC::MessageDecoder&, std::unique_ptr<IPC::MessageEncoder>&);
 
     void initializeClient(const WKContextClientBase*);
     void initializeInjectedBundleClient(const WKContextInjectedBundleClientBase*);
@@ -139,7 +130,7 @@ public:
     unsigned maximumNumberOfProcesses() const { return m_webProcessCountLimit; }
 
     // WebProcess or NetworkProcess as approporiate for current process model. The connection must be non-null.
-    CoreIPC::Connection* networkingProcessConnection();
+    IPC::Connection* networkingProcessConnection();
 
     template<typename T> void sendToAllProcesses(const T& message);
     template<typename T> void sendToAllProcessesRelaunchingThemIfNecessary(const T& message);
@@ -195,8 +186,8 @@ public:
     void addVisitedLinkHash(WebCore::LinkHash);
 
     // MessageReceiver.
-    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&) OVERRIDE;
+    virtual void didReceiveMessage(IPC::Connection*, IPC::MessageDecoder&) OVERRIDE;
+    virtual void didReceiveSyncMessage(IPC::Connection*, IPC::MessageDecoder&, std::unique_ptr<IPC::MessageEncoder>&) OVERRIDE;
 
     void setCacheModel(CacheModel);
     CacheModel cacheModel() const { return m_cacheModel; }
@@ -271,6 +262,7 @@ public:
     PassRefPtr<ImmutableDictionary> plugInAutoStartOriginHashes() const;
     void setPlugInAutoStartOriginHashes(ImmutableDictionary&);
     void setPlugInAutoStartOrigins(API::Array&);
+    void setPlugInAutoStartOriginsFilteringOutEntriesAddedAfterTime(ImmutableDictionary&, double time);
 
     // Network Process Management
 
@@ -308,12 +300,21 @@ public:
 #endif
 
     static void setInvalidMessageCallback(void (*)(WKStringRef));
-    static void didReceiveInvalidMessage(const CoreIPC::StringReference& messageReceiverName, const CoreIPC::StringReference& messageName);
+    static void didReceiveInvalidMessage(const IPC::StringReference& messageReceiverName, const IPC::StringReference& messageName);
 
     void processDidCachePage(WebProcessProxy*);
 
     bool isURLKnownHSTSHost(const String& urlString, bool privateBrowsingEnabled) const;
     void resetHSTSHosts();
+
+#if ENABLE(CUSTOM_PROTOCOLS)
+    void registerSchemeForCustomProtocol(const String&);
+    void unregisterSchemeForCustomProtocol(const String&);
+
+    static HashSet<String>& globalURLSchemesWithCustomProtocolHandlers();
+    static void registerGlobalURLSchemeAsHavingCustomProtocolHandlers(const String&);
+    static void unregisterGlobalURLSchemeAsHavingCustomProtocolHandlers(const String&);
+#endif
 
 private:
     void platformInitialize();
@@ -365,8 +366,8 @@ private:
     void didGetStatistics(const StatisticsData&, uint64_t callbackID);
         
     // Implemented in generated WebContextMessageReceiver.cpp
-    void didReceiveWebContextMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    void didReceiveSyncWebContextMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&);
+    void didReceiveWebContextMessage(IPC::Connection*, IPC::MessageDecoder&);
+    void didReceiveSyncWebContextMessage(IPC::Connection*, IPC::MessageDecoder&, std::unique_ptr<IPC::MessageEncoder>&);
 
     static void languageChanged(void* context);
     void languageChanged();
@@ -394,11 +395,6 @@ private:
     void unregisterNotificationObservers();
 #endif
 
-#if ENABLE(CUSTOM_PROTOCOLS)
-    void registerSchemeForCustomProtocol(const String&);
-    void unregisterSchemeForCustomProtocol(const String&);
-#endif
-
     void addPlugInAutoStartOriginHash(const String& pageOrigin, unsigned plugInOriginHash);
     void plugInDidReceiveUserInteraction(unsigned plugInOriginHash);
 
@@ -409,7 +405,7 @@ private:
     virtual void pluginInfoStoreDidLoadPlugins(PluginInfoStore*) OVERRIDE;
 #endif
 
-    CoreIPC::MessageReceiverMap m_messageReceiverMap;
+    IPC::MessageReceiverMap m_messageReceiverMap;
 
     ProcessModel m_processModel;
     unsigned m_webProcessCountLimit; // The limit has no effect when process model is ProcessModelSharedSecondaryProcess.
@@ -472,9 +468,6 @@ private:
 
 #if PLATFORM(MAC)
     RetainPtr<NSObject> m_enhancedAccessibilityObserver;
-    RetainPtr<NSObject> m_customSchemeRegisteredObserver;
-    RetainPtr<NSObject> m_customSchemeUnregisteredObserver;
-
     RetainPtr<NSObject> m_automaticTextReplacementNotificationObserver;
     RetainPtr<NSObject> m_automaticSpellingCorrectionNotificationObserver;
 #if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
@@ -520,6 +513,13 @@ void WebContext::sendToNetworkingProcess(T&& message)
 {
     switch (m_processModel) {
     case ProcessModelSharedSecondaryProcess:
+#if ENABLE(NETWORK_PROCESS)
+        if (m_usesNetworkProcess) {
+            if (m_networkProcess->canSendMessage())
+                m_networkProcess->send(std::forward<T>(message), 0);
+            return;
+        }
+#endif
         if (!m_processes.isEmpty() && m_processes[0]->canSendMessage())
             m_processes[0]->send(std::forward<T>(message), 0);
         return;
@@ -540,6 +540,13 @@ void WebContext::sendToNetworkingProcessRelaunchingIfNecessary(T&& message)
 {
     switch (m_processModel) {
     case ProcessModelSharedSecondaryProcess:
+#if ENABLE(NETWORK_PROCESS)
+        if (m_usesNetworkProcess) {
+            ensureNetworkProcess();
+            m_networkProcess->send(std::forward<T>(message), 0);
+            return;
+        }
+#endif
         ensureSharedWebProcess();
         m_processes[0]->send(std::forward<T>(message), 0);
         return;

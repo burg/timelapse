@@ -152,6 +152,7 @@ list(APPEND WebCore_SOURCES
     platform/network/efl/NetworkStateNotifierEfl.cpp
 
     platform/network/soup/AuthenticationChallengeSoup.cpp
+    platform/network/soup/CertificateInfo.cpp
     platform/network/soup/CookieJarSoup.cpp
     platform/network/soup/CookieStorageSoup.cpp
     platform/network/soup/CredentialStorageSoup.cpp
@@ -170,6 +171,8 @@ list(APPEND WebCore_SOURCES
 
     platform/posix/FileSystemPOSIX.cpp
     platform/posix/SharedBufferPOSIX.cpp
+
+    platform/soup/SharedBufferSoup.cpp
 
     platform/text/LocaleICU.cpp
 

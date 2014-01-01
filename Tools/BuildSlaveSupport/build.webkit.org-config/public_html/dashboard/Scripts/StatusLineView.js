@@ -33,11 +33,22 @@ StatusLineView = function(message, status, label, repeatCount, url)
     this.element.classList.add("status-line");
     this.element.__statusLineView = this;
 
-    this._statusBubbleElement = document.createElement("div");
+    if (url) {
+        this._statusBubbleElement = document.createElement("a");
+        this._statusBubbleElement.href = url;
+        this._statusBubbleElement.target = "_blank";
+    } else
+        this._statusBubbleElement = document.createElement("div");
     this._statusBubbleElement.classList.add("bubble");
-    this.element.appendChild(this._statusBubbleElement);
+    if (status != StatusLineView.Status.NoBubble)
+        this.element.appendChild(this._statusBubbleElement);
 
-    this._labelElement = document.createElement("div");
+    if (url) {
+        this._labelElement = document.createElement("a");
+        this._labelElement.href = url;
+        this._labelElement.target = "_blank";
+    } else
+        this._labelElement = document.createElement("div");
     this._labelElement.classList.add("label");
 
     this._messageElement = document.createElement("div");
@@ -49,14 +60,10 @@ StatusLineView = function(message, status, label, repeatCount, url)
     this.label = label || "";
     this.repeatCount = repeatCount || 0;
     this.url = url || null;
-
-    if (url) {
-        this.element.addEventListener("click", this._clicked.bind(this));
-        this.element.classList.add("linked");
-    }
 };
 
 StatusLineView.Status = {
+    NoBubble: "no-bubble",
     Neutral: "neutral",
     Good: "good",
     Danger: "danger",
@@ -153,17 +160,5 @@ StatusLineView.prototype = {
         } else {
             this._messageElement.textContent = x;
         }
-    },
-
-    _clicked: function(event)
-    {
-        if (!this.url)
-            return;
-
-        var anchor = document.createElement("a");
-        anchor.href = this.url;
-        anchor.target = "_blank";
-
-        anchor.click();
     }
 };

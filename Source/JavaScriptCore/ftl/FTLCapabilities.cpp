@@ -42,7 +42,6 @@ inline CapabilityLevel canCompile(Node* node)
     case WeakJSConstant:
     case GetLocal:
     case SetLocal:
-    case MovHintAndCheck:
     case MovHint:
     case ZombieHint:
     case Phantom:
@@ -109,6 +108,9 @@ inline CapabilityLevel canCompile(Node* node)
     case ValueToInt32:
     case Branch:
     case LogicalNot:
+    case CheckInBounds:
+    case ConstantStoragePointer:
+    case Check:
         // These are OK.
         break;
     case GetById:
@@ -179,6 +181,17 @@ inline CapabilityLevel canCompile(Node* node)
         }
         break;
     case CompareEq:
+        if (node->isBinaryUseKind(Int32Use))
+            break;
+        if (node->isBinaryUseKind(MachineIntUse))
+            break;
+        if (node->isBinaryUseKind(NumberUse))
+            break;
+        if (node->isBinaryUseKind(ObjectUse))
+            break;
+        if (node->isBinaryUseKind(UntypedUse))
+            break;
+        return CannotCompile;
     case CompareStrictEq:
         if (node->isBinaryUseKind(Int32Use))
             break;
@@ -198,6 +211,8 @@ inline CapabilityLevel canCompile(Node* node)
         if (node->isBinaryUseKind(MachineIntUse))
             break;
         if (node->isBinaryUseKind(NumberUse))
+            break;
+        if (node->isBinaryUseKind(UntypedUse))
             break;
         return CannotCompile;
     case Switch:

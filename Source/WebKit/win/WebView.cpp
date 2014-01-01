@@ -137,7 +137,6 @@
 #include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/SchemeRegistry.h>
 #include <WebCore/ScriptController.h>
-#include <WebCore/ScriptValue.h>
 #include <WebCore/Scrollbar.h>
 #include <WebCore/ScrollbarTheme.h>
 #include <WebCore/SecurityOrigin.h>
@@ -147,6 +146,7 @@
 #include <WebCore/SystemInfo.h>
 #include <WebCore/WindowMessageBroadcaster.h>
 #include <WebCore/WindowsTouch.h>
+#include <bindings/ScriptValue.h>
 #include <wtf/MainThread.h>
 
 #if USE(CG)
@@ -2380,7 +2380,7 @@ LRESULT CALLBACK WebView::WebViewWndProc(HWND hWnd, UINT message, WPARAM wParam,
         case WM_XP_THEMECHANGED:
             if (Frame* coreFrame = core(mainFrameImpl)) {
                 webView->deleteBackingStore();
-                coreFrame->page()->theme()->themeChanged();
+                coreFrame->page()->theme().themeChanged();
                 ScrollbarTheme::theme()->themeChanged();
                 RECT windowRect;
                 ::GetClientRect(hWnd, &windowRect);
@@ -6292,7 +6292,7 @@ HRESULT WebView::setCanStartPlugins(BOOL canStartPlugins)
 
 void WebView::enterFullscreenForNode(Node* node)
 {
-#if ENABLE(VIDEO)
+#if ENABLE(VIDEO) && !USE(GSTREAMER)
     if (!isHTMLVideoElement(node) || !node->isElementNode())
         return;
 
@@ -6323,7 +6323,7 @@ void WebView::enterFullscreenForNode(Node* node)
 
 void WebView::exitFullscreen()
 {
-#if ENABLE(VIDEO)
+#if ENABLE(VIDEO) && !USE(GSTREAMER)
     if (!m_fullScreenVideoController)
         return;
     

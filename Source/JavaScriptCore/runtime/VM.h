@@ -31,6 +31,7 @@
 
 #include "DateInstanceCache.h"
 #include "ExecutableAllocator.h"
+#include "GPRInfo.h"
 #include "Heap.h"
 #include "Intrinsic.h"
 #include "JITThunks.h"
@@ -47,17 +48,20 @@
 #include "ThunkGenerators.h"
 #include "TypedArrayController.h"
 #include "Watchdog.h"
+#include "Watchpoint.h"
 #include "WeakRandom.h"
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/DateMath.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 #include <wtf/RefCountedArray.h>
 #include <wtf/SimpleStats.h>
 #include <wtf/StackBounds.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/WTFThreadData.h>
+#include <wtf/text/WTFString.h>
 #if ENABLE(REGEXP_TRACING)
 #include <wtf/ListHashSet.h>
 #endif
@@ -69,6 +73,7 @@ namespace JSC {
     class CommonIdentifiers;
     class ExecState;
     class HandleStack;
+    class Identifier;
     class IdentifierTable;
     class Interpreter;
     class JSGlobalObject;
@@ -92,6 +97,8 @@ namespace JSC {
     class UnlinkedFunctionExecutable;
     class UnlinkedProgramCodeBlock;
     class VMEntryScope;
+    class Watchpoint;
+    class WatchpointSet;
 
 #if ENABLE(DFG_JIT)
     namespace DFG {
@@ -474,9 +481,14 @@ namespace JSC {
         
         JS_EXPORT_PRIVATE void discardAllCode();
 
+        void registerWatchpointForImpureProperty(const Identifier&, Watchpoint*);
+        // FIXME: Use AtomicString once it got merged with Identifier.
+        JS_EXPORT_PRIVATE void addImpureProperty(const String&);
+
     private:
         friend class LLIntOffsetsExtractor;
         friend class ClearExceptionScope;
+        friend class RecursiveAllocationScope;
         
         VM(VMType, HeapType);
         static VM*& sharedInstanceInternal();
@@ -509,6 +521,8 @@ namespace JSC {
         bool m_inDefineOwnProperty;
         OwnPtr<CodeCache> m_codeCache;
         RefCountedArray<StackFrame> m_exceptionStack;
+
+        HashMap<String, RefPtr<WatchpointSet>> m_impurePropertyWatchpointSets;
     };
 
 #if ENABLE(GC_VALIDATION)

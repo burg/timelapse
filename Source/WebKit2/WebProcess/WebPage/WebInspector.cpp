@@ -34,12 +34,11 @@
 #include "WebPageCreationParameters.h"
 #include "WebProcess.h"
 #include <WebCore/InspectorController.h>
-#include <WebCore/InspectorForwarding.h>
 #include <WebCore/InspectorFrontendClient.h>
 #include <WebCore/MainFrame.h>
 #include <WebCore/Page.h>
 #include <WebCore/ScriptController.h>
-#include <WebCore/ScriptValue.h>
+#include <bindings/ScriptValue.h>
 #include <wtf/text/StringConcatenate.h>
 
 using namespace WebCore;
@@ -79,7 +78,7 @@ WebPage* WebInspector::createInspectorPage()
 
     if (!WebProcess::shared().parentProcessConnection()->sendSync(Messages::WebInspectorProxy::CreateInspectorPage(),
             Messages::WebInspectorProxy::CreateInspectorPage::Reply(inspectorPageID, parameters),
-            m_page->pageID(), CoreIPC::Connection::NoTimeout)) {
+            m_page->pageID(), std::chrono::milliseconds::max())) {
         return 0;
     }
 

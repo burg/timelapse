@@ -20,9 +20,12 @@
 #include "config.h"
 #include "WebKitWebContext.h"
 
+#include "APIString.h"
+#include "WebBatteryManagerProxy.h"
 #include "WebCertificateInfo.h"
 #include "WebCookieManagerProxy.h"
 #include "WebGeolocationManagerProxy.h"
+#include "WebKitBatteryProvider.h"
 #include "WebKitCertificateInfoPrivate.h"
 #include "WebKitCookieManagerPrivate.h"
 #include "WebKitDownloadClient.h"
@@ -139,6 +142,9 @@ struct _WebKitWebContextPrivate {
 #if ENABLE(GEOLOCATION)
     RefPtr<WebKitGeolocationProvider> geolocationProvider;
 #endif
+#if ENABLE(BATTERY_STATUS)
+    RefPtr<WebKitBatteryProvider> batteryProvider;
+#endif
 #if ENABLE(SPELLCHECK)
     OwnPtr<WebKitTextChecker> textChecker;
 #endif
@@ -199,6 +205,10 @@ static gpointer createDefaultWebContext(gpointer)
     priv->context = WebContext::create(WebCore::filenameToString(injectedBundleFilename().data()));
     priv->requestManager = webContext->priv->context->supplement<WebSoupRequestManagerProxy>();
     priv->context->setCacheModel(CacheModelPrimaryWebBrowser);
+#if ENABLE(NETWORK_PROCESS)
+    // FIXME: Temporary use an env var until we have API to set the process model. See https://bugs.webkit.org/show_bug.cgi?id=125463.
+    priv->context->setUsesNetworkProcess(g_getenv("WEBKIT_USE_NETWORK_PROCESS"));
+#endif
     priv->tlsErrorsPolicy = WEBKIT_TLS_ERRORS_POLICY_IGNORE;
 
     attachInjectedBundleClientToContext(webContext.get());
@@ -207,6 +217,9 @@ static gpointer createDefaultWebContext(gpointer)
 
 #if ENABLE(GEOLOCATION)
     priv->geolocationProvider = WebKitGeolocationProvider::create(priv->context->supplement<WebGeolocationManagerProxy>());
+#endif
+#if ENABLE(BATTERY_STATUS)
+    priv->batteryProvider = WebKitBatteryProvider::create(priv->context->supplement<WebBatteryManagerProxy>());
 #endif
 #if ENABLE(SPELLCHECK)
     priv->textChecker = WebKitTextChecker::create();
@@ -771,7 +784,7 @@ void webkit_web_context_set_web_extensions_directory(WebKitWebContext* context, 
     g_return_if_fail(directory);
 
     // We pass the additional web extensions directory to the injected bundle as initialization user data.
-    context->priv->context->setInjectedBundleInitializationUserData(WebString::create(WebCore::filenameToString(directory)));
+    context->priv->context->setInjectedBundleInitializationUserData(API::String::create(WebCore::filenameToString(directory)));
 }
 
 /**
@@ -805,8 +818,8 @@ void webkit_web_context_prefetch_dns(WebKitWebContext* context, const char* host
     g_return_if_fail(hostname);
 
     ImmutableDictionary::MapType message;
-    message.set(String::fromUTF8("Hostname"), WebString::create(String::fromUTF8(hostname)));
-    context->priv->context->postMessageToInjectedBundle(String::fromUTF8("PrefetchDNS"), ImmutableDictionary::adopt(message).get());
+    message.set(String::fromUTF8("Hostname"), API::String::create(String::fromUTF8(hostname)));
+    context->priv->context->postMessageToInjectedBundle(String::fromUTF8("PrefetchDNS"), ImmutableDictionary::create(std::move(message)).get());
 }
 
 /**

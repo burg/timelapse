@@ -135,6 +135,7 @@ void CodeBlock::dumpAssumingJITType(PrintStream& out, JITCode::JITType jitType) 
 
     if (codeType() == FunctionCode)
         out.print(specializationKind());
+    out.print(", ", instructionCount());
     if (this->jitType() == JITCode::BaselineJIT && m_shouldAlwaysBeInlined)
         out.print(" (SABI)");
     if (ownerExecutable()->neverInline())
@@ -899,6 +900,10 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r2 = (++it)->u.operand;
             printLocationAndOp(out, exec, location, it, "instanceof");
             out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
+            break;
+        }
+        case op_unsigned: {
+            printUnaryOp(out, exec, location, it, "unsigned");
             break;
         }
         case op_typeof: {

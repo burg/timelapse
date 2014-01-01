@@ -37,9 +37,7 @@
 #include "Frame.h"
 #include "InspectorController.h"
 #include "InspectorDebuggerAgent.h"
-#include "InspectorFrontend.h"
 #include "InspectorPageAgent.h"
-#include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "JSONEncoderContext.h"
 #include "Logging.h"
@@ -47,6 +45,7 @@
 #include "ReplayAgentStateMachine.h"
 #include "ReplayController.h"
 #include "ReplayRecording.h"
+#include <inspector/InspectorValues.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
@@ -57,17 +56,16 @@
 #include "EventLoopInput.h"
 #endif
 
-using namespace std;
-using namespace WTF;
+using namespace Inspector;
 
 namespace WebCore {
 
 InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent)
-    : InspectorBaseAgent(ASCIILiteral("Replay"), instrumentingAgents)
+    : InspectorAgentBase(ASCIILiteral("Replay"), instrumentingAgents)
     , m_pageAgent(pageAgent)
     , m_page(nullptr)
     , m_nextMarkIndex(0)
-    , m_lastHitMarkIndex(numeric_limits<unsigned>::max())
+    , m_lastHitMarkIndex(std::numeric_limits<unsigned>::max())
     , m_inputLocked(false)
 {
 }

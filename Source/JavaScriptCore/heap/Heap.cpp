@@ -35,13 +35,14 @@
 #include "HeapStatistics.h"
 #include "IncrementalSweeper.h"
 #include "Interpreter.h"
-#include "VM.h"
 #include "JSGlobalObject.h"
 #include "JSLock.h"
 #include "JSONObject.h"
 #include "Operations.h"
+#include "RecursiveAllocationScope.h"
 #include "Tracing.h"
 #include "UnlinkedCodeBlock.h"
+#include "VM.h"
 #include "WeakSetInlines.h"
 #include <algorithm>
 #include <wtf/RAMSize.h>
@@ -268,6 +269,9 @@ Heap::Heap(VM* vm, HeapType heapType)
     , m_copyVisitor(m_sharedData)
     , m_handleSet(vm)
     , m_isSafeToCollect(false)
+#if ENABLE(GGC)
+    , m_writeBarrierBuffer(128)
+#endif
     , m_vm(vm)
     , m_lastGCLength(0)
     , m_lastCodeDiscardTime(WTF::monotonicallyIncreasingTime())
@@ -754,9 +758,10 @@ void Heap::collect(SweepToggle sweepToggle)
     JAVASCRIPTCORE_GC_BEGIN();
     RELEASE_ASSERT(m_operationInProgress == NoOperation);
     
-    m_deferralDepth++; // Make sure that we don't GC in this call.
-    m_vm->prepareToDiscardCode();
-    m_deferralDepth--; // Decrement deferal manually, so we don't GC when we do so, since we are already GCing!.
+    {
+        RecursiveAllocationScope scope(*this);
+        m_vm->prepareToDiscardCode();
+    }
     
     m_operationInProgress = Collection;
     m_extraMemoryUsage = 0;
@@ -992,6 +997,16 @@ void Heap::decrementDeferralDepthAndGCIfNeeded()
 {
     decrementDeferralDepth();
     collectIfNecessaryOrDefer();
+}
+
+void Heap::flushWriteBarrierBuffer(JSCell* cell)
+{
+#if ENABLE(GGC)
+    m_writeBarrierBuffer.flush(*this);
+    m_writeBarrierBuffer.add(cell);
+#else
+    UNUSED_PARAM(cell);
+#endif
 }
 
 } // namespace JSC

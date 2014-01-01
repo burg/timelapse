@@ -142,7 +142,7 @@ void MediaControlPanelElement::startTimer()
     // The timer is required to set the property display:'none' on the panel,
     // such that captions are correctly displayed at the bottom of the video
     // at the end of the fadeout transition.
-    double duration = document().page() ? document().page()->theme()->mediaControlsFadeOutDuration() : 0;
+    double duration = document().page() ? document().page()->theme().mediaControlsFadeOutDuration() : 0;
     m_transitionTimer.startOneShot(duration);
 }
 
@@ -193,7 +193,7 @@ void MediaControlPanelElement::makeOpaque()
     if (m_opaque)
         return;
 
-    double duration = document().page() ? document().page()->theme()->mediaControlsFadeInDuration() : 0;
+    double duration = document().page() ? document().page()->theme().mediaControlsFadeInDuration() : 0;
 
     setInlineStyleProperty(CSSPropertyWebkitTransitionProperty, CSSPropertyOpacity);
     setInlineStyleProperty(CSSPropertyWebkitTransitionDuration, duration, CSSPrimitiveValue::CSS_S);
@@ -210,7 +210,7 @@ void MediaControlPanelElement::makeTransparent()
     if (!m_opaque)
         return;
 
-    double duration = document().page() ? document().page()->theme()->mediaControlsFadeOutDuration() : 0;
+    double duration = document().page() ? document().page()->theme().mediaControlsFadeOutDuration() : 0;
 
     setInlineStyleProperty(CSSPropertyWebkitTransitionProperty, CSSPropertyOpacity);
     setInlineStyleProperty(CSSPropertyWebkitTransitionDuration, duration, CSSPrimitiveValue::CSS_S);
@@ -332,9 +332,9 @@ void MediaControlTimelineContainerElement::setTimeDisplaysHidden(bool hidden)
     }
 }
 
-RenderElement* MediaControlTimelineContainerElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> MediaControlTimelineContainerElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderMediaControlTimelineContainer(*this, std::move(style));
+    return createRenderer<RenderMediaControlTimelineContainer>(*this, std::move(style));
 }
 
 // ----------------------------
@@ -351,9 +351,9 @@ PassRefPtr<MediaControlVolumeSliderContainerElement> MediaControlVolumeSliderCon
     return element.release();
 }
 
-RenderElement* MediaControlVolumeSliderContainerElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> MediaControlVolumeSliderContainerElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderMediaVolumeSliderContainer(*this, std::move(style));
+    return createRenderer<RenderMediaVolumeSliderContainer>(*this, std::move(style));
 }
 
 void MediaControlVolumeSliderContainerElement::defaultEventHandler(Event* event)
@@ -751,8 +751,13 @@ const AtomicString& MediaControlClosedCaptionsContainerElement::shadowPseudoId()
 
 MediaControlClosedCaptionsTrackListElement::MediaControlClosedCaptionsTrackListElement(Document& document, MediaControls* controls)
     : MediaControlDivElement(document, MediaClosedCaptionsTrackList)
+#if ENABLE(VIDEO_TRACK)
     , m_controls(controls)
+#endif
 {
+#if !ENABLE(VIDEO_TRACK)
+    UNUSED_PARAM(controls);
+#endif
 }
 
 PassRefPtr<MediaControlClosedCaptionsTrackListElement> MediaControlClosedCaptionsTrackListElement::create(Document& document, MediaControls* controls)
@@ -794,6 +799,8 @@ void MediaControlClosedCaptionsTrackListElement::defaultEventHandler(Event* even
     }
 
     MediaControlDivElement::defaultEventHandler(event);
+#else
+    UNUSED_PARAM(event);
 #endif
 }
 
@@ -935,7 +942,7 @@ void MediaControlTimelineElement::defaultEventHandler(Event* event)
     if (event->isMouseEvent() && static_cast<MouseEvent*>(event)->button())
         return;
 
-    if (!attached())
+    if (!renderer())
         return;
 
     if (event->type() == eventNames().mousedownEvent)
@@ -958,13 +965,15 @@ void MediaControlTimelineElement::defaultEventHandler(Event* event)
         m_controls->updateCurrentTimeDisplay();
 }
 
+#if !PLATFORM(IOS)
 bool MediaControlTimelineElement::willRespondToMouseClickEvents()
 {
-    if (!attached())
+    if (!renderer())
         return false;
 
     return true;
 }
+#endif // !PLATFORM(IOS)
 
 void MediaControlTimelineElement::setPosition(double currentTime)
 {
@@ -1205,9 +1214,9 @@ PassRefPtr<MediaControlTextTrackContainerElement> MediaControlTextTrackContainer
     return element.release();
 }
 
-RenderElement* MediaControlTextTrackContainerElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> MediaControlTextTrackContainerElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderTextTrackContainerElement(*this, std::move(style));
+    return createRenderer<RenderTextTrackContainerElement>(*this, std::move(style));
 }
 
 const AtomicString& MediaControlTextTrackContainerElement::textTrackContainerElementShadowPseudoId()
@@ -1281,7 +1290,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         RefPtr<TextTrackCueBox> displayBox = cue->getDisplayTree(m_videoDisplaySize.size());
         if (displayBox->hasChildNodes() && !contains(displayBox.get())) {
             // Note: the display tree of a cue is removed when the active flag of the cue is unset.
-            appendChild(displayBox, ASSERT_NO_EXCEPTION, AttachNow);
+            appendChild(displayBox, ASSERT_NO_EXCEPTION);
             cue->setFontSize(m_fontSize, m_videoDisplaySize.size(), m_fontSizeIsImportant);
         }
     }

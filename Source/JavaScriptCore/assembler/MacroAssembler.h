@@ -140,6 +140,9 @@ public:
     using MacroAssemblerBase::and32;
     using MacroAssemblerBase::branchAdd32;
     using MacroAssemblerBase::branchMul32;
+#if CPU(X86_64)
+    using MacroAssemblerBase::branchPtr;
+#endif // CPU(X86_64)
     using MacroAssemblerBase::branchSub32;
     using MacroAssemblerBase::lshift32;
     using MacroAssemblerBase::or32;
@@ -592,6 +595,11 @@ public:
         store32(TrustedImm32(imm), address);
     }
 
+    void storePtr(TrustedImmPtr imm, BaseIndex address)
+    {
+        store32(TrustedImm32(imm), address);
+    }
+
     DataLabel32 storePtrWithAddressOffsetPatch(RegisterID src, Address address)
     {
         return store32WithAddressOffsetPatch(src, address);
@@ -725,6 +733,11 @@ public:
     }
 
     void andPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        and64(imm, srcDest);
+    }
+    
+    void andPtr(TrustedImmPtr imm, RegisterID srcDest)
     {
         and64(imm, srcDest);
     }

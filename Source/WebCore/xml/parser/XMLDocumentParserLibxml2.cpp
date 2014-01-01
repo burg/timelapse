@@ -52,7 +52,6 @@
 #include "ResourceResponse.h"
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
-#include "ScriptValue.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "TextResourceDecoder.h"
@@ -845,7 +844,6 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
     if (!m_currentNode) // Synchronous DOM events may have removed the current node.
         return;
 
-    const ContainerNode* currentNode = m_currentNode;
 #if ENABLE(TEMPLATE_ELEMENT)
     if (newElement->hasTagName(HTMLNames::templateTag))
         pushCurrentNode(toHTMLTemplateElement(newElement.get())->content());
@@ -854,9 +852,6 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
 #else
     pushCurrentNode(newElement.get());
 #endif
-
-    if (m_view && currentNode->attached() && !newElement->attached())
-        Style::attachRenderTree(*newElement);
 
     if (newElement->hasTagName(HTMLNames::htmlTag))
         toHTMLHtmlElement(newElement.get())->insertedByParser();
@@ -972,8 +967,9 @@ void XMLDocumentParser::error(XMLErrors::ErrorType type, const char* message, va
     vsnprintf(m, sizeof(m) - 1, message, args);
 #endif
 
+    TextPosition position = textPosition();
     if (m_parserPaused)
-        m_pendingCallbacks->appendErrorCallback(type, reinterpret_cast<const xmlChar*>(m), lineNumber(), columnNumber());
+        m_pendingCallbacks->appendErrorCallback(type, reinterpret_cast<const xmlChar*>(m), position.m_line, position.m_column);
     else
         handleError(type, m, textPosition());
 
@@ -1029,9 +1025,7 @@ void XMLDocumentParser::cdataBlock(const xmlChar* s, int len)
     exitText();
 
     RefPtr<CDATASection> newNode = CDATASection::create(m_currentNode->document(), toString(s, len));
-    m_currentNode->parserAppendChild(newNode.get());
-    if (m_view && !newNode->attached())
-        Style::attachTextRenderer(*newNode);
+    m_currentNode->parserAppendChild(newNode.release());
 }
 
 void XMLDocumentParser::comment(const xmlChar* s)
@@ -1047,7 +1041,7 @@ void XMLDocumentParser::comment(const xmlChar* s)
     exitText();
 
     RefPtr<Comment> newNode = Comment::create(m_currentNode->document(), toString(s));
-    m_currentNode->parserAppendChild(newNode.get());
+    m_currentNode->parserAppendChild(newNode.release());
 }
 
 enum StandaloneInfo {
@@ -1425,16 +1419,6 @@ void* xmlDocPtrForString(CachedResourceLoader* cachedResourceLoader, const Strin
     return xmlReadMemory(characters, sizeInBytes, url.latin1().data(), encoding, XSLT_PARSE_OPTIONS);
 }
 #endif
-
-OrdinalNumber XMLDocumentParser::lineNumber() const
-{
-    return OrdinalNumber::fromOneBasedInt(context() ? context()->input->line : 1);
-}
-
-OrdinalNumber XMLDocumentParser::columnNumber() const
-{
-    return OrdinalNumber::fromOneBasedInt(context() ? context()->input->col : 1);
-}
 
 TextPosition XMLDocumentParser::textPosition() const
 {

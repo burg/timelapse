@@ -38,7 +38,7 @@ namespace WebKit {
 class WebPreferences;
 class WebPageProxy;
 
-class WebPageGroup : public API::TypedObject<API::Object::Type::PageGroup> {
+class WebPageGroup : public API::ObjectImpl<API::Object::Type::PageGroup> {
 public:
     WebPageGroup(const String& identifier = String(), bool visibleToInjectedBundle = true, bool visibleToHistoryClient = true);
     static PassRefPtr<WebPageGroup> create(const String& identifier = String(), bool visibleToInjectedBundle = true, bool visibleToHistoryClient = true);
@@ -65,24 +65,26 @@ public:
     void removeAllUserScripts();
     void removeAllUserContent();
 
-    bool addProcess(WebProcessProxy&);
-    void disconnectProcess(WebProcessProxy&);
-
 private:
     template<typename T> void sendToAllProcessesInGroup(const T&, uint64_t destinationID);
 
     WebPageGroupData m_data;
     mutable RefPtr<WebPreferences> m_preferences;
     HashSet<WebPageProxy*> m_pages;
-    HashSet<WebProcessProxy*> m_processes;
 };
 
 template<typename T>
 void WebPageGroup::sendToAllProcessesInGroup(const T& message, uint64_t destinationID)
 {
-    for (auto webProcessProxy : m_processes) {
-        if (webProcessProxy->canSendMessage())
-            webProcessProxy->send(T(message), destinationID);
+    HashSet<WebProcessProxy*> processesSeen;
+
+    for (WebPageProxy* webPageProxy : m_pages) {
+        WebProcessProxy& webProcessProxy = webPageProxy->process();
+        if (!processesSeen.add(&webProcessProxy).isNewEntry)
+            continue;
+
+        if (webProcessProxy.canSendMessage())
+            webProcessProxy.send(T(message), destinationID);
     }
 }
 

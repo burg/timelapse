@@ -195,6 +195,8 @@ private:
         }
 
         case UInt32ToNumber: {
+            // FIXME: Support Int52.
+            // https://bugs.webkit.org/show_bug.cgi?id=125704
             if (nodeCanSpeculateInt32(node->arithNodeFlags()))
                 changed |= mergePrediction(SpecInt32);
             else
@@ -502,15 +504,13 @@ private:
         case CheckArray:
         case Arrayify:
         case ArrayifyToStructure:
-        case MovHint:
-        case MovHintAndCheck:
-        case ZombieHint:
         case CheckTierUpInLoop:
         case CheckTierUpAtReturn:
         case CheckTierUpAndOSREnter:
         case InvalidationPoint:
         case Int52ToValue:
-        case Int52ToDouble: {
+        case Int52ToDouble:
+        case CheckInBounds: {
             // This node should never be visible at this stage of compilation. It is
             // inserted by fixup(), which follows this phase.
             RELEASE_ASSERT_NOT_REACHED();
@@ -543,6 +543,9 @@ private:
 
 #ifndef NDEBUG
         // These get ignored because they don't return anything.
+        case StoreBarrier:
+        case ConditionalStoreBarrier:
+        case StoreBarrierWithNullCheck:
         case PutByValDirect:
         case PutByVal:
         case PutClosureVar:
@@ -571,6 +574,7 @@ private:
         case VarInjectionWatchpoint:
         case AllocationProfileWatchpoint:
         case Phantom:
+        case Check:
         case PutGlobalVar:
         case CheckWatchdogTimer:
         case Unreachable:
@@ -578,6 +582,9 @@ private:
         case NotifyWrite:
         case FunctionReentryWatchpoint:
         case TypedArrayWatchpoint:
+        case ConstantStoragePointer:
+        case MovHint:
+        case ZombieHint:
             break;
             
         // This gets ignored because it already has a prediction.
@@ -736,6 +743,10 @@ private:
             }
             break;
         }
+            
+        case MovHint:
+            // Ignore these since they have no effect on in-DFG execution.
+            break;
             
         default:
             m_graph.voteChildren(node, VoteValue);

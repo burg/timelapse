@@ -134,13 +134,13 @@ void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
     if (SVGTests::handleAttributeChange(this, attrName))
         return;
 
-    RenderObject* object = renderer();
-    if (!object)
+    auto renderer = this->renderer();
+    if (!renderer)
         return;
 
     if (attrName == SVGNames::transformAttr) {
-        object->setNeedsTransformUpdate();
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(object);
+        renderer->setNeedsTransformUpdate();
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
@@ -162,10 +162,10 @@ FloatRect SVGGraphicsElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
     return SVGTransformable::getBBox(this, styleUpdateStrategy);
 }
 
-RenderElement* SVGGraphicsElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGGraphicsElement::createElementRenderer(PassRef<RenderStyle> style)
 {
     // By default, any subclass is expected to do path-based drawing
-    return new RenderSVGPath(*this, std::move(style));
+    return createRenderer<RenderSVGPath>(*this, std::move(style));
 }
 
 void SVGGraphicsElement::toClipPath(Path& path)

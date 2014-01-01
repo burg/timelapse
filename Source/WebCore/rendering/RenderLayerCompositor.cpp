@@ -55,7 +55,6 @@
 #include "RenderReplica.h"
 #include "RenderVideo.h"
 #include "RenderView.h"
-#include "ScrollbarTheme.h"
 #include "ScrollingConstraints.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
@@ -67,6 +66,7 @@
 #include <wtf/text/StringBuilder.h>
 
 #if PLATFORM(IOS)
+#include "MainFrame.h"
 #include "Region.h"
 #include "RenderScrollbar.h"
 #include "TileCache.h"
@@ -1842,12 +1842,7 @@ void RenderLayerCompositor::updateRootLayerPosition()
 #if ENABLE(RUBBER_BANDING)
     if (m_contentShadowLayer) {
         m_contentShadowLayer->setPosition(m_rootContentLayer->position());
-
-        FloatSize rootContentLayerSize = m_rootContentLayer->size();
-        if (m_contentShadowLayer->size() != rootContentLayerSize) {
-            m_contentShadowLayer->setSize(rootContentLayerSize);
-            ScrollbarTheme::theme()->setUpContentShadowLayer(m_contentShadowLayer.get());
-        }
+        m_contentShadowLayer->setSize(m_rootContentLayer->size());
     }
 
     updateLayerForTopOverhangArea(m_layerForTopOverhangArea != nullptr);
@@ -2269,13 +2264,14 @@ bool RenderLayerCompositor::requiresCompositingForCanvas(RenderLayerModelObject&
         return false;
 
     if (renderer.isCanvas()) {
-        HTMLCanvasElement* canvas = toHTMLCanvasElement(renderer.element());
 #if USE(COMPOSITING_FOR_SMALL_CANVASES)
         bool isCanvasLargeEnoughToForceCompositing = true;
 #else
+        HTMLCanvasElement* canvas = toHTMLCanvasElement(renderer.element());
         bool isCanvasLargeEnoughToForceCompositing = canvas->size().area() >= canvasAreaThresholdRequiringCompositing;
 #endif
-        return canvas->renderingContext() && canvas->renderingContext()->isAccelerated() && (canvas->renderingContext()->is3d() || isCanvasLargeEnoughToForceCompositing);
+        CanvasCompositingStrategy compositingStrategy = canvasCompositingStrategy(renderer);
+        return compositingStrategy == CanvasAsLayerContents || (compositingStrategy == CanvasPaintedToLayer && isCanvasLargeEnoughToForceCompositing);
     }
 
     return false;
@@ -2663,15 +2659,18 @@ float RenderLayerCompositor::contentsScaleMultiplierForNewTiles(const GraphicsLa
 {
 #if PLATFORM(IOS)
     TileCache* tileCache = nullptr;
-    if (Page* page = this->page())
-        tileCache = page->mainFrame().view().tileCache();
+    if (Page* page = this->page()) {
+        if (FrameView* frameView = page->mainFrame().view())
+            tileCache = frameView->tileCache();
+    }
 
     if (!tileCache)
         return 1;
 
     return tileCache->tilingMode() == TileCache::Zooming ? 0.125 : 1;
-#endif
+#else
     return 1;
+#endif
 }
 
 void RenderLayerCompositor::didCommitChangesForLayer(const GraphicsLayer*) const
@@ -2933,8 +2932,7 @@ void RenderLayerCompositor::updateOverflowControlsLayers()
 #endif
             m_layerForOverhangAreas->setDrawsContent(false);
             m_layerForOverhangAreas->setSize(m_renderView.frameView().frameRect().size());
-
-            ScrollbarTheme::theme()->setUpOverhangAreasLayerContents(m_layerForOverhangAreas.get(), this->page()->chrome().client().underlayColor());
+            m_layerForOverhangAreas->setCustomAppearance(GraphicsLayer::ScrollingOverhang);
 
             // We want the overhang areas layer to be positioned below the frame contents,
             // so insert it below the clip layer.
@@ -2953,7 +2951,7 @@ void RenderLayerCompositor::updateOverflowControlsLayers()
 #endif
             m_contentShadowLayer->setSize(m_rootContentLayer->size());
             m_contentShadowLayer->setPosition(m_rootContentLayer->position());
-            ScrollbarTheme::theme()->setUpContentShadowLayer(m_contentShadowLayer.get());
+            m_contentShadowLayer->setCustomAppearance(GraphicsLayer::ScrollingShadow);
 
             m_scrollLayer->addChildBelow(m_contentShadowLayer.get(), m_rootContentLayer.get());
         }
@@ -3048,8 +3046,7 @@ void RenderLayerCompositor::ensureRootLayer()
 #if PLATFORM(IOS)
         // Page scale is applied above this on iOS, so we'll just say that our root layer applies it.
         Frame& frame = m_renderView.frameView().frame();
-        Page* page = frame.page();
-        if (page && &page->mainFrame() == &frame)
+        if (frame.isMainFrame())
             m_rootContentLayer->setAppliesPageScale();
 #endif
 

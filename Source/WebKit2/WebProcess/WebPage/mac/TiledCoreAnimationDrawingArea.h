@@ -101,8 +101,12 @@ private:
     // Message handlers.
     virtual void updateGeometry(const WebCore::IntSize& viewSize, const WebCore::IntSize& layerPosition) OVERRIDE;
     virtual void setDeviceScaleFactor(float) OVERRIDE;
-    virtual void setLayerHostingMode(uint32_t) OVERRIDE;
+    virtual void setLayerHostingMode(LayerHostingMode) OVERRIDE;
     virtual void setColorSpace(const ColorSpaceData&) OVERRIDE;
+
+    virtual void adjustTransientZoom(double scale, WebCore::FloatPoint origin) OVERRIDE;
+    virtual void commitTransientZoom(double scale, WebCore::FloatPoint origin) OVERRIDE;
+    void applyTransientZoomToPage(double scale, WebCore::FloatPoint origin);
 
     void updateLayerHostingContext();
 
@@ -143,6 +147,9 @@ private:
     WebCore::IntSize m_lastSentIntrinsicContentSize;
     WebCore::Timer<TiledCoreAnimationDrawingArea> m_updateIntrinsicContentSizeTimer;
     bool m_inUpdateGeometry;
+
+    double m_transientZoomScale;
+    WebCore::FloatPoint m_transientZoomOrigin;
 };
 
 } // namespace WebKit

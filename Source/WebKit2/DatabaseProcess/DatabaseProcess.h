@@ -30,11 +30,13 @@
 
 #include "ChildProcess.h"
 #include "UniqueIDBDatabaseIdentifier.h"
+#include <wtf/NeverDestroyed.h>
 
 class WorkQueue;
 
 namespace WebKit {
 
+class AsyncTask;
 class DatabaseToWebProcessConnection;
 class UniqueIDBDatabase;
 
@@ -42,6 +44,7 @@ struct DatabaseProcessCreationParameters;
 
 class DatabaseProcess : public ChildProcess  {
     WTF_MAKE_NONCOPYABLE(DatabaseProcess);
+    friend NeverDestroyed<DatabaseProcess>;
 public:
     static DatabaseProcess& shared();
 
@@ -50,27 +53,37 @@ public:
     PassRefPtr<UniqueIDBDatabase> getOrCreateUniqueIDBDatabase(const UniqueIDBDatabaseIdentifier&);
     void removeUniqueIDBDatabase(const UniqueIDBDatabase&);
 
-    WorkQueue& queue() const { return const_cast<WorkQueue&>(m_queue.get()); }
+    void ensureIndexedDatabaseRelativePathExists(const String&);
+    String absoluteIndexedDatabasePathFromDatabaseRelativePath(const String&);
+
+    WorkQueue& queue() { return m_queue.get(); }
+
+    ~DatabaseProcess();
 
 private:
     DatabaseProcess();
-    ~DatabaseProcess();
 
     // ChildProcess
     virtual void initializeProcess(const ChildProcessInitializationParameters&) OVERRIDE;
     virtual void initializeProcessName(const ChildProcessInitializationParameters&) OVERRIDE;
     virtual void initializeSandbox(const ChildProcessInitializationParameters&, SandboxInitializationParameters&) OVERRIDE;
-    virtual void initializeConnection(CoreIPC::Connection*) OVERRIDE;
+    virtual void initializeConnection(IPC::Connection*) OVERRIDE;
     virtual bool shouldTerminate() OVERRIDE;
 
-    // CoreIPC::Connection::Client
-    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    virtual void didClose(CoreIPC::Connection*) OVERRIDE;
-    virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
+    // IPC::Connection::Client
+    virtual void didReceiveMessage(IPC::Connection*, IPC::MessageDecoder&) OVERRIDE;
+    virtual void didClose(IPC::Connection*) OVERRIDE;
+    virtual void didReceiveInvalidMessage(IPC::Connection*, IPC::StringReference messageReceiverName, IPC::StringReference messageName) OVERRIDE;
 
     // Message Handlers
     void initializeDatabaseProcess(const DatabaseProcessCreationParameters&);
     void createDatabaseToWebProcessConnection();
+
+    void postDatabaseTask(std::unique_ptr<AsyncTask>);
+
+    // For execution on work queue thread only
+    void performNextDatabaseTask();
+    void ensurePathExists(const String&);
 
     Vector<RefPtr<DatabaseToWebProcessConnection>> m_databaseToWebProcessConnections;
 
@@ -79,6 +92,9 @@ private:
     String m_indexedDatabaseDirectory;
 
     HashMap<UniqueIDBDatabaseIdentifier, RefPtr<UniqueIDBDatabase>> m_idbDatabases;
+
+    Deque<std::unique_ptr<AsyncTask>> m_databaseTasks;
+    Mutex m_databaseTaskMutex;
 };
 
 } // namespace WebKit

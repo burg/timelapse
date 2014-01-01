@@ -57,7 +57,7 @@ public:
     {
     }
 
-    void encode(CoreIPC::ArgumentEncoder& encoder) const
+    void encode(IPC::ArgumentEncoder& encoder) const
     {
         API::Object::Type type = API::Object::Type::Null;
         if (baseEncode(encoder, *this, type))
@@ -76,8 +76,6 @@ public:
         }
         case API::Object::Type::PageGroup: {
             WebPageGroup* pageGroup = static_cast<WebPageGroup*>(m_root);
-            if (pageGroup->addProcess(m_process))
-                m_process.addWebPageGroup(*pageGroup);
             encoder << pageGroup->data();
             break;
         }
@@ -119,7 +117,7 @@ public:
     {
     }
 
-    static bool decode(CoreIPC::ArgumentDecoder& decoder, WebContextUserMessageDecoder& coder)
+    static bool decode(IPC::ArgumentDecoder& decoder, WebContextUserMessageDecoder& coder)
     {
         API::Object::Type type = API::Object::Type::Null;
         if (!Base::baseDecode(decoder, coder, type))
@@ -147,7 +145,7 @@ public:
             uint64_t pageGroupID;
             if (!decoder.decode(pageGroupID))
                 return false;
-            coder.m_root = coder.m_process.webPageGroup(pageGroupID);
+            coder.m_root = WebPageGroup::get(pageGroupID);
             break;
         }
 #if PLATFORM(MAC)

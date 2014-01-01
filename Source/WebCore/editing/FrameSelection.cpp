@@ -213,11 +213,12 @@ void FrameSelection::setNonDirectionalSelectionIfNeeded(const VisibleSelection& 
 
     VisiblePosition base = m_originalBase.isNotNull() ? m_originalBase : newSelection.visibleBase();
     VisiblePosition newBase = base;
-    VisiblePosition newExtent = newSelection.visibleExtent();
+    VisiblePosition extent = newSelection.visibleExtent();
+    VisiblePosition newExtent = extent;
     if (endpointsAdjustmentMode == AdjustEndpointsAtBidiBoundary)
         adjustEndpointsAtBidiBoundary(newBase, newExtent);
 
-    if (newBase != base || newExtent != newSelection.visibleExtent()) {
+    if (newBase != base || newExtent != extent) {
         m_originalBase = base;
         newSelection.setBase(newBase);
         newSelection.setExtent(newExtent);
@@ -1589,7 +1590,7 @@ void FrameSelection::selectFrameElementInParentIfFullySelected()
         return;
         
     // This method's purpose is it to make it easier to select iframes (in order to delete them).  Don't do anything if the iframe isn't deletable.
-    if (!ownerElementParent->rendererIsEditable())
+    if (!ownerElementParent->hasEditableStyle())
         return;
 
     // Create compute positions before and after the element.
@@ -1705,7 +1706,7 @@ void FrameSelection::focusedOrActiveStateChanged()
         element->setNeedsStyleRecalc();
         if (RenderObject* renderer = element->renderer())
             if (renderer && renderer->style().hasAppearance())
-                renderer->theme()->stateChanged(renderer, FocusState);
+                renderer->theme().stateChanged(renderer, FocusState);
     }
 }
 
@@ -1759,7 +1760,7 @@ void FrameSelection::updateAppearance()
     // Start blinking with a black caret. Be sure not to restart if we're
     // already blinking in the right location.
     if (shouldBlink && !m_caretBlinkTimer.isActive()) {
-        if (double blinkInterval = m_frame->page()->theme()->caretBlinkInterval())
+        if (double blinkInterval = m_frame->page()->theme().caretBlinkInterval())
             m_caretBlinkTimer.startRepeating(blinkInterval);
 
         if (!m_caretPaint) {
@@ -2024,7 +2025,7 @@ void FrameSelection::setSelectionFromNone()
 
     Document* document = m_frame->document();
     bool caretBrowsing = m_frame->settings().caretBrowsingEnabled();
-    if (!isNone() || !(document->rendererIsEditable() || caretBrowsing))
+    if (!isNone() || !(document->hasEditableStyle() || caretBrowsing))
         return;
 
     Node* node = document->documentElement();

@@ -57,6 +57,8 @@
 #if ENABLE(WEB_REPLAY)
 #include "SetRandomSeed.h"
 #include <wtf/replay/InputIterator.h>
+#include <wtf/text/AtomicString.h>
+#include <wtf/NeverDestroyed.h>
 #endif
 
 namespace JSC {
@@ -76,7 +78,7 @@ public:
         if (it && it->isCapturing())
             it->storeInput(std::make_unique<SetRandomSeed>(seedUnsafe()));
         if (it && it->isReplaying()) {
-            DEFINE_STATIC_LOCAL(const AtomicString, type, ("SetRandomSeed", AtomicString::ConstructFromLiteral));
+            static NeverDestroyed<const AtomicString> type("SetRandomSeed", AtomicString::ConstructFromLiteral);
             SetRandomSeed* action = static_cast<SetRandomSeed*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, type));
             if (action)
                 initializeSeed(action->randomSeed());

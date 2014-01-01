@@ -32,6 +32,7 @@
 
 #if ENABLE(WEB_REPLAY)
 
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringConcatenate.h>
 
 namespace JSC {
@@ -47,7 +48,7 @@ GetCurrentTime::~GetCurrentTime()
 
 const AtomicString& GetCurrentTime::type() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, type, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> type("GetCurrentTime", AtomicString::ConstructFromLiteral);
     return type;
 }
 

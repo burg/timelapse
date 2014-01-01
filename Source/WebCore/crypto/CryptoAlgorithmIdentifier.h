@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-ENUM_CLASS(CryptoAlgorithmIdentifier) {
+enum class CryptoAlgorithmIdentifier {
     RSAES_PKCS1_v1_5 = 1,
     RSASSA_PKCS1_v1_5,
     RSA_PSS,
@@ -42,6 +42,7 @@ ENUM_CLASS(CryptoAlgorithmIdentifier) {
     AES_CMAC,
     AES_GCM,
     AES_CFB,
+    AES_KW,
     HMAC,
     DH,
     SHA_1,
@@ -51,8 +52,7 @@ ENUM_CLASS(CryptoAlgorithmIdentifier) {
     SHA_512,
     CONCAT,
     HKDF_CTR,
-    PBKDF2,
-    AES_KW // Not yet standardized.
+    PBKDF2
 };
 
 }

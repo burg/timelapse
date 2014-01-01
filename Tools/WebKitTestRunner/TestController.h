@@ -66,6 +66,7 @@ public:
     EventSenderProxy* eventSenderProxy() { return m_eventSenderProxy.get(); }
 
     void ensureViewSupportsOptions(WKDictionaryRef options);
+    bool shouldUseRemoteLayerTree() const { return m_shouldUseRemoteLayerTree; }
     
     // Runs the run loop until `done` is true or the timeout elapses.
     enum TimeoutDuration { ShortTimeout, LongTimeout, NoTimeout, CustomTimeout };
@@ -163,6 +164,8 @@ private:
     static void runModal(WKPageRef, const void* clientInfo);
     static void runModal(PlatformWebView*);
 
+    void setHidden(bool);
+
     static const char* libraryPathForTesting();
     static const char* platformLibraryPathForTesting();
 
@@ -217,6 +220,10 @@ private:
     String m_authenticationPassword;
 
     bool m_shouldBlockAllPlugins;
+
+    bool m_forceComplexText;
+    bool m_shouldUseAcceleratedDrawing;
+    bool m_shouldUseRemoteLayerTree;
 
     OwnPtr<EventSenderProxy> m_eventSenderProxy;
 

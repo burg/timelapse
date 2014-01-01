@@ -1,3 +1,40 @@
+2013-12-30  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Cleanup static_cast<HTMLFormElement*> by using toHTMLFormElement()
+        https://bugs.webkit.org/show_bug.cgi?id=126309
+
+        Reviewed by Andreas Kling.
+
+        To detect bad type casts, it would be good to use toHTMLFormElement() instead of
+        using manual type cast. Additionally FORM_ASSOCIATED_ELEMENT_TYPE_CASTS is introduced newly
+        to do it.
+
+        * WebFrame.cpp:
+        (WebFrame::elementWithName):
+
+2013-12-17  Alex Christensen  <achristensen@webkit.org>
+
+        [WinCairo] Compile fixes for GStreamer on Windows.
+        https://bugs.webkit.org/show_bug.cgi?id=124867
+
+        Reviewed by Philippe Normand.
+
+        * WebView.cpp:
+        (WebView::enterFullscreenForNode):
+        (WebView::exitFullscreen):
+        GStreamer in WebKit does not support fullscreen, so
+        I added #if !USE(GSTREAMER) to the fullscreen code to get it to compile.
+
+2013-12-11  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Push More Inspector Required Classes Down into JavaScriptCore
+        https://bugs.webkit.org/show_bug.cgi?id=125324
+
+        Reviewed by Timothy Hatcher.
+
+        * WebFrame.cpp:
+        * WebView.cpp:
+
 2013-12-04  Brent Fulgham  <bfulgham@apple.com>
 
         [Win] Exiting from Media Full Screen mode via 'escape' key does not work properly

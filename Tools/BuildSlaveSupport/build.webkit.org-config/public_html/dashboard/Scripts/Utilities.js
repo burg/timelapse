@@ -50,12 +50,71 @@ JSON.load = function(url, callback)
     request.send();
 };
 
+function loadXML(url, callback) {
+    console.assert(url);
+
+    if (!(callback instanceof Function))
+        return;
+
+    var request = new XMLHttpRequest;
+    request.onreadystatechange = function() {
+        if (this.readyState !== 4)
+            return;
+
+        // Allow a status of 0 for easier testing with local files.
+        if (!this.status || this.status === 200)
+            callback(request.responseXML);
+    };
+
+    request.open("GET", url);
+    request.send();
+};
+
+Node.prototype.isAncestor = function(node)
+{
+    if (!node)
+        return false;
+
+    var currentNode = node.parentNode;
+    while (currentNode) {
+        if (this === currentNode)
+            return true;
+        currentNode = currentNode.parentNode;
+    }
+
+    return false;
+}
+
+Node.prototype.isDescendant = function(descendant)
+{
+    return !!descendant && descendant.isAncestor(this);
+}
+
+Node.prototype.isSelfOrAncestor = function(node)
+{
+    return !!node && (node === this || this.isAncestor(node));
+}
+
+Node.prototype.isSelfOrDescendant = function(node)
+{
+    return !!node && (node === this || this.isDescendant(node));
+}
+
 Element.prototype.removeChildren = function()
 {
     // This has been tested to be the fastest removal method.
     if (this.firstChild)
         this.textContent = "";
 };
+
+DOMTokenList.prototype.contains = function(string)
+{
+    for (var i = 0, end = this.length; i < end; ++i) {
+        if (this.item(i) === string)
+            return true;
+    }
+    return false;
+}
 
 Array.prototype.contains = function(value)
 {

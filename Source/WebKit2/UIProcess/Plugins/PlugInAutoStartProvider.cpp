@@ -89,18 +89,35 @@ PassRefPtr<ImmutableDictionary> PlugInAutoStartProvider::autoStartOriginsTableCo
         for (PlugInAutoStartOriginHash::const_iterator valueIt = it->value.begin(); valueIt != valueEnd; ++valueIt) {
             if (now > valueIt->value)
                 continue;
-            hashMap.set(String::number(valueIt->key), WebDouble::create(valueIt->value));
+            hashMap.set(String::number(valueIt->key), API::Double::create(valueIt->value));
         }
 
         if (hashMap.size())
-            map.set(it->key, ImmutableDictionary::adopt(hashMap));
+            map.set(it->key, ImmutableDictionary::create(std::move(hashMap)));
     }
 
-    return ImmutableDictionary::adopt(map);
+    return ImmutableDictionary::create(std::move(map));
 }
 
 void PlugInAutoStartProvider::setAutoStartOriginsTable(ImmutableDictionary& table)
 {
+    setAutoStartOriginsTableWithItemsPassingTest(table, [](double) {
+        return true;
+    });
+}
+
+void PlugInAutoStartProvider::setAutoStartOriginsFilteringOutEntriesAddedAfterTime(ImmutableDictionary& table, double time)
+{
+    double adjustedTimestamp = time + plugInAutoStartExpirationTimeThreshold;
+    setAutoStartOriginsTableWithItemsPassingTest(table, [adjustedTimestamp](double expirationTimestamp) {
+        return adjustedTimestamp > expirationTimestamp;
+    });
+}
+
+void PlugInAutoStartProvider::setAutoStartOriginsTableWithItemsPassingTest(ImmutableDictionary& table, std::function<bool(double expirationTimestamp)> isExpirationTimeAcceptable)
+{
+    ASSERT(isExpirationTimeAcceptable);
+
     m_hashToOriginMap.clear();
     m_autoStartTable.clear();
     HashMap<unsigned, double> hashMap;
@@ -116,16 +133,20 @@ void PlugInAutoStartProvider::setAutoStartOriginsTable(ImmutableDictionary& tabl
             if (!ok)
                 continue;
 
-            if (hashIt->value->type() != WebDouble::APIType)
+            if (hashIt->value->type() != API::Double::APIType)
                 continue;
 
-            double expirationTime = static_cast<WebDouble*>(hashIt->value.get())->value();
+            double expirationTime = static_cast<API::Double*>(hashIt->value.get())->value();
+            if (!isExpirationTimeAcceptable(expirationTime))
+                continue;
+
             hashes.set(hash, expirationTime);
             hashMap.set(hash, expirationTime);
             m_hashToOriginMap.set(hash, it->key);
         }
 
-        m_autoStartTable.set(it->key, hashes);
+        if (!hashes.isEmpty())
+            m_autoStartTable.set(it->key, hashes);
     }
 
     m_context->sendToAllProcesses(Messages::WebProcess::ResetPlugInAutoStartOriginHashes(hashMap));
@@ -135,9 +156,9 @@ void PlugInAutoStartProvider::setAutoStartOriginsArray(API::Array& originList)
 {
     m_autoStartOrigins.clear();
     for (size_t i = 0, length = originList.size(); i < length; ++i) {
-        if (originList.at(i)->type() != WebString::APIType)
+        if (originList.at(i)->type() != API::String::APIType)
             continue;
-        m_autoStartOrigins.append(static_cast<WebString*>(originList.at(i))->string());
+        m_autoStartOrigins.append(static_cast<API::String*>(originList.at(i))->string());
     }
 }
 

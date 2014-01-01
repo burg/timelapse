@@ -37,7 +37,7 @@
 
 namespace WebKit {
 
-AuthenticationChallengeProxy::AuthenticationChallengeProxy(const WebCore::AuthenticationChallenge& authenticationChallenge, uint64_t challengeID, CoreIPC::Connection* connection)
+AuthenticationChallengeProxy::AuthenticationChallengeProxy(const WebCore::AuthenticationChallenge& authenticationChallenge, uint64_t challengeID, IPC::Connection* connection)
     : m_coreAuthenticationChallenge(authenticationChallenge)
     , m_challengeID(challengeID)
     , m_connection(connection)
@@ -66,7 +66,7 @@ void AuthenticationChallengeProxy::useCredential(WebCredential* credential)
         m_connection->send(Messages::AuthenticationManager::ContinueWithoutCredentialForChallenge(m_challengeID), 0);
     else {
         WebCertificateInfo* certificateInfo = credential->certificateInfo();
-        CertificateInfo platformInfo = certificateInfo ? certificateInfo->certificateInfo() : CertificateInfo();
+        WebCore::CertificateInfo platformInfo = certificateInfo ? certificateInfo->certificateInfo() : WebCore::CertificateInfo();
         m_connection->send(Messages::AuthenticationManager::UseCredentialForChallenge(m_challengeID, credential->core(), platformInfo), 0);
     }
 

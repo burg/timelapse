@@ -42,37 +42,37 @@ class WebEvent;
 class WebPage;
 class WebWheelEvent;
 
-class EventDispatcher : public CoreIPC::Connection::WorkQueueMessageReceiver {
+class EventDispatcher : public IPC::Connection::WorkQueueMessageReceiver {
 public:
     static PassRefPtr<EventDispatcher> create();
     ~EventDispatcher();
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
     void addScrollingTreeForPage(WebPage*);
     void removeScrollingTreeForPage(WebPage*);
 #endif
 
-    void initializeConnection(CoreIPC::Connection*);
+    void initializeConnection(IPC::Connection*);
 
 private:
     EventDispatcher();
 
-    // CoreIPC::Connection::WorkQueueMessageReceiver.
-    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
+    // IPC::Connection::WorkQueueMessageReceiver.
+    virtual void didReceiveMessage(IPC::Connection*, IPC::MessageDecoder&) OVERRIDE;
 
     // Message handlers
-    void wheelEvent(uint64_t pageID, const WebWheelEvent&, bool canRubberBandsAtLeft, bool canRubberBandsAtRight, bool canRubberBandsAtTop, bool canRubberBandsAtBottom);
+    void wheelEvent(uint64_t pageID, const WebWheelEvent&, bool canRubberBandAtLeft, bool canRubberBandAtRight, bool canRubberBandAtTop, bool canRubberBandAtBottom);
 
     // This is called on the main thread.
     void dispatchWheelEvent(uint64_t pageID, const WebWheelEvent&);
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
     void sendDidReceiveEvent(uint64_t pageID, const WebEvent&, bool didHandleEvent);
 #endif
 
     RefPtr<WorkQueue> m_queue;
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
     Mutex m_scrollingTreesMutex;
     HashMap<uint64_t, RefPtr<WebCore::ScrollingTree>> m_scrollingTrees;
 #endif

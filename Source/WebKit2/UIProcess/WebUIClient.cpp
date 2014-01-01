@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebUIClient.h"
 
+#include "APINumber.h"
 #include "ImmutableDictionary.h"
 #include "NativeWebKeyboardEvent.h"
 #include "NativeWebWheelEvent.h"
@@ -33,7 +34,6 @@
 #include "PluginInformation.h"
 #include "WKAPICast.h"
 #include "WebColorPickerResultListenerProxy.h"
-#include "WebNumber.h"
 #include "WebOpenPanelResultListenerProxy.h"
 #include "WebPageProxy.h"
 #include <WebCore/FloatRect.h>
@@ -56,27 +56,27 @@ PassRefPtr<WebPageProxy> WebUIClient::createNewPage(WebPageProxy* page, const Re
 
     ImmutableDictionary::MapType map;
     if (windowFeatures.xSet)
-        map.set("x", WebDouble::create(windowFeatures.x));
+        map.set("x", API::Double::create(windowFeatures.x));
     if (windowFeatures.ySet)
-        map.set("y", WebDouble::create(windowFeatures.y));
+        map.set("y", API::Double::create(windowFeatures.y));
     if (windowFeatures.widthSet)
-        map.set("width", WebDouble::create(windowFeatures.width));
+        map.set("width", API::Double::create(windowFeatures.width));
     if (windowFeatures.heightSet)
-        map.set("height", WebDouble::create(windowFeatures.height));
-    map.set("menuBarVisible", WebBoolean::create(windowFeatures.menuBarVisible));
-    map.set("statusBarVisible", WebBoolean::create(windowFeatures.statusBarVisible));
-    map.set("toolBarVisible", WebBoolean::create(windowFeatures.toolBarVisible));
-    map.set("locationBarVisible", WebBoolean::create(windowFeatures.locationBarVisible));
-    map.set("scrollbarsVisible", WebBoolean::create(windowFeatures.scrollbarsVisible));
-    map.set("resizable", WebBoolean::create(windowFeatures.resizable));
-    map.set("fullscreen", WebBoolean::create(windowFeatures.fullscreen));
-    map.set("dialog", WebBoolean::create(windowFeatures.dialog));
-    RefPtr<ImmutableDictionary> featuresMap = ImmutableDictionary::adopt(map);
+        map.set("height", API::Double::create(windowFeatures.height));
+    map.set("menuBarVisible", API::Boolean::create(windowFeatures.menuBarVisible));
+    map.set("statusBarVisible", API::Boolean::create(windowFeatures.statusBarVisible));
+    map.set("toolBarVisible", API::Boolean::create(windowFeatures.toolBarVisible));
+    map.set("locationBarVisible", API::Boolean::create(windowFeatures.locationBarVisible));
+    map.set("scrollbarsVisible", API::Boolean::create(windowFeatures.scrollbarsVisible));
+    map.set("resizable", API::Boolean::create(windowFeatures.resizable));
+    map.set("fullscreen", API::Boolean::create(windowFeatures.fullscreen));
+    map.set("dialog", API::Boolean::create(windowFeatures.dialog));
+    RefPtr<ImmutableDictionary> featuresMap = ImmutableDictionary::create(std::move(map));
 
     if (!m_client.base.version)
         return adoptRef(toImpl(m_client.createNewPage_deprecatedForUseWithV0(toAPI(page), toAPI(featuresMap.get()), toAPI(modifiers), toAPI(button), m_client.base.clientInfo)));
 
-    RefPtr<WebURLRequest> request = WebURLRequest::create(resourceRequest);    
+    RefPtr<API::URLRequest> request = API::URLRequest::create(resourceRequest);    
     return adoptRef(toImpl(m_client.createNewPage(toAPI(page), toAPI(request.get()), toAPI(featuresMap.get()), toAPI(modifiers), toAPI(button), m_client.base.clientInfo)));
 } 
 
@@ -141,7 +141,7 @@ String WebUIClient::runJavaScriptPrompt(WebPageProxy* page, const String& messag
     if (!m_client.runJavaScriptPrompt)
         return String();
 
-    WebString* string = toImpl(m_client.runJavaScriptPrompt(toAPI(page), toAPI(message.impl()), toAPI(defaultValue.impl()), toAPI(frame), m_client.base.clientInfo));
+    API::String* string = toImpl(m_client.runJavaScriptPrompt(toAPI(page), toAPI(message.impl()), toAPI(defaultValue.impl()), toAPI(frame), m_client.base.clientInfo));
     if (!string)
         return String();
 
@@ -183,9 +183,9 @@ void WebUIClient::unavailablePluginButtonClicked(WebPageProxy* page, WKPluginUna
         if (m_client.missingPluginButtonClicked_deprecatedForUseWithV0)
             m_client.missingPluginButtonClicked_deprecatedForUseWithV0(
                 toAPI(page),
-                toAPI(pluginInformation->get<WebString>(pluginInformationMIMETypeKey())),
-                toAPI(pluginInformation->get<WebString>(pluginInformationPluginURLKey())),
-                toAPI(pluginInformation->get<WebString>(pluginInformationPluginspageAttributeURLKey())),
+                toAPI(pluginInformation->get<API::String>(pluginInformationMIMETypeKey())),
+                toAPI(pluginInformation->get<API::String>(pluginInformationPluginURLKey())),
+                toAPI(pluginInformation->get<API::String>(pluginInformationPluginspageAttributeURLKey())),
                 m_client.base.clientInfo);
     }
 
@@ -193,9 +193,9 @@ void WebUIClient::unavailablePluginButtonClicked(WebPageProxy* page, WKPluginUna
         m_client.unavailablePluginButtonClicked_deprecatedForUseWithV1(
             toAPI(page),
             pluginUnavailabilityReason,
-            toAPI(pluginInformation->get<WebString>(pluginInformationMIMETypeKey())),
-            toAPI(pluginInformation->get<WebString>(pluginInformationPluginURLKey())),
-            toAPI(pluginInformation->get<WebString>(pluginInformationPluginspageAttributeURLKey())),
+            toAPI(pluginInformation->get<API::String>(pluginInformationMIMETypeKey())),
+            toAPI(pluginInformation->get<API::String>(pluginInformationPluginURLKey())),
+            toAPI(pluginInformation->get<API::String>(pluginInformationPluginspageAttributeURLKey())),
             m_client.base.clientInfo);
 
     if (m_client.unavailablePluginButtonClicked)
@@ -420,7 +420,7 @@ void WebUIClient::runModal(WebPageProxy* page)
     m_client.runModal(toAPI(page), m_client.base.clientInfo);
 }
 
-void WebUIClient::saveDataToFileInDownloadsFolder(WebPageProxy* page, const String& suggestedFilename, const String& mimeType, const String& originatingURLString, WebData* data)
+void WebUIClient::saveDataToFileInDownloadsFolder(WebPageProxy* page, const String& suggestedFilename, const String& mimeType, const String& originatingURLString, API::Data* data)
 {
     if (!m_client.saveDataToFileInDownloadsFolder)
         return;

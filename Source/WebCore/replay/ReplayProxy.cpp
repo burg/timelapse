@@ -59,6 +59,7 @@
 #include "HandleMousePress.h"
 #include "HandleMouseRelease.h"
 #include "HandleWheelEvent.h"
+#include "InspectorWebTypeBuilders.h"
 #include "JSONEncoderContext.h"
 #include "LoadURLRequest.h"
 #include "Logging.h"
@@ -72,6 +73,7 @@
 #include "SerializationMethods.h"
 #include "StopLoadingFrame.h"
 #include "TryClosePage.h"
+#include <inspector/InspectorValues.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/text/CString.h>
 
@@ -80,6 +82,8 @@
 #endif
 
 #endif // ENABLE(WEB_REPLAY)
+
+using namespace Inspector;
 
 namespace WebCore {
 

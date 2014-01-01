@@ -135,14 +135,14 @@ static RenderObject* nextSiblingRenderer(const Element& element, const Container
     // Avoid an O(N^2) problem with this function by not checking for
     // nextRenderer() when the parent element hasn't attached yet.
     // FIXME: Why would we get here anyway if parent is not attached?
-    if (renderingParentNode && !renderingParentNode->attached())
-        return 0;
+    if (renderingParentNode && !renderingParentNode->renderer())
+        return nullptr;
     for (Node* sibling = NodeRenderingTraversal::nextSibling(&element); sibling; sibling = NodeRenderingTraversal::nextSibling(sibling)) {
         RenderObject* renderer = sibling->renderer();
         if (renderer && !isRendererReparented(renderer))
             return renderer;
     }
-    return 0;
+    return nullptr;
 }
 
 static bool shouldCreateRenderer(const Element& element, const ContainerNode* renderingParent)
@@ -237,7 +237,7 @@ static void createRendererIfNeeded(Element& element, PassRefPtr<RenderStyle> res
         nextRenderer = nextSiblingRenderer(element, renderingParentNode);
     }
 
-    RenderElement* newRenderer = element.createRenderer(style.releaseNonNull());
+    RenderElement* newRenderer = element.createElementRenderer(style.releaseNonNull()).leakPtr();
     if (!newRenderer)
         return;
     if (!parentRenderer->isChildAllowed(*newRenderer, newRenderer->style())) {
@@ -302,7 +302,7 @@ static void reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(No
     // the current node gaining or losing the renderer. This can only affect white space text nodes.
     for (Node* sibling = NodeRenderingTraversal::nextSibling(&current); sibling; sibling = NodeRenderingTraversal::nextSibling(sibling)) {
         // Siblings haven't been attached yet. They will be handled normally when they are.
-        if (!sibling->attached())
+        if (sibling->styleChangeType() == ReconstructRenderTree)
             return;
         if (sibling->isElementNode()) {
             // Text renderers beyond rendered elements can't be affected.
@@ -378,34 +378,31 @@ static void createTextRendererIfNeeded(Text& textNode)
     if (!renderingParentNode->childShouldCreateRenderer(textNode))
         return;
 
-    // FIXME: constify this RenderStyle&.
-    RenderStyle& style = parentRenderer->style();
+    const auto& style = parentRenderer->style();
 
     if (!textRendererIsNeeded(textNode, *parentRenderer, style))
         return;
-    RenderText* newRenderer = textNode.createTextRenderer(style);
-    if (!newRenderer)
+
+    auto newRenderer = textNode.createTextRenderer(style);
+    ASSERT(newRenderer);
+
+    if (!parentRenderer->isChildAllowed(*newRenderer, style))
         return;
-    if (!parentRenderer->isChildAllowed(*newRenderer, style)) {
-        newRenderer->destroy();
-        return;
-    }
 
     // Make sure the RenderObject already knows it is going to be added to a RenderFlowThread before we set the style
     // for the first time. Otherwise code using inRenderFlowThread() in the styleWillChange and styleDidChange will fail.
     newRenderer->setFlowThreadState(parentRenderer->flowThreadState());
 
     RenderObject* nextRenderer = nextSiblingRenderer(textNode);
-    textNode.setRenderer(newRenderer);
+    textNode.setRenderer(newRenderer.get());
     // Parent takes care of the animations, no need to call setAnimatableStyle.
-    parentRenderer->addChild(newRenderer, nextRenderer);
+    parentRenderer->addChild(newRenderer.leakPtr(), nextRenderer);
 }
 
 void attachTextRenderer(Text& textNode)
 {
     createTextRendererIfNeeded(textNode);
 
-    textNode.setAttached(true);
     textNode.clearNeedsStyleRecalc();
 }
 
@@ -414,13 +411,10 @@ void detachTextRenderer(Text& textNode)
     if (textNode.renderer())
         textNode.renderer()->destroyAndCleanupAnonymousWrappers();
     textNode.setRenderer(0);
-    textNode.setAttached(false);
 }
 
 void updateTextRendererAfterContentChange(Text& textNode, unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
 {
-    if (!textNode.attached())
-        return;
     RenderText* textRenderer = textNode.renderer();
     if (!textRenderer) {
         attachTextRenderer(textNode);
@@ -440,8 +434,8 @@ void updateTextRendererAfterContentChange(Text& textNode, unsigned offsetOfRepla
 static void attachChildren(ContainerNode& current)
 {
     for (Node* child = current.firstChild(); child; child = child->nextSibling()) {
-        ASSERT(!child->attached() || current.shadowRoot());
-        if (child->attached())
+        ASSERT(!child->renderer() || current.shadowRoot() || current.isInsertionPoint());
+        if (child->renderer())
             continue;
         if (child->isTextNode()) {
             attachTextRenderer(*toText(child));
@@ -454,8 +448,6 @@ static void attachChildren(ContainerNode& current)
 
 static void attachShadowRoot(ShadowRoot& shadowRoot)
 {
-    if (shadowRoot.attached())
-        return;
     StyleResolver& styleResolver = shadowRoot.document().ensureStyleResolver();
     styleResolver.pushParentShadowRoot(&shadowRoot);
 
@@ -464,7 +456,7 @@ static void attachShadowRoot(ShadowRoot& shadowRoot)
     styleResolver.popParentShadowRoot(&shadowRoot);
 
     shadowRoot.clearNeedsStyleRecalc();
-    shadowRoot.setAttached(true);
+    shadowRoot.clearChildNeedsStyleRecalc();
 }
 
 static PseudoElement* beforeOrAfterPseudoElement(Element& current, PseudoId pseudoId)
@@ -519,7 +511,7 @@ static void attachBeforeOrAfterPseudoElementIfNeeded(Element& current, PseudoId 
 
 static void attachRenderTree(Element& current, PassRefPtr<RenderStyle> resolvedStyle)
 {
-    PostAttachCallbackDisabler callbackDisabler(current);
+    PostAttachCallbackDisabler callbackDisabler(current.document());
     WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
 
     if (current.hasCustomStyleResolveCallbacks())
@@ -543,8 +535,8 @@ static void attachRenderTree(Element& current, PassRefPtr<RenderStyle> resolvedS
 
     attachChildren(current);
 
-    current.setAttached(true);
     current.clearNeedsStyleRecalc();
+    current.clearChildNeedsStyleRecalc();
 
     if (AXObjectCache* cache = current.document().axObjectCache())
         cache->updateCacheAfterNodeIsAttached(&current);
@@ -572,11 +564,7 @@ static void detachChildren(ContainerNode& current, DetachType detachType)
 
 static void detachShadowRoot(ShadowRoot& shadowRoot, DetachType detachType)
 {
-    if (!shadowRoot.attached())
-        return;
     detachChildren(shadowRoot, detachType);
-
-    shadowRoot.setAttached(false);
 }
 
 static void detachRenderTree(Element& current, DetachType detachType)
@@ -601,8 +589,6 @@ static void detachRenderTree(Element& current, DetachType detachType)
     if (current.renderer())
         current.renderer()->destroyAndCleanupAnonymousWrappers();
     current.setRenderer(0);
-
-    current.setAttached(false);
 
     if (current.hasCustomStyleResolveCallbacks())
         current.didDetachRenderers();
@@ -649,12 +635,12 @@ static Change resolveLocal(Element& current, Change inheritedChange)
     RefPtr<RenderStyle> currentStyle = current.renderStyle();
 
     Document& document = current.document();
-    if (currentStyle) {
+    if (currentStyle && current.styleChangeType() != ReconstructRenderTree) {
         newStyle = current.styleForRenderer();
         localChange = determineChange(currentStyle.get(), newStyle.get(), document.settings());
     }
     if (localChange == Detach) {
-        if (current.attached())
+        if (current.renderer() || current.inNamedFlow())
             detachRenderTree(current, ReattachDetach);
         attachRenderTree(current, newStyle.release());
         reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(current);
@@ -907,7 +893,7 @@ void detachRenderTreeInReattachMode(Element& element)
 
 void reattachRenderTree(Element& current)
 {
-    if (current.attached())
+    if (current.renderer())
         detachRenderTree(current, ReattachDetach);
     attachRenderTree(current);
 }

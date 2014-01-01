@@ -34,13 +34,15 @@
 
 #include "PageConsoleAgent.h"
 
+#include "CommandLineAPIHost.h"
 #include "DOMWindow.h"
 #include "InjectedScriptHost.h"
 #include "InjectedScriptManager.h"
 #include "InspectorAgent.h"
 #include "InspectorDOMAgent.h"
 #include "Node.h"
-#include "ScriptObject.h"
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -63,12 +65,12 @@ void PageConsoleAgent::clearMessages(ErrorString* errorString)
     InspectorConsoleAgent::clearMessages(errorString);
 }
 
-class InspectableNode : public InjectedScriptHost::InspectableObject {
+class InspectableNode FINAL : public CommandLineAPIHost::InspectableObject {
 public:
     explicit InspectableNode(Node* node) : m_node(node) { }
-    virtual ScriptValue get(JSC::ExecState* state)
+    virtual Deprecated::ScriptValue get(JSC::ExecState* state) OVERRIDE
     {
-        return InjectedScriptHost::nodeAsScriptValue(state, m_node);
+        return InspectorDOMAgent::nodeAsScriptValue(state, m_node);
     }
 private:
     Node* m_node;
@@ -78,10 +80,12 @@ void PageConsoleAgent::addInspectedNode(ErrorString* errorString, int nodeId)
 {
     Node* node = m_inspectorDOMAgent->nodeForId(nodeId);
     if (!node || node->isInShadowTree()) {
-        *errorString = "nodeId is not valid";
+        *errorString = ASCIILiteral("nodeId is not valid");
         return;
     }
-    m_injectedScriptManager->injectedScriptHost()->addInspectedObject(adoptPtr(new InspectableNode(node)));
+
+    if (CommandLineAPIHost* commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())
+        commandLineAPIHost->addInspectedObject(adoptPtr(new InspectableNode(node)));
 }
 
 bool PageConsoleAgent::developerExtrasEnabled()

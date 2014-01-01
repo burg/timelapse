@@ -28,11 +28,11 @@
 #include "WKPagePrivate.h"
 
 #include "APIArray.h"
+#include "APIData.h"
 #include "PrintInfo.h"
 #include "WKAPICast.h"
 #include "WKPluginInformation.h"
 #include "WebBackForwardList.h"
-#include "WebData.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
 #include <WebCore/Page.h>
@@ -315,13 +315,13 @@ void WKPageTerminate(WKPageRef pageRef)
 
 WKStringRef WKPageGetSessionHistoryURLValueType()
 {
-    static WebString* sessionHistoryURLValueType = WebString::create("SessionHistoryURL").leakRef();
+    static API::String* sessionHistoryURLValueType = API::String::create("SessionHistoryURL").leakRef();
     return toAPI(sessionHistoryURLValueType);
 }
 
 WKStringRef WKPageGetSessionBackForwardListItemValueType()
 {
-    static WebString* sessionBackForwardListValueType = WebString::create("SessionBackForwardListItem").leakRef();
+    static API::String* sessionBackForwardListValueType = API::String::create("SessionBackForwardListItem").leakRef();
     return toAPI(sessionBackForwardListValueType);
 }
 
@@ -410,9 +410,10 @@ void WKPageListenForLayoutMilestones(WKPageRef pageRef, WKLayoutMilestones miles
     toImpl(pageRef)->listenForLayoutMilestones(toLayoutMilestones(milestones));
 }
 
-void WKPageSetVisibilityState(WKPageRef pageRef, WKPageVisibilityState state, bool isInitialState)
+void WKPageSetVisibilityState(WKPageRef pageRef, WKPageVisibilityState state, bool)
 {
-    toImpl(pageRef)->setVisibilityState(toPageVisibilityState(state), isInitialState);
+    if (state == kWKPageVisibilityStatePrerender)
+        toImpl(pageRef)->setVisibilityStatePrerender();
 }
 
 bool WKPageHasHorizontalScrollbar(WKPageRef pageRef)
@@ -493,6 +494,16 @@ bool WKPageRubberBandsAtBottom(WKPageRef pageRef)
 void WKPageSetRubberBandsAtBottom(WKPageRef pageRef, bool rubberBandsAtBottom)
 {
     toImpl(pageRef)->setRubberBandsAtBottom(rubberBandsAtBottom);
+}
+
+void WKPageSetBackgroundExtendsBeyondPage(WKPageRef pageRef, bool backgroundExtendsBeyondPage)
+{
+    toImpl(pageRef)->setBackgroundExtendsBeyondPage(backgroundExtendsBeyondPage);
+}
+
+bool WKPageBackgroundExtendsBeyondPage(WKPageRef pageRef)
+{
+    return toImpl(pageRef)->backgroundExtendsBeyondPage();
 }
 
 void WKPageSetPaginationMode(WKPageRef pageRef, WKPaginationMode paginationMode)
@@ -633,6 +644,9 @@ void WKPageSetPageContextMenuClient(WKPageRef pageRef, const WKPageContextMenuCl
 {
 #if ENABLE(CONTEXT_MENUS)
     toImpl(pageRef)->initializeContextMenuClient(wkClient);
+#else
+    UNUSED_PARAM(pageRef);
+    UNUSED_PARAM(wkClient);
 #endif
 }
 
@@ -847,6 +861,9 @@ void WKPageSelectContextMenuItem(WKPageRef page, WKContextMenuItemRef item)
 {
 #if ENABLE(CONTEXT_MENUS)
     toImpl(page)->contextMenuItemSelected(*(toImpl(item)->data()));
+#else
+    UNUSED_PARAM(page);
+    UNUSED_PARAM(item);
 #endif
 }
 

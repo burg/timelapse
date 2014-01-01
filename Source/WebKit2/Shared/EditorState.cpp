@@ -35,7 +35,7 @@
 
 namespace WebKit {
 
-void EditorState::encode(CoreIPC::ArgumentEncoder& encoder) const
+void EditorState::encode(IPC::ArgumentEncoder& encoder) const
 {
     encoder << shouldIgnoreCompositionSelectionChange;
     encoder << selectionIsNone;
@@ -52,6 +52,9 @@ void EditorState::encode(CoreIPC::ArgumentEncoder& encoder) const
     encoder << selectionRects;
     encoder << selectedTextLength;
     encoder << wordAtSelection;
+    encoder << firstMarkedRect;
+    encoder << lastMarkedRect;
+    encoder << markedText;
 #endif
 
 #if PLATFORM(GTK)
@@ -59,7 +62,7 @@ void EditorState::encode(CoreIPC::ArgumentEncoder& encoder) const
 #endif
 }
 
-bool EditorState::decode(CoreIPC::ArgumentDecoder& decoder, EditorState& result)
+bool EditorState::decode(IPC::ArgumentDecoder& decoder, EditorState& result)
 {
     if (!decoder.decode(result.shouldIgnoreCompositionSelectionChange))
         return false;
@@ -95,6 +98,12 @@ bool EditorState::decode(CoreIPC::ArgumentDecoder& decoder, EditorState& result)
     if (!decoder.decode(result.selectedTextLength))
         return false;
     if (!decoder.decode(result.wordAtSelection))
+        return false;
+    if (!decoder.decode(result.firstMarkedRect))
+        return false;
+    if (!decoder.decode(result.lastMarkedRect))
+        return false;
+    if (!decoder.decode(result.markedText))
         return false;
 #endif
 

@@ -34,16 +34,15 @@
 
 #if !PLATFORM(IOS)
 #define ENABLE_WEB_PROCESS_SANDBOX 1
-#define ENABLE_NETWORK_PROCESS 1
 #endif
+
+#define ENABLE_NETWORK_PROCESS 1
 
 #define ENABLE_DATABASE_PROCESS 1
 
 #define ENABLE_MEMORY_SAMPLER 1
 
-#if !PLATFORM(IOS)
 #define ENABLE_CUSTOM_PROTOCOLS 1
-#endif
 
 #define ENABLE_SHAREABLE_RESOURCE 1
 
@@ -67,6 +66,10 @@
 
 #if (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090) || !PLATFORM(IOS_SIMULATOR)
 #define WTF_USE_XPC_SERVICES 1
+#endif
+
+#if PLATFORM(GTK)
+#define ENABLE_NETWORK_PROCESS 1
 #endif
 
 /* When C++ exceptions are disabled, the C++ library defines |try| and |catch|

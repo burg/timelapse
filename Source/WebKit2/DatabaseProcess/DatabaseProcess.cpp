@@ -28,16 +28,21 @@
 
 #if ENABLE(DATABASE_PROCESS)
 
+#include "AsyncTask.h"
 #include "DatabaseProcessCreationParameters.h"
 #include "DatabaseProcessProxyMessages.h"
 #include "DatabaseToWebProcessConnection.h"
 #include "UniqueIDBDatabase.h"
+#include <WebCore/FileSystem.h>
+#include <wtf/MainThread.h>
+
+using namespace WebCore;
 
 namespace WebKit {
 
 DatabaseProcess& DatabaseProcess::shared()
 {
-    DEFINE_STATIC_LOCAL(DatabaseProcess, databaseProcess, ());
+    static NeverDestroyed<DatabaseProcess> databaseProcess;
     return databaseProcess;
 }
 
@@ -50,7 +55,7 @@ DatabaseProcess::~DatabaseProcess()
 {
 }
 
-void DatabaseProcess::initializeConnection(CoreIPC::Connection* connection)
+void DatabaseProcess::initializeConnection(IPC::Connection* connection)
 {
     ChildProcess::initializeConnection(connection);
 }
@@ -60,12 +65,12 @@ bool DatabaseProcess::shouldTerminate()
     return true;
 }
 
-void DatabaseProcess::didClose(CoreIPC::Connection*)
+void DatabaseProcess::didClose(IPC::Connection*)
 {
     RunLoop::current()->stop();
 }
 
-void DatabaseProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference, CoreIPC::StringReference)
+void DatabaseProcess::didReceiveInvalidMessage(IPC::Connection*, IPC::StringReference, IPC::StringReference)
 {
     RunLoop::current()->stop();
 }
@@ -87,13 +92,59 @@ void DatabaseProcess::removeUniqueIDBDatabase(const UniqueIDBDatabase& database)
     const UniqueIDBDatabaseIdentifier& identifier = database.identifier();
     ASSERT(m_idbDatabases.contains(identifier));
 
-    // FIXME: Perform necessary shut down of the unique database before it is actually destroyed.
     m_idbDatabases.remove(identifier);
 }
 
 void DatabaseProcess::initializeDatabaseProcess(const DatabaseProcessCreationParameters& parameters)
 {
     m_indexedDatabaseDirectory = parameters.indexedDatabaseDirectory;
+
+    ensureIndexedDatabaseRelativePathExists(StringImpl::empty());
+}
+
+void DatabaseProcess::ensureIndexedDatabaseRelativePathExists(const String& relativePath)
+{
+    postDatabaseTask(createAsyncTask(*this, &DatabaseProcess::ensurePathExists, absoluteIndexedDatabasePathFromDatabaseRelativePath(relativePath)));
+}
+
+void DatabaseProcess::ensurePathExists(const String& path)
+{
+    ASSERT(!isMainThread());
+
+    if (!makeAllDirectories(path))
+        LOG_ERROR("Failed to make all directories for path '%s'", path.utf8().data());
+}
+
+String DatabaseProcess::absoluteIndexedDatabasePathFromDatabaseRelativePath(const String& relativePath)
+{
+    // FIXME: pathByAppendingComponent() was originally designed to append individual atomic components.
+    // We don't have a function designed to append a multi-component subpath, but we should.
+    return pathByAppendingComponent(m_indexedDatabaseDirectory, relativePath);
+}
+
+void DatabaseProcess::postDatabaseTask(std::unique_ptr<AsyncTask> task)
+{
+    ASSERT(isMainThread());
+
+    MutexLocker locker(m_databaseTaskMutex);
+
+    m_databaseTasks.append(std::move(task));
+
+    m_queue->dispatch(bind(&DatabaseProcess::performNextDatabaseTask, this));
+}
+
+void DatabaseProcess::performNextDatabaseTask()
+{
+    ASSERT(!isMainThread());
+
+    std::unique_ptr<AsyncTask> task;
+    {
+        MutexLocker locker(m_databaseTaskMutex);
+        ASSERT(!m_databaseTasks.isEmpty());
+        task = m_databaseTasks.takeFirst();
+    }
+
+    task->performTask();
 }
 
 void DatabaseProcess::createDatabaseToWebProcessConnection()
@@ -104,10 +155,10 @@ void DatabaseProcess::createDatabaseToWebProcessConnection()
     mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &listeningPort);
 
     // Create a listening connection.
-    RefPtr<DatabaseToWebProcessConnection> connection = DatabaseToWebProcessConnection::create(CoreIPC::Connection::Identifier(listeningPort));
+    RefPtr<DatabaseToWebProcessConnection> connection = DatabaseToWebProcessConnection::create(IPC::Connection::Identifier(listeningPort));
     m_databaseToWebProcessConnections.append(connection.release());
 
-    CoreIPC::Attachment clientPort(listeningPort, MACH_MSG_TYPE_MAKE_SEND);
+    IPC::Attachment clientPort(listeningPort, MACH_MSG_TYPE_MAKE_SEND);
     parentProcessConnection()->send(Messages::DatabaseProcessProxy::DidCreateDatabaseToWebProcessConnection(clientPort), 0);
 #else
     notImplemented();

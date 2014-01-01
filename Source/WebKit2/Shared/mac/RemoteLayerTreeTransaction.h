@@ -36,7 +36,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
 
-namespace CoreIPC {
+namespace IPC {
 class ArgumentDecoder;
 class ArgumentEncoder;
 }
@@ -76,14 +76,15 @@ public:
         TimeOffsetChanged = 1 << 23,
         BackingStoreChanged = 1 << 24,
         FiltersChanged = 1 << 25,
-        EdgeAntialiasingMaskChanged = 1 << 26
+        EdgeAntialiasingMaskChanged = 1 << 26,
+        CustomAppearanceChanged = 1 << 27
     };
 
     struct LayerCreationProperties {
         LayerCreationProperties();
 
-        void encode(CoreIPC::ArgumentEncoder&) const;
-        static bool decode(CoreIPC::ArgumentDecoder&, LayerCreationProperties&);
+        void encode(IPC::ArgumentEncoder&) const;
+        static bool decode(IPC::ArgumentDecoder&, LayerCreationProperties&);
 
         LayerID layerID;
         WebCore::PlatformCALayer::LayerType type;
@@ -94,8 +95,8 @@ public:
     struct LayerProperties {
         LayerProperties();
 
-        void encode(CoreIPC::ArgumentEncoder&) const;
-        static bool decode(CoreIPC::ArgumentDecoder&, LayerProperties&);
+        void encode(IPC::ArgumentEncoder&) const;
+        static bool decode(IPC::ArgumentDecoder&, LayerProperties&);
 
         void notePropertiesChanged(LayerChange layerChanges)
         {
@@ -132,13 +133,14 @@ public:
         RemoteLayerBackingStore backingStore;
         WebCore::FilterOperations filters;
         unsigned edgeAntialiasingMask;
+        WebCore::GraphicsLayer::CustomAppearance customAppearance;
     };
 
     explicit RemoteLayerTreeTransaction();
     ~RemoteLayerTreeTransaction();
 
-    void encode(CoreIPC::ArgumentEncoder&) const;
-    static bool decode(CoreIPC::ArgumentDecoder&, RemoteLayerTreeTransaction&);
+    void encode(IPC::ArgumentEncoder&) const;
+    static bool decode(IPC::ArgumentDecoder&, RemoteLayerTreeTransaction&);
 
     LayerID rootLayerID() const { return m_rootLayerID; }
     void setRootLayerID(LayerID rootLayerID);

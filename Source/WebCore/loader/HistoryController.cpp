@@ -137,6 +137,8 @@ void HistoryController::restoreScrollPositionAndViewState()
     // through to the client. It's currently used only for the PDF view on Mac.
     m_frame.loader().client().restoreViewState();
 
+    // Don't restore scroll point on iOS as FrameLoaderClient::restoreViewState() does that.
+#if !PLATFORM(IOS)
     // FIXME: There is some scrolling related work that needs to happen whenever a page goes into the
     // page cache and similar work that needs to occur when it comes out. This is where we do the work
     // that needs to happen when we exit, and the work that needs to happen when we enter is in
@@ -156,6 +158,7 @@ void HistoryController::restoreScrollPositionAndViewState()
                 view->setScrollPosition(m_currentItem->scrollPoint());
         }
     }
+#endif
 }
 
 void HistoryController::updateBackForwardListForFragmentScroll()
@@ -188,7 +191,7 @@ void HistoryController::saveDocumentState()
     Document* document = m_frame.document();
     ASSERT(document);
     
-    if (item->isCurrentDocument(document) && document->attached()) {
+    if (item->isCurrentDocument(document) && document->hasLivingRenderTree()) {
         LOG(Loading, "WebCoreLoading %s: saving form state to %p", m_frame.tree().uniqueName().string().utf8().data(), item);
         item->setDocumentState(document->formElementsState());
     }
@@ -883,6 +886,18 @@ void HistoryController::replaceState(PassRefPtr<SerializedScriptValue> stateObje
     ASSERT(m_frame.page());
     addVisitedLink(m_frame.page(), URL(ParsedURLString, urlString));
     m_frame.loader().client().updateGlobalHistory();
+}
+
+void HistoryController::replaceCurrentItem(HistoryItem* item)
+{
+    if (!item)
+        return;
+
+    m_previousItem = nullptr;
+    if (m_provisionalItem)
+        m_provisionalItem = item;
+    else
+        m_currentItem = item;
 }
 
 } // namespace WebCore

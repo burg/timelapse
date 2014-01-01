@@ -43,9 +43,8 @@
 #include "FrameLoader.h"
 #include "HitTestResult.h"
 #include "HTMLFrameOwnerElement.h"
-#include "InspectorAgent.h"
-#include "InspectorController.h"
 #include "InspectorFrontendClient.h"
+#include "JSMainThreadExecState.h"
 #include "MainFrame.h"
 #include "MouseEvent.h"
 #include "Page.h"
@@ -53,29 +52,33 @@
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-#include "ScriptFunctionCall.h"
+#include "ScriptGlobalObject.h"
+#include "ScriptState.h"
 #include "Sound.h"
 #include "UserGestureIndicator.h"
+#include <bindings/ScriptFunctionCall.h>
 #include <wtf/StdLibExtras.h>
+
+using namespace Inspector;
 
 namespace WebCore {
 
 #if ENABLE(CONTEXT_MENUS)
 class FrontendMenuProvider : public ContextMenuProvider {
 public:
-    static PassRefPtr<FrontendMenuProvider> create(InspectorFrontendHost* frontendHost, ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
+    static PassRefPtr<FrontendMenuProvider> create(InspectorFrontendHost* frontendHost, Deprecated::ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
     {
         return adoptRef(new FrontendMenuProvider(frontendHost, frontendApiObject, items));
     }
     
     void disconnect()
     {
-        m_frontendApiObject = ScriptObject();
+        m_frontendApiObject = Deprecated::ScriptObject();
         m_frontendHost = 0;
     }
     
 private:
-    FrontendMenuProvider(InspectorFrontendHost* frontendHost, ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
+    FrontendMenuProvider(InspectorFrontendHost* frontendHost, Deprecated::ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
         : m_frontendHost(frontendHost)
         , m_frontendApiObject(frontendApiObject)
         , m_items(items)
@@ -99,7 +102,7 @@ private:
             UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
             int itemNumber = item->action() - ContextMenuItemBaseCustomTag;
 
-            ScriptFunctionCall function(m_frontendApiObject, "contextMenuItemSelected");
+            Deprecated::ScriptFunctionCall function(m_frontendApiObject, "contextMenuItemSelected", WebCore::functionCallHandlerFromAnyThread);
             function.appendArgument(itemNumber);
             function.call();
         }
@@ -108,7 +111,7 @@ private:
     virtual void contextMenuCleared()
     {
         if (m_frontendHost) {
-            ScriptFunctionCall function(m_frontendApiObject, "contextMenuCleared");
+            Deprecated::ScriptFunctionCall function(m_frontendApiObject, "contextMenuCleared", WebCore::functionCallHandlerFromAnyThread);
             function.call();
 
             m_frontendHost->m_menuProvider = 0;
@@ -117,7 +120,7 @@ private:
     }
 
     InspectorFrontendHost* m_frontendHost;
-    ScriptObject m_frontendApiObject;
+    Deprecated::ScriptObject m_frontendApiObject;
     Vector<ContextMenuItem> m_items;
 };
 #endif
@@ -213,15 +216,14 @@ void InspectorFrontendHost::moveWindowBy(float x, float y) const
         m_client->moveWindowBy(x, y);
 }
 
-void InspectorFrontendHost::setInjectedScriptForOrigin(const String& origin, const String& script)
-{
-    ASSERT(m_frontendPage->inspectorController());
-    m_frontendPage->inspectorController()->setInjectedScriptForOrigin(origin, script);
-}
-
 String InspectorFrontendHost::localizedStringsURL()
 {
     return m_client ? m_client->localizedStringsURL() : "";
+}
+
+String InspectorFrontendHost::debuggableType()
+{
+    return ASCIILiteral("web");
 }
 
 void InspectorFrontendHost::copyText(const String& text)
@@ -272,7 +274,7 @@ void InspectorFrontendHost::showContextMenu(Event* event, const Vector<ContextMe
 
     ASSERT(m_frontendPage);
     JSC::ExecState* frontendExecState = execStateFromPage(debuggerWorld(), m_frontendPage);
-    ScriptObject frontendApiObject;
+    Deprecated::ScriptObject frontendApiObject;
     if (!ScriptGlobalObject::get(frontendExecState, "InspectorFrontendAPI", frontendApiObject)) {
         ASSERT_NOT_REACHED();
         return;
@@ -281,10 +283,11 @@ void InspectorFrontendHost::showContextMenu(Event* event, const Vector<ContextMe
     m_frontendPage->contextMenuController().showContextMenu(event, menuProvider);
     m_menuProvider = menuProvider.get();
 }
+#endif
 
 void InspectorFrontendHost::dispatchEventAsContextMenuEvent(Event* event)
 {
-#if USE(ACCESSIBILITY_CONTEXT_MENUS)
+#if ENABLE(CONTEXT_MENUS) && USE(ACCESSIBILITY_CONTEXT_MENUS)
     if (!event || !event->isMouseEvent())
         return;
 
@@ -297,7 +300,6 @@ void InspectorFrontendHost::dispatchEventAsContextMenuEvent(Event* event)
     UNUSED_PARAM(event);
 #endif
 }
-#endif
 
 String InspectorFrontendHost::loadResourceSynchronously(const String& url)
 {

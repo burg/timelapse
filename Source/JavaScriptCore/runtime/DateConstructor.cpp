@@ -38,7 +38,9 @@
 #include <wtf/MathExtras.h>
 
 #if ENABLE(WEB_REPLAY)
+#include <wtf/NeverDestroyed.h>
 #include <wtf/replay/InputIterator.h>
+#include <wtf/text/AtomicString.h>
 #endif
 
 #if OS(WINCE)
@@ -87,7 +89,7 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
     } else if (it->isCapturing()) {
         it->storeInput(std::make_unique<GetCurrentTime>(currentTime));
     } else if (it->isReplaying()) {
-        DEFINE_STATIC_LOCAL(const AtomicString, type, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
+        static NeverDestroyed<const AtomicString> type("GetCurrentTime", AtomicString::ConstructFromLiteral);
         GetCurrentTime* input = static_cast<GetCurrentTime*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, type));
         if (input)
             currentTime = input->currentTime();

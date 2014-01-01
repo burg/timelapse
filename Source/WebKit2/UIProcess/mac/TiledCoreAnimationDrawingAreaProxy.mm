@@ -54,11 +54,6 @@ void TiledCoreAnimationDrawingAreaProxy::deviceScaleFactorDidChange()
     m_webPageProxy->process().send(Messages::DrawingArea::SetDeviceScaleFactor(m_webPageProxy->deviceScaleFactor()), m_webPageProxy->pageID());
 }
 
-void TiledCoreAnimationDrawingAreaProxy::layerHostingModeDidChange()
-{
-    m_webPageProxy->process().send(Messages::DrawingArea::SetLayerHostingMode(m_webPageProxy->layerHostingMode()), m_webPageProxy->pageID());
-}
-
 void TiledCoreAnimationDrawingAreaProxy::sizeDidChange()
 {
     if (!m_webPageProxy->isValid())
@@ -72,7 +67,7 @@ void TiledCoreAnimationDrawingAreaProxy::sizeDidChange()
     sendUpdateGeometry();
 }
 
-void TiledCoreAnimationDrawingAreaProxy::waitForPossibleGeometryUpdate(double timeout)
+void TiledCoreAnimationDrawingAreaProxy::waitForPossibleGeometryUpdate(std::chrono::milliseconds timeout)
 {
     if (!m_isWaitingForDidUpdateGeometry)
         return;
@@ -146,6 +141,16 @@ void TiledCoreAnimationDrawingAreaProxy::sendUpdateGeometry()
     m_lastSentLayerPosition = m_layerPosition;
     m_webPageProxy->process().send(Messages::DrawingArea::UpdateGeometry(m_size, m_layerPosition), m_webPageProxy->pageID());
     m_isWaitingForDidUpdateGeometry = true;
+}
+
+void TiledCoreAnimationDrawingAreaProxy::adjustTransientZoom(double scale, FloatPoint origin)
+{
+    m_webPageProxy->process().send(Messages::DrawingArea::AdjustTransientZoom(scale, origin), m_webPageProxy->pageID());
+}
+
+void TiledCoreAnimationDrawingAreaProxy::commitTransientZoom(double scale, FloatPoint origin)
+{
+    m_webPageProxy->process().send(Messages::DrawingArea::CommitTransientZoom(scale, origin), m_webPageProxy->pageID());
 }
 
 } // namespace WebKit

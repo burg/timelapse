@@ -24,7 +24,9 @@ macro(WEBKIT_SET_EXTRA_COMPILER_FLAGS _target)
             set(OLD_COMPILE_FLAGS "-fno-tree-sra ${OLD_COMPILE_FLAGS}")
         endif ()
 
-        if (NOT SHARED_CORE)
+        # For GTK+ we will rely on a linker script to deal with symbol visibility on
+        # production builds, we want all symbols visible for development builds.
+        if (NOT SHARED_CORE AND NOT ${PORT} STREQUAL "GTK")
             set(OLD_COMPILE_FLAGS "-fvisibility=hidden ${OLD_COMPILE_FLAGS}")
         endif ()
 
@@ -43,12 +45,6 @@ macro(WEBKIT_SET_EXTRA_COMPILER_FLAGS _target)
         # Enable errors on warning
         if (OPTION_ENABLE_WERROR)
             set(OLD_COMPILE_FLAGS "-Werror -Wno-error=unused-parameter ${OLD_COMPILE_FLAGS}")
-        endif ()
-
-        # Disable C++0x compat warnings for GCC >= 4.6.0 until we build
-        # cleanly with that.
-        if (NOT ${OPTION_IGNORECXX_WARNINGS} AND NOT ${COMPILER_VERSION} VERSION_LESS "4.6.0")
-            set(OLD_COMPILE_FLAGS "${OLD_COMPILE_FLAGS} -Wno-c++0x-compat")
         endif ()
 
         set_target_properties(${_target} PROPERTIES
@@ -103,4 +99,26 @@ macro(ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES _source _deps)
 
     ADD_SOURCE_DEPENDENCIES(${_source} ${_tmp})
     unset(_tmp)
+endmacro()
+
+macro(CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE library_name current revision age)
+    math(EXPR ${library_name}_VERSION_MAJOR "${current} - ${age}")
+    set(${library_name}_VERSION_MINOR ${age})
+    set(${library_name}_VERSION_PATCH ${revision})
+    set(${library_name}_VERSION ${${library_name}_VERSION_MAJOR}.${age}.${revision})
+endmacro()
+
+macro(POPULATE_LIBRARY_VERSION library_name)
+if (NOT DEFINED ${library_name}_VERSION_MAJOR)
+    set(${library_name}_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+endif ()
+if (NOT DEFINED ${library_name}_VERSION_MINOR)
+    set(${library_name}_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+endif ()
+if (NOT DEFINED ${library_name}_VERSION_PATCH)
+    set(${library_name}_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+endif ()
+if (NOT DEFINED ${library_name}_VERSION)
+    set(${library_name}_VERSION ${PROJECT_VERSION})
+endif ()
 endmacro()

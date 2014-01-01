@@ -123,7 +123,8 @@ enum {
     PROP_MEDIA_PLAYBACK_ALLOWS_INLINE,
     PROP_ENABLE_CSS_SHADERS,
     PROP_ENABLE_RUNNING_OF_INSECURE_CONTENT,
-    PROP_ENABLE_DISPLAY_OF_INSECURE_CONTENT
+    PROP_ENABLE_DISPLAY_OF_INSECURE_CONTENT,
+    PROP_ENABLE_MEDIA_SOURCE
 };
 
 static void webkit_web_settings_finalize(GObject* object);
@@ -825,14 +826,25 @@ static void webkit_web_settings_class_init(WebKitWebSettingsClass* klass)
                                                          FALSE,
                                                          flags));
 
-    /* Undocumented for now */
+    /**
+    * WebKitWebSettings:enable-fullscreen:
+    *
+    *
+    * Whether to enable the Javascript Fullscreen API. The API
+    * allows any HTML element to request fullscreen display. See also
+    * the current draft of the spec:
+    * http://www.w3.org/TR/fullscreen/
+    *
+    * Since: 2.4
+    */
     g_object_class_install_property(gobject_class,
-                                    PROP_ENABLE_FULLSCREEN,
-                                    g_param_spec_boolean("enable-fullscreen",
-                                                         _("Enable Fullscreen"),
-                                                         _("Whether the Mozilla style API should be enabled."),
-                                                         FALSE,
-                                                         flags));
+        PROP_ENABLE_FULLSCREEN,
+        g_param_spec_boolean("enable-fullscreen",
+            _("Enable Fullscreen"),
+            _("Whether to enable the Javascript Fullscreen API"),
+            TRUE,
+            flags));
+
     /**
     * WebKitWebSettings:enable-webgl:
     *
@@ -1023,6 +1035,26 @@ static void webkit_web_settings_class_init(WebKitWebSettingsClass* klass)
             _("Enable running of insecure content"),
             _("Whether non-HTTPS resources can run on HTTPS pages."),
             TRUE,
+            flags));
+
+    /**
+    * WebKitWebSettings:enable-mediasource:
+    *
+    * Enable or disable support for MediaSource on pages. MediaSource is an
+    * experimental proposal which extends HTMLMediaElement to allow
+    * JavaScript to generate media streams for playback.  The standard is
+    * currently a work-in-progress by the W3C HTML Media Task Force.
+    *
+    * See also http://www.w3.org/TR/media-source/
+    *
+    * Since: 2.4
+    */
+    g_object_class_install_property(gobject_class,
+        PROP_ENABLE_MEDIA_SOURCE,
+        g_param_spec_boolean("enable-mediasource",
+            _("Enable MediaSource"),
+            _("Whether MediaSource should be enabled."),
+            FALSE,
             flags));
 }
 
@@ -1223,6 +1255,9 @@ static void webkit_web_settings_set_property(GObject* object, guint prop_id, con
     case PROP_ENABLE_RUNNING_OF_INSECURE_CONTENT:
         priv->enableRunningOfInsecureContent = g_value_get_boolean(value);
         break;
+    case PROP_ENABLE_MEDIA_SOURCE:
+        priv->enableMediaSource = g_value_get_boolean(value);
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
         break;
@@ -1411,6 +1446,9 @@ static void webkit_web_settings_get_property(GObject* object, guint prop_id, GVa
         break;
     case PROP_ENABLE_RUNNING_OF_INSECURE_CONTENT:
         g_value_set_boolean(value, priv->enableRunningOfInsecureContent);
+        break;
+    case PROP_ENABLE_MEDIA_SOURCE:
+        g_value_set_boolean(value, priv->enableMediaSource);
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);

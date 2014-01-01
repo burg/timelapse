@@ -41,7 +41,6 @@
 #include "Page.h"
 #include "RenderElement.h"
 #include "ScriptController.h"
-#include "ScriptObject.h"
 #include "ScriptSourceCode.h"
 #include "UserAgentScripts.h"
 #include <JavaScriptCore/APICast.h>
@@ -118,14 +117,14 @@ QuickTimePluginReplacement::~QuickTimePluginReplacement()
     m_mediaElement = nullptr;
 }
 
-RenderElement* QuickTimePluginReplacement::createRenderer(HTMLPlugInElement& plugin, PassRef<RenderStyle> style)
+RenderPtr<RenderElement> QuickTimePluginReplacement::createElementRenderer(HTMLPlugInElement& plugin, PassRef<RenderStyle> style)
 {
     ASSERT_UNUSED(plugin, m_parentElement == &plugin);
 
     if (m_mediaElement)
-        return m_mediaElement->createRenderer(std::move(style));
+        return m_mediaElement->createElementRenderer(std::move(style));
 
-    return 0;
+    return nullptr;
 }
 
 DOMWrapperWorld& QuickTimePluginReplacement::isolatedWorld()

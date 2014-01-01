@@ -26,7 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
+
+#if !TARGET_OS_IPHONE
+#import <AppKit/AppKit.h>
+#endif
 
 /*!
     This informal protocol enables a plug-in to request that its containing application
@@ -53,20 +57,21 @@
 */
 - (void)webPlugInContainerShowStatus:(NSString *)message;
 
+#if !TARGET_OS_IPHONE
 /*!
-    @method webPlugInContainerSelectionColor
-    @result Returns the color that should be used for any special drawing when
+    @property webPlugInContainerSelectionColor
+    @abstract The color that should be used for any special drawing when
     plug-in is selected.
 */
-- (NSColor *)webPlugInContainerSelectionColor;
+@property (nonatomic, readonly, strong) NSColor *webPlugInContainerSelectionColor;
+#endif
 
 /*!
-    @method webFrame
-    @discussion The webFrame method allows the plug-in to access the WebFrame that
+    @property webFrame
+    @abstract Allows the plug-in to access the WebFrame that
     contains the plug-in.  This method will not be implemented by containers that 
     are not WebKit based.
-    @result Return the WebFrame that contains the plug-in.
 */
-- (WebFrame *)webFrame;
+@property (nonatomic, readonly, strong) WebFrame *webFrame;
 
 @end

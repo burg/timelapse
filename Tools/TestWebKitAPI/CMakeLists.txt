@@ -5,7 +5,6 @@ include_directories(${CMAKE_BINARY_DIR}
     ${TESTWEBKITAPI_DIR}
     ${CMAKE_SOURCE_DIR}/Source
     ${DERIVED_SOURCES_WEBCORE_DIR}
-    ${DERIVED_SOURCES_WEBKIT2_DIR}/include
     ${JAVASCRIPTCORE_DIR}
     ${JAVASCRIPTCORE_DIR}/API
     ${JAVASCRIPTCORE_DIR}/ForwardingHeaders
@@ -15,6 +14,7 @@ include_directories(${CMAKE_BINARY_DIR}
     ${WEBCORE_DIR}/platform/graphics
     ${WEBCORE_DIR}/platform/text
     ${WEBCORE_DIR}/platform/network
+    ${WEBKIT2_DIR}/Platform/IPC
     ${WEBKIT2_DIR}/Shared
     ${WEBKIT2_DIR}/Shared/API/c
     ${WEBKIT2_DIR}/Shared/Plugins
@@ -81,7 +81,7 @@ add_library(TestWebKitAPIInjectedBundle SHARED
 )
 
 target_link_libraries(TestWebKitAPIInjectedBundle ${TestWebKitAPI_LIBRARIES})
-add_dependencies(TestWebKitAPIInjectedBundle ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
+add_dependencies(TestWebKitAPIInjectedBundle ${ForwardingHeadersForTestWebKitAPI_NAME})
 
 get_property(TestWebKitAPIInjectedBundle_PATH TARGET TestWebKitAPIInjectedBundle PROPERTY LOCATION)
 

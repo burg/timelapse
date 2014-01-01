@@ -1,11 +1,40 @@
-2013-12-03  Joseph Pecoraro  <pecoraro@apple.com>
+2013-12-30  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
 
-        Web Inspector: Push Remote Inspector debugging connection management into JavaScriptCore
-        https://bugs.webkit.org/show_bug.cgi?id=124613
+        Cleanup static_cast<HTMLFormElement*> by using toHTMLFormElement()
+        https://bugs.webkit.org/show_bug.cgi?id=126309
+
+        Reviewed by Andreas Kling.
+
+        To detect bad type casts, it would be good to use toHTMLFormElement() instead of
+        using manual type cast. Additionally FORM_ASSOCIATED_ELEMENT_TYPE_CASTS is introduced newly
+        to do it.
+
+        * WebCoreSupport/CredentialTransformData.cpp:
+        (WebCore::CredentialTransformData::findPasswordFormFields):
+        * WebKitSupport/DOMSupport.cpp:
+        (BlackBerry::WebKit::DOMSupport::toTextControlElement):
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::updateFormState):
+        (BlackBerry::WebKit::InputHandler::submitForm):
+
+2013-12-16  Peter Szanka  <h868064@stud.u-szeged.hu>
+
+        Delete RVCT related code parts.
+        https://bugs.webkit.org/show_bug.cgi?id=125626
+
+        Reviewed by Darin Adler.
+
+        * WebKitSupport/AboutData.cpp:
+        (BlackBerry::WebKit::configPage):
+
+2013-12-11  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Push More Inspector Required Classes Down into JavaScriptCore
+        https://bugs.webkit.org/show_bug.cgi?id=125324
 
         Reviewed by Timothy Hatcher.
 
-        * WebCoreSupport/InspectorClientBlackBerry.h:
+        * Api/WebPage.cpp:
 
 2013-12-03  Nick Diego Yamane  <nick.yamane@openbossa.org>
 

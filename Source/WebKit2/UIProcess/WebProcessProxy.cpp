@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebProcessProxy.h"
 
+#include "APIFrameHandle.h"
 #include "CustomProtocolManagerProxyMessages.h"
 #include "DataReference.h"
 #include "DownloadProxyMap.h"
@@ -33,11 +34,11 @@
 #include "PluginProcessManager.h"
 #include "TextChecker.h"
 #include "TextCheckerState.h"
+#include "UserData.h"
 #include "WebBackForwardListItem.h"
 #include "WebContext.h"
 #include "WebNavigationDataStore.h"
 #include "WebNotificationManagerProxy.h"
-#include "WebPageGroup.h"
 #include "WebPageProxy.h"
 #include "WebPluginSiteDataManager.h"
 #include "WebProcessMessages.h"
@@ -45,6 +46,7 @@
 #include <WebCore/SuddenTermination.h>
 #include <WebCore/URL.h>
 #include <stdio.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -73,7 +75,7 @@ static uint64_t generatePageID()
 static WebProcessProxy::WebPageProxyMap& globalPageMap()
 {
     ASSERT(RunLoop::isMain());
-    DEFINE_STATIC_LOCAL(WebProcessProxy::WebPageProxyMap, pageMap, ());
+    static NeverDestroyed<WebProcessProxy::WebPageProxyMap> pageMap;
     return pageMap;
 }
 
@@ -108,7 +110,7 @@ void WebProcessProxy::getLaunchOptions(ProcessLauncher::LaunchOptions& launchOpt
     platformGetLaunchOptions(launchOptions);
 }
 
-void WebProcessProxy::connectionWillOpen(CoreIPC::Connection* connection)
+void WebProcessProxy::connectionWillOpen(IPC::Connection* connection)
 {
     ASSERT(this->connection() == connection);
 
@@ -122,7 +124,7 @@ void WebProcessProxy::connectionWillOpen(CoreIPC::Connection* connection)
     m_context->processWillOpenConnection(this);
 }
 
-void WebProcessProxy::connectionWillClose(CoreIPC::Connection* connection)
+void WebProcessProxy::connectionWillClose(IPC::Connection* connection)
 {
     ASSERT(this->connection() == connection);
 
@@ -145,15 +147,10 @@ void WebProcessProxy::disconnect()
 
     Vector<RefPtr<WebFrameProxy>> frames;
     copyValuesToVector(m_frameMap, frames);
-    for (auto frame : frames)
-        frame->disconnect();
-    m_frameMap.clear();
 
-    Vector<WebPageGroup*> pageGroups;
-    copyValuesToVector(m_pageGroups, pageGroups);
-    for (auto pageGroup : pageGroups)
-        pageGroup->disconnectProcess(*this);
-    m_pageGroups.clear();
+    for (size_t i = 0, size = frames.size(); i < size; ++i)
+        frames[i]->disconnect();
+    m_frameMap.clear();
 
     if (m_downloadProxyMap)
         m_downloadProxyMap->processDidClose();
@@ -213,19 +210,6 @@ Vector<WebPageProxy*> WebProcessProxy::pages() const
     Vector<WebPageProxy*> result;
     copyValuesToVector(m_pageMap, result);
     return result;
-}
-
-WebPageGroup* WebProcessProxy::webPageGroup(uint64_t pageGroupID)
-{
-    if (!HashMap<uint64_t, WebPageGroup*>::isValidKey(pageGroupID))
-        return nullptr;
-
-    return m_pageGroups.get(pageGroupID);
-}
-
-void WebProcessProxy::addWebPageGroup(WebPageGroup& pageGroup)
-{
-    m_pageGroups.add(pageGroup.pageGroupID(), &pageGroup);
 }
 
 WebBackForwardListItem* WebProcessProxy::webBackForwardItem(uint64_t itemID) const
@@ -303,7 +287,7 @@ bool WebProcessProxy::fullKeyboardAccessEnabled()
 }
 #endif
 
-void WebProcessProxy::addBackForwardItem(uint64_t itemID, const String& originalURL, const String& url, const String& title, const CoreIPC::DataReference& backForwardData)
+void WebProcessProxy::addBackForwardItem(uint64_t itemID, const String& originalURL, const String& url, const String& title, const IPC::DataReference& backForwardData)
 {
     MESSAGE_CHECK_URL(originalURL);
     MESSAGE_CHECK_URL(url);
@@ -364,7 +348,7 @@ void WebProcessProxy::getDatabaseProcessConnection(PassRefPtr<Messages::WebProce
 }
 #endif // ENABLE(DATABASE_PROCESS)
 
-void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
+void WebProcessProxy::didReceiveMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder)
 {
     if (dispatchMessage(connection, decoder))
         return;
@@ -380,7 +364,7 @@ void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC
     // FIXME: Add unhandled message logging.
 }
 
-void WebProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
+void WebProcessProxy::didReceiveSyncMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder, std::unique_ptr<IPC::MessageEncoder>& replyEncoder)
 {
     if (dispatchSyncMessage(connection, decoder, replyEncoder))
         return;
@@ -396,7 +380,7 @@ void WebProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, Cor
     // FIXME: Add unhandled message logging.
 }
 
-void WebProcessProxy::didClose(CoreIPC::Connection*)
+void WebProcessProxy::didClose(IPC::Connection*)
 {
     // Protect ourselves, as the call to disconnect() below may otherwise cause us
     // to be deleted before we can finish our work.
@@ -414,7 +398,7 @@ void WebProcessProxy::didClose(CoreIPC::Connection*)
 
 }
 
-void WebProcessProxy::didReceiveInvalidMessage(CoreIPC::Connection* connection, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName)
+void WebProcessProxy::didReceiveInvalidMessage(IPC::Connection* connection, IPC::StringReference messageReceiverName, IPC::StringReference messageName)
 {
     WTFLogAlways("Received an invalid message \"%s.%s\" from the web process.\n", messageReceiverName.toString().data(), messageName.toString().data());
 
@@ -423,7 +407,7 @@ void WebProcessProxy::didReceiveInvalidMessage(CoreIPC::Connection* connection, 
     // Terminate the WebProcess.
     terminate();
 
-    // Since we've invalidated the connection we'll never get a CoreIPC::Connection::Client::didClose
+    // Since we've invalidated the connection we'll never get a IPC::Connection::Client::didClose
     // callback so we'll explicitly call it here instead.
     didClose(connection);
 }
@@ -452,7 +436,7 @@ void WebProcessProxy::didBecomeResponsive(ResponsivenessTimer*)
         pages[i]->processDidBecomeResponsive();
 }
 
-void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, CoreIPC::Connection::Identifier connectionIdentifier)
+void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, IPC::Connection::Identifier connectionIdentifier)
 {
     ChildProcessProxy::didFinishLaunching(launcher, connectionIdentifier);
 
@@ -683,6 +667,21 @@ void WebProcessProxy::disableSuddenTermination()
         return;
 
     WebCore::disableSuddenTermination();
+}
+
+RefPtr<API::Object> WebProcessProxy::apiObjectByConvertingToHandles(API::Object* object)
+{
+    return UserData::transform(object, [](const API::Object& object) -> RefPtr<API::Object> {
+        switch (object.type()) {
+        case API::Object::Type::Frame: {
+            auto& frame = static_cast<const WebFrameProxy&>(object);
+            return API::FrameHandle::create(frame.frameID());
+        }
+
+        default:
+            return nullptr;
+        }
+    });
 }
 
 } // namespace WebKit

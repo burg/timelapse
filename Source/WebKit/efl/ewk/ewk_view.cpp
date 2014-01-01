@@ -1366,8 +1366,8 @@ void ewk_view_theme_set(Evas_Object* ewkView, const char* path)
     if (!eina_stringshare_replace(&priv->settings.theme, path))
         return;
 
-    WebCore::RenderThemeEfl* theme = static_cast<WebCore::RenderThemeEfl*>(priv->page->theme());
-    theme->setThemePath(path);
+    WebCore::RenderThemeEfl& theme = static_cast<WebCore::RenderThemeEfl&>(priv->page->theme());
+    theme.setThemePath(path);
 }
 
 const char* ewk_view_theme_get(const Evas_Object* ewkView)
@@ -3431,22 +3431,6 @@ void ewk_view_add_console_message(Evas_Object* ewkView, const char* message, uns
     smartData->api->add_console_message(smartData, message, lineNumber, sourceID);
 }
 
-/**
- * @internal
- *
- * Reports that FrameView object has been created.
- * Allows to repaint the frame completely even if the areas are out of the screen
- * when @ewkView is an instance of ewk_view_tiled.
- *
- * @param ewkView view object
- */
-void ewk_view_frame_view_creation_notify(Evas_Object* ewkView)
-{
-    EWK_VIEW_TYPE_CHECK_OR_RETURN(ewkView, ewkViewTiledName);
-    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
-    ewk_frame_paint_full_set(smartData->main_frame, true);
-}
-
 bool ewk_view_focus_can_cycle(Evas_Object* ewkView, Ewk_Focus_Direction direction)
 {
     DBG("ewkView=%p direction=%d", ewkView, direction);
@@ -4066,7 +4050,7 @@ Eina_Bool ewk_view_js_object_add(Evas_Object* ewkView, Ewk_JS_Object* object, co
     JSC::JSObject* runtimeObject = (JSC::JSObject*)JSC::Bindings::CInstance::create((NPObject*)object, root)->createRuntimeObject(executeState);
     JSC::Identifier id = JSC::Identifier(executeState, objectName);
 
-    JSC::PutPropertySlot slot;
+    JSC::PutPropertySlot slot(window);
     window->methodTable()->put(window, executeState, id, runtimeObject, slot);
     return true;
 #else
@@ -4249,6 +4233,10 @@ Eina_Bool ewk_view_visibility_state_set(Evas_Object* ewkView, Ewk_Page_Visibilit
 #if ENABLE(PAGE_VISIBILITY_API)
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, false);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
+
+    // WebKit does not curently support the "unloaded" state.
+    if (pageVisibilityState == EWK_PAGE_VISIBILITY_STATE_UNLOADED)
+        return false;
 
     priv->page->setVisibilityState(static_cast<WebCore::PageVisibilityState>(pageVisibilityState), initialState);
 

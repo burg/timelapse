@@ -34,6 +34,7 @@
 
 #include "InspectorController.h"
 
+#include "CommandLineAPIHost.h"
 #include "DOMWrapperWorld.h"
 #include "GraphicsContext.h"
 #include "IdentifiersFactory.h"
@@ -41,8 +42,6 @@
 #include "InjectedScriptManager.h"
 #include "InspectorAgent.h"
 #include "InspectorApplicationCacheAgent.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorBaseAgent.h"
 #include "InspectorCSSAgent.h"
 #include "InspectorCanvasAgent.h"
 #include "InspectorClient.h"
@@ -51,7 +50,6 @@
 #include "InspectorDOMStorageAgent.h"
 #include "InspectorDatabaseAgent.h"
 #include "InspectorDebuggerAgent.h"
-#include "InspectorFrontend.h"
 #include "InspectorFrontendClient.h"
 #include "InspectorHeapProfilerAgent.h"
 #include "InspectorIndexedDBAgent.h"
@@ -65,15 +63,18 @@
 #include "InspectorResourceAgent.h"
 #include "InspectorTimelineAgent.h"
 #include "InspectorReplayAgent.h"
+#include "InspectorWebBackendDispatchers.h"
+#include "InspectorWebFrontendDispatchers.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
 #include "MainFrame.h"
+#include "Page.h"
 #include "PageConsoleAgent.h"
 #include "PageDebuggerAgent.h"
 #include "PageRuntimeAgent.h"
-#include "Page.h"
-#include "ScriptObject.h"
 #include "Settings.h"
+#include <inspector/InspectorBackendDispatcher.h>
+#include <inspector/InspectorValues.h>
 
 namespace WebCore {
 
@@ -89,7 +90,9 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     , m_hasRemoteFrontend(false)
 #endif
 {
-    OwnPtr<InspectorAgent> inspectorAgentPtr(InspectorAgent::create(page, m_injectedScriptManager.get(), m_instrumentingAgents.get()));
+    ASSERT_ARG(inspectorClient, inspectorClient);
+
+    OwnPtr<InspectorAgent> inspectorAgentPtr(InspectorAgent::create(page, m_instrumentingAgents.get()));
     m_inspectorAgent = inspectorAgentPtr.get();
     m_agents.append(inspectorAgentPtr.release());
 
@@ -168,16 +171,17 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     m_agents.append(InspectorLayerTreeAgent::create(m_instrumentingAgents.get()));
 #endif
 
-    ASSERT_ARG(inspectorClient, inspectorClient);
-    m_injectedScriptManager->injectedScriptHost()->init(m_inspectorAgent
-        , consoleAgent
+    ASSERT(m_injectedScriptManager->commandLineAPIHost());
+    if (CommandLineAPIHost* commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost()) {
+        commandLineAPIHost->init(m_inspectorAgent
+            , consoleAgent
+            , m_domAgent
+            , domStorageAgent
 #if ENABLE(SQL_DATABASE)
-        , databaseAgent
+            , databaseAgent
 #endif
-        , domStorageAgent
-        , m_domAgent
-        , m_debuggerAgent
-    );
+        );
+    }
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     runtimeAgent->setScriptDebugServer(&m_debuggerAgent->scriptDebugServer());
@@ -252,7 +256,7 @@ void InspectorController::connectFrontend(InspectorFrontendChannel* frontendChan
     ASSERT(!m_inspectorBackendDispatcher);
 
     m_inspectorFrontendChannel = frontendChannel;
-    m_inspectorBackendDispatcher = InspectorBackendDispatcher::create(frontendChannel);
+    m_inspectorBackendDispatcher = Inspector::InspectorBackendDispatcher::create(frontendChannel);
 
     m_agents.didCreateFrontendAndBackend(frontendChannel, m_inspectorBackendDispatcher.get());
 
@@ -337,7 +341,7 @@ void InspectorController::getHighlight(Highlight* highlight) const
     m_overlay->getHighlight(highlight);
 }
 
-PassRefPtr<InspectorObject> InspectorController::buildObjectForHighlightedNode() const
+PassRefPtr<Inspector::InspectorObject> InspectorController::buildObjectForHighlightedNode() const
 {
     return m_overlay->buildObjectForHighlightedNode();
 }
@@ -361,11 +365,6 @@ bool InspectorController::enabled() const
 Page* InspectorController::inspectedPage() const
 {
     return m_page;
-}
-
-void InspectorController::setInjectedScriptForOrigin(const String& origin, const String& source)
-{
-    m_inspectorAgent->setInjectedScriptForOrigin(origin, source);
 }
 
 void InspectorController::dispatchMessageFromFrontend(const String& message)

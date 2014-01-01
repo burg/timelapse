@@ -70,6 +70,10 @@ TextFieldInputType::~TextFieldInputType()
 
 bool TextFieldInputType::isKeyboardFocusable(KeyboardEvent*) const
 {
+#if PLATFORM(IOS)
+    if (element().isReadOnly())
+        return false;
+#endif
     return element().isTextFormControlFocusable();
 }
 
@@ -201,9 +205,9 @@ bool TextFieldInputType::shouldSubmitImplicitly(Event* event)
     return (event->type() == eventNames().textInputEvent && event->eventInterface() == TextEventInterfaceType && static_cast<TextEvent*>(event)->data() == "\n") || InputType::shouldSubmitImplicitly(event);
 }
 
-RenderElement* TextFieldInputType::createRenderer(PassRef<RenderStyle> style) const
+RenderPtr<RenderElement> TextFieldInputType::createInputRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderTextControlSingleLine(element(), std::move(style));
+    return createRenderer<RenderTextControlSingleLine>(element(), std::move(style));
 }
 
 bool TextFieldInputType::needsContainer() const
@@ -218,7 +222,7 @@ bool TextFieldInputType::needsContainer() const
 bool TextFieldInputType::shouldHaveSpinButton() const
 {
     Document& document = element().document();
-    RefPtr<RenderTheme> theme = document.page() ? document.page()->theme() : RenderTheme::defaultTheme();
+    RefPtr<RenderTheme> theme = document.page() ? &document.page()->theme() : RenderTheme::defaultTheme();
     return theme->shouldHaveSpinButton(&element());
 }
 

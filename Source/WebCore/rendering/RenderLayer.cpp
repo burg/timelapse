@@ -207,9 +207,6 @@ RenderLayer::RenderLayer(RenderLayerModelObject& rendererLayerModelObject)
     , m_last(0)
     , m_staticInlinePosition(0)
     , m_staticBlockPosition(0)
-    , m_reflection(0)
-    , m_scrollCorner(0)
-    , m_resizer(0)
     , m_enclosingPaginationLayer(0)
 {
     m_isNormalFlowOnly = shouldBeNormalFlowOnly();
@@ -271,11 +268,6 @@ RenderLayer::~RenderLayer()
 #if USE(ACCELERATED_COMPOSITING)
     clearBacking(true);
 #endif
-    
-    if (m_scrollCorner)
-        m_scrollCorner->destroy();
-    if (m_resizer)
-        m_resizer->destroy();
 }
 
 String RenderLayer::name() const
@@ -2334,7 +2326,7 @@ void RenderLayer::scrollTo(int x, int y)
             updateCompositingLayersAfterScroll();
 #endif
         return;
-}
+    }
     m_scrollOffset = newScrollOffset;
 
     InspectorInstrumentation::willScrollLayer(&renderer().frame());
@@ -2423,7 +2415,6 @@ void RenderLayer::scrollRectToVisible(const LayoutRect& rect, const ScrollAlignm
     // We may end up propagating a scroll event. It is important that we suspend events until 
     // the end of the function since they could delete the layer or the layer's renderer().
     FrameView& frameView = renderer().view().frameView();
-    frameView.pauseScheduledEvents();
 
     bool restrictedByLineClamp = false;
     if (renderer().parent()) {
@@ -2507,8 +2498,6 @@ void RenderLayer::scrollRectToVisible(const LayoutRect& rect, const ScrollAlignm
 
     if (parentLayer)
         parentLayer->scrollRectToVisible(newRect, alignX, alignY);
-
-    frameView.resumeScheduledEvents();
 }
 
 void RenderLayer::updateCompositingLayersAfterScroll()
@@ -3901,10 +3890,10 @@ bool RenderLayer::setupFontSubpixelQuantization(GraphicsContext* context, bool& 
         return false;
 
     bool scrollingOnMainThread = true;
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
     if (Page* page = renderer().frame().page()) {
         if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator())
-            scrollingOnMainThread = scrollingCoordinator->shouldUpdateScrollLayerPositionOnMainThread();
+            scrollingOnMainThread = scrollingCoordinator->shouldUpdateScrollLayerPositionSynchronously();
     }
 #endif
 
@@ -4709,14 +4698,8 @@ bool RenderLayer::isFlowThreadCollectingGraphicsLayersUnderRegions() const
 static double computeZOffset(const HitTestingTransformState& transformState)
 {
     // We got an affine transform, so no z-offset
-    if (transformState.m_accumulatedTransform.isAffine()) {
-        // Non transformed layers are being hit last, not through or in-between transformed layers.
-        // The paint order says that the divs creating stacking contexts (including transforms) are painted after the
-        // other siblings so they should be hit tested in the reverse order. Also, a rotated div in a non-rotated parent
-        // should be hit in its entire area, not hit its parent's background, even if the z-coordinate is negative where
-        // the mouse is located.
-        return -std::numeric_limits<int>::max();
-    }
+    if (transformState.m_accumulatedTransform.isAffine())
+        return 0;
 
     // Flatten the point into the target plane
     FloatPoint targetPoint = transformState.mappedPoint();
@@ -4918,11 +4901,6 @@ RenderLayer* RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLayer* cont
     if (preserves3D()) {
         depthSortDescendants = true;
         // Our layers can depth-test with our container, so share the z depth pointer with the container, if it passed one down.
-        zOffsetForDescendantsPtr = zOffset ? zOffset : &localZOffset;
-        zOffsetForContentsPtr = zOffset ? zOffset : &localZOffset;
-    } else if (m_has3DTransformedDescendant) {
-        // Flattening layer with 3d children; use a local zOffset pointer to depth-test children and foreground.
-        depthSortDescendants = true;
         zOffsetForDescendantsPtr = zOffset ? zOffset : &localZOffset;
         zOffsetForContentsPtr = zOffset ? zOffset : &localZOffset;
     } else if (zOffset) {
@@ -6287,9 +6265,12 @@ void RenderLayer::repaintIncludingDescendants()
         curr->repaintIncludingDescendants();
 
     // If this is a region, we must also repaint the flow thread's layer since it is the one
-    // doing the actual painting of the flowed content.
-    if (renderer().isRenderNamedFlowFragmentContainer())
-        toRenderBlockFlow(&renderer())->renderNamedFlowFragment()->flowThread()->layer()->repaintIncludingDescendants();
+    // doing the actual painting of the flowed content, but only if the region is valid.
+    if (renderer().isRenderNamedFlowFragmentContainer()) {
+        RenderNamedFlowFragment* region = toRenderBlockFlow(renderer()).renderNamedFlowFragment();
+        if (region->isValid())
+            region->flowThread()->layer()->repaintIncludingDescendants();
+    }
 }
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -6707,34 +6688,36 @@ void RenderLayer::updateScrollCornerStyle()
 {
     RenderElement* actualRenderer = rendererForScrollbar(renderer());
     RefPtr<RenderStyle> corner = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(SCROLLBAR_CORNER), &actualRenderer->style()) : PassRefPtr<RenderStyle>(0);
-    if (corner) {
-        if (!m_scrollCorner) {
-            m_scrollCorner = new RenderScrollbarPart(renderer().document(), corner.releaseNonNull());
-            m_scrollCorner->setParent(&renderer());
-            m_scrollCorner->initializeStyle();
-        } else
-            m_scrollCorner->setStyle(corner.releaseNonNull());
-    } else if (m_scrollCorner) {
-        m_scrollCorner->destroy();
-        m_scrollCorner = 0;
+
+    if (!corner) {
+        m_scrollCorner = nullptr;
+        return;
     }
+
+    if (!m_scrollCorner) {
+        m_scrollCorner = createRenderer<RenderScrollbarPart>(renderer().document(), corner.releaseNonNull());
+        m_scrollCorner->setParent(&renderer());
+        m_scrollCorner->initializeStyle();
+    } else
+        m_scrollCorner->setStyle(corner.releaseNonNull());
 }
 
 void RenderLayer::updateResizerStyle()
 {
     RenderElement* actualRenderer = rendererForScrollbar(renderer());
     RefPtr<RenderStyle> resizer = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(RESIZER), &actualRenderer->style()) : PassRefPtr<RenderStyle>(0);
-    if (resizer) {
-        if (!m_resizer) {
-            m_resizer = new RenderScrollbarPart(renderer().document(), resizer.releaseNonNull());
-            m_resizer->setParent(&renderer());
-            m_resizer->initializeStyle();
-        } else
-            m_resizer->setStyle(resizer.releaseNonNull());
-    } else if (m_resizer) {
-        m_resizer->destroy();
-        m_resizer = 0;
+
+    if (!resizer) {
+        m_resizer = nullptr;
+        return;
     }
+
+    if (!m_resizer) {
+        m_resizer = createRenderer<RenderScrollbarPart>(renderer().document(), resizer.releaseNonNull());
+        m_resizer->setParent(&renderer());
+        m_resizer->initializeStyle();
+    } else
+        m_resizer->setStyle(resizer.releaseNonNull());
 }
 
 RenderLayer* RenderLayer::reflectionLayer() const
@@ -6745,7 +6728,7 @@ RenderLayer* RenderLayer::reflectionLayer() const
 void RenderLayer::createReflection()
 {
     ASSERT(!m_reflection);
-    m_reflection = new RenderReplica(renderer().document(), createReflectionStyle());
+    m_reflection = createRenderer<RenderReplica>(renderer().document(), createReflectionStyle());
     m_reflection->setParent(&renderer()); // We create a 1-way connection.
     m_reflection->initializeStyle();
 }
@@ -6756,8 +6739,7 @@ void RenderLayer::removeReflection()
         m_reflection->removeLayers(this);
 
     m_reflection->setParent(0);
-    m_reflection->destroy();
-    m_reflection = 0;
+    m_reflection = nullptr;
 }
 
 PassRef<RenderStyle> RenderLayer::createReflectionStyle()

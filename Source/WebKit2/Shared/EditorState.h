@@ -68,14 +68,17 @@ struct EditorState {
     Vector<WebCore::SelectionRect> selectionRects;
     uint64_t selectedTextLength;
     String wordAtSelection;
+    WebCore::IntRect firstMarkedRect;
+    WebCore::IntRect lastMarkedRect;
+    String markedText;
 #endif
 
 #if PLATFORM(GTK)
     WebCore::IntRect cursorRect;
 #endif
 
-    void encode(CoreIPC::ArgumentEncoder&) const;
-    static bool decode(CoreIPC::ArgumentDecoder&, EditorState&);
+    void encode(IPC::ArgumentEncoder&) const;
+    static bool decode(IPC::ArgumentDecoder&, EditorState&);
 };
 
 }

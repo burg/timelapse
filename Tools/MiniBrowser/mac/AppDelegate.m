@@ -45,8 +45,11 @@ enum {
 {
     self = [super init];
     if (self) {
-        _processGroup = [[WKProcessGroup alloc] init];
+#if WK_API_ENABLED
+        NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] pathForAuxiliaryExecutable:@"MiniBrowser.wkbundle"]];
+        _processGroup = [[WKProcessGroup alloc] initWithInjectedBundleURL:url];
         _browsingContextGroup = [[WKBrowsingContextGroup alloc] initWithIdentifier:@"MiniBrowser"];
+#endif
         _browserWindows = [[NSMutableSet alloc] init];
     }
 
@@ -92,11 +95,13 @@ enum {
         [controller applicationTerminating];
     }
 
+#if WK_API_ENABLED
     [_processGroup release];
     _processGroup = nil;
 
     [_browsingContextGroup release];
     _browsingContextGroup = nil;
+#endif
 }
 
 - (BrowserWindowController *)frontmostBrowserWindowController

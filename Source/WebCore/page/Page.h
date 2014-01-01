@@ -48,6 +48,10 @@
 #include <wtf/SchedulePair.h>
 #endif
 
+#if PLATFORM(IOS)
+#include "Settings.h"
+#endif
+
 namespace JSC {
 class Debugger;
 }
@@ -113,6 +117,7 @@ class Page : public Supplementable<Page> {
 
 public:
     static void updateStyleForAllPagesAfterGlobalChangeInEnvironment();
+    static void jettisonStyleResolversInAllDocuments();
 
     // It is up to the platform to ensure that non-null clients are provided where required.
     struct PageClients {
@@ -142,7 +147,7 @@ public:
 
     void setNeedsRecalcStyleInAllFrames();
 
-    RenderTheme* theme() const { return m_theme.get(); }
+    RenderTheme& theme() const { return *m_theme; }
 
     ViewportArguments viewportArguments() const;
 
@@ -211,7 +216,7 @@ public:
     ScrollingCoordinator* scrollingCoordinator();
 
     String scrollingStateTreeAsText();
-    String mainThreadScrollingReasonsAsText();
+    String synchronousScrollingReasonsAsText();
     PassRefPtr<ClientRectList> nonFastScrollableRects(const Frame*);
 
     Settings& settings() const { return *m_settings; }
@@ -326,9 +331,16 @@ public:
     StorageNamespace* sessionStorage(bool optionalCreate = true);
     void setSessionStorage(PassRefPtr<StorageNamespace>);
 
+    // FIXME: We should make Settings::maxParseDuration() platform-independent, remove {has, set}CustomHTMLTokenizerTimeDelay()
+    // and customHTMLTokenizerTimeDelay() and modify theirs callers to update or query Settings::maxParseDuration().
     void setCustomHTMLTokenizerTimeDelay(double);
+#if PLATFORM(IOS)
+    bool hasCustomHTMLTokenizerTimeDelay() const { return m_settings->maxParseDuration() != -1; }
+    double customHTMLTokenizerTimeDelay() const { ASSERT(m_settings->maxParseDuration() != -1); return m_settings->maxParseDuration(); }
+#else
     bool hasCustomHTMLTokenizerTimeDelay() const { return m_customHTMLTokenizerTimeDelay != -1; }
     double customHTMLTokenizerTimeDelay() const { ASSERT(m_customHTMLTokenizerTimeDelay != -1); return m_customHTMLTokenizerTimeDelay; }
+#endif
 
     void setCustomHTMLTokenizerChunkSize(int);
     bool hasCustomHTMLTokenizerChunkSize() const { return m_customHTMLTokenizerChunkSize != -1; }

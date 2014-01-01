@@ -45,6 +45,7 @@
 #include "PlatformScreen.h"
 #include "QualifiedName.h"
 #include "ReferrerPolicy.h"
+#include "RenderPtr.h"
 #include "ScriptExecutionContext.h"
 #include "StringWithDirection.h"
 #include "StyleResolveTree.h"
@@ -169,6 +170,9 @@ struct AnnotatedRegionValue;
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
+#if PLATFORM(IOS)
+#include "DocumentIOSForward.h"
+#endif
 class Touch;
 class TouchList;
 #endif
@@ -195,6 +199,13 @@ class ReplayableTimers;
 #endif
 
 typedef int ExceptionCode;
+
+#if PLATFORM(IOS)
+class DeviceMotionClient;
+class DeviceMotionController;
+class DeviceOrientationClient;
+class DeviceOrientationController;
+#endif
 
 #if ENABLE(IOS_TEXT_AUTOSIZING)
 struct TextAutoSizingHash;
@@ -323,6 +334,11 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(touchmove);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(touchend);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(touchcancel);
+#endif
+#if ENABLE(IOS_GESTURE_EVENTS)
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(gesturestart);
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(gesturechange);
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(gestureend);
 #endif
 #if ENABLE(FULLSCREEN_API)
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitfullscreenchange);
@@ -457,6 +473,7 @@ public:
     PassRefPtr<HTMLCollection> documentNamedItems(const AtomicString& name);
 
     // Other methods (not part of DOM)
+    bool isSynthesized() const { return m_isSynthesized; }
     bool isHTMLDocument() const { return m_documentClasses & HTMLDocumentClass; }
     bool isXHTMLDocument() const { return m_documentClasses & XHTMLDocumentClass; }
     bool isImageDocument() const { return m_documentClasses & ImageDocumentClass; }
@@ -563,8 +580,9 @@ public:
     // Override ScriptExecutionContext methods to do additional work
     virtual void suspendActiveDOMObjects(ActiveDOMObject::ReasonForSuspension) OVERRIDE;
     virtual void resumeActiveDOMObjects(ActiveDOMObject::ReasonForSuspension) OVERRIDE;
+    virtual void stopActiveDOMObjects() OVERRIDE;
 
-    RenderView* renderView() const { return m_renderView; }
+    RenderView* renderView() const { return m_renderView.get(); }
 
     bool renderTreeBeingDestroyed() const { return m_renderTreeBeingDestroyed; }
     bool hasLivingRenderTree() const { return renderView() && !renderTreeBeingDestroyed(); }
@@ -796,6 +814,14 @@ public:
      * @param content The header value (value of the meta tag's "content" attribute)
      */
     void processHttpEquiv(const String& equiv, const String& content);
+
+#if PLATFORM(IOS)
+    void processFormatDetection(const String&);
+
+    // Called when <meta name="apple-mobile-web-app-orientations"> changes.
+    void processWebAppOrientations();
+#endif
+    
     void processViewport(const String& features, ViewportArguments::Type origin);
     void updateViewportArguments();
     void processReferrerPolicy(const String& policy);
@@ -1043,6 +1069,7 @@ public:
 
     void enqueueWindowEvent(PassRefPtr<Event>);
     void enqueueDocumentEvent(PassRefPtr<Event>);
+    void enqueueOverflowEvent(PassRefPtr<Event>);
     void enqueuePageshowEvent(PageshowEventPersistence);
     void enqueueHashchangeEvent(const String& oldURL, const String& newURL);
     void enqueuePopstateEvent(PassRefPtr<SerializedScriptValue> stateObject);
@@ -1104,7 +1131,16 @@ public:
     virtual void dispatchPendingEvent(const AtomicString&) OVERRIDE;
 
 #if ENABLE(TOUCH_EVENTS)
+#if PLATFORM(IOS)
+#include "DocumentIOS.h"
+#else
     PassRefPtr<Touch> createTouch(DOMWindow*, EventTarget*, int identifier, int pageX, int pageY, int screenX, int screenY, int radiusX, int radiusY, float rotationAngle, float force, ExceptionCode&) const;
+#endif // PLATFORM(IOS)
+#endif
+
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS)
+    DeviceMotionController* deviceMotionController() const;
+    DeviceOrientationController* deviceOrientationController() const;
 #endif
 
 #if ENABLE(WEB_TIMING)
@@ -1204,9 +1240,11 @@ public:
     void setVisualUpdatesAllowedByClient(bool);
 
 protected:
-    Document(Frame*, const URL&, unsigned = DefaultDocumentClass);
+    Document(Frame*, const URL&, unsigned = DefaultDocumentClass, bool isSynthesized = false);
 
     void clearXMLVersion() { m_xmlVersion = String(); }
+
+    virtual PassRefPtr<Document> cloneDocumentWithoutChildren() const;
 
 private:
     friend class Node;
@@ -1216,7 +1254,6 @@ private:
 
     RenderObject* renderer() const WTF_DELETED_FUNCTION;
     void setRenderer(RenderObject*) WTF_DELETED_FUNCTION;
-    void setRenderView(RenderView*);
 
     virtual void createRenderTree();
     virtual void dropChildren() OVERRIDE;
@@ -1234,6 +1271,7 @@ private:
     virtual NodeType nodeType() const OVERRIDE;
     virtual bool childTypeAllowed(NodeType) const OVERRIDE;
     virtual PassRefPtr<Node> cloneNode(bool deep) OVERRIDE;
+    void cloneDataFromDocument(const Document&);
 
     virtual void refScriptExecutionContext() OVERRIDE { ref(); }
     virtual void derefScriptExecutionContext() OVERRIDE { deref(); }
@@ -1476,11 +1514,13 @@ private:
 
     DocumentClassFlags m_documentClasses;
 
+    bool m_isSynthesized;
+
     bool m_isViewSource;
     bool m_sawElementsInKnownNamespaces;
     bool m_isSrcdocDocument;
 
-    RenderView* m_renderView;
+    RenderPtr<RenderView> m_renderView;
     mutable DocumentEventQueue m_eventQueue;
     mutable EventSender m_eventSender;
 
@@ -1532,6 +1572,34 @@ private:
     RefPtr<ScriptedAnimationController> m_scriptedAnimationController;
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS)
+    // FIXME: Use std::unique_ptr instead of OwnPtr after we upstream DeviceMotionClientIOS.{h, mm}.
+    OwnPtr<DeviceMotionClient> m_deviceMotionClient;
+    OwnPtr<DeviceMotionController> m_deviceMotionController;
+    OwnPtr<DeviceOrientationClient> m_deviceOrientationClient;
+    OwnPtr<DeviceOrientationController> m_deviceOrientationController;
+#endif
+
+// FIXME: Find a better place for this functionality.
+#if PLATFORM(IOS)
+public:
+
+    // These functions provide a two-level setting:
+    //    - A user-settable wantsTelephoneNumberParsing (at the Page / WebView level)
+    //    - A read-only telephoneNumberParsingAllowed which is set by the
+    //      document if it has the appropriate meta tag.
+    //    - isTelephoneNumberParsingEnabled() == isTelephoneNumberParsingAllowed() && page()->settings()->isTelephoneNumberParsingEnabled()
+
+    bool isTelephoneNumberParsingAllowed() const;
+    bool isTelephoneNumberParsingEnabled() const;
+
+private:
+    friend void setParserFeature(const String& key, const String& value, Document*, void* userData);
+    void setIsTelephoneNumberParsingAllowed(bool);
+
+    bool m_isTelephoneNumberParsingAllowed;
+#endif
+
     Timer<Document> m_pendingTasksTimer;
     Vector<OwnPtr<Task>> m_pendingTasks;
 
@@ -1549,6 +1617,8 @@ private:
 #if ENABLE(TEXT_AUTOSIZING)
     OwnPtr<TextAutosizer> m_textAutosizer;
 #endif
+
+    void platformSuspendOrStopActiveDOMObjects();
 
     bool m_scheduledTasksAreSuspended;
     

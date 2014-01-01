@@ -49,6 +49,10 @@
 #include "ReplayRecording.h"
 #endif // ENABLE(WEB_REPLAY)
 
+namespace Deprecated {
+class ScriptObject;
+}
+
 namespace WebCore {
 
 class CSSRule;
@@ -82,7 +86,6 @@ class ResourceResponse;
 class ScriptArguments;
 class ScriptCallStack;
 class ScriptExecutionContext;
-class ScriptObject;
 class ScriptProfile;
 class SecurityOrigin;
 class ShadowRoot;
@@ -296,9 +299,9 @@ public:
     static void didReceiveWebSocketFrameError(Document*, unsigned long identifier, const String& errorMessage);
 #endif
 
-    static ScriptObject wrapCanvas2DRenderingContextForInstrumentation(Document*, const ScriptObject&);
+    static Deprecated::ScriptObject wrapCanvas2DRenderingContextForInstrumentation(Document*, const Deprecated::ScriptObject&);
 #if ENABLE(WEBGL)
-    static ScriptObject wrapWebGLRenderingContextForInstrumentation(Document*, const ScriptObject&);
+    static Deprecated::ScriptObject wrapWebGLRenderingContextForInstrumentation(Document*, const Deprecated::ScriptObject&);
 #endif
 
     static void networkStateChanged(Page*);
@@ -312,15 +315,12 @@ public:
     static bool consoleAgentEnabled(ScriptExecutionContext*);
     static bool timelineAgentEnabled(ScriptExecutionContext*);
     static bool replayAgentEnabled(ScriptExecutionContext*);
-    static bool collectingHTMLParseErrors(Page*);
 #else
     static bool hasFrontends() { return false; }
     static bool canvasAgentEnabled(ScriptExecutionContext*) { return false; }
     static bool consoleAgentEnabled(ScriptExecutionContext*) { return false; }
     static bool runtimeAgentEnabled(Frame*) { return false; }
-    static bool timelineAgentEnabled(ScriptExecutionContext*) { return false; }
     static bool replayAgentEnabled(ScriptExecutionContext*) { return false; }
-    static bool collectingHTMLParseErrors(Page*) { return false; }
 #endif
 
 #if ENABLE(GEOLOCATION)
@@ -526,7 +526,6 @@ private:
     static InstrumentingAgents* instrumentingAgentsForWorkerGlobalScope(WorkerGlobalScope*);
     static InstrumentingAgents* instrumentingAgentsForNonDocumentContext(ScriptExecutionContext*);
 
-    static bool collectingHTMLParseErrors(InstrumentingAgents*);
     static void pauseOnNativeEventIfNeeded(InstrumentingAgents*, bool isDOMEvent, const String& eventName, bool synchronous);
     static void cancelPauseOnNativeEvent(InstrumentingAgents*);
     static InspectorTimelineAgent* retrieveTimelineAgent(const InspectorInstrumentationCookie&);
@@ -2208,14 +2207,6 @@ inline void InspectorInstrumentation::pseudoElementDestroyed(Page* page, PseudoE
 #endif
 
 #if ENABLE(INSPECTOR)
-inline bool InspectorInstrumentation::collectingHTMLParseErrors(Page* page)
-{
-    FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        return collectingHTMLParseErrors(instrumentingAgents);
-    return false;
-}
-
 inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForContext(ScriptExecutionContext* context)
 {
     if (!context)

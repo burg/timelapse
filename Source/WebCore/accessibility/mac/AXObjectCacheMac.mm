@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-void AXObjectCache::detachWrapper(AccessibilityObject* obj)
+void AXObjectCache::detachWrapper(AccessibilityObject* obj, AccessibilityDetachmentType)
 {
     [obj->wrapper() detach];
     obj->setWrapper(0);
@@ -117,6 +117,9 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* obj, AXNotific
             break;
         case AXElementBusyChanged:
             macNotification = @"AXElementBusyChanged";
+            break;
+        case AXMenuClosed:
+            macNotification = (id)kAXMenuClosedNotification;
             break;
         case AXCheckedStateChanged:
             // Does not exist on Mac.

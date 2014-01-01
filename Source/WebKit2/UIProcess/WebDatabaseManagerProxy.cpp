@@ -34,6 +34,7 @@
 #include "WebDatabaseManagerMessages.h"
 #include "WebDatabaseManagerProxyMessages.h"
 #include "WebSecurityOrigin.h"
+#include <wtf/NeverDestroyed.h>
 
 using namespace WebCore;
 
@@ -46,49 +47,49 @@ const char* WebDatabaseManagerProxy::supplementName()
 
 String WebDatabaseManagerProxy::originKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerOriginKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerOriginKey"));
     return key;
 }
 
 String WebDatabaseManagerProxy::originQuotaKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerOriginQuotaKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerOriginQuotaKey"));
     return key;
 }
 
 String WebDatabaseManagerProxy::originUsageKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerOriginUsageKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerOriginUsageKey"));
     return key;
 }
 
 String WebDatabaseManagerProxy::databaseDetailsKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerDatabaseDetailsKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerDatabaseDetailsKey"));
     return key;
 }
 
 String WebDatabaseManagerProxy::databaseDetailsNameKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerDatabaseDetailsNameKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerDatabaseDetailsNameKey"));
     return key;
 }
 
 String WebDatabaseManagerProxy::databaseDetailsDisplayNameKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerDatabaseDetailsDisplayNameKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerDatabaseDetailsDisplayNameKey"));
     return key;
 }
 
 String WebDatabaseManagerProxy::databaseDetailsExpectedUsageKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerDatabaseDetailsExpectedUsageKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerDatabaseDetailsExpectedUsageKey"));
     return key;
 }
 
 String WebDatabaseManagerProxy::databaseDetailsCurrentUsageKey()
 {
-    DEFINE_STATIC_LOCAL(String, key, (ASCIILiteral("WebDatabaseManagerDatabaseDetailsCurrentUsageKey")));
+    static NeverDestroyed<String> key(ASCIILiteral("WebDatabaseManagerDatabaseDetailsCurrentUsageKey"));
     return key;
 }
 
@@ -100,7 +101,7 @@ PassRefPtr<WebDatabaseManagerProxy> WebDatabaseManagerProxy::create(WebContext* 
 WebDatabaseManagerProxy::WebDatabaseManagerProxy(WebContext* webContext)
     : WebContextSupplement(webContext)
 {
-    WebContextSupplement::context()->addMessageReceiver(Messages::WebDatabaseManagerProxy::messageReceiverName(), this);
+    WebContextSupplement::context()->addMessageReceiver(Messages::WebDatabaseManagerProxy::messageReceiverName(), *this);
 }
 
 WebDatabaseManagerProxy::~WebDatabaseManagerProxy()
@@ -168,21 +169,21 @@ void WebDatabaseManagerProxy::didGetDatabasesByOrigin(const Vector<OriginAndData
         for (const auto& databaseDetails : originAndDatabases.databases) {
             HashMap<String, RefPtr<API::Object>> detailsMap;
 
-            detailsMap.set(databaseDetailsNameKey(), WebString::create(databaseDetails.name()));
-            detailsMap.set(databaseDetailsDisplayNameKey(), WebString::create(databaseDetails.displayName()));
-            detailsMap.set(databaseDetailsExpectedUsageKey(), WebUInt64::create(databaseDetails.expectedUsage()));
-            detailsMap.set(databaseDetailsCurrentUsageKey(), WebUInt64::create(databaseDetails.currentUsage()));
+            detailsMap.set(databaseDetailsNameKey(), API::String::create(databaseDetails.name()));
+            detailsMap.set(databaseDetailsDisplayNameKey(), API::String::create(databaseDetails.displayName()));
+            detailsMap.set(databaseDetailsExpectedUsageKey(), API::UInt64::create(databaseDetails.expectedUsage()));
+            detailsMap.set(databaseDetailsCurrentUsageKey(), API::UInt64::create(databaseDetails.currentUsage()));
 
-            databases.uncheckedAppend(ImmutableDictionary::adopt(detailsMap));
+            databases.uncheckedAppend(ImmutableDictionary::create(std::move(detailsMap)));
         }
 
         HashMap<String, RefPtr<API::Object>> originAndDatabasesMap;
         originAndDatabasesMap.set(originKey(), origin);
-        originAndDatabasesMap.set(originQuotaKey(), WebUInt64::create(originAndDatabases.originQuota));
-        originAndDatabasesMap.set(originUsageKey(), WebUInt64::create(originAndDatabases.originUsage));
+        originAndDatabasesMap.set(originQuotaKey(), API::UInt64::create(originAndDatabases.originQuota));
+        originAndDatabasesMap.set(originUsageKey(), API::UInt64::create(originAndDatabases.originUsage));
         originAndDatabasesMap.set(databaseDetailsKey(), API::Array::create(std::move(databases)));
 
-        result.uncheckedAppend(ImmutableDictionary::adopt(originAndDatabasesMap));
+        result.uncheckedAppend(ImmutableDictionary::create(std::move(originAndDatabasesMap)));
     }
 
     callback->performCallbackWithReturnValue(API::Array::create(std::move(result)).get());

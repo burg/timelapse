@@ -50,7 +50,6 @@
 #include "InspectorCSSAgent.h"
 #include "InspectorCanvasAgent.h"
 #include "InspectorConsoleAgent.h"
-#include "InspectorController.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorDOMDebuggerAgent.h"
 #include "InspectorDOMStorageAgent.h"
@@ -77,12 +76,13 @@
 #include "StyleResolver.h"
 #include "StyleRule.h"
 #include "WorkerGlobalScope.h"
-#include "WorkerInspectorController.h"
 #include "WorkerRuntimeAgent.h"
 #include "WorkerThread.h"
 #include "XMLHttpRequest.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -143,8 +143,6 @@ void InspectorInstrumentation::didClearWindowObjectInWorldImpl(InstrumentingAgen
     InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent();
     if (pageAgent)
         pageAgent->didClearWindowObjectInWorld(frame, world);
-    if (InspectorAgent* inspectorAgent = instrumentingAgents->inspectorAgent())
-        inspectorAgent->didClearWindowObjectInWorld(frame, world);
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     if (PageDebuggerAgent* debuggerAgent = instrumentingAgents->pageDebuggerAgent()) {
         if (pageAgent && &world == &mainThreadNormalWorld() && frame == pageAgent->mainFrame())
@@ -873,9 +871,6 @@ void InspectorInstrumentation::domContentLoadedEventFiredImpl(InstrumentingAgent
     if (&frame->page()->mainFrame() != frame)
         return;
 
-    if (InspectorAgent* inspectorAgent = instrumentingAgents->inspectorAgent())
-        inspectorAgent->domContentLoadedEventFired();
-
     if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
         domAgent->mainFrameDOMContentLoaded();
 
@@ -933,7 +928,6 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
         if (InspectorLayerTreeAgent* layerTreeAgent = instrumentingAgents->inspectorLayerTreeAgent())
             layerTreeAgent->reset();
 #endif
-        inspectorAgent->didCommitLoad();
     }
     if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
         domAgent->didCommitLoad(loader->frame()->document());
@@ -1303,13 +1297,6 @@ void InspectorInstrumentation::updateApplicationCacheStatusImpl(InstrumentingAge
 {
     if (InspectorApplicationCacheAgent* applicationCacheAgent = instrumentingAgents->inspectorApplicationCacheAgent())
         applicationCacheAgent->updateApplicationCacheStatus(frame);
-}
-
-bool InspectorInstrumentation::collectingHTMLParseErrors(InstrumentingAgents* instrumentingAgents)
-{
-    if (InspectorAgent* inspectorAgent = instrumentingAgents->inspectorAgent())
-        return inspectorAgent->hasFrontend();
-    return false;
 }
 
 bool InspectorInstrumentation::canvasAgentEnabled(ScriptExecutionContext* scriptExecutionContext)

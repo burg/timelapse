@@ -157,8 +157,12 @@ public:
 
         bool horizontalLayoutOverflowChanged = hasHorizontalLayoutOverflow != m_hadHorizontalLayoutOverflow;
         bool verticalLayoutOverflowChanged = hasVerticalLayoutOverflow != m_hadVerticalLayoutOverflow;
-        if (horizontalLayoutOverflowChanged || verticalLayoutOverflowChanged)
-            m_block->view().frameView().scheduleEvent(OverflowEvent::create(horizontalLayoutOverflowChanged, hasHorizontalLayoutOverflow, verticalLayoutOverflowChanged, hasVerticalLayoutOverflow), m_block->element());
+        if (!horizontalLayoutOverflowChanged && !verticalLayoutOverflowChanged)
+            return;
+
+        RefPtr<OverflowEvent> overflowEvent = OverflowEvent::create(horizontalLayoutOverflowChanged, hasHorizontalLayoutOverflow, verticalLayoutOverflowChanged, hasVerticalLayoutOverflow);
+        overflowEvent->setTarget(m_block->element());
+        m_block->document().enqueueOverflowEvent(overflowEvent.release());
     }
 
 private:
@@ -507,8 +511,8 @@ RenderBlock* RenderBlock::clone() const
         cloneBlock = createAnonymousBlock();
         cloneBlock->setChildrenInline(childrenInline());
     } else {
-        auto cloneRenderer = element()->createRenderer(style());
-        cloneBlock = toRenderBlock(cloneRenderer);
+        auto cloneRenderer = element()->createElementRenderer(style());
+        cloneBlock = toRenderBlock(cloneRenderer.leakPtr());
         cloneBlock->initializeStyle();
 
         // This takes care of setting the right value of childrenInline in case
@@ -1455,9 +1459,8 @@ void RenderBlock::markShapeInsideDescendantsForLayout()
         return;
     }
 
-    auto blockChildren = childrenOfType<RenderBlock>(*this);
-    for (auto childBlock = blockChildren.begin(), end = blockChildren.end(); childBlock != end; ++childBlock)
-        childBlock->markShapeInsideDescendantsForLayout();
+    for (auto& childBlock : childrenOfType<RenderBlock>(*this))
+        childBlock.markShapeInsideDescendantsForLayout();
 }
 
 ShapeInsideInfo* RenderBlock::layoutShapeInsideInfo() const
@@ -1711,7 +1714,7 @@ void RenderBlock::addVisualOverflowFromTheme()
         return;
 
     IntRect inflatedRect = pixelSnappedBorderBoxRect();
-    theme()->adjustRepaintRect(this, inflatedRect);
+    theme().adjustRepaintRect(this, inflatedRect);
     addVisualOverflow(inflatedRect);
 
     if (RenderFlowThread* flowThread = flowThreadContainingBlock())
@@ -2480,7 +2483,7 @@ void RenderBlock::paintCaret(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     bool isContentEditable;
     if (type == CursorCaret) {
         caretPainter = frame().selection().caretRenderer();
-        isContentEditable = frame().selection().rendererIsEditable();
+        isContentEditable = frame().selection().hasEditableStyle();
     } else {
         caretPainter = frame().page()->dragCaretController().caretRenderer();
         isContentEditable = frame().page()->dragCaretController().isContentEditable();
@@ -3535,7 +3538,7 @@ static inline bool isEditingBoundary(RenderElement* ancestor, RenderObject& chil
     ASSERT(!ancestor || ancestor->nonPseudoElement());
     ASSERT(child.nonPseudoNode());
     return !ancestor || !ancestor->parent() || (ancestor->hasLayer() && ancestor->parent()->isRenderView())
-        || ancestor->nonPseudoElement()->rendererIsEditable() == child.nonPseudoNode()->rendererIsEditable();
+        || ancestor->nonPseudoElement()->hasEditableStyle() == child.nonPseudoNode()->hasEditableStyle();
 }
 
 // FIXME: This function should go on RenderObject as an instance method. Then
@@ -4712,8 +4715,8 @@ int RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLine, Lin
         // FIXME: Might be better to have a custom CSS property instead, so that if the theme
         // is turned off, checkboxes/radios will still have decent baselines.
         // FIXME: Need to patch form controls to deal with vertical lines.
-        if (style().hasAppearance() && !theme()->isControlContainer(style().appearance()))
-            return theme()->baselinePosition(this);
+        if (style().hasAppearance() && !theme().isControlContainer(style().appearance()))
+            return theme().baselinePosition(this);
             
         // CSS2.1 states that the baseline of an inline block is the baseline of the last line box in
         // the normal flow.  We make an exception for marquees, since their baselines are meaningless
@@ -4986,6 +4989,8 @@ void RenderBlock::updateFirstLetter()
     if (style().styleType() == FIRST_LETTER)
         return;
 
+    // FIXME: We need to destroy the first-letter object if it is no longer the first child. Need to find
+    // an efficient way to check for that situation though before implementing anything.
     RenderElement* firstLetterBlock = findFirstLetterBlock(this);
     if (!firstLetterBlock)
         return;
@@ -5017,27 +5022,9 @@ void RenderBlock::updateFirstLetter()
     if (!descendant)
         return;
 
+    // If the child already has style, then it has already been created, so we just want
+    // to update it.
     if (descendant->parent()->style().styleType() == FIRST_LETTER) {
-        // Destroy the first-letter object if it is no longer the first child.
-        RenderObject* remainingText = descendant->parent()->nextSibling();
-        if (remainingText && descendant->node() != remainingText->node()) {
-            if (!remainingText->isText() || remainingText->isBR())
-                return;
-
-            if (auto oldFirstLetter = descendant->parent()->isBoxModelObject() ?  toRenderBoxModelObject(descendant->parent()) : nullptr) { 
-                if (auto oldRemainingText = oldFirstLetter->firstLetterRemainingText()) {
-                    LayoutStateDisabler layoutStateDisabler(&view());
-                    // Destroy the text fragment for the old first-letter and update oldRemainingText with its DOM text.
-                    oldRemainingText->setText(oldRemainingText->textNode()->data());
-                    createFirstLetterRenderer(firstLetterBlock, toRenderText(remainingText));
-                }    
-            }    
-
-            return;
-        }    
-
-        // If the child already has style, then it has already been created, so we just want
-        // to update it.
         updateFirstLetterStyle(firstLetterBlock, descendant);
         return;
     }

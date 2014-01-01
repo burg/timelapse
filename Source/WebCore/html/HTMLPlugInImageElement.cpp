@@ -55,6 +55,12 @@
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
 
+#if PLATFORM(IOS)
+#include "HTMLIFrameElement.h"
+#include "RenderBlockFlow.h"
+#include "YouTubeEmbedShadowElement.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -190,10 +196,10 @@ bool HTMLPlugInImageElement::wouldLoadAsNetscapePlugin(const String& url, const 
     return false;
 }
 
-RenderElement* HTMLPlugInImageElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLPlugInImageElement::createElementRenderer(PassRef<RenderStyle> style)
 {
     if (displayState() >= PreparingPluginReplacement)
-        return HTMLPlugInElement::createRenderer(std::move(style));
+        return HTMLPlugInElement::createElementRenderer(std::move(style));
 
     // Once a PlugIn Element creates its renderer, it needs to be told when the Document goes
     // inactive or reactivates so it can clear the renderer before going into the page cache.
@@ -203,9 +209,9 @@ RenderElement* HTMLPlugInImageElement::createRenderer(PassRef<RenderStyle> style
     }
 
     if (displayState() == DisplayingSnapshot) {
-        RenderSnapshottedPlugIn* renderSnapshottedPlugIn = new RenderSnapshottedPlugIn(*this, std::move(style));
+        auto renderSnapshottedPlugIn = createRenderer<RenderSnapshottedPlugIn>(*this, std::move(style));
         renderSnapshottedPlugIn->updateSnapshot(m_snapshotImage);
-        return renderSnapshottedPlugIn;
+        return std::move(renderSnapshottedPlugIn);
     }
 
     // Fallback content breaks the DOM->Renderer class relationship of this
@@ -215,12 +221,19 @@ RenderElement* HTMLPlugInImageElement::createRenderer(PassRef<RenderStyle> style
         return RenderElement::createFor(*this, std::move(style));
 
     if (isImageType()) {
-        RenderImage* image = new RenderImage(*this, std::move(style));
+        auto image = createRenderer<RenderImage>(*this, std::move(style));
         image->setImageResource(RenderImageResource::create());
-        return image;
+        return std::move(image);
     }
 
-    return HTMLPlugInElement::createRenderer(std::move(style));
+#if PLATFORM(IOS)
+    if (ShadowRoot* shadowRoot = this->shadowRoot()) {
+        Element* shadowElement = toElement(shadowRoot->firstChild());
+        if (shadowElement && shadowElement->shadowPseudoId() == "-apple-youtube-shadow-iframe")
+            return createRenderer<RenderBlockFlow>(*this, std::move(style));
+    }
+#endif
+    return HTMLPlugInElement::createElementRenderer(std::move(style));
 }
 
 bool HTMLPlugInImageElement::willRecalcStyle(Style::Change)
@@ -234,14 +247,14 @@ bool HTMLPlugInImageElement::willRecalcStyle(Style::Change)
 void HTMLPlugInImageElement::didAttachRenderers()
 {
     if (!isImageType()) {
-        queuePostAttachCallback(&HTMLPlugInImageElement::updateWidgetCallback, this);
+        queuePostAttachCallback(&HTMLPlugInImageElement::updateWidgetCallback, *this);
         return;
     }
     if (!renderer() || useFallbackContent())
         return;
-    if (!m_imageLoader)
-        m_imageLoader = adoptPtr(new HTMLImageLoader(this));
-    m_imageLoader->updateFromElement();
+
+    // Image load might complete synchronously and cause us to re-enter attach.
+    queuePostAttachCallback(&HTMLPlugInImageElement::startLoadingImageCallback, *this);
 }
 
 void HTMLPlugInImageElement::willDetachRenderers()
@@ -249,7 +262,7 @@ void HTMLPlugInImageElement::willDetachRenderers()
     // FIXME: Because of the insanity that is HTMLPlugInImageElement::willRecalcStyle,
     // we can end up detaching during an attach() call, before we even have a
     // renderer.  In that case, don't mark the widget for update.
-    if (attached() && renderer() && !useFallbackContent()) {
+    if (renderer() && !useFallbackContent()) {
         // Update the widget the next time we attach (detaching destroys the plugin).
         setNeedsWidgetUpdate(true);
     }
@@ -321,9 +334,21 @@ PassRefPtr<RenderStyle> HTMLPlugInImageElement::customStyleForRenderer()
     return m_customStyleForPageCache;
 }
 
-void HTMLPlugInImageElement::updateWidgetCallback(Node* n, unsigned)
+void HTMLPlugInImageElement::updateWidgetCallback(Node& node, unsigned)
 {
-    toHTMLPlugInImageElement(n)->updateWidgetIfNecessary();
+    toHTMLPlugInImageElement(node).updateWidgetIfNecessary();
+}
+
+void HTMLPlugInImageElement::startLoadingImage()
+{
+    if (!m_imageLoader)
+        m_imageLoader = adoptPtr(new HTMLImageLoader(this));
+    m_imageLoader->updateFromElement();
+}
+
+void HTMLPlugInImageElement::startLoadingImageCallback(Node& node, unsigned)
+{
+    toHTMLPlugInImageElement(node).startLoadingImage();
 }
 
 void HTMLPlugInImageElement::updateSnapshot(PassRefPtr<Image> image)
@@ -411,6 +436,38 @@ bool HTMLPlugInImageElement::partOfSnapshotOverlay(Node* node)
     RefPtr<Element> snapshotLabel = ensureUserAgentShadowRoot().querySelector(selector, ASSERT_NO_EXCEPTION);
     return node && snapshotLabel && (node == snapshotLabel.get() || node->isDescendantOf(snapshotLabel.get()));
 }
+
+#if PLATFORM(IOS)
+void HTMLPlugInImageElement::createShadowIFrameSubtree(const String& src)
+{
+    if (this->shadowRoot())
+        return;
+
+    if (src.isEmpty())
+        return;
+
+    RefPtr<YouTubeEmbedShadowElement> shadowElement = YouTubeEmbedShadowElement::create(document());
+    ShadowRoot& root = this->ensureUserAgentShadowRoot();
+    root.appendChild(shadowElement, ASSERT_NO_EXCEPTION);
+
+    RefPtr<HTMLIFrameElement> iframeElement = HTMLIFrameElement::create(HTMLNames::iframeTag, document());
+    if (hasAttribute(HTMLNames::widthAttr))
+        iframeElement->setAttribute(HTMLNames::widthAttr, AtomicString("100%", AtomicString::ConstructFromLiteral));
+    if (hasAttribute(HTMLNames::heightAttr)) {
+        iframeElement->setAttribute(HTMLNames::styleAttr, AtomicString("max-height: 100%", AtomicString::ConstructFromLiteral));
+        iframeElement->setAttribute(HTMLNames::heightAttr, getAttribute(HTMLNames::heightAttr));
+    }
+    iframeElement->setAttribute(HTMLNames::srcAttr, src);
+    iframeElement->setAttribute(HTMLNames::frameborderAttr, AtomicString("0", AtomicString::ConstructFromLiteral));
+
+    // Disable frame flattening for this iframe.
+    iframeElement->setAttribute(HTMLNames::scrollingAttr, AtomicString("no", AtomicString::ConstructFromLiteral));
+    shadowElement->appendChild(iframeElement, ASSERT_NO_EXCEPTION);
+
+    if (renderer())
+        Style::reattachRenderTree(*this);
+}
+#endif
 
 void HTMLPlugInImageElement::removeSnapshotTimerFired(Timer<HTMLPlugInImageElement>*)
 {

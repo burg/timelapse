@@ -26,7 +26,7 @@
 #ifndef ScrollingTree_h
 #define ScrollingTree_h
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "PlatformWheelEvent.h"
 #include "Region.h"
@@ -92,7 +92,7 @@ public:
 #endif
 
     // Can be called from any thread. Will update what edges allow rubber-banding.
-    void setCanRubberBandState(bool canRubberBandsAtLeft, bool canRubberBandsAtRight, bool canRubberBandsAtTop, bool canRubberBandsAtBottom);
+    void setCanRubberBandState(bool canRubberBandAtLeft, bool canRubberBandAtRight, bool canRubberBandAtTop, bool canRubberBandAtBottom);
 
     bool rubberBandsAtLeft();
     bool rubberBandsAtRight();
@@ -145,6 +145,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_SCROLLING)
+#endif // ENABLE(ASYNC_SCROLLING)
 
 #endif // ScrollingTree_h

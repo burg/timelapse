@@ -41,16 +41,22 @@ namespace WTF {
 class InputIterator {
     WTF_MAKE_NONCOPYABLE(InputIterator);
 public:
-    InputIterator() { }
+    InputIterator() : m_isActive(true) { }
     virtual ~InputIterator() { }
 
     virtual bool isCapturing() const =0;
     virtual bool isReplaying() const =0;
     virtual void incrementExecutionTicks() { }
 
+    // Used for temporary deactivation; e.g. when injected scripts are evaluated.
+    void setIsActive(bool isActive) { m_isActive = isActive; }
+    bool isActive() const { return m_isActive; }
+
     WTF_EXPORT_PRIVATE virtual void storeInput(std::unique_ptr<NondeterministicInput>) =0;
     WTF_EXPORT_PRIVATE virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&) =0;
     WTF_EXPORT_PRIVATE virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType) =0;
+private:
+    bool m_isActive;
 };
 
 } // namespace WTF

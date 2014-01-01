@@ -138,6 +138,15 @@
 #include <wtf/replay/InputIterator.h>
 #endif
 
+#if PLATFORM(IOS)
+#include "DocumentType.h"
+#include "MemoryPressureHandler.h"
+#include "ResourceLoader.h"
+#include "RuntimeApplicationChecksIOS.h"
+#include "SystemMemory.h"
+#include "WKContentObservation.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -148,6 +157,10 @@ using namespace SVGNames;
 
 static const char defaultAcceptHeader[] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
 static double storedTimeOfLastCompletedLoad;
+
+#if PLATFORM(IOS)
+const int memoryLevelThresholdToPrunePageCache = 20;
+#endif
 
 bool isBackForwardLoadType(FrameLoadType type)
 {
@@ -244,6 +257,7 @@ FrameLoader::FrameLoader(Frame& frame, FrameLoaderClient& client)
     , m_loadingFromCachedPage(false)
     , m_suppressOpenerInNewFrame(false)
     , m_currentNavigationHasShownBeforeUnloadConfirmPanel(false)
+    , m_loadsSynchronously(false)
     , m_forcedSandboxFlags(SandboxNone)
 {
 }
@@ -274,6 +288,32 @@ void FrameLoader::init()
     m_networkingContext = m_client.createNetworkingContext();
     m_progressTracker = std::make_unique<FrameProgressTracker>(m_frame);
 }
+
+#if PLATFORM(IOS)
+void FrameLoader::initForSynthesizedDocument(const URL&)
+{
+    // FIXME: We need to initialize the document URL to the specified URL. Currently the URL is empty and hence
+    // FrameLoader::checkCompleted() will overwrite the URL of the document to be activeDocumentLoader()->documentURL().
+
+    RefPtr<DocumentLoader> loader = m_client.createDocumentLoader(ResourceRequest(URL(ParsedURLString, emptyString())), SubstituteData());
+    loader->setFrame(&m_frame);
+    loader->setResponse(ResourceResponse(URL(), ASCIILiteral("text/html"), 0, String(), String()));
+    loader->setCommitted(true);
+    setDocumentLoader(loader.get());
+
+    m_stateMachine.advanceTo(FrameLoaderStateMachine::DisplayingInitialEmptyDocument);
+    m_stateMachine.advanceTo(FrameLoaderStateMachine::DisplayingInitialEmptyDocumentPostCommit);
+    m_stateMachine.advanceTo(FrameLoaderStateMachine::CommittedFirstRealLoad);
+    m_client.transitionToCommittedForNewPage();
+
+    m_didCallImplicitClose = true;
+    m_isComplete = true;
+    m_state = FrameStateComplete;
+    m_needsClear = true;
+
+    m_networkingContext = m_client.createNetworkingContext();
+}
+#endif
 
 void FrameLoader::setDefersLoading(bool defers)
 {
@@ -583,7 +623,7 @@ void FrameLoader::clear(Document* newDocument, bool clearWindowProperties, bool 
     if (!m_frame.document()->inPageCache()) {
         m_frame.document()->cancelParsing();
         m_frame.document()->stopActiveDOMObjects();
-        if (m_frame.document()->attached()) {
+        if (m_frame.document()->hasLivingRenderTree()) {
             m_frame.document()->prepareForDestruction();
             m_frame.document()->removeFocusedNodeOfSubtree(m_frame.document());
         }
@@ -793,6 +833,18 @@ void FrameLoader::checkCompleted()
     m_isComplete = true;
     m_requestedHistoryItem = 0;
     m_frame.document()->setReadyState(Document::Complete);
+
+#if PLATFORM(IOS)
+    if (m_frame.document()->url().isEmpty()) {
+        // We need to update the document URL of a PDF document to be non-empty so that both back/forward history navigation
+        // between PDF pages and fragment navigation works. See <rdar://problem/9544769> for more details.
+        // FIXME: Is there a better place for this code, say DocumentLoader? Also, we should explicitly only update the URL
+        // of the document when it's a PDFDocument object instead of assuming that a Document object with an empty URL is a PDFDocument.
+        // FIXME: This code is incorrect for a synthesized document (which also has an empty URL). The URL for a synthesized
+        // document should be the URL specified to FrameLoader::initForSynthesizedDocument().
+        m_frame.document()->setURL(activeDocumentLoader()->documentURL());
+    }
+#endif
 
     checkCallImplicitClose(); // if we didn't do it before
 
@@ -1456,6 +1508,13 @@ const ResourceRequest& FrameLoader::initialRequest() const
 
 bool FrameLoader::willLoadMediaElementURL(URL& url)
 {
+#if PLATFORM(IOS)
+    // MobileStore depends on the iOS 4.0 era client delegate method because webView:resource:willSendRequest:redirectResponse:fromDataSource
+    // doesn't let them tell when a load request is coming from a media element. See <rdar://problem/8266916> for more details.
+    if (applicationIsMobileStore())
+        return m_client.shouldLoadMediaElementURL(url);
+#endif
+
     ResourceRequest request(url);
 
     unsigned long identifier;
@@ -1608,7 +1667,15 @@ void FrameLoader::stopAllLoaders(ClearProvisionalItemPolicy clearProvisionalItem
 void FrameLoader::stopForUserCancel(bool deferCheckLoadComplete)
 {
     stopAllLoaders();
-    
+
+#if PLATFORM(IOS)
+    // Lay out immediately when stopping to immediately clear the old page if we just committed this one
+    // but haven't laid out/painted yet.
+    // FIXME: Is this behavior specific to iOS? Or should we expose a setting to toggle this behavior?
+    if (m_frame.view() && !m_frame.view()->didFirstLayout())
+        m_frame.view()->layout();
+#endif
+
     if (deferCheckLoadComplete)
         scheduleCheckLoadComplete();
     else if (m_frame.page())
@@ -1727,6 +1794,26 @@ void FrameLoader::commitProvisionalLoad()
         m_frame.document() ? m_frame.document()->url().stringCenterEllipsizedToLength().utf8().data() : "",
         pdl ? pdl->url().stringCenterEllipsizedToLength().utf8().data() : "<no provisional DocumentLoader>");
 
+#if PLATFORM(IOS)
+    // In the case where we are not navigating to a cached page, and the system is under (speculative) memory pressure,
+    // we can try to preemptively release some of the pages in the cache.
+    // FIXME: Right now the capacity is 1 on iOS devices with 256 MB of RAM, so this will always blow away the whole
+    // page cache. We could still preemptively prune the page cache while navigating to a cached page if capacity > 1.
+    // See <rdar://problem/11779846> for more details.
+    if (!cachedPage) {
+        if (memoryPressureHandler().hasReceivedMemoryPressure()) {
+            LOG(MemoryPressure, "Pruning page cache because under memory pressure at: %s", __PRETTY_FUNCTION__);
+            LOG(PageCache, "Pruning page cache to 0 due to memory pressure");
+            // Don't cache any page if we are under memory pressure.
+            pageCache()->pruneToCapacityNow(0);
+        } else if (systemMemoryLevel() <= memoryLevelThresholdToPrunePageCache) {
+            LOG(MemoryPressure, "Pruning page cache because system memory level is %d at: %s", systemMemoryLevel(), __PRETTY_FUNCTION__);
+            LOG(PageCache, "Pruning page cache to %d due to low memory (level %d less or equal to %d threshold)", pageCache()->capacity() / 2, systemMemoryLevel(), memoryLevelThresholdToPrunePageCache);
+            pageCache()->pruneToCapacityNow(pageCache()->capacity() / 2);
+        }
+    }
+#endif
+
     willTransitionToCommitted();
 
     // Check to see if we need to cache the page we are navigating away from into the back/forward cache.
@@ -1757,13 +1844,21 @@ void FrameLoader::commitProvisionalLoad()
         clientRedirectCancelledOrFinished(false);
     
     if (cachedPage && cachedPage->document()) {
+#if PLATFORM(IOS)
+        // FIXME: CachedPage::restore() would dispatch viewport change notification. However UIKit expects load
+        // commit to happen before any changes to viewport arguments and dealing with this there is difficult.
+        m_frame.page()->chrome().setDispatchViewportDataDidChangeSuppressed(true);
+#endif
         prepareForCachedPageRestore();
 
         // FIXME: This API should be turned around so that we ground CachedPage into the Page.
         cachedPage->restore(*m_frame.page());
 
         dispatchDidCommitLoad();
-
+#if PLATFORM(IOS)
+        m_frame.page()->chrome().setDispatchViewportDataDidChangeSuppressed(false);
+        m_frame.page()->chrome().dispatchViewportPropertiesDidChange(m_frame.page()->viewportArguments());
+#endif
         // If we have a title let the WebView know about it. 
         StringWithDirection title = m_documentLoader->title();
         if (!title.isNull())
@@ -1780,10 +1875,19 @@ void FrameLoader::commitProvisionalLoad()
         history().updateForClientRedirect();
 
     if (m_loadingFromCachedPage) {
+#if PLATFORM(IOS)
+        // Note, didReceiveDocType is expected to be called for cached pages. See <rdar://problem/5906758> for more details.
+        if (m_frame.document()->doctype() && m_frame.page())
+            m_frame.page()->chrome().didReceiveDocType(&m_frame);
+#endif
         m_frame.document()->documentDidResumeFromPageCache();
-        
+
         // Force a layout to update view size and thereby update scrollbars.
+#if PLATFORM(IOS)
+        m_client.forceLayoutWithoutRecalculatingStyles();
+#else
         m_frame.view()->forceLayout();
+#endif
 
         const ResponseVector& responses = m_documentLoader->responses();
         size_t count = responses.size();
@@ -1846,7 +1950,7 @@ void FrameLoader::transitionToCommitted(CachedPage* cachedPage)
 
     setState(FrameStateCommittedPage);
 
-#if ENABLE(TOUCH_EVENTS)
+#if ENABLE(TOUCH_EVENTS) && !PLATFORM(IOS)
     if (m_frame.isMainFrame())
         m_frame.page()->chrome().client().needTouchEvents(false);
 #endif
@@ -2304,6 +2408,13 @@ void FrameLoader::didLayout(LayoutMilestones milestones)
 
 void FrameLoader::didFirstLayout()
 {
+#if PLATFORM(IOS)
+    // Only send layout-related delegate callbacks synchronously for the main frame to
+    // avoid reentering layout for the main frame while delivering a layout-related delegate
+    // callback for a subframe.
+    if (&m_frame != &m_frame.page()->mainFrame())
+        return;
+#endif
     if (m_frame.page() && isBackForwardLoadType(m_loadType))
         history().restoreScrollPositionAndViewState();
 
@@ -3265,6 +3376,13 @@ ResourceError FrameLoader::cancelledError(const ResourceRequest& request) const
     return error;
 }
 
+#if PLATFORM(IOS)
+RetainPtr<CFDictionaryRef> FrameLoader::connectionProperties(ResourceLoader* loader)
+{
+    return m_client.connectionProperties(loader->documentLoader(), loader->identifier());
+}
+#endif
+
 String FrameLoader::referrer() const
 {
     return m_documentLoader ? m_documentLoader->request().httpReferrer() : "";
@@ -3476,9 +3594,10 @@ PassRefPtr<Frame> createWindow(Frame* openerFrame, Frame* lookupFrame, const Fra
     // specify the size of the viewport. We can only resize the window, so adjust
     // for the difference between the window size and the viewport size.
 
-    FloatRect windowRect = page->chrome().windowRect();
+// FIXME: We should reconcile the initialization of viewport arguments between iOS and OpenSource.
+#if !PLATFORM(IOS)
     FloatSize viewportSize = page->chrome().pageRect().size();
-
+    FloatRect windowRect = page->chrome().windowRect();
     if (features.xSet)
         windowRect.setX(features.x);
     if (features.ySet)
@@ -3493,6 +3612,17 @@ PassRefPtr<Frame> createWindow(Frame* openerFrame, Frame* lookupFrame, const Fra
     FloatRect newWindowRect = DOMWindow::adjustWindowRect(page, windowRect);
 
     page->chrome().setWindowRect(newWindowRect);
+#else
+    // On iOS, width and height refer to the viewport dimensions.
+    ViewportArguments arguments;
+    // Zero width and height mean using default size, not minimum one.
+    if (features.widthSet && features.width)
+        arguments.width = features.width;
+    if (features.heightSet && features.height)
+        arguments.height = features.height;
+    page->mainFrame().setViewportArguments(arguments);
+#endif
+
     page->chrome().show();
 
     created = true;

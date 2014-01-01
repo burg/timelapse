@@ -103,6 +103,7 @@ BINDING_IDLS = \
     $(WebCore)/Modules/mediasource/SourceBufferList.idl \
 	$(WebCore)/Modules/mediasource/TextTrackMediaSource.idl \
 	$(WebCore)/Modules/mediasource/VideoTrackMediaSource.idl \
+	$(WebCore)/Modules/mediasource/VideoPlaybackQuality.idl \
 	$(WebCore)/Modules/mediastream/AllVideoCapabilities.idl \
 	$(WebCore)/Modules/mediastream/AllAudioCapabilities.idl \
 	$(WebCore)/Modules/mediastream/AudioStreamTrack.idl \
@@ -126,10 +127,10 @@ BINDING_IDLS = \
     $(WebCore)/Modules/mediastream/RTCDTMFToneChangeEvent.idl \
     $(WebCore)/Modules/mediastream/RTCDataChannel.idl \
     $(WebCore)/Modules/mediastream/RTCDataChannelEvent.idl \
-    $(WebCore)/Modules/mediastream/RTCErrorCallback.idl \
     $(WebCore)/Modules/mediastream/RTCIceCandidate.idl \
     $(WebCore)/Modules/mediastream/RTCIceCandidateEvent.idl \
     $(WebCore)/Modules/mediastream/RTCPeerConnection.idl \
+    $(WebCore)/Modules/mediastream/RTCPeerConnectionErrorCallback.idl \
     $(WebCore)/Modules/mediastream/RTCSessionDescription.idl \
     $(WebCore)/Modules/mediastream/RTCSessionDescriptionCallback.idl \
     $(WebCore)/Modules/mediastream/RTCStatsCallback.idl \
@@ -451,6 +452,7 @@ BINDING_IDLS = \
     $(WebCore)/html/track/TrackEvent.idl \
     $(WebCore)/html/track/VideoTrack.idl \
     $(WebCore)/html/track/VideoTrackList.idl \
+    $(WebCore)/inspector/CommandLineAPIHost.idl \
     $(WebCore)/inspector/InjectedScriptHost.idl \
     $(WebCore)/inspector/InspectorFrontendHost.idl \
     $(WebCore)/inspector/ScriptProfile.idl \
@@ -658,32 +660,6 @@ BINDING_IDLS = \
     $(WebCore)/xml/XPathResult.idl \
     $(WebCore)/xml/XSLTProcessor.idl \
     InternalSettingsGenerated.idl
-#
-
-INSPECTOR_DOMAINS = \
-    $(WebCore)/inspector/protocol/ApplicationCache.json \
-    $(WebCore)/inspector/protocol/CSS.json \
-    $(WebCore)/inspector/protocol/Canvas.json \
-    $(WebCore)/inspector/protocol/Console.json \
-    $(WebCore)/inspector/protocol/DOM.json \
-    $(WebCore)/inspector/protocol/DOMDebugger.json \
-    $(WebCore)/inspector/protocol/DOMStorage.json \
-    $(WebCore)/inspector/protocol/Database.json \
-    $(WebCore)/inspector/protocol/Debugger.json \
-    $(WebCore)/inspector/protocol/FileSystem.json \
-    $(WebCore)/inspector/protocol/HeapProfiler.json \
-    $(WebCore)/inspector/protocol/IndexedDB.json \
-    $(WebCore)/inspector/protocol/Input.json \
-    $(WebCore)/inspector/protocol/InspectorDomain.json \
-    $(WebCore)/inspector/protocol/LayerTree.json \
-    $(WebCore)/inspector/protocol/Memory.json \
-    $(WebCore)/inspector/protocol/Network.json \
-    $(WebCore)/inspector/protocol/Page.json \
-    $(WebCore)/inspector/protocol/Profiler.json \
-	$(WebCore)/inspector/protocol/Replay.json \
-    $(WebCore)/inspector/protocol/Runtime.json \
-    $(WebCore)/inspector/protocol/Timeline.json \
-    $(WebCore)/inspector/protocol/Worker.json
 #
 
 .PHONY : all
@@ -1093,17 +1069,43 @@ JS%.h : %.idl $(JS_BINDINGS_SCRIPTS) $(IDL_ATTRIBUTES_FILE) $(WINDOW_CONSTRUCTOR
 
 # Inspector interfaces generator
 
-all : Inspector.json
+INSPECTOR_DOMAINS = \
+    $(WebCore)/inspector/protocol/ApplicationCache.json \
+    $(WebCore)/inspector/protocol/CSS.json \
+    $(WebCore)/inspector/protocol/Canvas.json \
+    $(WebCore)/inspector/protocol/Console.json \
+    $(WebCore)/inspector/protocol/DOM.json \
+    $(WebCore)/inspector/protocol/DOMDebugger.json \
+    $(WebCore)/inspector/protocol/DOMStorage.json \
+    $(WebCore)/inspector/protocol/Database.json \
+    $(WebCore)/inspector/protocol/FileSystem.json \
+    $(WebCore)/inspector/protocol/HeapProfiler.json \
+    $(WebCore)/inspector/protocol/IndexedDB.json \
+    $(WebCore)/inspector/protocol/Input.json \
+    $(WebCore)/inspector/protocol/LayerTree.json \
+    $(WebCore)/inspector/protocol/Memory.json \
+    $(WebCore)/inspector/protocol/Network.json \
+    $(WebCore)/inspector/protocol/Page.json \
+    $(WebCore)/inspector/protocol/Profiler.json \
+    $(WebCore)/inspector/protocol/Replay.json \
+    $(WebCore)/inspector/protocol/Timeline.json \
+    $(WebCore)/inspector/protocol/Worker.json \
+#
 
-Inspector.json : inspector/Scripts/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS)
-	python $(WebCore)/inspector/Scripts/generate-combined-inspector-json.py "$(WebCore)/inspector/protocol" > ./Inspector.json
+INSPECTOR_GENERATOR_SCRIPTS = \
+	$(InspectorScripts)/CodeGeneratorInspector.py \
+	$(InspectorScripts)/CodeGeneratorInspectorStrings.py \
+#
 
-all : InspectorFrontend.h
+all : InspectorWeb.json
 
-INSPECTOR_GENERATOR_SCRIPTS = inspector/CodeGeneratorInspector.py inspector/CodeGeneratorInspectorStrings.py
+InspectorWeb.json : $(InspectorScripts)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS)
+	python $(InspectorScripts)/generate-combined-inspector-json.py $(WebCore)/inspector/protocol > ./InspectorWeb.json
 
-InspectorFrontend.h : Inspector.json $(INSPECTOR_GENERATOR_SCRIPTS)
-	python $(WebCore)/inspector/CodeGeneratorInspector.py ./Inspector.json --output_h_dir . --output_cpp_dir . --output_js_dir .
+all : InspectorWebFrontendDispatchers.h
+
+InspectorWebFrontendDispatchers.h : InspectorWeb.json $(InspectorScripts)/InspectorJS.json $(INSPECTOR_GENERATOR_SCRIPTS)
+	python $(InspectorScripts)/CodeGeneratorInspector.py ./InspectorWeb.json $(InspectorScripts)/InspectorJS.json --output_h_dir . --output_cpp_dir . --output_js_dir . --output_type Web
 
 all : InspectorOverlayPage.h
 
@@ -1118,6 +1120,13 @@ InjectedScriptSource.h : InjectedScriptSource.js
 	python "$(WebCore)/inspector/Scripts/jsmin.py" <"$(WebCore)/inspector/InjectedScriptSource.js" > ./InjectedScriptSource.min.js
 	perl "$(WebCore)/inspector/xxd.pl" InjectedScriptSource_js ./InjectedScriptSource.min.js InjectedScriptSource.h
 	rm -f ./InjectedScriptSource.min.js
+
+all : CommandLineAPIModuleSource.h
+
+CommandLineAPIModuleSource.h : CommandLineAPIModuleSource.js
+	python "$(WebCore)/inspector/Scripts/jsmin.py" <"$(WebCore)/inspector/CommandLineAPIModuleSource.js" > ./CommandLineAPIModuleSource.min.js
+	perl "$(WebCore)/inspector/xxd.pl" CommandLineAPIModuleSource_js ./CommandLineAPIModuleSource.min.js CommandLineAPIModuleSource.h
+	rm -f ./CommandLineAPIModuleSource.min.js
 
 all : InjectedScriptCanvasModuleSource.h
 

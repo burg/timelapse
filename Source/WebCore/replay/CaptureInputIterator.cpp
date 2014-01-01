@@ -64,7 +64,6 @@ CaptureInputIterator::CaptureInputIterator(InputStorage* storage, Page* page)
 , m_page(page)
 , m_previousEventLoopInput(nullptr)
 , m_elapsedTicks(0)
-, m_isActive(true)
 , m_withinInputExtent(false)
 {
     ASSERT(m_page);
@@ -90,7 +89,7 @@ void CaptureInputIterator::incrementExecutionTicks()
 void CaptureInputIterator::storeInput(std::unique_ptr<NondeterministicInput> input)
 {
     ASSERT_ARG(input, input);
-    ASSERT(m_isActive);
+    ASSERT(isActive());
 
     if (input->queue() == NondeterministicInput::EventLoopInputQueue) {
         EventLoopInput* eventLoopInput = static_cast<EventLoopInput*>(input.get());
@@ -115,12 +114,6 @@ NondeterministicInput* CaptureInputIterator::uncheckedLoadInput(Nondeterministic
     // Can't load inputs from capturing iterator.
     ASSERT_NOT_REACHED();
     return nullptr;
-}
-
-void CaptureInputIterator::setIsActive(bool state)
-{
-    ASSERT(m_isActive != state);
-    m_isActive = state;
 }
 
 void CaptureInputIterator::finalizePreviousInput()

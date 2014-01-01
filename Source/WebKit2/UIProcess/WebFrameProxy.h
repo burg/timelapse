@@ -35,14 +35,16 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/text/WTFString.h>
 
-namespace CoreIPC {
+namespace IPC {
     class ArgumentDecoder;
     class Connection;
 }
 
-namespace WebKit {
-
+namespace WebCore {
 class CertificateInfo;
+}
+
+namespace WebKit {
 class WebCertificateInfo;
 class WebFormSubmissionListenerProxy;
 class WebFramePolicyListenerProxy;
@@ -50,7 +52,7 @@ class WebPageProxy;
 
 typedef GenericCallback<WKDataRef> DataCallback;
 
-class WebFrameProxy : public API::TypedObject<API::Object::Type::Frame> {
+class WebFrameProxy : public API::ObjectImpl<API::Object::Type::Frame> {
 public:
     static PassRefPtr<WebFrameProxy> create(WebPageProxy* page, uint64_t frameID)
     {
@@ -95,12 +97,12 @@ public:
 
     void getWebArchive(PassRefPtr<DataCallback>);
     void getMainResourceData(PassRefPtr<DataCallback>);
-    void getResourceData(WebURL*, PassRefPtr<DataCallback>);
+    void getResourceData(API::URL*, PassRefPtr<DataCallback>);
 
     void didStartProvisionalLoad(const String& url);
     void didReceiveServerRedirectForProvisionalLoad(const String& url);
     void didFailProvisionalLoad();
-    void didCommitLoad(const String& contentType, const CertificateInfo&);
+    void didCommitLoad(const String& contentType, const WebCore::CertificateInfo&);
     void didFinishLoad();
     void didFailLoad();
     void didSameDocumentNavigation(const String&); // eg. anchor navigation, session state change.

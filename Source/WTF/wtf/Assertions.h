@@ -36,14 +36,10 @@
    Defining any of the symbols explicitly prevents this from having any effect.
 */
 
-#include <wtf/Platform.h>
-
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stddef.h>
-
-#if !COMPILER(MSVC)
-#include <inttypes.h>
-#endif
+#include <wtf/Platform.h>
 
 #ifdef NDEBUG
 /* Disable ASSERT* macros in release mode. */
@@ -223,13 +219,7 @@ extern "C" {
 #define ASSERT_NOT_REACHED() ((void)0)
 #define NO_RETURN_DUE_TO_ASSERT
 
-#if COMPILER(INTEL) && !OS(WINDOWS) || COMPILER(RVCT)
-template<typename T>
-inline void assertUnused(T& x) { (void)x; }
-#define ASSERT_UNUSED(variable, assertion) (assertUnused(variable))
-#else
 #define ASSERT_UNUSED(variable, assertion) ((void)variable)
-#endif
 
 #ifdef ADDRESS_SANITIZER
 #define ASSERT_WITH_SECURITY_IMPLICATION(assertion) \
@@ -238,8 +228,10 @@ inline void assertUnused(T& x) { (void)x; }
          CRASH_WITH_SECURITY_IMPLICATION()) : \
         (void)0)
 
+#define ASSERT_WITH_SECURITY_IMPLICATION_DISABLED 0
 #else
 #define ASSERT_WITH_SECURITY_IMPLICATION(assertion) ((void)0)
+#define ASSERT_WITH_SECURITY_IMPLICATION_DISABLED 1
 #endif
 
 #else
@@ -278,6 +270,7 @@ inline void assertUnused(T& x) { (void)x; }
         (WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion), \
          CRASH_WITH_SECURITY_IMPLICATION()) : \
         (void)0)
+#define ASSERT_WITH_SECURITY_IMPLICATION_DISABLED 0
 #endif
 
 /* ASSERT_WITH_MESSAGE */
@@ -296,13 +289,7 @@ while (0)
 /* ASSERT_WITH_MESSAGE_UNUSED */
 
 #if ASSERT_MSG_DISABLED
-#if COMPILER(INTEL) && !OS(WINDOWS) || COMPILER(RVCT)
-template<typename T>
-inline void assertWithMessageUnused(T& x) { (void)x; }
-#define ASSERT_WITH_MESSAGE_UNUSED(variable, assertion, ...) (assertWithMessageUnused(variable))
-#else
 #define ASSERT_WITH_MESSAGE_UNUSED(variable, assertion, ...) ((void)variable)
-#endif
 #else
 #define ASSERT_WITH_MESSAGE_UNUSED(variable, assertion, ...) do \
     if (!(assertion)) { \

@@ -28,6 +28,7 @@
 
 #include "CorrectionPanel.h"
 #include "PageClient.h"
+#include "WebFullScreenManagerProxy.h"
 #include <wtf/RetainPtr.h>
 
 @class WKEditorUndoTargetObjC;
@@ -40,14 +41,19 @@ class AlternativeTextUIController;
 namespace WebKit {
 class FindIndicatorWindow;
 
-class PageClientImpl FINAL : public PageClient {
+class PageClientImpl FINAL : public PageClient
+#if ENABLE(FULLSCREEN_API)
+    , public WebFullScreenManagerProxyClient
+#endif
+    {
 public:
-    explicit PageClientImpl(WKView*);
+    explicit PageClientImpl(WKView *);
     virtual ~PageClientImpl();
     
     void viewWillMoveToAnotherWindow();
 
 private:
+    // PageClient
     virtual std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy();
     virtual void setViewNeedsDisplay(const WebCore::IntRect&);
     virtual void displayView();
@@ -60,7 +66,9 @@ private:
     virtual bool isViewVisible();
     virtual bool isWindowVisible();
     virtual bool isViewInWindow();
-    virtual LayerHostingMode viewLayerHostingMode() OVERRIDE;
+#if HAVE(LAYER_HOSTING_IN_WINDOW_SERVER)
+    virtual bool isLayerWindowServerHosted();
+#endif
     virtual ColorSpaceData colorSpace() OVERRIDE;
     virtual void setAcceleratedCompositingRootLayer(CALayer *) OVERRIDE;
 
@@ -107,7 +115,7 @@ private:
     virtual void exitAcceleratedCompositingMode();
     virtual void updateAcceleratedCompositingMode(const LayerTreeContext&);
 
-    virtual void accessibilityWebProcessTokenReceived(const CoreIPC::DataReference&);
+    virtual void accessibilityWebProcessTokenReceived(const IPC::DataReference&);
 
     virtual void pluginFocusOrWindowFocusChanged(uint64_t pluginComplexTextInputIdentifier, bool pluginHasFocusAndWindowHasFocus);
     virtual void setPluginComplexTextInputState(uint64_t pluginComplexTextInputIdentifier, PluginComplexTextInputState);
@@ -134,6 +142,21 @@ private:
     virtual Vector<String> dictationAlternatives(uint64_t dictationContext);
 #endif
 
+    // Auxiliary Client Creation
+#if ENABLE(FULLSCREEN_API)
+    WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() OVERRIDE;
+#endif
+
+#if ENABLE(FULLSCREEN_API)
+    // WebFullScreenManagerProxyClient
+    virtual void closeFullScreenManager() OVERRIDE;
+    virtual bool isFullScreen() OVERRIDE;
+    virtual void enterFullScreen() OVERRIDE;
+    virtual void exitFullScreen() OVERRIDE;
+    virtual void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) OVERRIDE;
+    virtual void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame) OVERRIDE;
+#endif
+
     WKView* m_wkView;
     RetainPtr<WKEditorUndoTargetObjC> m_undoTarget;
 #if USE(AUTOCORRECTION_PANEL)
@@ -141,6 +164,9 @@ private:
 #endif
 #if USE(DICTATION_ALTERNATIVES)
     OwnPtr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;
+#endif
+#if HAVE(LAYER_HOSTING_IN_WINDOW_SERVER)
+    bool m_isLayerWindowServerHosted;
 #endif
 };
 

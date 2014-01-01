@@ -60,6 +60,8 @@ public:
     void setCols(int);
     void setRows(int);
 
+    virtual bool willRespondToMouseClickEvents() OVERRIDE;
+
 private:
     HTMLTextAreaElement(const QualifiedName&, Document&, HTMLFormElement*);
 
@@ -100,7 +102,7 @@ private:
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) OVERRIDE;
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual bool appendFormData(FormDataList&, bool) OVERRIDE;
     virtual void reset() OVERRIDE;
     virtual bool hasCustomFocusLogic() const OVERRIDE;

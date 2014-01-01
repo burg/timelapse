@@ -138,6 +138,7 @@ bool RangeInputType::isSteppable() const
     return true;
 }
 
+#if !PLATFORM(IOS)
 void RangeInputType::handleMouseDownEvent(MouseEvent* event)
 {
     if (element().isDisabledOrReadOnly())
@@ -154,11 +155,14 @@ void RangeInputType::handleMouseDownEvent(MouseEvent* event)
         return;
     thumb.dragFrom(event->absoluteLocation());
 }
+#endif
 
 #if ENABLE(TOUCH_EVENTS)
-#if ENABLE(TOUCH_SLIDER)
 void RangeInputType::handleTouchEvent(TouchEvent* event)
 {
+#if PLATFORM(IOS)
+    typedSliderThumbElement().handleTouchEvent(event);
+#elif ENABLE(TOUCH_SLIDER)
     if (element().isDisabledOrReadOnly())
         return;
 
@@ -172,14 +176,23 @@ void RangeInputType::handleTouchEvent(TouchEvent* event)
         typedSliderThumbElement().setPositionFromPoint(touches->item(0)->absoluteLocation());
         event->setDefaultHandled();
     }
+#endif
 }
 
+#if ENABLE(TOUCH_SLIDER)
 bool RangeInputType::hasTouchEventHandler() const
 {
     return true;
 }
 #endif
+
+#if PLATFORM(IOS)
+void RangeInputType::disabledAttributeChanged()
+{
+    typedSliderThumbElement().disabledAttributeChanged();
+}
 #endif
+#endif // ENABLE(TOUCH_EVENTS)
 
 void RangeInputType::handleKeydownEvent(KeyboardEvent* event)
 {
@@ -276,9 +289,9 @@ HTMLElement* RangeInputType::sliderThumbElement() const
     return &typedSliderThumbElement();
 }
 
-RenderElement* RangeInputType::createRenderer(PassRef<RenderStyle> style) const
+RenderPtr<RenderElement> RangeInputType::createInputRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderSlider(element(), std::move(style));
+    return createRenderer<RenderSlider>(element(), std::move(style));
 }
 
 Decimal RangeInputType::parseToNumber(const String& src, const Decimal& defaultValue) const

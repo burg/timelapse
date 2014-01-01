@@ -174,14 +174,14 @@ String HTMLImageElement::altText() const
     return alt;
 }
 
-RenderElement* HTMLImageElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLImageElement::createElementRenderer(PassRef<RenderStyle> style)
 {
     if (style.get().hasContent())
         return RenderElement::createFor(*this, std::move(style));
 
-    RenderImage* image = new RenderImage(*this, std::move(style));
+    auto image = createRenderer<RenderImage>(*this, std::move(style));
     image->setImageResource(RenderImageResource::create());
-    return image;
+    return std::move(image);
 }
 
 bool HTMLImageElement::canStartSelection() const
@@ -265,7 +265,7 @@ int HTMLImageElement::width(bool ignorePendingStylesheets)
         document().updateLayout();
 
     RenderBox* box = renderBox();
-    return box ? adjustForAbsoluteZoom(box->contentBoxRect().pixelSnappedWidth(), box) : 0;
+    return box ? adjustForAbsoluteZoom(box->contentBoxRect().pixelSnappedWidth(), *box) : 0;
 }
 
 int HTMLImageElement::height(bool ignorePendingStylesheets)
@@ -288,7 +288,7 @@ int HTMLImageElement::height(bool ignorePendingStylesheets)
         document().updateLayout();
 
     RenderBox* box = renderBox();
-    return box ? adjustForAbsoluteZoom(box->contentBoxRect().pixelSnappedHeight(), box) : 0;
+    return box ? adjustForAbsoluteZoom(box->contentBoxRect().pixelSnappedHeight(), *box) : 0;
 }
 
 int HTMLImageElement::naturalWidth() const

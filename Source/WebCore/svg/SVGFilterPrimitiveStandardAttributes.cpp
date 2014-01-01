@@ -142,9 +142,9 @@ void SVGFilterPrimitiveStandardAttributes::setStandardAttributes(FilterEffect* f
         filterEffect->setHasHeight(true);
 }
 
-RenderElement* SVGFilterPrimitiveStandardAttributes::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGFilterPrimitiveStandardAttributes::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderSVGResourceFilterPrimitive(*this, std::move(style));
+    return createRenderer<RenderSVGResourceFilterPrimitive>(*this, std::move(style));
 }
 
 bool SVGFilterPrimitiveStandardAttributes::rendererIsNeeded(const RenderStyle& style)
@@ -165,11 +165,11 @@ void invalidateFilterPrimitiveParent(SVGElement* element)
     if (!parent)
         return;
 
-    RenderObject* renderer = parent->renderer();
+    RenderElement* renderer = parent->renderer();
     if (!renderer || !renderer->isSVGResourceFilterPrimitive())
         return;
 
-    RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer, false);
+    RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer, false);
 }
 
 }

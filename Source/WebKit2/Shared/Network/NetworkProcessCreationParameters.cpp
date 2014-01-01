@@ -36,7 +36,7 @@ NetworkProcessCreationParameters::NetworkProcessCreationParameters()
 {
 }
 
-void NetworkProcessCreationParameters::encode(CoreIPC::ArgumentEncoder& encoder) const
+void NetworkProcessCreationParameters::encode(IPC::ArgumentEncoder& encoder) const
 {
     encoder << privateBrowsingEnabled;
     encoder.encodeEnum(cacheModel);
@@ -54,9 +54,15 @@ void NetworkProcessCreationParameters::encode(CoreIPC::ArgumentEncoder& encoder)
     encoder << httpProxy;
     encoder << httpsProxy;
 #endif
+#if USE(SOUP)
+    encoder << cookiePersistentStoragePath;
+    encoder << cookiePersistentStorageType;
+    encoder.encodeEnum(cookieAcceptPolicy);
+    encoder << ignoreTLSErrors;
+#endif
 }
 
-bool NetworkProcessCreationParameters::decode(CoreIPC::ArgumentDecoder& decoder, NetworkProcessCreationParameters& result)
+bool NetworkProcessCreationParameters::decode(IPC::ArgumentDecoder& decoder, NetworkProcessCreationParameters& result)
 {
     if (!decoder.decode(result.privateBrowsingEnabled))
         return false;
@@ -84,6 +90,17 @@ bool NetworkProcessCreationParameters::decode(CoreIPC::ArgumentDecoder& decoder,
     if (!decoder.decode(result.httpProxy))
         return false;
     if (!decoder.decode(result.httpsProxy))
+        return false;
+#endif
+
+#if USE(SOUP)
+    if (!decoder.decode(result.cookiePersistentStoragePath))
+        return false;
+    if (!decoder.decode(result.cookiePersistentStorageType))
+        return false;
+    if (!decoder.decodeEnum(result.cookieAcceptPolicy))
+        return false;
+    if (!decoder.decode(result.ignoreTLSErrors))
         return false;
 #endif
 

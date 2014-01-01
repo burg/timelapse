@@ -102,7 +102,7 @@ public:
     void remove(Widget*);
     void remove(AXID);
 
-    void detachWrapper(AccessibilityObject*);
+    void detachWrapper(AccessibilityObject*, AccessibilityDetachmentType);
     void attachWrapper(AccessibilityObject*);
     void childrenChanged(Node*);
     void childrenChanged(RenderObject*);
@@ -169,6 +169,7 @@ public:
         AXLiveRegionChanged,
         AXMenuListItemSelected,
         AXMenuListValueChanged,
+        AXMenuClosed,
         AXRowCountChanged,
         AXRowCollapsed,
         AXRowExpanded,
@@ -206,6 +207,8 @@ public:
 
     AXComputedObjectAttributeCache* computedObjectAttributeCache() { return m_computedObjectAttributeCache.get(); }
 
+    Document& document() const { return m_document; }
+    
 protected:
     void postPlatformNotification(AccessibilityObject*, AXNotification);
     void nodeTextChangePlatformNotification(AccessibilityObject*, AXTextChange, unsigned offset, const String&);
@@ -284,7 +287,7 @@ inline void AXObjectCache::textChanged(RenderObject*) { }
 inline void AXObjectCache::textChanged(Node*) { }
 inline void AXObjectCache::textChanged(AccessibilityObject*) { }
 inline void AXObjectCache::updateCacheAfterNodeIsAttached(Node*) { }
-inline void AXObjectCache::detachWrapper(AccessibilityObject*) { }
+inline void AXObjectCache::detachWrapper(AccessibilityObject*, AccessibilityDetachmentType) { }
 inline void AXObjectCache::frameLoadingEventNotification(Frame*, AXLoadingEvent) { }
 inline void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject*, AXLoadingEvent) { }
 inline void AXObjectCache::handleActiveDescendantChanged(Node*) { }

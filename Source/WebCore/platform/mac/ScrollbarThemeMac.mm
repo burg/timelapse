@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ScrollbarThemeMac.h"
 
+#include "BlockExceptions.h"
 #include "ColorMac.h"
 #include "ImageBuffer.h"
 #include "GraphicsLayer.h"
@@ -221,10 +222,12 @@ void ScrollbarThemeMac::preferencesChanged()
 
 int ScrollbarThemeMac::scrollbarThickness(ScrollbarControlSize controlSize)
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
     ScrollbarPainter scrollbarPainter = [NSClassFromString(@"NSScrollerImp") scrollerImpWithStyle:recommendedScrollerStyle() controlSize:controlSize horizontal:NO replacingScrollerImp:nil];
     if (supportsExpandedScrollbars())
         [scrollbarPainter setExpanded:YES];
     return [scrollbarPainter trackBoxWidth];
+    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 bool ScrollbarThemeMac::usesOverlayScrollbars() const
@@ -239,6 +242,7 @@ void ScrollbarThemeMac::usesOverlayScrollbarsChanged()
 
 void ScrollbarThemeMac::updateScrollbarOverlayStyle(ScrollbarThemeClient* scrollbar)
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
     ScrollbarPainter painter = painterForScrollbar(scrollbar);
     switch (scrollbar->scrollbarOverlayStyle()) {
     case ScrollbarOverlayStyleDefault:
@@ -251,6 +255,7 @@ void ScrollbarThemeMac::updateScrollbarOverlayStyle(ScrollbarThemeClient* scroll
         [painter setKnobStyle:NSScrollerKnobStyleLight];
         break;
     }
+    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 double ScrollbarThemeMac::initialAutoscrollTimerDelay()
@@ -420,7 +425,9 @@ IntRect ScrollbarThemeMac::trackRect(ScrollbarThemeClient* scrollbar, bool paint
 
 int ScrollbarThemeMac::minimumThumbLength(ScrollbarThemeClient* scrollbar)
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
     return [scrollbarMap()->get(scrollbar) knobMinLength];
+    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 bool ScrollbarThemeMac::shouldCenterOnThumb(ScrollbarThemeClient*, const PlatformMouseEvent& evt)
@@ -457,26 +464,31 @@ int ScrollbarThemeMac::scrollbarPartToHIPressedState(ScrollbarPart part)
 
 void ScrollbarThemeMac::updateEnabledState(ScrollbarThemeClient* scrollbar)
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
     [scrollbarMap()->get(scrollbar) setEnabled:scrollbar->enabled()];
+    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 void ScrollbarThemeMac::setPaintCharacteristicsForScrollbar(ScrollbarThemeClient* scrollbar)
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
     ScrollbarPainter painter = painterForScrollbar(scrollbar);
 
     float value;
     float overhang;
     ScrollableArea::computeScrollbarValueAndOverhang(scrollbar->currentPos(), scrollbar->totalSize(), scrollbar->visibleSize(), value, overhang);
-    float proportion = (static_cast<CGFloat>(scrollbar->visibleSize()) - overhang) / scrollbar->totalSize();
+    float proportion = scrollbar->totalSize() > 0 ? (static_cast<CGFloat>(scrollbar->visibleSize()) - overhang) / scrollbar->totalSize() : 1;
 
     [painter setEnabled:scrollbar->enabled()];
     [painter setBoundsSize:scrollbar->frameRect().size()];
     [painter setDoubleValue:value];
     [painter setKnobProportion:proportion];
+    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 static void scrollbarPainterPaint(ScrollbarPainter scrollbarPainter, bool enabled)
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
     // Use rectForPart: here; it will take the expansion transition progress into account.
     NSRect trackRect = [scrollbarPainter rectForPart:NSScrollerKnobSlot];
     [scrollbarPainter drawKnobSlotInRect:trackRect highlight:NO];
@@ -485,6 +497,7 @@ static void scrollbarPainterPaint(ScrollbarPainter scrollbarPainter, bool enable
     // call drawKnob.
     if (enabled)
         [scrollbarPainter drawKnob];
+    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 bool ScrollbarThemeMac::paint(ScrollbarThemeClient* scrollbar, GraphicsContext* context, const IntRect& damageRect)
@@ -517,33 +530,52 @@ static RetainPtr<CGColorRef> linenBackgroundColor()
     return adoptCF(CGColorCreateWithPattern(colorSpace.get(), pattern.get(), &alpha));
 }
 
-void ScrollbarThemeMac::setUpOverhangAreasLayerContents(GraphicsLayer* graphicsLayer, const Color& backgroundColor)
+void ScrollbarThemeMac::setUpOverhangAreaBackground(CALayer *layer, const Color& customBackgroundColor)
 {
     static CGColorRef cachedLinenBackgroundColor = linenBackgroundColor().leakRef();
     // We operate on the CALayer directly here, since GraphicsLayer doesn't have the concept
     // of pattern images, and we know that WebCore won't touch this layer.
-    graphicsLayer->platformLayer().backgroundColor = backgroundColor.isValid() ? cachedCGColor(backgroundColor, ColorSpaceDeviceRGB) : cachedLinenBackgroundColor;
+    layer.backgroundColor = customBackgroundColor.isValid() ? cachedCGColor(customBackgroundColor, ColorSpaceDeviceRGB) : cachedLinenBackgroundColor;
+}
+
+void ScrollbarThemeMac::removeOverhangAreaBackground(CALayer *layer)
+{
+    layer.backgroundColor = nil;
+}
+
+void ScrollbarThemeMac::setUpOverhangAreaShadow(CALayer *layer)
+{
+    static const CGFloat shadowOpacity = 0.66;
+    static const CGFloat shadowRadius = 3;
+
+    // We only need to set these shadow properties once.
+    if (!layer.shadowOpacity) {
+        layer.shadowColor = CGColorGetConstantColor(kCGColorBlack);
+        layer.shadowOffset = CGSizeZero;
+        layer.shadowOpacity = shadowOpacity;
+        layer.shadowRadius = shadowRadius;
+    }
+
+    RetainPtr<CGPathRef> shadowPath = adoptCF(CGPathCreateWithRect(layer.bounds, NULL));
+    layer.shadowPath = shadowPath.get();
+}
+
+void ScrollbarThemeMac::removeOverhangAreaShadow(CALayer *layer)
+{
+    layer.shadowPath = nil;
+    layer.shadowOpacity = 0;
+}
+
+void ScrollbarThemeMac::setUpOverhangAreasLayerContents(GraphicsLayer* graphicsLayer, const Color& customBackgroundColor)
+{
+    ScrollbarThemeMac::setUpOverhangAreaBackground(graphicsLayer->platformLayer(), customBackgroundColor);
 }
 
 void ScrollbarThemeMac::setUpContentShadowLayer(GraphicsLayer* graphicsLayer)
 {
     // We operate on the CALayer directly here, since GraphicsLayer doesn't have the concept
     // of shadows, and we know that WebCore won't touch this layer.
-    CALayer *contentShadowLayer = graphicsLayer->platformLayer();
-
-    static const CGFloat shadowOpacity = 0.66;
-    static const CGFloat shadowRadius = 3;
-
-    // We only need to set these shadow properties once.
-    if (!contentShadowLayer.shadowOpacity) {
-        contentShadowLayer.shadowColor = CGColorGetConstantColor(kCGColorBlack);
-        contentShadowLayer.shadowOffset = CGSizeZero;
-        contentShadowLayer.shadowOpacity = shadowOpacity;
-        contentShadowLayer.shadowRadius = shadowRadius;
-    }
-
-    RetainPtr<CGPathRef> shadowPath = adoptCF(CGPathCreateWithRect(CGRectMake(0, 0, graphicsLayer->size().width(), graphicsLayer->size().height()), NULL));
-    contentShadowLayer.shadowPath = shadowPath.get();
+    setUpOverhangAreaShadow(graphicsLayer->platformLayer());
 }
 
 #endif

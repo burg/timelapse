@@ -169,7 +169,6 @@
 #import <WebCore/RuntimeEnabledFeatures.h>
 #import <WebCore/SchemeRegistry.h>
 #import <WebCore/ScriptController.h>
-#import <WebCore/ScriptValue.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/SecurityPolicy.h>
 #import <WebCore/Settings.h>
@@ -185,6 +184,7 @@
 #import <WebKit/DOMExtensions.h>
 #import <WebKit/DOMPrivate.h>
 #import <WebKitSystemInterface.h>
+#import <bindings/ScriptValue.h>
 #import <mach-o/dyld.h>
 #import <objc/objc-auto.h>
 #import <objc/runtime.h>
@@ -399,7 +399,7 @@ static const char webViewIsOpen[] = "At least one WebView is still open.";
     id target; // Non-retained. Don't retain delegates.
     id defaultTarget;
 }
-- (id)initWithTarget:(id)target defaultTarget:(id)defaultTarget;
+- (instancetype)initWithTarget:(id)target defaultTarget:(id)defaultTarget;
 @end
 
 FindOptions coreOptions(WebFindOptions options)
@@ -435,8 +435,6 @@ static PageVisibilityState core(WebPageVisibilityState visibilityState)
         return PageVisibilityStateHidden;
     case WebPageVisibilityStatePrerender:
         return PageVisibilityStatePrerender;
-    case WebPageVisibilityStateUnloaded:
-        return PageVisibilityStateUnloaded;
     }
 
     ASSERT_NOT_REACHED();
@@ -452,8 +450,6 @@ static WebPageVisibilityState kit(PageVisibilityState visibilityState)
         return WebPageVisibilityStateHidden;
     case PageVisibilityStatePrerender:
         return WebPageVisibilityStatePrerender;
-    case PageVisibilityStateUnloaded:
-        return WebPageVisibilityStateUnloaded;
     }
 
     ASSERT_NOT_REACHED();
@@ -594,15 +590,14 @@ static NSString *systemMarketingVersionForUserAgentString()
 
 static NSString *createUserVisibleWebKitVersionString()
 {
-    // If the version is 4 digits long or longer, then the first digit represents
-    // the version of the OS. Our user agent string should not include this first digit,
-    // so strip it off and report the rest as the version. <rdar://problem/4997547>
+    // If the version is longer than 3 digits then the leading digits represent the version of the OS. Our user agent
+    // string should not include the leading digits, so strip them off and report the rest as the version. <rdar://problem/4997547>
     NSString *fullVersion = [[NSBundle bundleForClass:[WebView class]] objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey];
     NSRange nonDigitRange = [fullVersion rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]];
-    if (nonDigitRange.location == NSNotFound && [fullVersion length] >= 4)
-        return [[fullVersion substringFromIndex:1] copy];
-    if (nonDigitRange.location != NSNotFound && nonDigitRange.location >= 4)
-        return [[fullVersion substringFromIndex:1] copy];
+    if (nonDigitRange.location == NSNotFound && fullVersion.length > 3)
+        return [[fullVersion substringFromIndex:fullVersion.length - 3] copy];
+    if (nonDigitRange.location != NSNotFound && nonDigitRange.location > 3)
+        return [[fullVersion substringFromIndex:nonDigitRange.location - 3] copy];
     return [fullVersion copy];
 }
 
@@ -3281,7 +3276,7 @@ static Vector<String> toStringVector(NSArray* patterns)
 
 // Used to send messages to delegates that implement informal protocols.
 
-- (id)initWithTarget:(id)t defaultTarget:(id)dt
+- (instancetype)initWithTarget:(id)t defaultTarget:(id)dt
 {
     self = [super init];
     if (!self)
@@ -3633,12 +3628,12 @@ static bool needsWebViewInitThreadWorkaround()
     return isOldClient && !pthread_main_np();
 }
 
-- (id)initWithFrame:(NSRect)f
+- (instancetype)initWithFrame:(NSRect)f
 {
     return [self initWithFrame:f frameName:nil groupName:nil];
 }
 
-- (id)initWithFrame:(NSRect)f frameName:(NSString *)frameName groupName:(NSString *)groupName
+- (instancetype)initWithFrame:(NSRect)f frameName:(NSString *)frameName groupName:(NSString *)groupName
 {
     if (needsWebViewInitThreadWorkaround())
         return [[self _webkit_invokeOnMainThread] initWithFrame:f frameName:frameName groupName:groupName];
@@ -3647,7 +3642,7 @@ static bool needsWebViewInitThreadWorkaround()
     return [self _initWithFrame:f frameName:frameName groupName:groupName usesDocumentViews:YES];
 }
 
-- (id)initWithCoder:(NSCoder *)decoder
+- (instancetype)initWithCoder:(NSCoder *)decoder
 {
     if (needsWebViewInitThreadWorkaround())
         return [[self _webkit_invokeOnMainThread] initWithCoder:decoder];
@@ -6226,7 +6221,7 @@ static inline uint64_t roundUpToPowerOf2(uint64_t num)
     return s_cacheModel;
 }
 
-+ (WebCacheModel)_didSetCacheModel
++ (BOOL)_didSetCacheModel
 {
     return s_didSetCacheModel;
 }

@@ -64,6 +64,7 @@
 #include <runtime/Operations.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
 
 #if ENABLE(BATTERY_STATUS)
@@ -113,8 +114,7 @@ PassRefPtr<WebContext> WebContext::create(const String& injectedBundlePath)
 
 static Vector<WebContext*>& contexts()
 {
-    DEFINE_STATIC_LOCAL(Vector<WebContext*>, contexts, ());
-
+    static NeverDestroyed<Vector<WebContext*>> contexts;
     return contexts;
 }
 
@@ -122,14 +122,6 @@ const Vector<WebContext*>& WebContext::allContexts()
 {
     return contexts();
 }
-
-#if PLATFORM(IOS)
-WebContext* WebContext::sharedProcessContext()
-{
-    static WKContextRef sharedContextRef = WKContextCreate();
-    return toImpl(sharedContextRef);
-}
-#endif
 
 WebContext::WebContext(const String& injectedBundlePath)
     : m_processModel(ProcessModelSharedSecondaryProcess)
@@ -163,8 +155,8 @@ WebContext::WebContext(const String& injectedBundlePath)
 {
     platformInitialize();
 
-    addMessageReceiver(Messages::WebContext::messageReceiverName(), this);
-    addMessageReceiver(WebContextLegacyMessages::messageReceiverName(), this);
+    addMessageReceiver(Messages::WebContext::messageReceiverName(), *this);
+    addMessageReceiver(WebContextLegacyMessages::messageReceiverName(), *this);
 
     // NOTE: These sub-objects must be initialized after m_messageReceiverMap..
     m_iconDatabase = WebIconDatabase::create(this);
@@ -305,7 +297,7 @@ void WebContext::setMaximumNumberOfProcesses(unsigned maximumNumberOfProcesses)
         m_webProcessCountLimit = maximumNumberOfProcesses;
 }
 
-CoreIPC::Connection* WebContext::networkingProcessConnection()
+IPC::Connection* WebContext::networkingProcessConnection()
 {
     switch (m_processModel) {
     case ProcessModelSharedSecondaryProcess:
@@ -486,7 +478,7 @@ void WebContext::setInvalidMessageCallback(void (*invalidMessageCallback)(WKStri
     s_invalidMessageCallback = invalidMessageCallback;
 }
 
-void WebContext::didReceiveInvalidMessage(const CoreIPC::StringReference& messageReceiverName, const CoreIPC::StringReference& messageName)
+void WebContext::didReceiveInvalidMessage(const IPC::StringReference& messageReceiverName, const IPC::StringReference& messageName)
 {
     if (!s_invalidMessageCallback)
         return;
@@ -496,7 +488,7 @@ void WebContext::didReceiveInvalidMessage(const CoreIPC::StringReference& messag
     messageNameStringBuilder.append(".");
     messageNameStringBuilder.append(messageName.data(), messageName.size());
 
-    s_invalidMessageCallback(toAPI(WebString::create(messageNameStringBuilder.toString()).get()));
+    s_invalidMessageCallback(toAPI(API::String::create(messageNameStringBuilder.toString()).get()));
 }
 
 void WebContext::processDidCachePage(WebProcessProxy* process)
@@ -574,7 +566,7 @@ WebProcessProxy& WebContext::createNewWebProcess()
 
     parameters.fullKeyboardAccessEnabled = WebProcessProxy::fullKeyboardAccessEnabled();
 
-    parameters.defaultRequestTimeoutInterval = WebURLRequest::defaultTimeoutInterval();
+    parameters.defaultRequestTimeoutInterval = API::URLRequest::defaultTimeoutInterval();
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     // FIXME: There should be a generic way for supplements to add to the intialization parameters.
@@ -605,11 +597,11 @@ WebProcessProxy& WebContext::createNewWebProcess()
         for (size_t i = 0; i != m_messagesToInjectedBundlePostedToEmptyContext.size(); ++i) {
             pair<String, RefPtr<API::Object>>& message = m_messagesToInjectedBundlePostedToEmptyContext[i];
 
-            CoreIPC::ArgumentEncoder messageData;
+            IPC::ArgumentEncoder messageData;
 
             messageData.encode(message.first);
             messageData.encode(WebContextUserMessageEncoder(message.second.get(), *process));
-            process->send(Messages::WebProcess::PostInjectedBundleMessage(CoreIPC::DataReference(messageData.buffer(), messageData.bufferSize())), 0);
+            process->send(Messages::WebProcess::PostInjectedBundleMessage(IPC::DataReference(messageData.buffer(), messageData.bufferSize())), 0);
         }
         m_messagesToInjectedBundlePostedToEmptyContext.clear();
     } else
@@ -786,11 +778,11 @@ void WebContext::postMessageToInjectedBundle(const String& messageName, API::Obj
 
     for (auto process : m_processes) {
         // FIXME: Return early if the message body contains any references to WKPageRefs/WKFrameRefs etc. since they're local to a process.
-        CoreIPC::ArgumentEncoder messageData;
+        IPC::ArgumentEncoder messageData;
         messageData.encode(messageName);
         messageData.encode(WebContextUserMessageEncoder(messageBody, *process.get()));
 
-        process->send(Messages::WebProcess::PostInjectedBundleMessage(CoreIPC::DataReference(messageData.buffer(), messageData.bufferSize())), 0);
+        process->send(Messages::WebProcess::PostInjectedBundleMessage(IPC::DataReference(messageData.buffer(), messageData.bufferSize())), 0);
     }
 }
 
@@ -882,6 +874,36 @@ void WebContext::registerURLSchemeAsCORSEnabled(const String& urlScheme)
     sendToAllProcesses(Messages::WebProcess::RegisterURLSchemeAsCORSEnabled(urlScheme));
 }
 
+#if ENABLE(CUSTOM_PROTOCOLS)
+HashSet<String>& WebContext::globalURLSchemesWithCustomProtocolHandlers()
+{
+    static NeverDestroyed<HashSet<String>> set;
+    return set;
+}
+
+void WebContext::registerGlobalURLSchemeAsHavingCustomProtocolHandlers(const String& urlScheme)
+{
+    if (!urlScheme)
+        return;
+
+    String schemeLower = urlScheme.lower();
+    globalURLSchemesWithCustomProtocolHandlers().add(schemeLower);
+    for (auto* context : allContexts())
+        context->registerSchemeForCustomProtocol(schemeLower);
+}
+
+void WebContext::unregisterGlobalURLSchemeAsHavingCustomProtocolHandlers(const String& urlScheme)
+{
+    if (!urlScheme)
+        return;
+
+    String schemeLower = urlScheme.lower();
+    globalURLSchemesWithCustomProtocolHandlers().remove(schemeLower);
+    for (auto* context : allContexts())
+        context->unregisterSchemeForCustomProtocol(schemeLower);
+}
+#endif
+
 void WebContext::setCacheModel(CacheModel cacheModel)
 {
     m_cacheModel = cacheModel;
@@ -919,32 +941,32 @@ DownloadProxy* WebContext::createDownloadProxy()
     return ensureSharedWebProcess().createDownloadProxy();
 }
 
-void WebContext::addMessageReceiver(CoreIPC::StringReference messageReceiverName, CoreIPC::MessageReceiver* messageReceiver)
+void WebContext::addMessageReceiver(IPC::StringReference messageReceiverName, IPC::MessageReceiver& messageReceiver)
 {
     m_messageReceiverMap.addMessageReceiver(messageReceiverName, messageReceiver);
 }
 
-void WebContext::addMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID, CoreIPC::MessageReceiver* messageReceiver)
+void WebContext::addMessageReceiver(IPC::StringReference messageReceiverName, uint64_t destinationID, IPC::MessageReceiver& messageReceiver)
 {
     m_messageReceiverMap.addMessageReceiver(messageReceiverName, destinationID, messageReceiver);
 }
 
-void WebContext::removeMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID)
+void WebContext::removeMessageReceiver(IPC::StringReference messageReceiverName, uint64_t destinationID)
 {
     m_messageReceiverMap.removeMessageReceiver(messageReceiverName, destinationID);
 }
 
-bool WebContext::dispatchMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
+bool WebContext::dispatchMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder)
 {
     return m_messageReceiverMap.dispatchMessage(connection, decoder);
 }
 
-bool WebContext::dispatchSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
+bool WebContext::dispatchSyncMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder, std::unique_ptr<IPC::MessageEncoder>& replyEncoder)
 {
     return m_messageReceiverMap.dispatchSyncMessage(connection, decoder, replyEncoder);
 }
 
-void WebContext::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
+void WebContext::didReceiveMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder)
 {
     if (decoder.messageReceiverName() == Messages::WebContext::messageReceiverName()) {
         didReceiveWebContextMessage(connection, decoder);
@@ -968,7 +990,7 @@ void WebContext::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
     ASSERT_NOT_REACHED();
 }
 
-void WebContext::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
+void WebContext::didReceiveSyncMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder, std::unique_ptr<IPC::MessageEncoder>& replyEncoder)
 {
     if (decoder.messageReceiverName() == Messages::WebContext::messageReceiverName()) {
         didReceiveSyncWebContextMessage(connection, decoder, replyEncoder);
@@ -1119,14 +1141,14 @@ void WebContext::allowSpecificHTTPSCertificateForHost(const WebCertificateInfo* 
         m_networkProcess->send(Messages::NetworkProcess::AllowSpecificHTTPSCertificateForHost(certificate->certificateInfo(), host), 0);
         return;
     }
-#else
+#endif
+
 #if USE(SOUP)
     m_processes[0]->send(Messages::WebProcess::AllowSpecificHTTPSCertificateForHost(certificate->certificateInfo(), host), 0);
     return;
 #else
     UNUSED_PARAM(certificate);
     UNUSED_PARAM(host);
-#endif
 #endif
 
 #if !PLATFORM(IOS)
@@ -1258,6 +1280,11 @@ void WebContext::setPlugInAutoStartOrigins(API::Array& array)
     m_plugInAutoStartProvider.setAutoStartOriginsArray(array);
 }
 
+void WebContext::setPlugInAutoStartOriginsFilteringOutEntriesAddedAfterTime(ImmutableDictionary& dictionary, double time)
+{
+    m_plugInAutoStartProvider.setAutoStartOriginsFilteringOutEntriesAddedAfterTime(dictionary, time);
+}
+
 #if ENABLE(CUSTOM_PROTOCOLS)
 void WebContext::registerSchemeForCustomProtocol(const String& scheme)
 {
@@ -1285,23 +1312,23 @@ void WebContext::pluginInfoStoreDidLoadPlugins(PluginInfoStore* store)
 
     for (const auto& pluginModule : pluginModules) {
         ImmutableDictionary::MapType map;
-        map.set(ASCIILiteral("path"), WebString::create(pluginModule.path));
-        map.set(ASCIILiteral("name"), WebString::create(pluginModule.info.name));
-        map.set(ASCIILiteral("file"), WebString::create(pluginModule.info.file));
-        map.set(ASCIILiteral("desc"), WebString::create(pluginModule.info.desc));
+        map.set(ASCIILiteral("path"), API::String::create(pluginModule.path));
+        map.set(ASCIILiteral("name"), API::String::create(pluginModule.info.name));
+        map.set(ASCIILiteral("file"), API::String::create(pluginModule.info.file));
+        map.set(ASCIILiteral("desc"), API::String::create(pluginModule.info.desc));
 
         Vector<RefPtr<API::Object>> mimeTypes;
         mimeTypes.reserveInitialCapacity(pluginModule.info.mimes.size());
         for (const auto& mimeClassInfo : pluginModule.info.mimes)
-            mimeTypes.uncheckedAppend(WebString::create(mimeClassInfo.type));
+            mimeTypes.uncheckedAppend(API::String::create(mimeClassInfo.type));
         map.set(ASCIILiteral("mimes"), API::Array::create(std::move(mimeTypes)));
 
 #if PLATFORM(MAC)
-        map.set(ASCIILiteral("bundleId"), WebString::create(pluginModule.bundleIdentifier));
-        map.set(ASCIILiteral("version"), WebString::create(pluginModule.versionString));
+        map.set(ASCIILiteral("bundleId"), API::String::create(pluginModule.bundleIdentifier));
+        map.set(ASCIILiteral("version"), API::String::create(pluginModule.versionString));
 #endif
 
-        plugins.uncheckedAppend(ImmutableDictionary::adopt(map));
+        plugins.uncheckedAppend(ImmutableDictionary::create(std::move(map)));
     }
 
     m_client.plugInInformationBecameAvailable(this, API::Array::create(std::move(plugins)).get());

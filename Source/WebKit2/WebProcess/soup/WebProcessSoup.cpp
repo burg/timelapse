@@ -90,10 +90,18 @@ void WebProcess::platformSetCacheModel(CacheModel cacheModel)
     unsigned long urlCacheMemoryCapacity = 0;
     unsigned long urlCacheDiskCapacity = 0;
 
-    SoupSession* session = WebCore::ResourceHandle::defaultSession();
-    SoupCache* cache = SOUP_CACHE(soup_session_get_feature(session, SOUP_TYPE_CACHE));
-    uint64_t diskFreeSize = getCacheDiskFreeSize(cache) / 1024 / 1024;
+    uint64_t diskFreeSize = 0;
+    SoupCache* cache = nullptr;
 
+#if ENABLE(NETWORK_PROCESS)
+    if (!m_usesNetworkProcess) {
+#endif
+        SoupSession* session = WebCore::ResourceHandle::defaultSession();
+        cache = SOUP_CACHE(soup_session_get_feature(session, SOUP_TYPE_CACHE));
+        diskFreeSize = getCacheDiskFreeSize(cache) / 1024 / 1024;
+#if ENABLE(NETWORK_PROCESS)
+    }
+#endif
     uint64_t memSize = getMemorySize();
     calculateCacheSizes(cacheModel, memSize, diskFreeSize,
                         cacheTotalCapacity, cacheMinDeadCapacity, cacheMaxDeadCapacity, deadDecodedDataDeletionInterval,
@@ -103,6 +111,14 @@ void WebProcess::platformSetCacheModel(CacheModel cacheModel)
     WebCore::memoryCache()->setDeadDecodedDataDeletionInterval(deadDecodedDataDeletionInterval);
     WebCore::pageCache()->setCapacity(pageCacheCapacity);
 
+#if ENABLE(NETWORK_PROCESS)
+    if (!m_usesNetworkProcess) {
+#endif
+        if (urlCacheDiskCapacity > soup_cache_get_max_size(cache))
+            soup_cache_set_max_size(cache, urlCacheDiskCapacity);
+#if ENABLE(NETWORK_PROCESS)
+    }
+#endif
     if (urlCacheDiskCapacity > soup_cache_get_max_size(cache))
         soup_cache_set_max_size(cache, urlCacheDiskCapacity);
 }
@@ -112,6 +128,11 @@ void WebProcess::platformClearResourceCaches(ResourceCachesToClear cachesToClear
     if (cachesToClear == InMemoryResourceCachesOnly)
         return;
 
+    // If we're using the network process then it is the only one that needs to clear the disk cache.
+#if ENABLE(NETWORK_PROCESS)
+    if (m_usesNetworkProcess)
+        return;
+#endif
     SoupSession* session = WebCore::ResourceHandle::defaultSession();
     soup_cache_clear(SOUP_CACHE(soup_session_get_feature(session, SOUP_TYPE_CACHE)));
 }
@@ -166,7 +187,7 @@ static void languageChanged(void*)
     setSoupSessionAcceptLanguage(WebCore::userPreferredLanguages());
 }
 
-void WebProcess::platformInitializeWebProcess(const WebProcessCreationParameters& parameters, CoreIPC::MessageDecoder&)
+void WebProcess::platformInitializeWebProcess(const WebProcessCreationParameters& parameters, IPC::MessageDecoder&)
 {
 #if ENABLE(SECCOMP_FILTERS)
     {
@@ -177,22 +198,27 @@ void WebProcess::platformInitializeWebProcess(const WebProcessCreationParameters
     }
 #endif
 
-    ASSERT(!parameters.diskCacheDirectory.isEmpty());
-    GRefPtr<SoupCache> soupCache = adoptGRef(soup_cache_new(parameters.diskCacheDirectory.utf8().data(), SOUP_CACHE_SINGLE_USER));
-    soup_session_add_feature(WebCore::ResourceHandle::defaultSession(), SOUP_SESSION_FEATURE(soupCache.get()));
-    soup_cache_load(soupCache.get());
+#if ENABLE(NETWORK_PROCESS)
+    if (!m_usesNetworkProcess) {
+#endif
+        ASSERT(!parameters.diskCacheDirectory.isEmpty());
+        GRefPtr<SoupCache> soupCache = adoptGRef(soup_cache_new(parameters.diskCacheDirectory.utf8().data(), SOUP_CACHE_SINGLE_USER));
+        soup_session_add_feature(WebCore::ResourceHandle::defaultSession(), SOUP_SESSION_FEATURE(soupCache.get()));
+        soup_cache_load(soupCache.get());
 
+        if (!parameters.cookiePersistentStoragePath.isEmpty()) {
+            supplement<WebCookieManager>()->setCookiePersistentStorage(parameters.cookiePersistentStoragePath,
+                parameters.cookiePersistentStorageType);
+        }
+        supplement<WebCookieManager>()->setHTTPCookieAcceptPolicy(parameters.cookieAcceptPolicy);
+#if ENABLE(NETWORK_PROCESS)
+    }
+#endif
     if (!parameters.languages.isEmpty())
         setSoupSessionAcceptLanguage(parameters.languages);
 
     for (size_t i = 0; i < parameters.urlSchemesRegistered.size(); i++)
         supplement<WebSoupRequestManager>()->registerURIScheme(parameters.urlSchemesRegistered[i]);
-
-    if (!parameters.cookiePersistentStoragePath.isEmpty()) {
-        supplement<WebCookieManager>()->setCookiePersistentStorage(parameters.cookiePersistentStoragePath,
-            parameters.cookiePersistentStorageType);
-    }
-    supplement<WebCookieManager>()->setHTTPCookieAcceptPolicy(parameters.cookieAcceptPolicy);
 
     setIgnoreTLSErrors(parameters.ignoreTLSErrors);
 
@@ -209,10 +235,9 @@ void WebProcess::setIgnoreTLSErrors(bool ignoreTLSErrors)
     WebCore::ResourceHandle::setIgnoreSSLErrors(ignoreTLSErrors);
 }
 
-#if !ENABLE(NETWORK_PROCESS)
-void WebProcess::allowSpecificHTTPSCertificateForHost(const CertificateInfo& certificateInfo, const String& host)
+void WebProcess::allowSpecificHTTPSCertificateForHost(const WebCore::CertificateInfo& certificateInfo, const String& host)
 {
     WebCore::ResourceHandle::setClientCertificate(host, certificateInfo.certificate());
 }
-#endif
+
 } // namespace WebKit

@@ -49,6 +49,7 @@
 #import "TextChecker.h"
 #import "TextCheckerState.h"
 #import "TiledCoreAnimationDrawingAreaProxy.h"
+#import "ViewGestureController.h"
 #import "WKAPICast.h"
 #import "WKFullScreenWindowController.h"
 #import "WKPrintingView.h"
@@ -58,7 +59,6 @@
 #import "WKViewPrivate.h"
 #import "WebContext.h"
 #import "WebEventFactory.h"
-#import "WebFullScreenManagerProxy.h"
 #import "WebKit2Initialize.h"
 #import "WebPage.h"
 #import "WebPageGroup.h"
@@ -75,6 +75,7 @@
 #import <WebCore/FloatRect.h>
 #import <WebCore/Image.h>
 #import <WebCore/IntRect.h>
+#import <WebCore/FileSystem.h>
 #import <WebCore/KeyboardEvent.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/PlatformEventFactoryMac.h>
@@ -82,10 +83,9 @@
 #import <WebCore/Region.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/TextAlternativeWithRange.h>
-#import <WebCore/WebCoreNSStringExtras.h>
 #import <WebCore/WebCoreFullScreenPlaceholderView.h>
 #import <WebCore/WebCoreFullScreenWindow.h>
-#import <WebCore/FileSystem.h>
+#import <WebCore/WebCoreNSStringExtras.h>
 #import <WebKitSystemInterface.h>
 #import <sys/stat.h>
 #import <wtf/RefPtr.h>
@@ -96,16 +96,6 @@
 #import "WKBrowsingContextControllerInternal.h"
 #import "WKBrowsingContextGroupPrivate.h"
 #import "WKProcessGroupPrivate.h"
-
-inline bool isWKContentAnchorRight(WKContentAnchor x)
-{
-    return x == WKContentAnchorTopRight || x == WKContentAnchorBottomRight;
-}
-
-inline bool isWKContentAnchorBottom(WKContentAnchor x)
-{
-    return x == WKContentAnchorBottomLeft || x == WKContentAnchorBottomRight;
-}
 
 @interface NSApplication (WKNSApplicationDetails)
 - (void)speakString:(NSString *)string;
@@ -219,19 +209,15 @@ struct WKViewInterpretKeyEventsParameters {
     RefPtr<WebCore::Image> _promisedImage;
     String _promisedFilename;
     String _promisedURL;
-
-    // The frame origin can be seen as a position within the layer of painted page content where the
-    // top left corner of the frame will be positioned. This is usually 0,0 - but if the content
-    // anchor is set to a corner other than the top left, the origin will implicitly move as the
-    // the frame size is modified.
-    NSPoint _frameOrigin;
-    WKContentAnchor _contentAnchor;
     
     NSSize _intrinsicContentSize;
     BOOL _clipsToVisibleRect;
     NSRect _contentPreparationRect;
     BOOL _useContentPreparationRectForVisibleRect;
     BOOL _windowOcclusionDetectionEnabled;
+
+    std::unique_ptr<ViewGestureController> _gestureController;
+    BOOL _allowsMagnification;
 }
 
 @end
@@ -412,35 +398,9 @@ struct WKViewInterpretKeyEventsParameters {
     if (!NSEqualSizes(size, [self frame].size))
         _data->_windowHasValidBackingStore = NO;
 
-    bool frameSizeUpdatesEnabled = ![self frameSizeUpdatesDisabled];
-    NSPoint newFrameOrigin;
-
-    // If frame updates are enabled we'll synchronously wait on the repaint, so we can reposition
-    // the layers back to the origin. If frame updates are disabled then shift the layer position
-    // so that the currently painted contents remain anchored appropriately.
-    if (frameSizeUpdatesEnabled)
-        newFrameOrigin = NSZeroPoint;
-    else {
-        newFrameOrigin = _data->_frameOrigin;
-        if (isWKContentAnchorRight(_data->_contentAnchor))
-            newFrameOrigin.x += [self frame].size.width - size.width;
-        if (isWKContentAnchorBottom(_data->_contentAnchor))
-            newFrameOrigin.y += [self frame].size.height - size.height;
-    }
-    
-    // If the frame origin has changed then update the layer position.
-    if (_data->_layerHostingView && !NSEqualPoints(_data->_frameOrigin, newFrameOrigin)) {
-        _data->_frameOrigin = newFrameOrigin;
-        CALayer *rootLayer = [[_data->_layerHostingView layer].sublayers objectAtIndex:0];
-        [CATransaction begin];
-        [CATransaction setDisableActions:YES];
-        rootLayer.position = CGPointMake(-newFrameOrigin.x, -newFrameOrigin.y);
-        [CATransaction commit];
-    }
-
     [super setFrameSize:size];
 
-    if (frameSizeUpdatesEnabled) {
+    if (![self frameSizeUpdatesDisabled]) {
         if (_data->_clipsToVisibleRect)
             [self _updateViewExposedRect];
         [self _setDrawingAreaSize:size];
@@ -2084,8 +2044,8 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     // Initialize remote accessibility when the window connection has been established.
     NSData *remoteElementToken = WKAXRemoteTokenForElement(self);
     NSData *remoteWindowToken = WKAXRemoteTokenForElement([self window]);
-    CoreIPC::DataReference elementToken = CoreIPC::DataReference(reinterpret_cast<const uint8_t*>([remoteElementToken bytes]), [remoteElementToken length]);
-    CoreIPC::DataReference windowToken = CoreIPC::DataReference(reinterpret_cast<const uint8_t*>([remoteWindowToken bytes]), [remoteWindowToken length]);
+    IPC::DataReference elementToken = IPC::DataReference(reinterpret_cast<const uint8_t*>([remoteElementToken bytes]), [remoteElementToken length]);
+    IPC::DataReference windowToken = IPC::DataReference(reinterpret_cast<const uint8_t*>([remoteWindowToken bytes]), [remoteWindowToken length]);
     _data->_page->registerUIProcessAccessibilityTokens(elementToken, windowToken);
 }
 
@@ -2198,13 +2158,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     if (!_data->_page->drawingArea())
         return;
     
-    NSSize layerOffset = NSMakeSize(_data->_frameOrigin.x, _data->_frameOrigin.y);
-    if (isWKContentAnchorRight(_data->_contentAnchor))
-        layerOffset.width += [self frame].size.width - size.width;
-    if (isWKContentAnchorBottom(_data->_contentAnchor))
-        layerOffset.height += [self frame].size.height - size.height;
-
-    _data->_page->drawingArea()->setSize(IntSize(size), IntSize(layerOffset), IntSize(_data->_resizeScrollOffset));
+    _data->_page->drawingArea()->setSize(IntSize(size), IntSize(0, 0), IntSize(_data->_resizeScrollOffset));
     _data->_resizeScrollOffset = NSZeroSize;
 }
 
@@ -2513,7 +2467,6 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     _data->_findIndicatorWindow->setFindIndicator(findIndicator, fadeOut, animate);
 }
 
-
 - (void)_setAcceleratedCompositingModeRootLayer:(CALayer *)rootLayer
 {
     [CATransaction begin];
@@ -2546,7 +2499,6 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
             [_data->_layerHostingView setWantsLayer:NO];
 
             _data->_layerHostingView = nullptr;
-            _data->_frameOrigin = NSZeroPoint;
         }
     }
 
@@ -2782,12 +2734,12 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 }
 
 #if ENABLE(FULLSCREEN_API)
-- (BOOL)hasFullScreenWindowController
+- (BOOL)_hasFullScreenWindowController
 {
     return (bool)_data->_fullScreenWindowController;
 }
 
-- (WKFullScreenWindowController*)fullScreenWindowController
+- (WKFullScreenWindowController *)_fullScreenWindowController
 {
     if (!_data->_fullScreenWindowController)
         _data->_fullScreenWindowController = adoptNS([[WKFullScreenWindowController alloc] initWithWindow:[self createFullScreenWindow] webView:self]);
@@ -2795,11 +2747,12 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     return _data->_fullScreenWindowController.get();
 }
 
-- (void)closeFullScreenWindowController
+- (void)_closeFullScreenWindowController
 {
     if (!_data->_fullScreenWindowController)
         return;
-    [_data->_fullScreenWindowController.get() close];
+
+    [_data->_fullScreenWindowController close];
     _data->_fullScreenWindowController = nullptr;
 }
 #endif
@@ -2911,9 +2864,7 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_page = toImpl(contextRef)->createWebPage(*_data->_pageClient, toImpl(pageGroupRef), toImpl(relatedPage));
     _data->_page->setIntrinsicDeviceScaleFactor([self _intrinsicDeviceScaleFactor]);
     _data->_page->initializeWebPage();
-#if ENABLE(FULLSCREEN_API)
-    _data->_page->fullScreenManager()->setWebView(self);
-#endif
+
     _data->_mouseDownEvent = nil;
     _data->_ignoringMouseDraggedEvents = NO;
     _data->_clipsToVisibleRect = NO;
@@ -2923,8 +2874,6 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_intrinsicContentSize = NSMakeSize(NSViewNoInstrinsicMetric, NSViewNoInstrinsicMetric);
 
     _data->_needsViewFrameInWindowCoordinates = _data->_page->pageGroup().preferences()->pluginsEnabled();
-    _data->_frameOrigin = NSZeroPoint;
-    _data->_contentAnchor = WKContentAnchorTopLeft;
     
     [self _registerDraggedTypes];
 
@@ -3122,13 +3071,27 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_page->setUnderlayColor(colorFromNSColor(underlayColor));
 }
 
-- (NSView*)fullScreenPlaceholderView
+- (NSView *)fullScreenPlaceholderView
 {
 #if ENABLE(FULLSCREEN_API)
     if (_data->_fullScreenWindowController && [_data->_fullScreenWindowController isFullScreen])
         return [_data->_fullScreenWindowController webViewPlaceholder];
 #endif
     return nil;
+}
+
+- (NSWindow *)createFullScreenWindow
+{
+#if ENABLE(FULLSCREEN_API)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080
+    NSRect contentRect = NSZeroRect;
+#else
+    NSRect contentRect = [[NSScreen mainScreen] frame];
+#endif
+    return [[[WebCoreFullScreenWindow alloc] initWithContentRect:contentRect styleMask:(NSBorderlessWindowMask | NSResizableWindowMask) backing:NSBackingStoreBuffered defer:NO] autorelease];
+#else
+    return nil;
+#endif
 }
 
 - (void)beginDeferringViewInWindowChanges
@@ -3192,16 +3155,6 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_windowOcclusionDetectionEnabled = flag;
 }
 
-- (void)setContentAnchor:(WKContentAnchor)contentAnchor
-{
-    _data->_contentAnchor = contentAnchor;
-}
-
-- (WKContentAnchor)contentAnchor
-{
-    return _data->_contentAnchor;
-}
-
 // This method forces a drawing area geometry update, even if frame size updates are disabled.
 // The updated is performed asynchronously; we don't wait for the geometry update before returning.
 // The area drawn need not match the current frame size - if it differs it will be anchored to the
@@ -3216,32 +3169,18 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     // pending did-update message now, such that the new update can be sent. We do so after setting
     // the drawing area size such that the latest update is sent.
     if (DrawingAreaProxy* drawingArea = _data->_page->drawingArea())
-        drawingArea->waitForPossibleGeometryUpdate(0);
+        drawingArea->waitForPossibleGeometryUpdate(std::chrono::milliseconds::zero());
 }
 
 - (void)waitForAsyncDrawingAreaSizeUpdate
 {
     if (DrawingAreaProxy* drawingArea = _data->_page->drawingArea()) {
-        // If a geometry update is still pending then the action of recieving the
+        // If a geometry update is still pending then the action of receiving the
         // first geometry update may result in another update being scheduled -
         // we should wait for this to complete too.
-        drawingArea->waitForPossibleGeometryUpdate(DrawingAreaProxy::didUpdateBackingStoreStateTimeout * 0.5);
-        drawingArea->waitForPossibleGeometryUpdate(DrawingAreaProxy::didUpdateBackingStoreStateTimeout * 0.5);
+        drawingArea->waitForPossibleGeometryUpdate(DrawingAreaProxy::didUpdateBackingStoreStateTimeout() / 2);
+        drawingArea->waitForPossibleGeometryUpdate(DrawingAreaProxy::didUpdateBackingStoreStateTimeout() / 2);
     }
-}
-
-- (NSWindow*)createFullScreenWindow
-{
-#if ENABLE(FULLSCREEN_API)
-#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080
-    NSRect contentRect = NSZeroRect;
-#else
-    NSRect contentRect = [[NSScreen mainScreen] frame];
-#endif
-    return [[[WebCoreFullScreenWindow alloc] initWithContentRect:contentRect styleMask:(NSBorderlessWindowMask | NSResizableWindowMask) backing:NSBackingStoreBuffered defer:NO] autorelease];
-#else
-    return nil;
-#endif
 }
 
 - (BOOL)isUsingUISideCompositing
@@ -3250,6 +3189,77 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
         return drawingArea->type() == DrawingAreaTypeRemoteLayerTree;
 
     return NO;
+}
+
+- (void)_ensureGestureController
+{
+    if (_data->_gestureController)
+        return;
+
+    _data->_gestureController = std::make_unique<ViewGestureController>(*_data->_page);
+}
+
+- (void)setAllowsMagnification:(BOOL)allowsMagnification
+{
+    _data->_allowsMagnification = allowsMagnification;
+}
+
+- (BOOL)allowsMagnification
+{
+    return _data->_allowsMagnification;
+}
+
+- (void)magnifyWithEvent:(NSEvent *)event
+{
+    if (!_data->_allowsMagnification) {
+        [super magnifyWithEvent:event];
+        return;
+    }
+
+    [self _ensureGestureController];
+
+    _data->_gestureController->handleMagnificationGesture(event.magnification, [self convertPoint:event.locationInWindow fromView:nil]);
+}
+
+- (void)smartMagnifyWithEvent:(NSEvent *)event
+{
+    if (!_data->_allowsMagnification) {
+        [super smartMagnifyWithEvent:event];
+        return;
+    }
+
+    [self _ensureGestureController];
+
+    _data->_gestureController->handleSmartMagnificationGesture([self convertPoint:event.locationInWindow fromView:nil]);
+}
+
+-(void)endGestureWithEvent:(NSEvent *)event
+{
+    if (!_data->_gestureController) {
+        [super endGestureWithEvent:event];
+        return;
+    }
+
+    _data->_gestureController->endActiveGesture();
+}
+
+- (void)setMagnification:(double)magnification centeredAtPoint:(NSPoint)point
+{
+    _data->_page->scalePage(magnification, roundedIntPoint(point));
+}
+
+- (void)setMagnification:(double)magnification
+{
+    FloatPoint viewCenter(NSMidX([self bounds]), NSMidY([self bounds]));
+    _data->_page->scalePage(magnification, roundedIntPoint(viewCenter));
+}
+
+- (double)magnification
+{
+    if (_data->_gestureController)
+        return _data->_gestureController->magnification();
+
+    return _data->_page->pageScaleFactor();
 }
 
 @end

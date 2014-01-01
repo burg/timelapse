@@ -100,7 +100,7 @@ void WebPage::platformInitialize()
     
     // send data back over
     NSData* remoteToken = (NSData *)WKAXRemoteTokenForElement(mockAccessibilityElement); 
-    CoreIPC::DataReference dataToken = CoreIPC::DataReference(reinterpret_cast<const uint8_t*>([remoteToken bytes]), [remoteToken length]);
+    IPC::DataReference dataToken = IPC::DataReference(reinterpret_cast<const uint8_t*>([remoteToken bytes]), [remoteToken length]);
     send(Messages::WebPageProxy::RegisterWebProcessAccessibilityToken(dataToken));
     m_mockAccessibilityElement = mockAccessibilityElement;
 }
@@ -282,8 +282,8 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 
 void WebPage::sendComplexTextInputToPlugin(uint64_t pluginComplexTextInputIdentifier, const String& textInput)
 {
-    for (HashSet<PluginView*>::const_iterator it = m_pluginViews.begin(), end = m_pluginViews.end(); it != end; ++it) {
-        if ((*it)->sendComplexTextInput(pluginComplexTextInputIdentifier, textInput))
+    for (auto* pluginView : m_pluginViews) {
+        if (pluginView->sendComplexTextInput(pluginComplexTextInputIdentifier, textInput))
             break;
     }
 }
@@ -689,7 +689,7 @@ bool WebPage::performDefaultBehaviorForKeyEvent(const WebKeyboardEvent&)
     return false;
 }
 
-void WebPage::registerUIProcessAccessibilityTokens(const CoreIPC::DataReference& elementToken, const CoreIPC::DataReference& windowToken)
+void WebPage::registerUIProcessAccessibilityTokens(const IPC::DataReference& elementToken, const IPC::DataReference& windowToken)
 {
     NSData* elementTokenData = [NSData dataWithBytes:elementToken.data() length:elementToken.size()];
     NSData* windowTokenData = [NSData dataWithBytes:windowToken.data() length:windowToken.size()];
@@ -826,14 +826,6 @@ void WebPage::acceptsFirstMouse(int eventNumber, const WebKit::WebMouseEvent& ev
     else
 #endif
         result = !!hitResult.scrollbar();
-}
-
-void WebPage::setLayerHostingMode(LayerHostingMode layerHostingMode)
-{
-    m_layerHostingMode = layerHostingMode;
-
-    for (HashSet<PluginView*>::const_iterator it = m_pluginViews.begin(), end = m_pluginViews.end(); it != end; ++it)
-        (*it)->setLayerHostingMode(layerHostingMode);
 }
 
 void WebPage::setTopOverhangImage(PassRefPtr<WebImage> image)

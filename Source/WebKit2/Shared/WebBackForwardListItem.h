@@ -30,14 +30,14 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/text/WTFString.h>
 
-namespace CoreIPC {
+namespace IPC {
     class ArgumentDecoder;
     class ArgumentEncoder;
 }
 
 namespace WebKit {
 
-class WebBackForwardListItem : public API::TypedObject<API::Object::Type::BackForwardListItem> {
+class WebBackForwardListItem : public API::ObjectImpl<API::Object::Type::BackForwardListItem> {
 public:
     static PassRefPtr<WebBackForwardListItem> create(const String& originalURL, const String& url, const String& title, const uint8_t* backForwardData, size_t backForwardDataSize, uint64_t itemID)
     {
@@ -60,8 +60,8 @@ public:
     void setBackForwardData(const uint8_t* buffer, size_t size);
     const Vector<uint8_t>& backForwardData() const { return m_backForwardData; }
 
-    void encode(CoreIPC::ArgumentEncoder&) const;
-    static PassRefPtr<WebBackForwardListItem> decode(CoreIPC::ArgumentDecoder&);
+    void encode(IPC::ArgumentEncoder&) const;
+    static PassRefPtr<WebBackForwardListItem> decode(IPC::ArgumentDecoder&);
 
     static uint64_t highedUsedItemID();
 

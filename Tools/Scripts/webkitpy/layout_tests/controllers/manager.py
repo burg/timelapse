@@ -54,9 +54,6 @@ from webkitpy.layout_tests.models.test_input import TestInput
 
 _log = logging.getLogger(__name__)
 
-# Builder base URL where we have the archived test results.
-BUILDER_BASE_URL = "http://build.chromium.org/buildbot/layout_test_results/"
-
 TestExpectations = test_expectations.TestExpectations
 
 
@@ -182,6 +179,7 @@ class Manager(object):
 
         self._printer.write_update("Parsing expectations ...")
         self._expectations = test_expectations.TestExpectations(self._port, test_names, force_expectations_pass=self._options.force)
+        self._expectations.parse_all_expectations()
 
         tests_to_run, tests_to_skip = self._prepare_lists(paths, test_names)
         self._printer.print_found(len(test_names), len(tests_to_run), self._options.repeat_each, self._options.iterations)
@@ -355,7 +353,6 @@ class Manager(object):
         generator = json_layout_results_generator.JSONLayoutResultsGenerator(
             self._port, self._options.builder_name, self._options.build_name,
             self._options.build_number, self._results_directory,
-            BUILDER_BASE_URL,
             self._expectations, initial_results,
             self._options.test_results_server,
             "layout-tests",

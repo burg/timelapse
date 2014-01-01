@@ -28,6 +28,7 @@
 
 #include "ShareableBitmap.h"
 #include <WebCore/AuthenticationChallenge.h>
+#include <WebCore/CertificateInfo.h>
 #include <WebCore/Cookie.h>
 #include <WebCore/Credential.h>
 #include <WebCore/Cursor.h>
@@ -69,7 +70,7 @@
 using namespace WebCore;
 using namespace WebKit;
 
-namespace CoreIPC {
+namespace IPC {
 
 void ArgumentCoder<AffineTransform>::encode(ArgumentEncoder& encoder, const AffineTransform& affineTransform)
 {
@@ -91,7 +92,6 @@ bool ArgumentCoder<TransformationMatrix>::decode(ArgumentDecoder& decoder, Trans
 {
     return SimpleArgumentCoder<TransformationMatrix>::decode(decoder, transformationMatrix);
 }
-
 
 void ArgumentCoder<FloatPoint>::encode(ArgumentEncoder& encoder, const FloatPoint& floatPoint)
 {
@@ -1547,4 +1547,4 @@ bool ArgumentCoder<IDBObjectStoreMetadata>::decode(ArgumentDecoder& decoder, IDB
 }
 #endif
 
-} // namespace CoreIPC
+} // namespace IPC

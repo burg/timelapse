@@ -25,26 +25,30 @@
 
 BuildbotQueueView = function(debugQueues, releaseQueues)
 {
-    BaseObject.call(this);
+    QueueView.call(this);
 
     this.releaseQueues = releaseQueues || [];
     this.debugQueues = debugQueues || [];
 
-    this.element = document.createElement("div");
-    this.element.classList.add("queue-view");
-    this.element.__queueView = this;
-
     this.releaseQueues.forEach(function(queue) {
+        if (this.platform && this.platform != queue.platform)
+            throw "A buildbot view may not contain queues for multiple platforms."
+        else
+            this.platform = queue.platform;
         queue.addEventListener(BuildbotQueue.Event.IterationsAdded, this._queueIterationsAdded, this);
     }.bind(this));
 
     this.debugQueues.forEach(function(queue) {
+        if (this.platform && this.platform != queue.platform)
+            throw "A buildbot view may not contain queues for multiple platforms."
+        else
+            this.platform = queue.platform;
         queue.addEventListener(BuildbotQueue.Event.IterationsAdded, this._queueIterationsAdded, this);
     }.bind(this));
 
-    this.lastUpdate = 0;
-    setTimeout(this._updateQueues.bind(this), BuildbotQueueView.UpdateInterval);
-    settings.addSettingListener("hiddenPlatforms", this._updateQueues.bind(this));
+    webkitTrac.addEventListener(Trac.Event.NewCommitsRecorded, this._newCommitsRecorded, this);
+    if (typeof internalTrac != "undefined")
+        internalTrac.addEventListener(Trac.Event.NewCommitsRecorded, this._newCommitsRecorded, this);
 };
 
 BaseObject.addConstructorFunctions(BuildbotQueueView);
@@ -54,66 +58,210 @@ BuildbotQueueView.UpdateSoonTimeout = 1000; // 1 second
 
 BuildbotQueueView.prototype = {
     constructor: BuildbotQueueView,
-    __proto__: BaseObject.prototype,
+    __proto__: QueueView.prototype,
 
-    updateSoon: function()
+    _latestProductiveIteration: function(queue)
     {
-        if (this._updateTimeout)
+        if (!queue.iterations.length)
+            return null;
+        if (queue.iterations[0].productive)
+            return queue.iterations[0];
+        return queue.iterations[0].previousProductiveIteration;
+    },
+
+    _appendPendingRevisionCount: function(queue)
+    {
+        var latestProductiveIteration = this._latestProductiveIteration(queue);
+        if (!latestProductiveIteration)
             return;
-        this._updateTimeout = setTimeout(this.update.bind(this), BuildbotQueueView.UpdateSoonTimeout);
+
+        var latestRecordedOpenSourceRevisionNumber = webkitTrac.latestRecordedRevisionNumber;
+        if (!latestRecordedOpenSourceRevisionNumber)
+            return;
+
+        var openSourceRevisionsBehind = latestRecordedOpenSourceRevisionNumber - latestProductiveIteration.openSourceRevision;
+        if (openSourceRevisionsBehind < 0)
+            openSourceRevisionsBehind = 0;
+
+        if (latestProductiveIteration.internalRevision) {
+            var latestRecordedInternalRevisionNumber = internalTrac.latestRecordedRevisionNumber;
+            if (!latestRecordedInternalRevisionNumber)
+                return;
+
+            var internalRevisionsBehind = latestRecordedInternalRevisionNumber - latestProductiveIteration.internalRevision;
+            if (internalRevisionsBehind < 0)
+                internalRevisionsBehind = 0;
+            if (openSourceRevisionsBehind || internalRevisionsBehind)
+                var messageText = openSourceRevisionsBehind + " \uff0b " + internalRevisionsBehind + " revisions behind";
+        } else if (openSourceRevisionsBehind)
+            var messageText = openSourceRevisionsBehind + " " + (openSourceRevisionsBehind === 1 ? "revision behind" : "revisions behind");
+
+        if (!messageText)
+            return;
+
+        var messageElement = document.createElement("span"); // We can't just pass text to StatusLineView here, because we need an element that perfectly fits the text for popover positioning.
+        messageElement.textContent = messageText;
+        var status = new StatusLineView(messageElement, StatusLineView.Status.NoBubble);
+        this.element.appendChild(status.element);
+
+        new PopoverTracker(messageElement, this._presentPopoverForPendingCommits.bind(this), queue);
     },
 
-    update: function()
+    _popoverLinesForCommitRange: function(trac, firstRevisionNumber, lastRevisionNumber)
     {
-        if (this._updateTimeout) {
-            clearTimeout(this._updateTimeout);
-            delete this._updateTimeout;
-        }
-
-        // Implemented by subclasses.
-    },
-
-    revisionLinksForIteration: function(iteration)
-    {
-        function linkForRevision(revision, internal)
+        function lineForCommit(trac, commit)
         {
+            var result = document.createElement("div");
+            result.className = "pending-commit";
+
             var linkElement = document.createElement("a");
-            linkElement.href = iteration.queue.buildbot.tracRevisionURL(revision, internal);
+            linkElement.className = "revision";
+            linkElement.href = trac.revisionURL(commit.revisionNumber);
             linkElement.target = "_blank";
-            linkElement.textContent = "r";
+            linkElement.textContent = "r" + commit.revisionNumber;
+            result.appendChild(linkElement);
 
-            var revisionLabel = document.createElement("span");
-            revisionLabel.classList.add("selectable");
-            revisionLabel.textContent = revision;
-            linkElement.appendChild(revisionLabel);
+            var authorElement = document.createElement("span");
+            authorElement.className = "author";
+            authorElement.textContent = commit.author;
+            result.appendChild(authorElement);
 
-            return linkElement;
+            var titleElement = document.createElement("span");
+            titleElement.className = "title";
+            titleElement.innerHTML = commit.title.innerHTML;
+            result.appendChild(titleElement);
+
+            return result;
         }
 
+        // This function only adds lines about commits that the trac object knows about.
+        // Alternatively, it could add links without info and/or trigger loading additional
+        // data, but this probably doesn't matter for Dashboard use.
+        var result = [];
+        for (var i = trac.recordedCommits.length - 1; i >= 0; --i) {
+            var commit = trac.recordedCommits[i];
+            if (commit.revisionNumber > lastRevisionNumber)
+                continue;
+
+            if (commit.revisionNumber < firstRevisionNumber)
+                break;
+
+            result.push(lineForCommit(trac, commit));
+        }
+
+        return result;
+    },
+
+    _presentPopoverForPendingCommits: function(element, popover, queue)
+    {
+        var latestProductiveIteration = this._latestProductiveIteration(queue);
+        if (!latestProductiveIteration)
+            return false;
+
+        var content = document.createElement("div");
+        content.className = "commit-history-popover";
+
+        var linesForOpenSource = this._popoverLinesForCommitRange(webkitTrac, latestProductiveIteration.openSourceRevision + 1, webkitTrac.latestRecordedRevisionNumber);
+        for (var i = 0; i != linesForOpenSource.length; ++i)
+            content.appendChild(linesForOpenSource[i]);
+
+        var linesForInternal = [];
+        if (latestProductiveIteration.internalRevision && internalTrac.latestRecordedRevisionNumber)
+            var linesForInternal = this._popoverLinesForCommitRange(internalTrac, latestProductiveIteration.internalRevision + 1, internalTrac.latestRecordedRevisionNumber);
+
+        if (linesForOpenSource.length && linesForInternal.length) {
+            var divider = document.createElement("div");
+            divider.className = "divider";
+            content.appendChild(divider);
+        }
+
+        for (var i = 0; i != linesForInternal.length; ++i)
+            content.appendChild(linesForInternal[i]);
+
+        var rect = Dashboard.Rect.rectFromClientRect(element.getBoundingClientRect());
+        popover.present(rect, content, [Dashboard.RectEdge.MIN_Y, Dashboard.RectEdge.MAX_Y, Dashboard.RectEdge.MAX_X, Dashboard.RectEdge.MIN_X]);
+
+        return true;
+    },
+
+    _presentPopoverForRevisionRange: function(element, popover, context)
+    {
+        var content = document.createElement("div");
+        content.className = "commit-history-popover";
+
+        var linesForCommits = this._popoverLinesForCommitRange(context.trac, context.firstRevision, context.lastRevision);
+        if (!linesForCommits.length)
+            return false;
+
+        for (var i = 0; i != linesForCommits.length; ++i)
+            content.appendChild(linesForCommits[i]);
+
+        var rect = Dashboard.Rect.rectFromClientRect(element.getBoundingClientRect());
+        popover.present(rect, content, [Dashboard.RectEdge.MIN_Y, Dashboard.RectEdge.MAX_Y, Dashboard.RectEdge.MAX_X, Dashboard.RectEdge.MIN_X]);
+
+        return true;
+    },
+
+    _presentNoChangePopover: function(element, popover, context)
+    {
+        var content = document.createElement("div");
+        content.className = "commit-history-popover";
+
+        var line = document.createElement("div");
+        line.className = "no-commits";
+        line.textContent = "no new commits in this buildbot queue iteration";
+        
+        content.appendChild(line);
+
+        var rect = Dashboard.Rect.rectFromClientRect(element.getBoundingClientRect());
+        popover.present(rect, content, [Dashboard.RectEdge.MIN_Y, Dashboard.RectEdge.MAX_Y, Dashboard.RectEdge.MAX_X, Dashboard.RectEdge.MIN_X]);
+
+        return true;
+    },
+
+    _revisionPopoverContentForIteration: function(iteration, internal)
+    {
+        var contentElement = document.createElement("span");
+        contentElement.textContent = "r" + (internal ? iteration.internalRevision : iteration.openSourceRevision);
+        contentElement.classList.add("revision-number");
+
+        var previousIteration = iteration.previousProductiveIteration;
+        if (previousIteration) {
+            var context = {
+                trac: internal ? internalTrac : webkitTrac,
+                firstRevision: (internal ? previousIteration.internalRevision : previousIteration.openSourceRevision) + 1,
+                lastRevision: internal ? iteration.internalRevision : iteration.openSourceRevision
+            };
+            if (context.firstRevision <= context.lastRevision)
+                new PopoverTracker(contentElement, this._presentPopoverForRevisionRange.bind(this), context);
+            else
+                new PopoverTracker(contentElement, this._presentNoChangePopover.bind(this), context);
+        }
+
+        return contentElement;
+    },
+
+    revisionContentForIteration: function(iteration)
+    {
         console.assert(iteration.openSourceRevision);
-        var openSourceLink = linkForRevision(iteration.openSourceRevision, false);
+        var openSourceContent = this._revisionPopoverContentForIteration(iteration);
 
         if (!iteration.internalRevision)
-            return openSourceLink;
+            return openSourceContent;
 
-        var internalLink = linkForRevision(iteration.internalRevision, true);
+        var internalContent = this._revisionPopoverContentForIteration(iteration, true);
 
         var fragment = document.createDocumentFragment();
-        fragment.appendChild(openSourceLink);
+        fragment.appendChild(openSourceContent);
         fragment.appendChild(document.createTextNode(" \uff0b "));
-        fragment.appendChild(internalLink);
+        fragment.appendChild(internalContent);
         return fragment;
     },
 
     _updateQueues: function()
     {
-        var now = Date.now();
-        if (now - this.lastUpdate < BuildbotQueueView.UpdateInterval)
-            return;
         this.releaseQueues.forEach(function(queue) { queue.update(); });
         this.debugQueues.forEach(function(queue) { queue.update(); });
-        this.lastUpdate = now;
-        setTimeout(this._updateQueues.bind(this), BuildbotQueueView.UpdateInterval);
     },
 
     _queueIterationsAdded: function(event)
@@ -126,6 +274,11 @@ BuildbotQueueView.prototype = {
     },
 
     _iterationUpdated: function(event)
+    {
+        this.updateSoon();
+    },
+    
+    _newCommitsRecorded: function(event)
     {
         this.updateSoon();
     }

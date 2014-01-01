@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -30,105 +30,25 @@
 #ifndef InjectedScriptHost_h
 #define InjectedScriptHost_h
 
-#include "ConsoleTypes.h"
-#include "InspectorAgent.h"
 #include "ScriptState.h"
+#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
+
+namespace Deprecated {
+class ScriptValue;
+}
 
 namespace WebCore {
 
-class Database;
-class InjectedScript;
-class InspectorAgent;
-class InspectorConsoleAgent;
-class InspectorDOMAgent;
-class InspectorDOMStorageAgent;
-class InspectorDatabaseAgent;
-class InspectorDebuggerAgent;
-class InspectorObject;
-class InspectorValue;
 class Node;
-class ScriptDebugServer;
-class ScriptObject;
-class ScriptValue;
-class Storage;
-
-struct EventListenerInfo;
 
 class InjectedScriptHost : public RefCounted<InjectedScriptHost> {
 public:
     static PassRefPtr<InjectedScriptHost> create();
-    ~InjectedScriptHost();
-
-    void init(InspectorAgent* inspectorAgent
-            , InspectorConsoleAgent* consoleAgent
-#if ENABLE(SQL_DATABASE)
-            , InspectorDatabaseAgent* databaseAgent
-#endif
-            , InspectorDOMStorageAgent* domStorageAgent
-            , InspectorDOMAgent* domAgent
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-            , InspectorDebuggerAgent* debuggerAgent
-#endif
-        )
-    {
-        m_inspectorAgent = inspectorAgent;
-        m_consoleAgent = consoleAgent;
-#if ENABLE(SQL_DATABASE)
-        m_databaseAgent = databaseAgent;
-#endif
-        m_domStorageAgent = domStorageAgent;
-        m_domAgent = domAgent;
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-        m_debuggerAgent = debuggerAgent;
-#endif
-    }
-
-    static Node* scriptValueAsNode(ScriptValue);
-    static ScriptValue nodeAsScriptValue(JSC::ExecState*, Node*);
-
-    void disconnect();
-
-    class InspectableObject {
-        WTF_MAKE_FAST_ALLOCATED;
-    public:
-        virtual ScriptValue get(JSC::ExecState*);
-        virtual ~InspectableObject() { }
-    };
-    void addInspectedObject(PassOwnPtr<InspectableObject>);
-    void clearInspectedObjects();
-    InspectableObject* inspectedObject(unsigned int num);
-
-    void inspectImpl(PassRefPtr<InspectorValue> objectToInspect, PassRefPtr<InspectorValue> hints);
-    void getEventListenersImpl(Node*, Vector<EventListenerInfo>& listenersArray);
-
-    void clearConsoleMessages();
-    void copyText(const String& text);
-#if ENABLE(SQL_DATABASE)
-    String databaseIdImpl(Database*);
-#endif
-    String storageIdImpl(Storage*);
-
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    ScriptDebugServer& scriptDebugServer();
-#endif
+    ~InjectedScriptHost() { }
 
 private:
-    InjectedScriptHost();
-
-    InspectorAgent* m_inspectorAgent;
-    InspectorConsoleAgent* m_consoleAgent;
-#if ENABLE(SQL_DATABASE)
-    InspectorDatabaseAgent* m_databaseAgent;
-#endif
-    InspectorDOMStorageAgent* m_domStorageAgent;
-    InspectorDOMAgent* m_domAgent;
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    InspectorDebuggerAgent* m_debuggerAgent;
-#endif
-    Vector<OwnPtr<InspectableObject>> m_inspectedObjects;
-    OwnPtr<InspectableObject> m_defaultInspectableObject;
+    InjectedScriptHost() { }
 };
 
 } // namespace WebCore

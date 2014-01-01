@@ -706,7 +706,7 @@ bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRe
 
 void TestRunner::setCacheModel(int cacheModel)
 {
-    [[WebPreferences standardPreferences] setCacheModel:cacheModel];
+    [[WebPreferences standardPreferences] setCacheModel:(WebCacheModel)cacheModel];
 }
 
 bool TestRunner::isCommandEnabled(JSStringRef name)
@@ -1075,8 +1075,6 @@ void TestRunner::setPageVisibility(const char* newVisibility)
         [webView _setVisibilityState:WebPageVisibilityStateHidden isInitialState:NO];
     else if (!strcmp(newVisibility, "prerender"))
         [webView _setVisibilityState:WebPageVisibilityStatePrerender isInitialState:NO];
-    else if (!strcmp(newVisibility, "unloaded"))
-        [webView _setVisibilityState:WebPageVisibilityStateUnloaded isInitialState:NO];
 }
 
 void TestRunner::grantWebNotificationPermission(JSStringRef jsOrigin)

@@ -154,20 +154,20 @@ void SVGImageElement::svgAttributeChanged(const QualifiedName& attrName)
         return;
     }
 
-    RenderObject* renderer = this->renderer();
+    auto renderer = this->renderer();
     if (!renderer)
         return;
 
     if (isLengthAttribute) {
         if (toRenderSVGImage(renderer)->updateImageViewport())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
     if (attrName == SVGNames::preserveAspectRatioAttr
         || SVGLangSpace::isKnownAttribute(attrName)
         || SVGExternalResourcesRequired::isKnownAttribute(attrName)) {
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
@@ -182,9 +182,9 @@ bool SVGImageElement::selfHasRelativeLengths() const
         || height().isRelative();
 }
 
-RenderElement* SVGImageElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGImageElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderSVGImage(*this, std::move(style));
+    return createRenderer<RenderSVGImage>(*this, std::move(style));
 }
 
 bool SVGImageElement::haveLoadedRequiredResources()

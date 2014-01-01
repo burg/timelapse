@@ -28,6 +28,9 @@
 #include "WKBundlePagePrivate.h"
 
 #include "APIArray.h"
+#include "APIString.h"
+#include "APIURL.h"
+#include "APIURLRequest.h"
 #include "InjectedBundleBackForwardList.h"
 #include "InjectedBundleNodeHandle.h"
 #include "PageBanner.h"
@@ -44,9 +47,6 @@
 #include "WebPage.h"
 #include "WebRenderLayer.h"
 #include "WebRenderObject.h"
-#include "WebString.h"
-#include "WebURL.h"
-#include "WebURLRequest.h"
 #include <WebCore/AXObjectCache.h>
 #include <WebCore/AccessibilityObject.h>
 #include <WebCore/MainFrame.h>
@@ -65,6 +65,9 @@ void WKBundlePageSetContextMenuClient(WKBundlePageRef pageRef, WKBundlePageConte
 {
 #if ENABLE(CONTEXT_MENUS)
     toImpl(pageRef)->initializeInjectedBundleContextMenuClient(wkClient);
+#else
+    UNUSED_PARAM(pageRef);
+    UNUSED_PARAM(wkClient);
 #endif
 }
 
@@ -163,6 +166,9 @@ void WKBundlePageClickMenuItem(WKBundlePageRef pageRef, WKContextMenuItemRef ite
 {
 #if ENABLE(CONTEXT_MENUS)
     toImpl(pageRef)->contextMenu()->itemSelected(*toImpl(item)->data());
+#else
+    UNUSED_PARAM(pageRef);
+    UNUSED_PARAM(item);
 #endif
 }
 
@@ -188,6 +194,7 @@ WKArrayRef WKBundlePageCopyContextMenuItems(WKBundlePageRef pageRef)
 
     return toAPI(contextMenuItems(*contextMenu).leakRef());
 #else
+    UNUSED_PARAM(pageRef);
     return nullptr;
 #endif
 }
@@ -201,6 +208,8 @@ WKArrayRef WKBundlePageCopyContextMenuAtPointInWindow(WKBundlePageRef pageRef, W
 
     return toAPI(contextMenuItems(*contextMenu).leakRef());
 #else
+    UNUSED_PARAM(pageRef);
+    UNUSED_PARAM(point);
     return nullptr;
 #endif
 }

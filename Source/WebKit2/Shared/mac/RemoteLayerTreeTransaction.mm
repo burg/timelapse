@@ -31,6 +31,7 @@
 #import "MessageEncoder.h"
 #import "PlatformCALayerRemote.h"
 #import "WebCoreArgumentCoders.h"
+#import <QuartzCore/QuartzCore.h>
 #import <WebCore/TextStream.h>
 #import <wtf/text/CString.h>
 #import <wtf/text/StringBuilder.h>
@@ -43,7 +44,7 @@ RemoteLayerTreeTransaction::LayerCreationProperties::LayerCreationProperties()
 {
 }
 
-void RemoteLayerTreeTransaction::LayerCreationProperties::encode(CoreIPC::ArgumentEncoder& encoder) const
+void RemoteLayerTreeTransaction::LayerCreationProperties::encode(IPC::ArgumentEncoder& encoder) const
 {
     encoder << layerID;
     encoder.encodeEnum(type);
@@ -52,7 +53,7 @@ void RemoteLayerTreeTransaction::LayerCreationProperties::encode(CoreIPC::Argume
         encoder << hostingContextID;
 }
 
-bool RemoteLayerTreeTransaction::LayerCreationProperties::decode(CoreIPC::ArgumentDecoder& decoder, LayerCreationProperties& result)
+bool RemoteLayerTreeTransaction::LayerCreationProperties::decode(IPC::ArgumentDecoder& decoder, LayerCreationProperties& result)
 {
     if (!decoder.decode(result.layerID))
         return false;
@@ -71,10 +72,29 @@ bool RemoteLayerTreeTransaction::LayerCreationProperties::decode(CoreIPC::Argume
 RemoteLayerTreeTransaction::LayerProperties::LayerProperties()
     : changedProperties(NoChange)
     , everChangedProperties(NoChange)
+    , backgroundColor(Color::transparent)
+    , anchorPoint(0.5, 0.5, 0)
+    , borderWidth(0)
+    , borderColor(Color::black)
+    , opacity(1)
+    , hidden(false)
+    , geometryFlipped(false)
+    , doubleSided(true)
+    , masksToBounds(false)
+    , opaque(false)
+    , maskLayerID(0)
+    , contentsRect(FloatPoint(), FloatSize(1, 1))
+    , contentsScale(1)
+    , minificationFilter(PlatformCALayer::FilterType::Linear)
+    , magnificationFilter(PlatformCALayer::FilterType::Linear)
+    , speed(1)
+    , timeOffset(0)
+    , edgeAntialiasingMask(kCALayerLeftEdge | kCALayerRightEdge | kCALayerBottomEdge | kCALayerTopEdge)
+    , customAppearance(GraphicsLayer::NoCustomAppearance)
 {
 }
 
-void RemoteLayerTreeTransaction::LayerProperties::encode(CoreIPC::ArgumentEncoder& encoder) const
+void RemoteLayerTreeTransaction::LayerProperties::encode(IPC::ArgumentEncoder& encoder) const
 {
     encoder.encodeEnum(changedProperties);
 
@@ -155,9 +175,12 @@ void RemoteLayerTreeTransaction::LayerProperties::encode(CoreIPC::ArgumentEncode
 
     if (changedProperties & EdgeAntialiasingMaskChanged)
         encoder << edgeAntialiasingMask;
+
+    if (changedProperties & CustomAppearanceChanged)
+        encoder.encodeEnum(customAppearance);
 }
 
-bool RemoteLayerTreeTransaction::LayerProperties::decode(CoreIPC::ArgumentDecoder& decoder, LayerProperties& result)
+bool RemoteLayerTreeTransaction::LayerProperties::decode(IPC::ArgumentDecoder& decoder, LayerProperties& result)
 {
     if (!decoder.decodeEnum(result.changedProperties))
         return false;
@@ -297,6 +320,11 @@ bool RemoteLayerTreeTransaction::LayerProperties::decode(CoreIPC::ArgumentDecode
             return false;
     }
 
+    if (result.changedProperties & CustomAppearanceChanged) {
+        if (!decoder.decodeEnum(result.customAppearance))
+            return false;
+    }
+
     return true;
 }
 
@@ -308,7 +336,7 @@ RemoteLayerTreeTransaction::~RemoteLayerTreeTransaction()
 {
 }
 
-void RemoteLayerTreeTransaction::encode(CoreIPC::ArgumentEncoder& encoder) const
+void RemoteLayerTreeTransaction::encode(IPC::ArgumentEncoder& encoder) const
 {
     encoder << m_rootLayerID;
     encoder << m_createdLayers;
@@ -316,7 +344,7 @@ void RemoteLayerTreeTransaction::encode(CoreIPC::ArgumentEncoder& encoder) const
     encoder << m_destroyedLayerIDs;
 }
 
-bool RemoteLayerTreeTransaction::decode(CoreIPC::ArgumentDecoder& decoder, RemoteLayerTreeTransaction& result)
+bool RemoteLayerTreeTransaction::decode(IPC::ArgumentDecoder& decoder, RemoteLayerTreeTransaction& result)
 {
     if (!decoder.decode(result.m_rootLayerID))
         return false;
@@ -638,6 +666,9 @@ static void dumpChangedLayers(RemoteLayerTreeTextStream& ts, const HashMap<Remot
 
         if (layerProperties.changedProperties & RemoteLayerTreeTransaction::EdgeAntialiasingMaskChanged)
             dumpProperty<unsigned>(ts, "edgeAntialiasingMask", layerProperties.edgeAntialiasingMask);
+
+        if (layerProperties.changedProperties & RemoteLayerTreeTransaction::CustomAppearanceChanged)
+            dumpProperty<GraphicsLayer::CustomAppearance>(ts, "customAppearance", layerProperties.customAppearance);
 
         ts << ")";
 

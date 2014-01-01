@@ -26,7 +26,7 @@
 #ifndef ScrollingCoordinatorMac_h
 #define ScrollingCoordinatorMac_h
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingCoordinator.h"
 
@@ -91,34 +91,12 @@ private:
     virtual void syncChildPositions(const LayoutRect& viewportRect) OVERRIDE;
 
     virtual void recomputeWheelEventHandlerCountForFrameView(FrameView*);
-    virtual void setShouldUpdateScrollLayerPositionOnMainThread(MainThreadScrollingReasons);
+    virtual void setSynchronousScrollingReasons(SynchronousScrollingReasons);
 
     virtual bool hasVisibleSlowRepaintViewportConstrainedObjects(FrameView*) const { return false; }
 
     void ensureRootStateNodeForFrameView(FrameView*);
 
-    struct ScrollParameters {
-        ScrollElasticity horizontalScrollElasticity;
-        ScrollElasticity verticalScrollElasticity;
-
-        bool hasEnabledHorizontalScrollbar;
-        bool hasEnabledVerticalScrollbar;
-
-        ScrollbarMode horizontalScrollbarMode;
-        ScrollbarMode verticalScrollbarMode;
-
-        IntPoint scrollOrigin;
-
-        IntRect viewportRect;
-        IntSize totalContentsSize;
-        
-        float frameScaleFactor;
-
-        int headerHeight;
-        int footerHeight;
-    };
-
-    void setScrollParametersForNode(const ScrollParameters&, ScrollingStateScrollingNode*);
     void setScrollLayerForNode(GraphicsLayer*, ScrollingStateNode*);
     void setCounterScrollingLayerForNode(GraphicsLayer*, ScrollingStateScrollingNode*);
     void setHeaderLayerForNode(GraphicsLayer*, ScrollingStateScrollingNode*);
@@ -127,7 +105,6 @@ private:
     void setNonFastScrollableRegionForNode(const Region&, ScrollingStateScrollingNode*);
     void setWheelEventHandlerCountForNode(unsigned, ScrollingStateScrollingNode*);
     void setScrollBehaviorForFixedElementsForNode(ScrollBehaviorForFixedElements, ScrollingStateScrollingNode*);
-
 
     void updateMainFrameScrollLayerPosition();
 
@@ -143,6 +120,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_SCROLLING)
+#endif // ENABLE(ASYNC_SCROLLING)
 
 #endif // ScrollingCoordinatorMac_h

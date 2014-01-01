@@ -48,7 +48,6 @@ static const char* pageVisibilityStateToString(PageVisibilityState state)
     case PageVisibilityStateVisible: return "Visible";
     case PageVisibilityStateHidden: return "Hidden";
     case PageVisibilityStatePrerender: return "Prerender";
-    case PageVisibilityStateUnloaded: return "Unloaded";
     }
 
     ASSERT_NOT_REACHED();
@@ -69,11 +68,6 @@ static bool stringToPageVisibilityState(const String& string, PageVisibilityStat
 
     if (string == "Prerender") {
         outState = PageVisibilityStatePrerender;
-        return true;
-    }
-
-    if (string == "Unloaded") {
-        outState = PageVisibilityStateUnloaded;
         return true;
     }
 

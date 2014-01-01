@@ -41,7 +41,6 @@ namespace WebCore {
 
 class AXObjectCache;
 class Element;
-class Event;
 class FloatSize;
 class Frame;
 class HTMLFrameOwnerElement;
@@ -58,7 +57,7 @@ class RenderStyle;
 class RenderView;
 class RenderWidget;
 
-Pagination::Mode paginationModeForRenderStyle(RenderStyle*);
+Pagination::Mode paginationModeForRenderStyle(const RenderStyle&);
 
 typedef unsigned long long DOMTimeStamp;
 
@@ -121,6 +120,16 @@ public:
 
     bool needsFullRepaint() const { return m_needsFullRepaint; }
 
+    bool renderedCharactersExceed(unsigned threshold);
+
+#if PLATFORM(IOS)
+    bool useCustomFixedPositionLayoutRect() const { return m_useCustomFixedPositionLayoutRect; }
+    void setUseCustomFixedPositionLayoutRect(bool);
+    IntRect customFixedPositionLayoutRect() const { return m_customFixedPositionLayoutRect; }
+    void setCustomFixedPositionLayoutRect(const IntRect&);
+    bool updateFixedPositionLayoutRect();
+#endif
+
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     void serviceScriptedAnimations(double monotonicAnimationStartTime);
 #endif
@@ -136,6 +145,9 @@ public:
     // Called when changes to the GraphicsLayer hierarchy have to be synchronized with
     // content rendered via the normal painting path.
     void setNeedsOneShotDrawingSynchronization();
+
+    GraphicsLayer* graphicsLayerForPlatformWidget(PlatformWidget);
+    void scheduleLayerFlushAllowingThrottling();
 
     virtual TiledBacking* tiledBacking() OVERRIDE;
 
@@ -193,7 +205,9 @@ public:
 
     virtual float visibleContentScaleFactor() const OVERRIDE;
 
+#if !PLATFORM(IOS)
     virtual void setFixedVisibleContentRect(const IntRect&) OVERRIDE;
+#endif
     virtual void setScrollPosition(const IntPoint&) OVERRIDE;
     void scrollPositionChangedViaPlatformWidget();
     virtual void updateLayerPositionsAfterScrolling() OVERRIDE;
@@ -254,9 +268,6 @@ public:
 
     void restoreScrollbar();
 
-    void scheduleEvent(PassRefPtr<Event>, PassRefPtr<Node>);
-    void pauseScheduledEvents();
-    void resumeScheduledEvents();
     void postLayoutTimerFired(Timer<FrameView>*);
 
     bool wasScrolledByUser() const;
@@ -635,6 +646,11 @@ private:
     // Renderer to hold our custom scroll corner.
     RenderScrollbarPart* m_scrollCorner;
 
+#if PLATFORM(IOS)
+    bool m_useCustomFixedPositionLayoutRect;
+    IntRect m_customFixedPositionLayoutRect;
+#endif
+
     // If true, automatically resize the frame view around its content.
     bool m_shouldAutoSize;
     bool m_inAutoSize;
@@ -674,11 +690,6 @@ private:
     bool m_visualUpdatesAllowedByClient;
     
     ScrollPinningBehavior m_scrollPinningBehavior;
-
-    unsigned m_scheduledEventSuppressionCount;
-
-    struct ScheduledEvent;
-    Vector<ScheduledEvent> m_scheduledEvents;
 };
 
 inline void FrameView::incrementVisuallyNonEmptyCharacterCount(unsigned count)

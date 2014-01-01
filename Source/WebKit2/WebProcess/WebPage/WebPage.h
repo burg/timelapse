@@ -89,6 +89,7 @@
 #if PLATFORM(MAC)
 #include "DictionaryPopupInfo.h"
 #include "LayerHostingContext.h"
+#include "ViewGestureGeometryCollector.h"
 #include <wtf/RetainPtr.h>
 OBJC_CLASS CALayer;
 OBJC_CLASS NSDictionary;
@@ -102,7 +103,7 @@ namespace API {
 class Array;
 }
 
-namespace CoreIPC {
+namespace IPC {
     class ArgumentDecoder;
     class Connection;
 }
@@ -163,7 +164,7 @@ class WebTouchEvent;
 
 typedef Vector<RefPtr<PageOverlay>> PageOverlayList;
 
-class WebPage : public API::TypedObject<API::Object::Type::BundlePage>, public CoreIPC::MessageReceiver, public CoreIPC::MessageSender {
+class WebPage : public API::ObjectImpl<API::Object::Type::BundlePage>, public IPC::MessageReceiver, public IPC::MessageSender {
 public:
     static PassRefPtr<WebPage> create(uint64_t pageID, const WebPageCreationParameters&);
     virtual ~WebPage();
@@ -237,8 +238,8 @@ public:
     WebOpenPanelResultListener* activeOpenPanelResultListener() const { return m_activeOpenPanelResultListener.get(); }
     void setActiveOpenPanelResultListener(PassRefPtr<WebOpenPanelResultListener>);
 
-    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&) OVERRIDE;
+    void didReceiveMessage(IPC::Connection*, IPC::MessageDecoder&) OVERRIDE;
+    void didReceiveSyncMessage(IPC::Connection*, IPC::MessageDecoder&, std::unique_ptr<IPC::MessageEncoder>&) OVERRIDE;
 
     // -- InjectedBundle methods
 #if ENABLE(CONTEXT_MENUS)
@@ -318,12 +319,14 @@ public:
 
     void setSuppressScrollbarAnimations(bool);
 
+    void setBackgroundExtendsBeyondPage(bool);
+
     void setPaginationMode(uint32_t /* WebCore::Pagination::Mode */);
     void setPaginationBehavesLikeColumns(bool);
     void setPageLength(double);
     void setGapBetweenPages(double);
 
-    void postInjectedBundleMessage(const String& messageName, CoreIPC::MessageDecoder&);
+    void postInjectedBundleMessage(const String& messageName, IPC::MessageDecoder&);
 
     bool drawsBackground() const { return m_drawsBackground; }
     bool drawsTransparentBackground() const { return m_drawsTransparentBackground; }
@@ -346,7 +349,14 @@ public:
     bool windowIsVisible() const { return m_windowIsVisible; }
 
 #if PLATFORM(MAC)
-    LayerHostingMode layerHostingMode() const { return m_layerHostingMode; }
+    LayerHostingMode layerHostingMode() const
+    {
+#if HAVE(LAYER_HOSTING_IN_WINDOW_SERVER)
+        return m_viewState & ViewState::IsLayerWindowServerHosted ? LayerHostingModeInWindowServer : LayerHostingModeDefault;
+#else
+        return LayerHostingModeDefault;
+#endif
+    }
     void setLayerHostingMode(LayerHostingMode);
 
     void updatePluginsActiveAndFocusedState();
@@ -408,6 +418,8 @@ public:
     void requestAutocorrectionData(const String& textForAutocorrection, uint64_t callbackID);
     void applyAutocorrection(const String& correction, const String& originalText, uint64_t callbackID);
     void insertText(const String& text, uint64_t replacementRangeStart, uint64_t replacementRangeEnd);
+    void setComposition(const String& text, Vector<WebCore::CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd);
+    void confirmComposition();
 #endif
 
     NotificationPermissionRequestManager* notificationPermissionRequestManager();
@@ -470,18 +482,18 @@ public:
     void didChangeSelection();
 
 #if PLATFORM(MAC)
-    void registerUIProcessAccessibilityTokens(const CoreIPC::DataReference& elemenToken, const CoreIPC::DataReference& windowToken);
+    void registerUIProcessAccessibilityTokens(const IPC::DataReference& elemenToken, const IPC::DataReference& windowToken);
     WKAccessibilityWebPageObject* accessibilityRemoteObject();
     NSObject *accessibilityObjectForMainFramePlugin();
     const WebCore::FloatPoint& accessibilityPosition() const { return m_accessibilityPosition; }
     
     void sendComplexTextInputToPlugin(uint64_t pluginComplexTextInputIdentifier, const String& textInput);
 
-    void setComposition(const String& text, Vector<WebCore::CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, EditorState& newState);
-    void confirmComposition(EditorState& newState);
     void cancelComposition(EditorState& newState);
 #if !PLATFORM(IOS)
     void insertText(const String& text, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, bool& handled, EditorState& newState);
+    void setComposition(const String& text, Vector<WebCore::CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, EditorState& newState);
+    void confirmComposition(EditorState& newState);
 #endif
     void getMarkedRange(uint64_t& location, uint64_t& length);
     void getSelectedRange(uint64_t& location, uint64_t& length);
@@ -602,9 +614,8 @@ public:
 
     bool willGoToBackForwardItemCallbackEnabled() const { return m_willGoToBackForwardItemCallbackEnabled; }
 
-#if ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
-    void setVisibilityState(uint32_t /* WebCore::PageVisibilityState */, bool isInitialState);
-#endif
+    void setVisibilityStatePrerender();
+    void updateVisibilityState(bool isInitialState = false);
     void setThrottled(bool isThrottled);
 
 #if PLATFORM(IOS)
@@ -675,14 +686,14 @@ public:
 private:
     WebPage(uint64_t pageID, const WebPageCreationParameters&);
 
-    // CoreIPC::MessageSender
-    virtual CoreIPC::Connection* messageSenderConnection() OVERRIDE;
+    // IPC::MessageSender
+    virtual IPC::Connection* messageSenderConnection() OVERRIDE;
     virtual uint64_t messageSenderDestinationID() OVERRIDE;
 
     void platformInitialize();
 
-    void didReceiveWebPageMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    void didReceiveSyncWebPageMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&);
+    void didReceiveWebPageMessage(IPC::Connection*, IPC::MessageDecoder&);
+    void didReceiveSyncWebPageMessage(IPC::Connection*, IPC::MessageDecoder&, std::unique_ptr<IPC::MessageEncoder>&);
 
 #if !PLATFORM(MAC)
     static const char* interpretKeyEvent(const WebCore::KeyboardEvent*);
@@ -695,19 +706,20 @@ private:
 
     String sourceForFrame(WebFrame*);
 
-    void loadDataImpl(PassRefPtr<WebCore::SharedBuffer>, const String& MIMEType, const String& encodingName, const WebCore::URL& baseURL, const WebCore::URL& failingURL, CoreIPC::MessageDecoder&);
+    void loadDataImpl(PassRefPtr<WebCore::SharedBuffer>, const String& MIMEType, const String& encodingName, const WebCore::URL& baseURL, const WebCore::URL& failingURL, IPC::MessageDecoder&);
+    void loadString(const String&, const String& MIMEType, const WebCore::URL& baseURL, const WebCore::URL& failingURL, IPC::MessageDecoder&);
 
     bool platformHasLocalDataForURL(const WebCore::URL&);
 
     // Actions
     void tryClose();
-    void loadURL(const String&, const SandboxExtension::Handle&, CoreIPC::MessageDecoder&);
-    void loadURLRequest(const WebCore::ResourceRequest&, const SandboxExtension::Handle&, CoreIPC::MessageDecoder&);
-    void loadData(const CoreIPC::DataReference&, const String& MIMEType, const String& encodingName, const String& baseURL, CoreIPC::MessageDecoder&);
-    void loadHTMLString(const String& htmlString, const String& baseURL, CoreIPC::MessageDecoder&);
-    void loadAlternateHTMLString(const String& htmlString, const String& baseURL, const String& unreachableURL, CoreIPC::MessageDecoder&);
-    void loadPlainTextString(const String&, CoreIPC::MessageDecoder&);
-    void loadWebArchiveData(const CoreIPC::DataReference&, CoreIPC::MessageDecoder&);
+    void loadURL(const String&, const SandboxExtension::Handle&, IPC::MessageDecoder&);
+    void loadURLRequest(const WebCore::ResourceRequest&, const SandboxExtension::Handle&, IPC::MessageDecoder&);
+    void loadData(const IPC::DataReference&, const String& MIMEType, const String& encodingName, const String& baseURL, IPC::MessageDecoder&);
+    void loadHTMLString(const String& htmlString, const String& baseURL, IPC::MessageDecoder&);
+    void loadAlternateHTMLString(const String& htmlString, const String& baseURL, const String& unreachableURL, IPC::MessageDecoder&);
+    void loadPlainTextString(const String&, IPC::MessageDecoder&);
+    void loadWebArchiveData(const IPC::DataReference&, IPC::MessageDecoder&);
     void linkClicked(const String& url, const WebMouseEvent&);
     void reload(bool reloadFromOrigin, const SandboxExtension::Handle&);
     void goForward(uint64_t);
@@ -854,6 +866,8 @@ private:
 
     void reportUsedFeatures();
 
+    uint64_t m_pageID;
+
     OwnPtr<WebCore::Page> m_page;
     RefPtr<WebFrame> m_mainFrame;
     RefPtr<InjectedBundleBackForwardList> m_backForwardList;
@@ -920,12 +934,11 @@ private:
     // The accessibility position of the view.
     WebCore::FloatPoint m_accessibilityPosition;
     
-    // The layer hosting mode.
-    LayerHostingMode m_layerHostingMode;
-
     RetainPtr<WKAccessibilityWebPageObject> m_mockAccessibilityElement;
 
     WebCore::KeyboardEvent* m_keyboardEventBeingInterpreted;
+
+    ViewGestureGeometryCollector m_viewGestureGeometryCollector;
 
 #elif HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(EFL))
     GRefPtr<WebPageAccessibilityObject> m_accessibilityObject;
@@ -992,7 +1005,6 @@ private:
 #endif
 
     SandboxExtensionTracker m_sandboxExtensionTracker;
-    uint64_t m_pageID;
 
     RefPtr<SandboxExtension> m_pendingDropSandboxExtension;
     Vector<RefPtr<SandboxExtension>> m_pendingDropExtensionsForFileUpload;
@@ -1026,9 +1038,6 @@ private:
     bool m_shouldReturnWordAtSelection;
 #endif
 
-#if ENABLE(PAGE_VISIBILITY_API)
-    WebCore::PageVisibilityState m_visibilityState;
-#endif
     WebInspectorClient* m_inspectorClient;
 
     WebCore::Color m_backgroundColor;

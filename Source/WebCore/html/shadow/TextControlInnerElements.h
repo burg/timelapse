@@ -41,7 +41,7 @@ public:
     static PassRefPtr<TextControlInnerContainer> create(Document&);
 protected:
     TextControlInnerContainer(Document&);
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
 };
 
 class TextControlInnerElement FINAL : public HTMLDivElement {
@@ -66,7 +66,7 @@ public:
 
 private:
     TextControlInnerTextElement(Document&);
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
     virtual bool isMouseFocusable() const OVERRIDE { return false; }
     virtual bool isTextControlInnerTextElement() const OVERRIDE { return true; }
@@ -81,7 +81,9 @@ public:
     static PassRefPtr<SearchFieldResultsButtonElement> create(Document&);
 
     virtual void defaultEventHandler(Event*) OVERRIDE;
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE;
+#endif
 
 private:
     SearchFieldResultsButtonElement(Document&);
@@ -95,7 +97,9 @@ public:
 
     virtual void defaultEventHandler(Event*) OVERRIDE;
     virtual bool isSearchFieldCancelButtonElement() const OVERRIDE { return true; }
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents() OVERRIDE;
+#endif
 
 private:
     SearchFieldCancelButtonElement(Document&);
@@ -122,7 +126,9 @@ public:
     virtual ~InputFieldSpeechButtonElement();
 
     virtual void defaultEventHandler(Event*);
+#if !PLATFORM(IOS)
     virtual bool willRespondToMouseClickEvents();
+#endif
     virtual bool isInputFieldSpeechButtonElement() const { return true; }
     SpeechInputState state() const { return m_state; }
     void startSpeechInput();

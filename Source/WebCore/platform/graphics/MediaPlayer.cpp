@@ -65,8 +65,6 @@
 #include "MediaPlayerPrivateWinCE.h"
 #define PlatformMediaEngineClassName MediaPlayerPrivate
 #elif PLATFORM(WIN) && !USE(GSTREAMER)
-#include "MediaPlayerPrivateQuickTimeVisualContext.h"
-#define PlatformMediaEngineClassName MediaPlayerPrivateQuickTimeVisualContext
 #if USE(AVFOUNDATION)
 #include "MediaPlayerPrivateAVFoundationCF.h"
 #endif
@@ -1238,6 +1236,40 @@ unsigned long long MediaPlayer::fileSize() const
     
     return m_private->fileSize();
 }
+
+#if ENABLE(MEDIA_SOURCE)
+unsigned long MediaPlayer::totalVideoFrames()
+{
+    if (!m_private)
+        return 0;
+
+    return m_private->totalVideoFrames();
+}
+
+unsigned long MediaPlayer::droppedVideoFrames()
+{
+    if (!m_private)
+        return 0;
+
+    return m_private->droppedVideoFrames();
+}
+
+unsigned long MediaPlayer::corruptedVideoFrames()
+{
+    if (!m_private)
+        return 0;
+
+    return m_private->corruptedVideoFrames();
+}
+
+double MediaPlayer::totalFrameDelay()
+{
+    if (!m_private)
+        return 0;
+
+    return m_private->totalFrameDelay();
+}
+#endif
 
 void MediaPlayerFactorySupport::callRegisterMediaEngine(MediaEngineRegister registerMediaEngine)
 {

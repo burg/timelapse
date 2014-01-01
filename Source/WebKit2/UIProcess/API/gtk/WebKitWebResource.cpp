@@ -20,7 +20,7 @@
 #include "config.h"
 #include "WebKitWebResource.h"
 
-#include "WebData.h"
+#include "APIData.h"
 #include "WebFrameProxy.h"
 #include "WebKitMarshal.h"
 #include "WebKitURIRequest.h"
@@ -310,7 +310,7 @@ WebKitURIResponse* webkit_web_resource_get_response(WebKitWebResource* resource)
 }
 
 struct ResourceGetDataAsyncData {
-    RefPtr<WebData> webData;
+    RefPtr<API::Data> webData;
 };
 WEBKIT_DEFINE_ASYNC_DATA_STRUCT(ResourceGetDataAsyncData)
 
@@ -344,7 +344,7 @@ void webkit_web_resource_get_data(WebKitWebResource* resource, GCancellable* can
         resource->priv->frame->getMainResourceData(DataCallback::create(task, resourceDataCallback));
     else {
         String url = String::fromUTF8(resource->priv->uri.data());
-        resource->priv->frame->getResourceData(WebURL::create(url).get(), DataCallback::create(task, resourceDataCallback));
+        resource->priv->frame->getResourceData(API::URL::create(url).get(), DataCallback::create(task, resourceDataCallback));
     }
 }
 

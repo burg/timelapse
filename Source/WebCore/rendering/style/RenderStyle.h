@@ -1794,7 +1794,10 @@ public:
     static NamedGridLinesMap initialNamedGridRowLines() { return NamedGridLinesMap(); }
 
     // 'auto' is the default.
-    static GridPosition initialGridPosition() { return GridPosition(); }
+    static GridPosition initialGridItemColumnStart() { return GridPosition(); }
+    static GridPosition initialGridItemColumnEnd() { return GridPosition(); }
+    static GridPosition initialGridItemRowStart() { return GridPosition(); }
+    static GridPosition initialGridItemRowEnd() { return GridPosition(); }
 
     static unsigned initialTabSize() { return 8; }
 
@@ -1923,9 +1926,9 @@ private:
     void appendContent(std::unique_ptr<ContentData>);
 };
 
-inline int adjustForAbsoluteZoom(int value, const RenderStyle* style)
+inline int adjustForAbsoluteZoom(int value, const RenderStyle& style)
 {
-    double zoomFactor = style->effectiveZoom();
+    double zoomFactor = style.effectiveZoom();
     if (zoomFactor == 1)
         return value;
     // Needed because computeLengthInt truncates (rather than rounds) when scaling up.
@@ -1945,9 +1948,9 @@ inline float adjustFloatForAbsoluteZoom(float value, const RenderStyle* style)
 }
 
 #if ENABLE(SUBPIXEL_LAYOUT)
-inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderStyle* style)
+inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderStyle& style)
 {
-    return value / style->effectiveZoom();
+    return value / style.effectiveZoom();
 }
 #endif
 

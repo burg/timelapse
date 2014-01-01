@@ -73,13 +73,13 @@ static HTMLTokenizer::State tokenizerStateForContextElement(Element* contextElem
     return HTMLTokenizer::DataState;
 }
 
-HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document, bool reportErrors)
+HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document)
     : ScriptableDocumentParser(document)
     , m_options(document)
     , m_token(m_options.useThreading ? nullptr : adoptPtr(new HTMLToken))
     , m_tokenizer(m_options.useThreading ? nullptr : HTMLTokenizer::create(m_options))
     , m_scriptRunner(HTMLScriptRunner::create(document, *this))
-    , m_treeBuilder(HTMLTreeBuilder::create(*this, document, parserContentPolicy(), reportErrors, m_options))
+    , m_treeBuilder(HTMLTreeBuilder::create(*this, document, parserContentPolicy(), m_options))
     , m_parserScheduler(HTMLParserScheduler::create(*this))
     , m_xssAuditorDelegate(document)
 #if ENABLE(THREADED_HTML_PARSER)
@@ -318,13 +318,13 @@ void HTMLDocumentParser::didReceiveParsedChunkFromBackgroundParser(OwnPtr<Parsed
     // but we need to ensure it isn't deleted yet.
     Ref<HTMLDocumentParser> protect(*this);
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), lineNumber().zeroBasedInt());
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), textPosition().m_line.zeroBasedInt());
 
     ASSERT(m_speculations.isEmpty());
     chunk->preloads.clear(); // We don't need to preload because we're going to parse immediately.
     processParsedChunkFromBackgroundParser(chunk);
 
-    InspectorInstrumentation::didWriteHTML(cookie, lineNumber().zeroBasedInt());
+    InspectorInstrumentation::didWriteHTML(cookie, textPosition().m_line.zeroBasedInt());
 }
 
 void HTMLDocumentParser::validateSpeculations(OwnPtr<ParsedChunk> chunk)
@@ -462,7 +462,7 @@ void HTMLDocumentParser::pumpPendingSpeculations()
     ASSERT(!m_lastChunkBeforeScript);
 
     // FIXME: Pass in current input length.
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), lineNumber().zeroBasedInt());
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), textPosition().m_line.zeroBasedInt());
 
     double startTime = monotonicallyIncreasingTime();
 
@@ -478,7 +478,7 @@ void HTMLDocumentParser::pumpPendingSpeculations()
         }
     }
 
-    InspectorInstrumentation::didWriteHTML(cookie, lineNumber().zeroBasedInt());
+    InspectorInstrumentation::didWriteHTML(cookie, textPosition().m_line.zeroBasedInt());
 }
 
 #endif // ENABLE(THREADED_HTML_PARSER)
@@ -837,16 +837,6 @@ bool HTMLDocumentParser::isExecutingScript() const
     if (!m_scriptRunner)
         return false;
     return m_scriptRunner->isExecutingScript();
-}
-
-OrdinalNumber HTMLDocumentParser::lineNumber() const
-{
-#if ENABLE(THREADED_HTML_PARSER)
-    if (m_haveBackgroundParser)
-        return m_textPosition.m_line;
-#endif
-
-    return m_input.current().currentLine();
 }
 
 TextPosition HTMLDocumentParser::textPosition() const

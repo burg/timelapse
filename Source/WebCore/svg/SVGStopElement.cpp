@@ -89,20 +89,18 @@ void SVGStopElement::svgAttributeChanged(const QualifiedName& attrName)
 
     SVGElementInstance::InvalidationGuard invalidationGuard(this);
 
-    if (!renderer())
-        return;
-
     if (attrName == SVGNames::offsetAttr) {
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer());
+        if (auto renderer = this->renderer())
+            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
     ASSERT_NOT_REACHED();
 }
 
-RenderElement* SVGStopElement::createRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGStopElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new RenderSVGGradientStop(*this, std::move(style));
+    return createRenderer<RenderSVGGradientStop>(*this, std::move(style));
 }
 
 bool SVGStopElement::rendererIsNeeded(const RenderStyle&)

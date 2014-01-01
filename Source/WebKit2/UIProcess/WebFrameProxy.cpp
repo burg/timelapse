@@ -139,7 +139,7 @@ void WebFrameProxy::didFailProvisionalLoad()
     m_frameLoadState.didFailProvisionalLoad();
 }
 
-void WebFrameProxy::didCommitLoad(const String& contentType, const CertificateInfo& certificateInfo)
+void WebFrameProxy::didCommitLoad(const String& contentType, const WebCore::CertificateInfo& certificateInfo)
 {
     m_frameLoadState.didCommitLoad();
 
@@ -215,7 +215,7 @@ void WebFrameProxy::getMainResourceData(PassRefPtr<DataCallback> callback)
     m_page->getMainResourceDataOfFrame(this, callback);
 }
 
-void WebFrameProxy::getResourceData(WebURL* resourceURL, PassRefPtr<DataCallback> callback)
+void WebFrameProxy::getResourceData(API::URL* resourceURL, PassRefPtr<DataCallback> callback)
 {
     if (!m_page) {
         callback->invalidate();

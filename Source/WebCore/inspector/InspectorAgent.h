@@ -30,30 +30,34 @@
 #ifndef InspectorAgent_h
 #define InspectorAgent_h
 
-#include "InspectorBaseAgent.h"
+#include "InspectorWebAgentBase.h"
+#include <inspector/InspectorJSBackendDispatchers.h>
+#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
+
+namespace Inspector {
+class InspectorObject;
+class InspectorInspectorFrontendDispatcher;
+}
 
 namespace WebCore {
 
 class DOMWrapperWorld;
 class DocumentLoader;
 class Frame;
-class InjectedScriptManager;
-class InspectorInspectorFrontendDispatcher;
-class InspectorObject;
 class InstrumentingAgents;
 class Page;
 
 typedef String ErrorString;
 
-class InspectorAgent : public InspectorBaseAgent, public InspectorInspectorBackendDispatcherHandler {
+class InspectorAgent : public InspectorAgentBase, public Inspector::InspectorInspectorBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorAgent);
 public:
-    static PassOwnPtr<InspectorAgent> create(Page* page, InjectedScriptManager* injectedScriptManager, InstrumentingAgents* instrumentingAgents)
+    static PassOwnPtr<InspectorAgent> create(Page* page, InstrumentingAgents* instrumentingAgents)
     {
-        return adoptPtr(new InspectorAgent(page, injectedScriptManager, instrumentingAgents));
+        return adoptPtr(new InspectorAgent(page, instrumentingAgents));
     }
 
     virtual ~InspectorAgent();
@@ -64,34 +68,23 @@ public:
     void enable(ErrorString*);
     void disable(ErrorString*);
 
-    virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) OVERRIDE;
+    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) OVERRIDE;
     virtual void willDestroyFrontendAndBackend() OVERRIDE;
-
-    void didClearWindowObjectInWorld(Frame*, DOMWrapperWorld&);
-
-    void didCommitLoad();
-    void domContentLoadedEventFired();
-
-    bool hasFrontend() const { return !!m_frontendDispatcher; }
 
     // Generic code called from custom implementations.
     void evaluateForTestInFrontend(long testCallId, const String& script);
 
-    void setInjectedScriptForOrigin(const String& origin, const String& source);
-
-    void inspect(PassRefPtr<TypeBuilder::Runtime::RemoteObject> objectToInspect, PassRefPtr<InspectorObject> hints);
+    void inspect(PassRefPtr<Inspector::TypeBuilder::Runtime::RemoteObject> objectToInspect, PassRefPtr<Inspector::InspectorObject> hints);
 
 private:
-    InspectorAgent(Page*, InjectedScriptManager*, InstrumentingAgents*);
+    InspectorAgent(Page*, InstrumentingAgents*);
 
     Page* m_inspectedPage;
-    std::unique_ptr<InspectorInspectorFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<InspectorInspectorBackendDispatcher> m_backendDispatcher;
-    InjectedScriptManager* m_injectedScriptManager;
+    std::unique_ptr<Inspector::InspectorInspectorFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::InspectorInspectorBackendDispatcher> m_backendDispatcher;
 
     Vector<pair<long, String>> m_pendingEvaluateTestCommands;
-    pair<RefPtr<TypeBuilder::Runtime::RemoteObject>, RefPtr<InspectorObject>> m_pendingInspectData;
-    HashMap<String, String> m_injectedScriptForOrigin;
+    pair<RefPtr<Inspector::TypeBuilder::Runtime::RemoteObject>, RefPtr<Inspector::InspectorObject>> m_pendingInspectData;
 
     bool m_enabled;
 };

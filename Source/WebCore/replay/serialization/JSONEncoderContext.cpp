@@ -34,11 +34,11 @@
 
 #include "AllReplayInputs.h"
 #include "FunctorInputIterator.h"
-#include "InspectorValues.h"
 #include "JavaScriptCoreInputCoders.h"
 #include "Logging.h"
 #include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
+#include <inspector/InspectorValues.h>
 #include <wtf/RefPtr.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/text/CString.h>
@@ -89,7 +89,7 @@ static bool dispatchTypeSpecificEncodeMethod(EncoderContext& encoder, const Nond
 }
 
 JSONMapEncoder::JSONMapEncoder()
-    : m_object(InspectorObject::create())
+    : m_object(Inspector::InspectorObject::create())
 {
 }
 
@@ -154,7 +154,7 @@ void JSONMapEncoder::putULong(const String& key, unsigned long value)
 
 void JSONMapEncoder::putContext(const String& key, const EncoderContext& context)
 {
-    RefPtr<InspectorValue> encodedObject = static_cast<const JSONEncoderContext&>(context).encodedValue();
+    RefPtr<Inspector::InspectorValue> encodedObject = static_cast<const JSONEncoderContext&>(context).encodedValue();
     m_object->setValue(key, encodedObject);
 }
 
@@ -164,7 +164,7 @@ void JSONMapEncoder::putBytes(const String&, const char*, int)
 }
 
 JSONListEncoder::JSONListEncoder()
-    : m_array(InspectorArray::create())
+    : m_array(Inspector::InspectorArray::create())
 {
 }
 
@@ -174,7 +174,7 @@ JSONListEncoder::~JSONListEncoder()
 
 void JSONListEncoder::appendContext(const EncoderContext& context)
 {
-    RefPtr<InspectorValue> encodedObject = static_cast<const JSONEncoderContext&>(context).encodedValue();
+    RefPtr<Inspector::InspectorValue> encodedObject = static_cast<const JSONEncoderContext&>(context).encodedValue();
     m_array->pushValue(encodedObject);
 }
 
@@ -195,17 +195,17 @@ void JSONListEncoder::appendUInt32(uint32_t value)
 
 class SerializeInputToJSONFunctor {
 public:
-    typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInput> > ReturnType;
+    typedef PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Replay::ReplayInput> > ReturnType;
 
     SerializeInputToJSONFunctor()
-        : m_inputs(TypeBuilder::Array<TypeBuilder::Replay::ReplayInput>::create()) { }
+        : m_inputs(Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Replay::ReplayInput>::create()) { }
     ~SerializeInputToJSONFunctor() { }
 
     void operator()(size_t index, const NondeterministicInput* input)
     {
         LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type().string().ascii().data());
 
-        RefPtr<TypeBuilder::Replay::ReplayInput> serializedInput = JSONCoder::serializeInput(input, index);
+        RefPtr<Inspector::TypeBuilder::Replay::ReplayInput> serializedInput = JSONCoder::serializeInput(input, index);
         if (!serializedInput)
             return;
 
@@ -214,27 +214,27 @@ public:
 
     ReturnType returnValue() { return m_inputs.release(); }
 private:
-    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInput> > m_inputs;
+    RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Replay::ReplayInput> > m_inputs;
 };
 
-PassRefPtr<TypeBuilder::Replay::ReplayRecording> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
+PassRefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Replay::ReplayInputQueue>::create();
+    RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Replay::ReplayInputQueue> > queues = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Replay::ReplayInputQueue>::create();
 
     for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
         SerializeInputToJSONFunctor collector;
         NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
-        RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
+        RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Replay::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
 
-        RefPtr<TypeBuilder::Replay::ReplayInputQueue> queue = TypeBuilder::Replay::ReplayInputQueue::create()
+        RefPtr<Inspector::TypeBuilder::Replay::ReplayInputQueue> queue = Inspector::TypeBuilder::Replay::ReplayInputQueue::create()
             .setType(queueTypeToString(queueType))
             .setInputs(queueInputs);
 
         queues->addItem(queue.release());
     }
 
-    RefPtr<TypeBuilder::Replay::ReplayRecording> recordingObject = TypeBuilder::Replay::ReplayRecording::create()
+    RefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> recordingObject = Inspector::TypeBuilder::Replay::ReplayRecording::create()
         .setUid(recording->uid())
         .setDateCreated(recording->creationTimestamp())
         .setMemorySize(recording->memorySize())
@@ -243,7 +243,7 @@ PassRefPtr<TypeBuilder::Replay::ReplayRecording> JSONCoder::serialize(PassRefPtr
     return recordingObject;
 }
 
-PassRefPtr<TypeBuilder::Replay::ReplayInput> JSONCoder::serializeInput(const NondeterministicInput* input, int index)
+PassRefPtr<Inspector::TypeBuilder::Replay::ReplayInput> JSONCoder::serializeInput(const NondeterministicInput* input, int index)
 {
     std::unique_ptr<EncoderContext> encodedInput = JSONCoder::createMap();
     encodedInput->put("id", (uint64_t)index);
@@ -255,7 +255,7 @@ PassRefPtr<TypeBuilder::Replay::ReplayInput> JSONCoder::serializeInput(const Non
     if (!dispatchTypeSpecificEncodeMethod(*encodedInput, input))
         return 0;
 
-    RefPtr<TypeBuilder::Replay::ReplayInput> serializedInput = TypeBuilder::Replay::ReplayInput::create()
+    RefPtr<Inspector::TypeBuilder::Replay::ReplayInput> serializedInput = Inspector::TypeBuilder::Replay::ReplayInput::create()
         .setType(input->type())
         .setData(static_cast<JSONEncoderContext*>(encodedInput.get())->encodedValue()->asObject());
 

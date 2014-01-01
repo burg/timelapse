@@ -44,32 +44,13 @@
 #include <crt_externs.h>
 #endif
 
-#if USE(UNIX_DOMAIN_SOCKETS)
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/resource.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <wtf/UniStdExtras.h>
-
-#ifdef SOCK_SEQPACKET
-#define SOCKET_TYPE SOCK_SEQPACKET
-#else
-#if PLATFORM(GTK)
-#define SOCKET_TYPE SOCK_STREAM
-#else
-#define SOCKET_TYPE SOCK_DGRAM
-#endif
-#endif // SOCK_SEQPACKET
-#endif // USE(UNIX_DOMAIN_SOCKETS)
-
 using namespace WebCore;
 
 namespace WebKit {
 
 PluginProcess& PluginProcess::shared()
 {
-    DEFINE_STATIC_LOCAL(PluginProcess, pluginProcess, ());
+    static NeverDestroyed<PluginProcess> pluginProcess;
     return pluginProcess;
 }
 
@@ -140,19 +121,19 @@ bool PluginProcess::shouldTerminate()
     return m_webProcessConnections.isEmpty();
 }
 
-void PluginProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
+void PluginProcess::didReceiveMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder)
 {
     didReceivePluginProcessMessage(connection, decoder);
 }
 
-void PluginProcess::didClose(CoreIPC::Connection*)
+void PluginProcess::didClose(IPC::Connection*)
 {
     // The UI process has crashed, just go ahead and quit.
     // FIXME: If the plug-in is spinning in the main loop, we'll never get this message.
     stopRunLoop();
 }
 
-void PluginProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference, CoreIPC::StringReference)
+void PluginProcess::didReceiveInvalidMessage(IPC::Connection*, IPC::StringReference, IPC::StringReference)
 {
 }
 
@@ -177,42 +158,18 @@ void PluginProcess::createWebProcessConnection()
     mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &listeningPort);
 
     // Create a listening connection.
-    RefPtr<WebProcessConnection> connection = WebProcessConnection::create(CoreIPC::Connection::Identifier(listeningPort));
+    RefPtr<WebProcessConnection> connection = WebProcessConnection::create(IPC::Connection::Identifier(listeningPort));
     m_webProcessConnections.append(connection.release());
 
-    CoreIPC::Attachment clientPort(listeningPort, MACH_MSG_TYPE_MAKE_SEND);
+    IPC::Attachment clientPort(listeningPort, MACH_MSG_TYPE_MAKE_SEND);
     parentProcessConnection()->send(Messages::PluginProcessProxy::DidCreateWebProcessConnection(clientPort, m_supportsAsynchronousPluginInitialization), 0);
 #elif USE(UNIX_DOMAIN_SOCKETS)
-    int sockets[2];
-    if (socketpair(AF_UNIX, SOCKET_TYPE, 0, sockets) == -1) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
+    IPC::Connection::SocketPair socketPair = IPC::Connection::createPlatformConnection();
 
-    // Don't expose the plugin process socket to the web process.
-    while (fcntl(sockets[1], F_SETFD, FD_CLOEXEC)  == -1) {
-        if (errno != EINTR) {
-            ASSERT_NOT_REACHED();
-            closeWithRetry(sockets[0]);
-            closeWithRetry(sockets[1]);
-            return;
-        }
-    }
-
-    // Don't expose the web process socket to possible future web processes.
-    while (fcntl(sockets[0], F_SETFD, FD_CLOEXEC) == -1) {
-        if (errno != EINTR) {
-            ASSERT_NOT_REACHED();
-            closeWithRetry(sockets[0]);
-            closeWithRetry(sockets[1]);
-            return;
-        }
-    }
-
-    RefPtr<WebProcessConnection> connection = WebProcessConnection::create(sockets[1]);
+    RefPtr<WebProcessConnection> connection = WebProcessConnection::create(socketPair.server);
     m_webProcessConnections.append(connection.release());
 
-    CoreIPC::Attachment clientSocket(sockets[0]);
+    IPC::Attachment clientSocket(socketPair.client);
     parentProcessConnection()->send(Messages::PluginProcessProxy::DidCreateWebProcessConnection(clientSocket, m_supportsAsynchronousPluginInitialization), 0);
 #else
     notImplemented();

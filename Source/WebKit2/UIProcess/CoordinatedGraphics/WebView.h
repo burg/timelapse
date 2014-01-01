@@ -33,7 +33,7 @@
 #include "DefaultUndoController.h"
 #include "PageClient.h"
 #include "WebContext.h"
-#include "WebGeometry.h"
+#include "WebFullScreenManagerProxy.h"
 #include "WebPageGroup.h"
 #include "WebPageProxy.h"
 #include "WebPreferences.h"
@@ -46,7 +46,11 @@ class CoordinatedGraphicsScene;
 
 namespace WebKit {
 
-class WebView : public API::TypedObject<API::Object::Type::View>, public PageClient {
+class WebView : public API::ObjectImpl<API::Object::Type::View>, public PageClient
+#if ENABLE(FULLSCREEN_API)
+    , public WebFullScreenManagerProxyClient
+#endif
+    {
 public:
     virtual ~WebView();
 
@@ -66,8 +70,8 @@ public:
     bool isVisible() const { return m_visible; }
     void setVisible(bool);
 
-    void setContentScaleFactor(float scaleFactor) { m_contentScaleFactor = scaleFactor; }
-    float contentScaleFactor() const { return m_contentScaleFactor; }
+    void setContentScaleFactor(float);
+    float contentScaleFactor() const { return m_page->pageScaleFactor(); }
 
     void setContentPosition(const WebCore::FloatPoint& position) { m_contentPosition = position; }
     const WebCore::FloatPoint& contentPosition() const { return m_contentPosition; }
@@ -93,7 +97,7 @@ public:
     bool showsAsSource() const;
 
 #if ENABLE(FULLSCREEN_API)
-    bool exitFullScreen();
+    bool requestExitFullScreen();
 #endif
 
     void findZoomableAreaForPoint(const WebCore::IntPoint&, const WebCore::IntSize&);
@@ -189,6 +193,18 @@ protected:
     virtual void exitAcceleratedCompositingMode() OVERRIDE;
     virtual void updateAcceleratedCompositingMode(const LayerTreeContext&) OVERRIDE;
 
+#if ENABLE(FULLSCREEN_API)
+    WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() OVERRIDE;
+
+    // WebFullScreenManagerProxyClient
+    virtual void closeFullScreenManager() OVERRIDE { }
+    virtual bool isFullScreen() OVERRIDE { return false; }
+    virtual void enterFullScreen() OVERRIDE { }
+    virtual void exitFullScreen() OVERRIDE { }
+    virtual void beganEnterFullScreen(const WebCore::IntRect&, const WebCore::IntRect&) OVERRIDE { }
+    virtual void beganExitFullScreen(const WebCore::IntRect&, const WebCore::IntRect&) OVERRIDE { }
+#endif
+
 protected:
     WebViewClient m_client;
     RefPtr<WebPageProxy> m_page;
@@ -197,7 +213,6 @@ protected:
     WebCore::IntSize m_size; // Size in device units.
     bool m_focused;
     bool m_visible;
-    float m_contentScaleFactor;
     double m_opacity;
     WebCore::FloatPoint m_contentPosition; // Position in UI units.
     WebCore::IntSize m_contentsSize;

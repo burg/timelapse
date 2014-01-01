@@ -33,8 +33,9 @@
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
-#include "InspectorBaseAgent.h"
-#include "InspectorFrontend.h"
+#include "InspectorWebAgentBase.h"
+#include "InspectorWebBackendDispatchers.h"
+#include "InspectorWebFrontendDispatchers.h"
 #include "ReplayAgentStateMachine.h"
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
@@ -63,7 +64,9 @@ class ReplayRecording;
 
 typedef String ErrorString;
 
-class InspectorReplayAgent : public InspectorBaseAgent, public InspectorReplayBackendDispatcherHandler {
+class InspectorReplayAgent
+    : public InspectorAgentBase
+    , public Inspector::InspectorReplayBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorReplayAgent);
 public:
     static PassOwnPtr<InspectorReplayAgent> create(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent)
@@ -73,7 +76,7 @@ public:
 
     ~InspectorReplayAgent();
 
-    virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) OVERRIDE;
+    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) OVERRIDE;
     virtual void willDestroyFrontendAndBackend() OVERRIDE;
 
     // Callbacks from InspectorInstrumentation.
@@ -112,8 +115,8 @@ public:
     void loadRecording(ErrorString*, int, bool*);
     void unloadRecording(ErrorString*, bool*);
 
-    void getSerializedRecording(ErrorString*, int, RefPtr<TypeBuilder::Replay::ReplayRecording>&);
-    void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int>>&);
+    void getSerializedRecording(ErrorString*, int, RefPtr<Inspector::TypeBuilder::Replay::ReplayRecording>&);
+    void getAvailableRecordings(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<int>>&);
 
 private:
     InspectorReplayAgent(InstrumentingAgents*, InspectorPageAgent*);
@@ -124,8 +127,8 @@ private:
     // Helper method that's also shared with InspectorReplayAgent.
     PassRefPtr<ReplayRecording> findRecording(ErrorString*, int uid);
 
-    std::unique_ptr<InspectorReplayFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<InspectorReplayBackendDispatcher> m_backendDispatcher;
+    std::unique_ptr<Inspector::InspectorReplayFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::InspectorReplayBackendDispatcher> m_backendDispatcher;
     InspectorPageAgent* m_pageAgent;
     Page* m_page;
     ReplayAgentStateMachine m_stateMachine;

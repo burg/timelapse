@@ -34,7 +34,7 @@
 
 namespace WebKit {
 
-#if ENABLE(TOUCH_EVENTS)
+#if ENABLE(IOS_TOUCH_EVENTS)
 void WebChromeClient::didPreventDefaultForEvent()
 {
     notImplemented();
@@ -73,7 +73,7 @@ void WebChromeClient::clearContentChangeObservers(WebCore::Frame*)
 
 void WebChromeClient::notifyRevealedSelectionByScrollingFrame(WebCore::Frame*)
 {
-    notImplemented();
+    m_page->send(Messages::WebPageProxy::NotifyRevealedSelection());
 }
 
 bool WebChromeClient::isStopping()

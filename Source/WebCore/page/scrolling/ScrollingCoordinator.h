@@ -34,7 +34,7 @@
 #include "Timer.h"
 #include <wtf/Forward.h>
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 #include <wtf/HashMap.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
@@ -46,7 +46,7 @@
 
 namespace WebCore {
 
-typedef unsigned MainThreadScrollingReasons;
+typedef unsigned SynchronousScrollingReasons;
 typedef uint64_t ScrollingNodeID;
 
 enum ScrollingNodeType { ScrollingNode, FixedNode, StickyNode };
@@ -60,13 +60,44 @@ class Region;
 class ScrollableArea;
 class ViewportConstraints;
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
 class ScrollingTree;
 #endif
 
 enum SetOrSyncScrollingLayerPosition {
     SetScrollingLayerPosition,
     SyncScrollingLayerPosition
+};
+
+struct ScrollableAreaParameters {
+    ScrollElasticity horizontalScrollElasticity;
+    ScrollElasticity verticalScrollElasticity;
+
+    ScrollbarMode horizontalScrollbarMode;
+    ScrollbarMode verticalScrollbarMode;
+
+    bool hasEnabledHorizontalScrollbar;
+    bool hasEnabledVerticalScrollbar;
+    
+    ScrollableAreaParameters()
+        : horizontalScrollElasticity(ScrollElasticityNone)
+        , verticalScrollElasticity(ScrollElasticityNone)
+        , horizontalScrollbarMode(ScrollbarAuto)
+        , verticalScrollbarMode(ScrollbarAuto)
+        , hasEnabledHorizontalScrollbar(false)
+        , hasEnabledVerticalScrollbar(false)
+    {
+    }
+
+    bool operator==(const ScrollableAreaParameters& other) const
+    {
+        return horizontalScrollElasticity == other.horizontalScrollElasticity
+            && verticalScrollElasticity == other.verticalScrollElasticity
+            && horizontalScrollbarMode == other.horizontalScrollbarMode
+            && verticalScrollbarMode == other.verticalScrollbarMode
+            && hasEnabledHorizontalScrollbar == other.hasEnabledHorizontalScrollbar
+            && hasEnabledVerticalScrollbar == other.hasEnabledVerticalScrollbar;
+    }
 };
 
 class ScrollingCoordinator : public ThreadSafeRefCounted<ScrollingCoordinator> {
@@ -76,7 +107,7 @@ public:
 
     virtual void pageDestroyed();
 
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
     virtual ScrollingTree* scrollingTree() const { return 0; }
 
 #if ENABLE(WEB_REPLAY)
@@ -114,7 +145,7 @@ public:
 #endif
 
     // Force all scroll layer position updates to happen on the main thread.
-    void setForceMainThreadScrollLayerPositionUpdates(bool);
+    void setForceSynchronousScrollLayerPositionUpdates(bool);
 
     // These virtual functions are currently unique to the threaded scrolling architecture. 
     // Their meaningful implementations are in ScrollingCoordinatorMac.
@@ -146,16 +177,16 @@ public:
         IsImageDocument = 1 << 4
     };
 
-    MainThreadScrollingReasons mainThreadScrollingReasons() const;
-    bool shouldUpdateScrollLayerPositionOnMainThread() const { return mainThreadScrollingReasons() != 0; }
+    SynchronousScrollingReasons synchronousScrollingReasons() const;
+    bool shouldUpdateScrollLayerPositionSynchronously() const { return synchronousScrollingReasons(); }
 
     virtual void willDestroyScrollableArea(ScrollableArea*) { }
     virtual void scrollableAreaScrollLayerDidChange(ScrollableArea*) { }
     virtual void scrollableAreaScrollbarLayerDidChange(ScrollableArea*, ScrollbarOrientation) { }
     virtual void setLayerIsContainerForFixedPositionLayers(GraphicsLayer*, bool) { }
 
-    static String mainThreadScrollingReasonsAsText(MainThreadScrollingReasons);
-    String mainThreadScrollingReasonsAsText() const;
+    static String synchronousScrollingReasonsAsText(SynchronousScrollingReasons);
+    String synchronousScrollingReasonsAsText() const;
 
     Region computeNonFastScrollableRegion(const Frame*, const IntPoint& frameLocation) const;
 
@@ -178,10 +209,10 @@ protected:
 
 private:
     virtual void recomputeWheelEventHandlerCountForFrameView(FrameView*) { }
-    virtual void setShouldUpdateScrollLayerPositionOnMainThread(MainThreadScrollingReasons) { }
+    virtual void setSynchronousScrollingReasons(SynchronousScrollingReasons) { }
 
     virtual bool hasVisibleSlowRepaintViewportConstrainedObjects(FrameView*) const;
-    void updateShouldUpdateScrollLayerPositionOnMainThread();
+    void updateSynchronousScrollingReasons();
     
     void updateMainFrameScrollPositionTimerFired(Timer<ScrollingCoordinator>*);
 
@@ -190,7 +221,7 @@ private:
     bool m_scheduledUpdateIsProgrammaticScroll;
     SetOrSyncScrollingLayerPosition m_scheduledScrollingLayerPositionAction;
 
-    bool m_forceMainThreadScrollLayerPositionUpdates;
+    bool m_forceSynchronousScrollLayerPositionUpdates;
 #if ENABLE(WEB_REPLAY)
     bool m_forceDeterministicScrolling;
 #endif

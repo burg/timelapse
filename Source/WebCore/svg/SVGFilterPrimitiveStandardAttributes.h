@@ -55,20 +55,20 @@ protected:
 
     inline void invalidate()
     {
-        if (RenderObject* primitiveRenderer = renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(primitiveRenderer);
+        if (RenderElement* primitiveRenderer = renderer())
+            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*primitiveRenderer);
     }
 
     inline void primitiveAttributeChanged(const QualifiedName& attribute)
     {
-        if (RenderObject* primitiveRenderer = renderer())
+        if (RenderElement* primitiveRenderer = renderer())
             static_cast<RenderSVGResourceFilterPrimitive*>(primitiveRenderer)->primitiveAttributeChanged(attribute);
     }
 
 private:
     virtual bool isFilterEffect() const OVERRIDE { return true; }
 
-    virtual RenderElement* createRenderer(PassRef<RenderStyle>) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) OVERRIDE;
     virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE;
     virtual bool childShouldCreateRenderer(const Node&) const OVERRIDE { return false; }
 

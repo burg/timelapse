@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebProcess.h"
 
+#include "APIFrameHandle.h"
 #include "AuthenticationManager.h"
 #include "EventDispatcher.h"
 #include "InjectedBundle.h"
@@ -33,6 +34,7 @@
 #include "Logging.h"
 #include "PluginProcessConnectionManager.h"
 #include "StatisticsData.h"
+#include "UserData.h"
 #include "WebApplicationCacheManager.h"
 #include "WebConnectionToUIProcess.h"
 #include "WebContextMessages.h"
@@ -208,7 +210,7 @@ void WebProcess::initializeProcess(const ChildProcessInitializationParameters& p
     platformInitializeProcess(parameters);
 }
 
-void WebProcess::initializeConnection(CoreIPC::Connection* connection)
+void WebProcess::initializeConnection(IPC::Connection* connection)
 {
     ChildProcess::initializeConnection(connection);
 
@@ -248,7 +250,7 @@ void WebProcess::didDestroyDownload()
     enableTermination();
 }
 
-CoreIPC::Connection* WebProcess::downloadProxyConnection()
+IPC::Connection* WebProcess::downloadProxyConnection()
 {
     return parentProcessConnection();
 }
@@ -258,7 +260,7 @@ AuthenticationManager& WebProcess::downloadsAuthenticationManager()
     return *supplement<AuthenticationManager>();
 }
 
-void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parameters, CoreIPC::MessageDecoder& decoder)
+void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parameters, IPC::MessageDecoder& decoder)
 {
     ASSERT(m_pageMap.isEmpty());
 
@@ -364,19 +366,21 @@ void WebProcess::ensureNetworkProcessConnection()
     if (m_networkProcessConnection)
         return;
 
-    CoreIPC::Attachment encodedConnectionIdentifier;
+    IPC::Attachment encodedConnectionIdentifier;
 
     if (!parentProcessConnection()->sendSync(Messages::WebProcessProxy::GetNetworkProcessConnection(),
         Messages::WebProcessProxy::GetNetworkProcessConnection::Reply(encodedConnectionIdentifier), 0))
         return;
 
 #if PLATFORM(MAC)
-    CoreIPC::Connection::Identifier connectionIdentifier(encodedConnectionIdentifier.port());
-    if (CoreIPC::Connection::identifierIsNull(connectionIdentifier))
-        return;
+    IPC::Connection::Identifier connectionIdentifier(encodedConnectionIdentifier.port());
+#elif USE(UNIX_DOMAIN_SOCKETS)
+    IPC::Connection::Identifier connectionIdentifier = encodedConnectionIdentifier.releaseFileDescriptor();
 #else
     ASSERT_NOT_REACHED();
 #endif
+    if (IPC::Connection::identifierIsNull(connectionIdentifier))
+        return;
     m_networkProcessConnection = NetworkProcessConnection::create(connectionIdentifier);
 }
 #endif // ENABLE(NETWORK_PROCESS)
@@ -468,7 +472,7 @@ DownloadManager& WebProcess::downloadManager()
     ASSERT(!m_usesNetworkProcess);
 #endif
 
-    DEFINE_STATIC_LOCAL(DownloadManager, downloadManager, (this));
+    static NeverDestroyed<DownloadManager> downloadManager(this);
     return downloadManager;
 }
 
@@ -625,12 +629,12 @@ void WebProcess::terminate()
     ChildProcess::terminate();
 }
 
-void WebProcess::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
+void WebProcess::didReceiveSyncMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder, std::unique_ptr<IPC::MessageEncoder>& replyEncoder)
 {
     messageReceiverMap().dispatchSyncMessage(connection, decoder, replyEncoder);
 }
 
-void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
+void WebProcess::didReceiveMessage(IPC::Connection* connection, IPC::MessageDecoder& decoder)
 {
     if (messageReceiverMap().dispatchMessage(connection, decoder))
         return;
@@ -653,7 +657,7 @@ void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
     }
 }
 
-void WebProcess::didClose(CoreIPC::Connection*)
+void WebProcess::didClose(IPC::Connection*)
 {
 #ifndef NDEBUG
     m_inDidClose = true;
@@ -674,7 +678,7 @@ void WebProcess::didClose(CoreIPC::Connection*)
     stopRunLoop();
 }
 
-void WebProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference, CoreIPC::StringReference)
+void WebProcess::didReceiveInvalidMessage(IPC::Connection*, IPC::StringReference, IPC::StringReference)
 {
     // We received an invalid message, but since this is from the UI process (which we trust),
     // we'll let it slide.
@@ -969,13 +973,13 @@ void WebProcess::setJavaScriptGarbageCollectorTimerEnabled(bool flag)
     gcController().setJavaScriptGarbageCollectorTimerEnabled(flag);
 }
 
-void WebProcess::postInjectedBundleMessage(const CoreIPC::DataReference& messageData)
+void WebProcess::postInjectedBundleMessage(const IPC::DataReference& messageData)
 {
     InjectedBundle* injectedBundle = WebProcess::shared().injectedBundle();
     if (!injectedBundle)
         return;
 
-    CoreIPC::ArgumentDecoder decoder(messageData.data(), messageData.size());
+    IPC::ArgumentDecoder decoder(messageData.data(), messageData.size());
 
     String messageName;
     if (!decoder.decode(messageName))
@@ -1043,15 +1047,15 @@ void WebProcess::ensureWebToDatabaseProcessConnection()
     if (m_webToDatabaseProcessConnection)
         return;
 
-    CoreIPC::Attachment encodedConnectionIdentifier;
+    IPC::Attachment encodedConnectionIdentifier;
 
     if (!parentProcessConnection()->sendSync(Messages::WebProcessProxy::GetDatabaseProcessConnection(),
         Messages::WebProcessProxy::GetDatabaseProcessConnection::Reply(encodedConnectionIdentifier), 0))
         return;
 
 #if PLATFORM(MAC)
-    CoreIPC::Connection::Identifier connectionIdentifier(encodedConnectionIdentifier.port());
-    if (CoreIPC::Connection::identifierIsNull(connectionIdentifier))
+    IPC::Connection::Identifier connectionIdentifier(encodedConnectionIdentifier.port());
+    if (IPC::Connection::identifierIsNull(connectionIdentifier))
         return;
 #else
     ASSERT_NOT_REACHED();
@@ -1180,6 +1184,22 @@ void WebProcess::nonVisibleProcessCleanupTimerFired(Timer<WebProcess>*)
 #if PLATFORM(MAC)
     wkDestroyRenderingResources();
 #endif
+}
+
+RefPtr<API::Object> WebProcess::apiObjectByConvertingFromHandles(API::Object* object)
+{
+    return UserData::transform(object, [this](const API::Object& object) -> RefPtr<API::Object> {
+        switch (object.type()) {
+        case API::Object::Type::FrameHandle: {
+            auto& frameHandle = static_cast<const API::FrameHandle&>(object);
+
+            return webFrame(frameHandle.frameID());
+        }
+
+        default:
+            return nullptr;
+        }
+    });
 }
 
 } // namespace WebKit

@@ -43,4 +43,3 @@
                              optional boolean useCapture);
     [RaisesException] boolean dispatchEvent(Event event);
 };
-

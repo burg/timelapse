@@ -118,5 +118,5 @@ tags
 .cproject
 .settings
 
-# Ignore Timelapse project-related files:
-/docs/_site/
+# Ignore YouCompleteMe symlinks
+.ycm_extra_conf.py

@@ -131,9 +131,9 @@ PassRefPtr<AccessibilityRenderObject> AccessibilityRenderObject::create(RenderOb
     return adoptRef(new AccessibilityRenderObject(renderer));
 }
 
-void AccessibilityRenderObject::detach()
+void AccessibilityRenderObject::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
 {
-    AccessibilityNodeObject::detach();
+    AccessibilityNodeObject::detach(detachmentType, cache);
     
     detachRemoteSVGRoot();
     
@@ -536,11 +536,11 @@ bool AccessibilityRenderObject::isReadOnly() const
     
     if (isWebArea()) {
         if (HTMLElement* body = m_renderer->document().body()) {
-            if (body->rendererIsEditable())
+            if (body->hasEditableStyle())
                 return false;
         }
 
-        return !m_renderer->document().rendererIsEditable();
+        return !m_renderer->document().hasEditableStyle();
     }
 
     return AccessibilityNodeObject::isReadOnly();
@@ -1244,7 +1244,7 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
         return false;
     
     // Anything that is content editable should not be ignored.
-    // However, one cannot just call node->rendererIsEditable() since that will ask if its parents
+    // However, one cannot just call node->hasEditableStyle() since that will ask if its parents
     // are also editable. Only the top level content editable region should be exposed.
     if (hasContentEditableAttributeSet())
         return false;
@@ -1987,7 +1987,7 @@ VisiblePosition AccessibilityRenderObject::visiblePositionForPoint(const IntPoin
     LayoutPoint pointResult;
     while (1) {
         LayoutPoint ourpoint;
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && !PLATFORM(IOS)
         ourpoint = frameView->screenToContents(point);
 #else
         ourpoint = point;
@@ -2733,7 +2733,7 @@ void AccessibilityRenderObject::textChanged()
         if (parent->supportsARIALiveRegion())
             cache->postNotification(renderParent, AXObjectCache::AXLiveRegionChanged);
 
-        if (parent->isARIATextControl() && !parent->isNativeTextControl() && !parent->node()->rendererIsEditable())
+        if (parent->isARIATextControl() && !parent->isNativeTextControl() && !parent->node()->hasEditableStyle())
             cache->postNotification(renderParent, AXObjectCache::AXValueChanged);
     }
 }
@@ -2754,13 +2754,12 @@ void AccessibilityRenderObject::addImageMapChildren()
     if (!map)
         return;
 
-    auto areaDescendants = descendantsOfType<HTMLAreaElement>(*map);
-    for (auto area = areaDescendants.begin(), end = areaDescendants.end(); area != end; ++area) {
+    for (auto& area : descendantsOfType<HTMLAreaElement>(*map)) {
         // add an <area> element for this child if it has a link
-        if (!area->isLink())
+        if (!area.isLink())
             continue;
         AccessibilityImageMapLink* areaObject = toAccessibilityImageMapLink(axObjectCache()->getOrCreate(ImageMapLinkRole));
-        areaObject->setHTMLAreaElement(&*area);
+        areaObject->setHTMLAreaElement(&area);
         areaObject->setHTMLMapElement(map);
         areaObject->setParent(this);
         if (!areaObject->accessibilityIsIgnored())

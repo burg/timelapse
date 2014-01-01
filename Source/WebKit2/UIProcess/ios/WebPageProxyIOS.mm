@@ -83,15 +83,20 @@ void WebPageProxy::windowAndViewFramesChanged(const FloatRect&, const FloatPoint
     notImplemented();
 }
 
-void WebPageProxy::setComposition(const String&, Vector<CompositionUnderline>, uint64_t, uint64_t, uint64_t, uint64_t)
+void WebPageProxy::setComposition(const String& text, Vector<CompositionUnderline> underline, uint64_t selectionStart, uint64_t selectionEnd, uint64_t, uint64_t)
 {
-    notImplemented();
+    if (!isValid())
+        return;
 
+    process().send(Messages::WebPage::SetComposition(text, underline, selectionStart, selectionEnd), m_pageID);
 }
 
 void WebPageProxy::confirmComposition()
 {
-    notImplemented();
+    if (!isValid())
+        return;
+
+    process().send(Messages::WebPage::ConfirmComposition(), m_pageID);
 }
 
 void WebPageProxy::cancelComposition()
@@ -264,6 +269,11 @@ void WebPageProxy::selectWithTwoTouches(const WebCore::IntPoint from, const WebC
     m_process->send(Messages::WebPage::SelectWithTwoTouches(from, to, gestureType, gestureState, callbackID), m_pageID);
 }
 
+void WebPageProxy::notifyRevealedSelection()
+{
+    m_pageClient.selectionDidChange();
+}
+
 void WebPageProxy::extendSelection(WebCore::TextGranularity granularity)
 {
     m_process->send(Messages::WebPage::ExtendSelection(static_cast<uint32_t>(granularity)), m_pageID);
@@ -291,7 +301,7 @@ void WebPageProxy::setSmartInsertDeleteEnabled(bool)
     notImplemented();
 }
 
-void WebPageProxy::registerWebProcessAccessibilityToken(const CoreIPC::DataReference&)
+void WebPageProxy::registerWebProcessAccessibilityToken(const IPC::DataReference&)
 {
     notImplemented();
 }    
@@ -301,7 +311,7 @@ void WebPageProxy::makeFirstResponder()
     notImplemented();
 }
 
-void WebPageProxy::registerUIProcessAccessibilityTokens(const CoreIPC::DataReference&, const CoreIPC::DataReference&)
+void WebPageProxy::registerUIProcessAccessibilityTokens(const IPC::DataReference&, const IPC::DataReference&)
 {
     notImplemented();
 }
@@ -386,7 +396,7 @@ void WebPageProxy::didPerformDictionaryLookup(const AttributedString&, const Dic
     notImplemented();
 }
 
-void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplication(const String&, const String&, const CoreIPC::DataReference&, const String&)
+void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplication(const String&, const String&, const IPC::DataReference&, const String&)
 {
     notImplemented();
 }

@@ -39,7 +39,7 @@ namespace WebKit {
 class DatabaseToWebProcessConnection;
 class UniqueIDBDatabase;
 
-class DatabaseProcessIDBConnection : public RefCounted<DatabaseProcessIDBConnection>, public CoreIPC::MessageSender {
+class DatabaseProcessIDBConnection : public RefCounted<DatabaseProcessIDBConnection>, public IPC::MessageSender {
 public:
     static RefPtr<DatabaseProcessIDBConnection> create(DatabaseToWebProcessConnection& connection, uint64_t serverConnectionIdentifier)
     {
@@ -49,20 +49,27 @@ public:
     virtual ~DatabaseProcessIDBConnection();
 
     // Message handlers.
-    void didReceiveDatabaseProcessIDBConnectionMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
+    void didReceiveDatabaseProcessIDBConnectionMessage(IPC::Connection*, IPC::MessageDecoder&);
 
     void disconnectedFromWebProcess();
 
 private:
     DatabaseProcessIDBConnection(DatabaseToWebProcessConnection&, uint64_t idbConnectionIdentifier);
 
-    // CoreIPC::MessageSender
-    virtual CoreIPC::Connection* messageSenderConnection() OVERRIDE;
+    // IPC::MessageSender
+    virtual IPC::Connection* messageSenderConnection() OVERRIDE;
     virtual uint64_t messageSenderDestinationID() OVERRIDE { return m_serverConnectionIdentifier; }
 
     // Message handlers.
     void establishConnection(const String& databaseName, const SecurityOriginData& openingOrigin, const SecurityOriginData& mainFrameOrigin);
     void getOrEstablishIDBDatabaseMetadata(uint64_t requestID);
+    void openTransaction(uint64_t requestID, int64_t transactionID, const Vector<int64_t>& objectStoreIDs, uint64_t transactionMode);
+    void beginTransaction(uint64_t requestID, int64_t transactionID);
+    void commitTransaction(uint64_t requestID, int64_t transactionID);
+    void resetTransaction(uint64_t requestID, int64_t transactionID);
+    void rollbackTransaction(uint64_t requestID, int64_t transactionID);
+    void changeDatabaseVersion(uint64_t requestID, int64_t transactionID, uint64_t newVersion);
+
 
     Ref<DatabaseToWebProcessConnection> m_connection;
     uint64_t m_serverConnectionIdentifier;

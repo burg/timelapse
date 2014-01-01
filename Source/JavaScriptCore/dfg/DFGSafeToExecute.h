@@ -118,7 +118,6 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node)
     case GetCallee:
     case GetLocal:
     case SetLocal:
-    case MovHintAndCheck:
     case MovHint:
     case ZombieHint:
     case GetArgument:
@@ -241,10 +240,16 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node)
     case LoopHint:
     case Int52ToDouble:
     case Int52ToValue:
+    case StoreBarrier:
+    case ConditionalStoreBarrier:
+    case StoreBarrierWithNullCheck:
     case InvalidationPoint:
     case NotifyWrite:
     case FunctionReentryWatchpoint:
     case TypedArrayWatchpoint:
+    case CheckInBounds:
+    case ConstantStoragePointer:
+    case Check:
         return true;
         
     case GetByVal:

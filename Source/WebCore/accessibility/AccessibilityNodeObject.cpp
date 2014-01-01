@@ -120,10 +120,10 @@ PassRefPtr<AccessibilityNodeObject> AccessibilityNodeObject::create(Node* node)
     return adoptRef(new AccessibilityNodeObject(node));
 }
 
-void AccessibilityNodeObject::detach()
+void AccessibilityNodeObject::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
 {
-    clearChildren();
-    AccessibilityObject::detach();
+    // AccessibilityObject calls clearChildren.
+    AccessibilityObject::detach(detachmentType, cache);
     m_node = 0;
 }
 
@@ -150,7 +150,7 @@ void AccessibilityNodeObject::childrenChanged()
             axObjectCache()->postNotification(parent, parent->document(), AXObjectCache::AXLiveRegionChanged);
         
         // If this element is an ARIA text control, notify the AT of changes.
-        if (parent->isARIATextControl() && !parent->isNativeTextControl() && !parent->node()->rendererIsEditable())
+        if (parent->isARIATextControl() && !parent->isNativeTextControl() && !parent->node()->hasEditableStyle())
             axObjectCache()->postNotification(parent, parent->document(), AXObjectCache::AXValueChanged);
     }
 }
@@ -411,6 +411,18 @@ bool AccessibilityNodeObject::computeAccessibilityIsIgnored() const
     ASSERT(m_initialized);
 #endif
 
+    // Handle non-rendered text that is exposed through aria-hidden=false.
+    if (m_node && m_node->isTextNode() && !renderer()) {
+        // Fallback content in iframe nodes should be ignored.
+        if (m_node->parentNode() && m_node->parentNode()->hasTagName(iframeTag) && m_node->parentNode()->renderer())
+            return true;
+
+        // Whitespace only text elements should be ignored when they have no renderer.
+        String string = stringValue().stripWhiteSpace().simplifyWhiteSpace();
+        if (!string.length())
+            return true;
+    }
+    
     // If this element is within a parent that cannot have children, it should not be exposed.
     if (isDescendantOfBarrenParent())
         return true;
@@ -725,13 +737,17 @@ bool AccessibilityNodeObject::isReadOnly() const
             return input->isReadOnly();
     }
 
-    return !node->rendererIsEditable();
+    return !node->hasEditableStyle();
 }
 
 bool AccessibilityNodeObject::isRequired() const
 {
-    if (equalIgnoringCase(getAttribute(aria_requiredAttr), "true"))
+    // Explicit aria-required values should trump native required attributes.
+    const AtomicString& requiredValue = getAttribute(aria_requiredAttr);
+    if (equalIgnoringCase(requiredValue, "true"))
         return true;
+    if (equalIgnoringCase(requiredValue, "false"))
+        return false;
 
     Node* n = this->node();
     if (n && (n->isElementNode() && toElement(n)->isFormControlElement()))
@@ -1026,15 +1042,14 @@ Element* AccessibilityNodeObject::mouseButtonListener() const
 
     // check if our parent is a mouse button listener
     // FIXME: Do the continuation search like anchorElement does
-    auto lineage = elementLineage(node->isElementNode() ? toElement(node) : node->parentElement());
-    for (auto element = lineage.begin(), end = lineage.end(); element != end; ++element) {
+    for (auto& element : elementLineage(node->isElementNode() ? toElement(node) : node->parentElement())) {
         // If we've reached the body and this is not a control element, do not expose press action for this element.
         // It can cause false positives, where every piece of text is labeled as accepting press actions. 
-        if (element->hasTagName(bodyTag) && isStaticText())
+        if (element.hasTagName(bodyTag) && isStaticText())
             break;
         
-        if (element->hasEventListeners(eventNames().clickEvent) || element->hasEventListeners(eventNames().mousedownEvent) || element->hasEventListeners(eventNames().mouseupEvent))
-            return &*element;
+        if (element.hasEventListeners(eventNames().clickEvent) || element.hasEventListeners(eventNames().mousedownEvent) || element.hasEventListeners(eventNames().mouseupEvent))
+            return &element;
     }
 
     return 0;
@@ -1166,21 +1181,21 @@ static Element* siblingWithAriaRole(String role, Node* node)
 {
     ContainerNode* parent = node->parentNode();
     if (!parent)
-        return 0;
-    auto children = elementChildren(*parent);
-    for (auto sibling = children.begin(), end = children.end(); sibling != end; ++sibling) {
-        const AtomicString& siblingAriaRole = sibling->fastGetAttribute(roleAttr);
+        return nullptr;
+
+    for (auto& sibling : elementChildren(*parent)) {
+        const AtomicString& siblingAriaRole = sibling.fastGetAttribute(roleAttr);
         if (equalIgnoringCase(siblingAriaRole, role))
-            return &*sibling;
+            return &sibling;
     }
 
-    return 0;
+    return nullptr;
 }
 
 Element* AccessibilityNodeObject::menuElementForMenuButton() const
 {
     if (ariaRoleAttribute() != MenuButtonRole)
-        return 0;
+        return nullptr;
 
     return siblingWithAriaRole("menu", node());
 }
@@ -1211,6 +1226,11 @@ AccessibilityObject* AccessibilityNodeObject::menuButtonForMenu() const
     return 0;
 }
 
+bool AccessibilityNodeObject::usesAltTagForTextComputation() const
+{
+    return isImage() || isInputImage() || isNativeImage() || isCanvas() || (node() && node()->hasTagName(imgTag));
+}
+    
 void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOrder) const
 {
     Node* node = this->node();
@@ -1250,7 +1270,7 @@ void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrd
     if (!ariaLabel.isEmpty())
         textOrder.append(AccessibilityText(ariaLabel, AlternativeText));
     
-    if (isImage() || isInputImage() || isNativeImage() || isCanvas()) {
+    if (usesAltTagForTextComputation()) {
         if (renderer() && renderer()->isRenderImage()) {
             String renderAltText = toRenderImage(renderer())->altText();
 
@@ -1479,7 +1499,7 @@ String AccessibilityNodeObject::accessibilityDescription() const
     if (!ariaDescription.isEmpty())
         return ariaDescription;
 
-    if (isImage() || isInputImage() || isNativeImage() || isCanvas()) {
+    if (usesAltTagForTextComputation()) {
         // Images should use alt as long as the attribute is present, even if empty.                    
         // Otherwise, it should fallback to other methods, like the title attribute.                    
         const AtomicString& alt = getAttribute(altAttr);
@@ -1739,8 +1759,12 @@ String AccessibilityNodeObject::title() const
 String AccessibilityNodeObject::text() const
 {
     // If this is a user defined static text, use the accessible name computation.                                      
-    if (ariaRoleAttribute() == StaticTextRole)
-        return ariaAccessibilityDescription();
+    if (ariaRoleAttribute() == StaticTextRole) {
+        Vector<AccessibilityText> textOrder;
+        alternativeText(textOrder);
+        if (textOrder.size() > 0 && textOrder[0].text.length())
+            return textOrder[0].text;
+    }
 
     if (!isTextControl())
         return String();
@@ -2024,7 +2048,7 @@ AccessibilityRole AccessibilityNodeObject::remapAriaRoleDueToParent(Accessibilit
     return role;
 }   
 
-// If you call node->rendererIsEditable() since that will return true if an ancestor is editable.
+// If you call node->hasEditableStyle() since that will return true if an ancestor is editable.
 // This only returns true if this is the element that actually has the contentEditable attribute set.
 bool AccessibilityNodeObject::hasContentEditableAttributeSet() const
 {

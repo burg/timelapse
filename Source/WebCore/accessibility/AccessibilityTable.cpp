@@ -102,7 +102,7 @@ bool AccessibilityTable::isDataTable() const
     // When a section of the document is contentEditable, all tables should be
     // treated as data tables, otherwise users may not be able to work with rich
     // text editors that allow creating and editing tables.
-    if (node() && node()->rendererIsEditable())
+    if (node() && node()->hasEditableStyle())
         return true;
 
     // This employs a heuristic to determine if this table should appear.
@@ -124,9 +124,8 @@ bool AccessibilityTable::isDataTable() const
         return true;    
 
     // if there's a colgroup or col element, it's probably a data table.
-    auto tableChildren = elementChildren(*tableElement);
-    for (auto child = tableChildren.begin(), end = tableChildren.end(); child != end; ++child) {
-        if (child->hasTagName(colTag) || child->hasTagName(colgroupTag))
+    for (auto& child : elementChildren(*tableElement)) {
+        if (child.hasTagName(colTag) || child.hasTagName(colgroupTag))
             return true;
     }
     
