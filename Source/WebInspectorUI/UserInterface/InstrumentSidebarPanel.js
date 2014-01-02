@@ -138,7 +138,7 @@ WebInspector.InstrumentSidebarPanel = function()
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingEnded, this._profilingEnded, this);
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingInterrupted, this._profilingInterrupted, this);
 
-    this._recordScreenshots = true;
+    this._isCapturingScreenshots = true;
 
     this.emptyContentPlaceholder = WebInspector.UIString("No Recorded Profiles");
 
@@ -422,11 +422,11 @@ WebInspector.InstrumentSidebarPanel.prototype = {
 
         if (WebInspector.timelineManager.recording) {
             WebInspector.timelineManager.stopRecording();
-            if (this._recordScreenshots)
+            if (this._isCapturingScreenshots)
                 WebInspector.timelineManager.clearScreenshotInterval();
         } else {
             WebInspector.timelineManager.startRecording();
-            if (this._recordScreenshots)
+            if (this._isCapturingScreenshots)
                 WebInspector.timelineManager.setScreenshotInterval();
         }
     },

@@ -36,12 +36,13 @@ WebInspector.Object.addConstructorFunctions(WebInspector.ScreenshotTimelineDataG
 WebInspector.ScreenshotTimelineDataGridNode.IconStyleClassName = "icon";
 WebInspector.ScreenshotTimelineDataGridNode.SubtitleStyleClassName = "subtitle";
 WebInspector.ScreenshotTimelineDataGridNode.EmptyImagePlaceholder = "Images/DocumentImage.png";
-WebInspector.ScreenshotTimelineDataGridNode.EmptyValuePlaceholderString = "\u2014";
+WebInspector.ScreenshotTimelineDataGridNode.EmptyStringPlaceholder = "\u2014";
 WebInspector.ScreenshotTimelineDataGridNode.ScreenshotStyleClassName = "screenshot";
 WebInspector.ScreenshotTimelineDataGridNode.EmptyScreenshotStyleClassName = "empty";
 
 WebInspector.ScreenshotTimelineDataGridNode.prototype = {
     constructor: WebInspector.ScreenshotTimelineDataGridNode,
+    __proto__: WebInspector.DataGridNode.prototype,
 
     // Public
 
@@ -57,7 +58,7 @@ WebInspector.ScreenshotTimelineDataGridNode.prototype = {
 
     createCellContent: function(columnIdentifier, cell)
     {
-        var emptyValuePlaceholderString = WebInspector.ScreenshotTimelineDataGridNode.EmptyValuePlaceholderString;
+        var emptyString = WebInspector.ScreenshotTimelineDataGridNode.EmptyStringPlaceholder;
         var value = this.data[columnIdentifier];
 
         switch (columnIdentifier) {
@@ -67,33 +68,32 @@ WebInspector.ScreenshotTimelineDataGridNode.prototype = {
         case "image":
             var source = value;
             var image = document.createElement("img");
-            image.src = source;
             image.classList.add(WebInspector.ScreenshotTimelineDataGridNode.ScreenshotStyleClassName);
 
             if (!source) {
                 image.src = WebInspector.ScreenshotTimelineDataGridNode.EmptyImagePlaceholder;
                 image.classList.add(WebInspector.ScreenshotTimelineDataGridNode.EmptyScreenshotStyleClassName);
+            } else {
+                image.src = source;
             }
 
             return image;
 
         case "x":
         case "y":
-            return isNaN(value) ? emptyValuePlaceholderString : WebInspector.UIString("%d").format(value);
+            return isNaN(value) ? emptyString : WebInspector.UIString("%d").format(value);
 
         case "width":
         case "height":
-            return isNaN(value) ? emptyValuePlaceholderString : WebInspector.UIString("%fpx").format(value);
+            return isNaN(value) ? emptyString : WebInspector.UIString("%fpx").format(value);
 
         case "area":
-            return isNaN(value) ? emptyValuePlaceholderString : WebInspector.UIString("%fpx²").format(value);
+            return isNaN(value) ? emptyString : WebInspector.UIString("%fpx²").format(value);
 
         case "startTime":
-            return isNaN(value) ? emptyValuePlaceholderString : Number.secondsToString(value - this._baseStartTime);
+            return isNaN(value) ? emptyString : Number.secondsToString(value - this._baseStartTime);
         }
 
         return WebInspector.DataGridNode.prototype.createCellContent.call(this, columnIdentifier);
     }
 }
-
-WebInspector.ScreenshotTimelineDataGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;

@@ -954,7 +954,7 @@ WebInspector.DataGrid.prototype = {
         this._sortColumnCell = cell;
 
         cell.classList.add("sort-" + sortOrder);
-
+    
         this.dispatchEventToListeners(WebInspector.DataGrid.Event.SortChanged);
     },
 
@@ -1303,7 +1303,7 @@ WebInspector.DataGridNode = function(data, hasChildren)
     this._data = data || {};
     this.hasChildren = hasChildren || false;
     this.children = [];
-    this.dataGrid = this.dataGrid || null;
+    this.dataGrid = null;
     this.parent = null;
     this.previousSibling = null;
     this.nextSibling = null;
@@ -1436,7 +1436,7 @@ WebInspector.DataGridNode.prototype = {
     {
         if (typeof(this._leftPadding) === "number")
             return this._leftPadding;
-
+        
         this._leftPadding = this.depth * this.dataGrid.indentWidth;
         return this._leftPadding;
     },
@@ -1752,7 +1752,7 @@ WebInspector.DataGridNode.prototype = {
         var cell = event.target.enclosingNodeOrSelfWithNodeName("td");
         if (!cell.classList.contains("disclosure"))
             return false;
-
+        
         var left = cell.totalOffsetLeft + this.leftPadding;
         return event.pageX >= left && event.pageX <= left + this.disclosureToggleWidth;
     },

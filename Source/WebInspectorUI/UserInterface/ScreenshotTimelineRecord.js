@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2013 University of Washington. All rights reserved.
  *
@@ -27,11 +28,11 @@
 {
     WebInspector.TimelineRecord.call(this, WebInspector.TimelineRecord.Type.Screenshot, startTime, startTime);
 
-    this._startTime = typeof startTime === "number" ? startTime : NaN;
-    this._x = typeof x === "number" ? x : NaN;
-    this._y = typeof y === "number" ? y : NaN;
-    this._width = typeof width === "number" ? width : NaN;
-    this._height = typeof height === "number" ? height : NaN;
+    this._startTime = startTime || NaN;
+    this._x = x || NaN;
+    this._y = y || NaN;
+    this._width = width || NaN;
+    this._height = height || NaN;
     this._image = image;
 };
 

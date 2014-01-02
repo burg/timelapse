@@ -28,14 +28,13 @@
     WebInspector.TimelineDataGrid.call(this, columns);
 
     this.element.classList.add(WebInspector.ScreenshotTimelineDataGrid.ScreenshotDataGridStyleClassName);
-
-    this._showingHighlight = false;
 }
 
 WebInspector.ScreenshotTimelineDataGrid.ScreenshotDataGridStyleClassName = "screenshot-data-grid";
 
 WebInspector.ScreenshotTimelineDataGrid.prototype = {
     constructor: WebInspector.ScreenshotTimelineDataGrid,
+    __proto__: WebInspector.TimelineDataGrid.prototype,
 
     // Protected
 
@@ -44,5 +43,3 @@ WebInspector.ScreenshotTimelineDataGrid.prototype = {
         return this.selectedNode.elementWithColumnIdentifier("image");
     }
 }
-
-WebInspector.ScreenshotTimelineDataGrid.prototype.__proto__ = WebInspector.TimelineDataGrid.prototype;
