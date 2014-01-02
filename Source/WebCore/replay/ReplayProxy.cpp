@@ -81,9 +81,9 @@
 #include "SetPageVisibility.h"
 #endif
 
-#endif // ENABLE(WEB_REPLAY)
-
 using namespace Inspector;
+
+#endif // ENABLE(WEB_REPLAY)
 
 namespace WebCore {
 
