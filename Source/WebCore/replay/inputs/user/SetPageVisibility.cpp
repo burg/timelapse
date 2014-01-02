@@ -79,11 +79,6 @@ const AtomicString& SetPageVisibility::type() const
     return inputTypes().SetPageVisibility;
 }
 
-String SetPageVisibility::toString() const
-{
-    return String::format("SetPageVisibility(to=%s, initial=%s)", pageVisibilityStateToString(m_visibilityState), m_isInitialState ? "true" : "false");
-}
-
 void SetPageVisibility::dispatch(ReplayController& controller)
 {
     controller.page().replayProxy().setPageVisibility(m_visibilityState, m_isInitialState, true);

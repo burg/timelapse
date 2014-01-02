@@ -34,7 +34,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
@@ -44,7 +43,7 @@ class ReplayController;
 class LoadURLRequest : public EventLoopInput {
 public:
     LoadURLRequest(const FrameLoadRequest&);
-    LoadURLRequest(PassOwnPtr<FrameLoadRequest>);
+    LoadURLRequest(std::unique_ptr<FrameLoadRequest>);
     virtual ~LoadURLRequest();
 
     // EventLoopInput API
@@ -52,11 +51,10 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     const FrameLoadRequest& request() const { return *m_request; }
 private:
-    OwnPtr<FrameLoadRequest> m_request;
+    std::unique_ptr<FrameLoadRequest> m_request;
 };
 
 template<> struct InputCoder<FrameLoadRequest> {

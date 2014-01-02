@@ -42,7 +42,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -54,11 +53,6 @@ void InitializeWindow::dispatch(ReplayController& controller)
 const AtomicString& InitializeWindow::type() const
 {
     return inputTypes().InitializeWindow;
-}
-
-String InitializeWindow::toString() const
-{
-    return makeString("InitializeWindow(size=[", String::number(m_width), ",", String::number(m_height), "])");
 }
 
 std::unique_ptr<InitializeWindow> InitializeWindow::createFromPage(const Page& page)

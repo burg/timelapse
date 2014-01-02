@@ -38,6 +38,7 @@
 #include "Frame.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -64,11 +65,6 @@ void ReloadFrame::dispatch(ReplayController& controller)
 const AtomicString& ReloadFrame::type() const
 {
     return inputTypes().ReloadFrame;
-}
-
-String ReloadFrame::toString() const
-{
-    return makeString("ReloadFrame(", String::number(m_frameIndex), "/_)");
 }
 
 void InputCoder<ReloadFrame>::encode(EncoderContext& encoder, const ReloadFrame& input)

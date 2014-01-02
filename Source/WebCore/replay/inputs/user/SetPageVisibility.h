@@ -53,7 +53,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     PageVisibilityState visibilityState() const { return m_visibilityState; }
     bool isInitialState() const { return m_isInitialState; }

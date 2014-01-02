@@ -33,7 +33,7 @@
 #if ENABLE(WEB_REPLAY)
 
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/StringConcatenate.h>
+#include <wtf/text/AtomicString.h>
 
 namespace JSC {
 
@@ -50,10 +50,6 @@ const AtomicString& SetRandomSeed::type() const
 {
     static NeverDestroyed<const AtomicString> type("SetRandomSeed", AtomicString::ConstructFromLiteral);
     return type;
-}
-
-String SetRandomSeed::toString() const {
-    return makeString("SetRandomSeed(", String::number(m_randomSeed), ")");
 }
 
 } // namespace JSC

@@ -32,10 +32,8 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "EventLoopInput.h"
 #include "InputCoder.h"
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -52,14 +50,11 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
-    virtual String toString() const OVERRIDE
-    {
-        return makeString("DOMTimerCreated(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
-    }
+
+    Document* document(Page*) const;
 
     int timerId() const { return m_timerId; }
     int frameIndex() const { return m_frameIndex; }
-    Document* document(Page*) const;
 private:
     int m_timerId;
     int m_frameIndex;

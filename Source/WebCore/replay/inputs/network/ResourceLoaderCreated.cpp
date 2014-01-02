@@ -66,17 +66,6 @@ const AtomicString& ResourceLoaderCreated::type() const
     return inputTypes().ResourceLoaderCreated;
 }
 
-String ResourceLoaderCreated::toString() const
-{
-    StringBuilder builder;
-    builder.appendLiteral("ResourceLoaderCreated(identifier=");
-    builder.appendNumber(m_identifier);
-    builder.appendLiteral("; url=");
-    builder.append(m_request->url().string());
-    builder.appendLiteral(")");
-    return builder.toString();
-}
-
 void InputCoder<ResourceLoaderCreated>::encode(EncoderContext& encoder, const ResourceLoaderCreated& input)
 {
     encoder.put("identifier", input.identifier());

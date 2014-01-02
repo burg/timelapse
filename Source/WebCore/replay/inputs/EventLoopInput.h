@@ -83,9 +83,6 @@ public:
 
     virtual ~EventLoopInput() { }
 
-    // NondeterministicInput
-    virtual String toString() const =0;
-
     virtual void dispatch(ReplayController&) =0;
 
     virtual NondeterministicInput::QueueType queue() const { return NondeterministicInput::EventLoopInputQueue; }

@@ -35,7 +35,6 @@
 #include "EncoderContext.h"
 #include "KeyboardEvent.h"
 #include "ReplayInputTypes.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -47,21 +46,6 @@ InterpretedKeyCommands::~InterpretedKeyCommands() { }
 const AtomicString& InterpretedKeyCommands::type() const
 {
     return inputTypes().InterpretedKeyCommands;
-}
-
-String InterpretedKeyCommands::toString() const
-{
-    StringBuilder sb;
-    sb.append(String::format("InterpretedKeyCommands (n=%lu): [", m_commands.size()));
-    for (size_t i = 0; i < m_commands.size(); ++i) {
-        if (i > 0)
-            sb.append(",");
-        sb.append(m_commands[i].commandName);
-        sb.append(" -> ");
-        sb.append(m_commands[i].text);
-    }
-    sb.append("]");
-    return sb.toString();
 }
 
 void InputCoder<InterpretedKeyCommands>::encode(EncoderContext& encoder, const InterpretedKeyCommands& input)

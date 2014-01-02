@@ -34,7 +34,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -52,7 +51,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE { return String("TryClosePage"); }
 };
 
 template<> struct InputCoder<TryClosePage> {

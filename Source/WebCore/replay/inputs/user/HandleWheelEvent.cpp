@@ -43,90 +43,9 @@
 
 namespace WebCore {
 
-static String wheelEventGranularityToString(PlatformWheelEventGranularity ty)
-{
-    switch (ty) {
-    case ScrollByPageWheelEvent:  return "ScrollByPage";
-    case ScrollByPixelWheelEvent: return "ScrollByPixel";
-    default:
-        ASSERT_NOT_REACHED();
-        return String();
-    }
-}
-
-#if PLATFORM(MAC)
-static String wheelEventPhaseToString(PlatformWheelEventPhase ty)
-{
-    switch (ty) {
-    case PlatformWheelEventPhaseNone:       return "None";
-    case PlatformWheelEventPhaseBegan:      return "Began";
-    case PlatformWheelEventPhaseStationary: return "Stationary";
-    case PlatformWheelEventPhaseChanged:    return "Changed";
-    case PlatformWheelEventPhaseEnded:      return "Ended";
-    case PlatformWheelEventPhaseCancelled:  return "Cancelled";
-    case PlatformWheelEventPhaseMayBegin:   return "MayBegin";
-    default:
-        ASSERT_NOT_REACHED();
-        return String();
-    }
-}
-#endif
-
 const AtomicString& HandleWheelEvent::type() const
 {
     return inputTypes().HandleWheelEvent;
-}
-
-String HandleWheelEvent::toString() const
-{
-    StringBuilder sb;
-    sb.append("HandleWheelEvent(");
-    sb.append(makeString("pagePos=[",
-        String::number(m_platformEvent.position().x()),
-        ",",
-        String::number(m_platformEvent.position().y()),
-        "];"));
-    sb.append(makeString(" globalPos=[",
-        String::number(m_platformEvent.globalPosition().x()),
-        ",",
-        String::number(m_platformEvent.globalPosition().y()),
-        "];"));
-
-    sb.append(makeString(" delta=[",
-        String::number(m_platformEvent.deltaX()),
-        ",",
-        String::number(m_platformEvent.deltaY()),
-        "];"));
-
-
-    sb.append(makeString(" wheelTicksX=", String::number(m_platformEvent.wheelTicksX()), ";"));
-    sb.append(makeString(" wheelTicksY=", String::number(m_platformEvent.wheelTicksY()), ";"));
-
-    sb.append(makeString(" granularity=", wheelEventGranularityToString(m_platformEvent.granularity()), ";"));
-
-    if (m_platformEvent.shiftKey() || m_platformEvent.ctrlKey() || m_platformEvent.altKey() || m_platformEvent.metaKey()) {
-        sb.append("key=[ ");
-        if (m_platformEvent.shiftKey())
-            sb.append("SHIFT ");
-        if (m_platformEvent.ctrlKey())
-            sb.append("CTRL ");
-        if (m_platformEvent.altKey())
-            sb.append("ALT ");
-        if (m_platformEvent.metaKey())
-            sb.append("META ");
-        sb.append("];");
-    }
-
-    sb.append(makeString(" inverted from device: ", (m_platformEvent.directionInvertedFromDevice()) ? "true" : "false", ";"));
-
-#if PLATFORM(MAC)
-    sb.append(makeString(" phase=", wheelEventPhaseToString(m_platformEvent.phase()), ";"));
-    sb.append(makeString(" momentumPhase=", wheelEventPhaseToString(m_platformEvent.momentumPhase()), ";"));
-    sb.append(makeString(" PreciseScrollDeltas=", (m_platformEvent.hasPreciseScrollingDeltas()) ? "true" : "false", ";"));
-    sb.append(makeString(" ts=", String::number(m_platformEvent.timestamp()), ";"));
-#endif
-    sb.append(")");
-    return sb.toString();
 }
 
 void HandleWheelEvent::dispatch(ReplayController& controller)

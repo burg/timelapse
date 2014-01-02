@@ -39,10 +39,9 @@
 #include "NavigationScheduler.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "SecurityOrigin.h"
 #include "URL.h"
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -71,17 +70,6 @@ void NavigateToPage::dispatch(ReplayController& controller)
 const AtomicString& NavigateToPage::type() const
 {
     return inputTypes().NavigateToPage;
-}
-
-String NavigateToPage::toString() const
-{
-    StringBuilder sb;
-    sb.append("NavigateToPage(");
-    sb.append(makeString("url=", m_url, ";"));
-    sb.append(makeString("referrer=", m_referrer, ";"));
-    sb.append(makeString("securityOrigin=", m_securityOrigin->toString(), ";"));
-    sb.append(")");
-    return sb.toString();
 }
 
 void InputCoder<SecurityOrigin>::encode(EncoderContext& encoder, const SecurityOrigin& input)

@@ -63,16 +63,15 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
+
+    static String scrollDirectionToString(ScrollDirection);
+    static String logicalScrollDirectionToString(ScrollLogicalDirection);
+    static String scrollGranularityToString(ScrollGranularity);
 
     bool isLogicalScroll() const { return m_isLogicalScroll; }
     ScrollDirection scrollDirection() const { ASSERT(!isLogicalScroll()); return m_direction.normal; }
     ScrollLogicalDirection logicalScrollDirection() const { ASSERT(isLogicalScroll()); return m_direction.logical; }
     ScrollGranularity scrollGranularity() const { return m_granularity; }
-
-    static String scrollDirectionToString(ScrollDirection);
-    static String logicalScrollDirectionToString(ScrollLogicalDirection);
-    static String scrollGranularityToString(ScrollGranularity);
 
 private:
     bool m_isLogicalScroll;

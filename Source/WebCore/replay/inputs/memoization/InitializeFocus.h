@@ -56,7 +56,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     bool isFocused() const { return m_focus; }
     bool isActive() const { return m_active; }

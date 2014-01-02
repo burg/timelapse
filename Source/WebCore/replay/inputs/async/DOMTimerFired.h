@@ -44,15 +44,14 @@ public:
     DOMTimerFired(int timerId, int frameIndex);
     virtual ~DOMTimerFired() { }
 
-    int timerId() const { return m_timerId; }
-    int frameIndex() const { return m_frameIndex; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController&);
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const;
+
+    int timerId() const { return m_timerId; }
+    int frameIndex() const { return m_frameIndex; }
 private:
     int m_timerId;
     int m_frameIndex;

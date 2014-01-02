@@ -66,19 +66,6 @@ const AtomicString& ResourceDidReceiveResponse::type() const
     return inputTypes().ResourceDidReceiveResponse;
 }
 
-String ResourceDidReceiveResponse::toString() const
-{
-    StringBuilder sb;
-    sb.appendLiteral("ResourceDidReceiveResponse(id=");
-    sb.appendNumber(identifier());
-    sb.appendLiteral("; frameIndex=");
-    sb.appendNumber(frameIndex());
-    sb.appendLiteral("; url=");
-    sb.append(m_response->url().string());
-    sb.appendLiteral(")");
-    return sb.toString();
-}
-
 void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, const ResourceDidReceiveResponse& input)
 {
     encoder.put("identifier", input.identifier());

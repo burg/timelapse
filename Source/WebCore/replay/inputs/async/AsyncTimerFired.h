@@ -44,16 +44,14 @@ public:
     AsyncTimerFired(int frameIndex, unsigned int identifier);
     virtual ~AsyncTimerFired() { }
 
-    int frameIndex() const { return m_frameIndex; }
-    unsigned int identifier() const { return m_identifier; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController&);
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const;
 
+    int frameIndex() const { return m_frameIndex; }
+    unsigned int identifier() const { return m_identifier; }
 private:
     int m_frameIndex;
     unsigned int m_identifier;

@@ -52,7 +52,6 @@ public:
 
     virtual const AtomicString& type() const =0;
     virtual QueueType queue() const =0;
-    virtual String toString() const =0;
 };
 
 } // namespace WTF

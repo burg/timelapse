@@ -38,8 +38,6 @@
 #include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include <wtf/replay/NondeterministicInput.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -52,11 +50,6 @@ DOMTimerFired::DOMTimerFired(int timerId, int frameIndex)
 const AtomicString& DOMTimerFired::type() const
 {
     return inputTypes().DOMTimerFired;
-}
-
-String DOMTimerFired::toString() const
-{
-    return makeString("DOMTimerFired(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
 }
 
 void DOMTimerFired::dispatch(ReplayController& controller)

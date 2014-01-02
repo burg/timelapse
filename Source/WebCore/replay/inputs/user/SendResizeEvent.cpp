@@ -64,15 +64,6 @@ const AtomicString& SendResizeEvent::type() const
     return inputTypes().SendResizeEvent;
 }
 
-String SendResizeEvent::toString() const
-{
-    StringBuilder sb;
-    sb.append(makeString("Resize("));
-    sb.append(makeString("size=[", String::number(m_width), ",", String::number(m_height), "];"));
-    sb.append(")");
-    return sb.toString();
-}
-
 void InputCoder<SendResizeEvent>::encode(EncoderContext& encoder, const SendResizeEvent& input)
 {
     encoder.put("width", input.width());

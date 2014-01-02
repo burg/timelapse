@@ -65,17 +65,6 @@ const AtomicString& ResourceDidReceiveData::type() const
     return inputTypes().ResourceDidReceiveData;
 }
 
-String ResourceDidReceiveData::toString() const
-{
-    StringBuilder builder;
-    builder.appendLiteral("ResourceDidReceiveData(id=");
-    builder.appendNumber(identifier());
-    builder.appendLiteral(";bytes=");
-    builder.appendNumber(length());
-    builder.appendLiteral(")");
-    return builder.toString();
-}
-
 void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const ResourceDidReceiveData& input)
 {
     encoder.put("identifier", input.identifier());

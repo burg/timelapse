@@ -51,7 +51,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     bool toState() const { return m_toState; }
 private:

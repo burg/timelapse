@@ -49,7 +49,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     int width() const { return m_width; }
     int height() const { return m_height; }

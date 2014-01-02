@@ -48,7 +48,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
-    virtual String toString() const OVERRIDE;
 
     const Vector<KeypressCommand>& commands() const { return m_commands; }
 private:

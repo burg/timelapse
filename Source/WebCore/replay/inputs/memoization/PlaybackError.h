@@ -35,7 +35,7 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -49,12 +49,11 @@ public:
     virtual ~PlaybackError() { }
 
     // EventLoopInput API
-    virtual const AtomicString& type() const OVERRIDE;
     virtual void dispatch(ReplayController&) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
-    virtual String toString() const OVERRIDE;
+    virtual const AtomicString& type() const OVERRIDE;
 
     String errorMessage() const { return m_errorMessage; }
 private:

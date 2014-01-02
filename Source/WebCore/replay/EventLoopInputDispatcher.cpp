@@ -33,9 +33,11 @@
 #if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
+#include "JSONEncoderContext.h"
 #include "Logging.h"
 #include "Page.h"
 #include "ReplayInputIterator.h"
+#include <inspector/InspectorValues.h>
 #include <wtf/TemporaryChange.h>
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/text/CString.h>
@@ -166,8 +168,16 @@ void EventLoopInputDispatcher::dispatchInput()
         m_previousDispatchStartTime = monotonicallyIncreasingTime();
         m_previousMarkTime = m_runningInput->mark().time();
     }
+
+#if !LOG_DISABLED
+    std::unique_ptr<EncoderContext> encoder = JSONCoder::createMap();
+    encoder->encodeInput(m_runningInput);
+    RefPtr<Inspector::InspectorValue> value = static_cast<JSONEncoderContext*>(encoder.get())->encodedValue();
+    String jsonString = value->toJSONString();
+
     LOG(DeterministicReplay, "%-20s ----------------------------------------------", "ReplayEvents");
-    LOG(DeterministicReplay, "%-20s >DISPATCH: %s\n", "ReplayEvents", m_runningInput->toString().utf8().data());
+    LOG(DeterministicReplay, "%-20s >DISPATCH: %s %s\n", "ReplayEvents", m_runningInput->type().string().utf8().data(), jsonString.utf8().data());
+#endif
 
     m_client->willDispatchInput(*m_runningInput);
     // Client could stop replay in the previous callback, so check again.

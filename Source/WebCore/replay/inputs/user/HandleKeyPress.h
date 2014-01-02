@@ -51,7 +51,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     const PlatformKeyboardEvent& platformEvent() const { return m_platformEvent; }
 private:

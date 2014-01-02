@@ -36,7 +36,7 @@
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "ReplayController.h"
-#include <wtf/text/StringConcatenate.h>
+#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -48,11 +48,6 @@ void PlaybackError::dispatch(ReplayController& controller)
 const AtomicString& PlaybackError::type() const
 {
     return inputTypes().PlaybackError;
-}
-
-String PlaybackError::toString() const
-{
-    return makeString("PlaybackError(", m_errorMessage, ")");
 }
 
 void InputCoder<PlaybackError>::encode(EncoderContext& encoder, const PlaybackError& input)

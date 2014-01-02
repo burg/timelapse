@@ -37,35 +37,8 @@
 #include "PlatformMouseEvent.h"
 #include "ReplayInputTypes.h"
 #include <wtf/Assertions.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
-
-String HandleMouseBase::toString() const
-{
-    StringBuilder sb;
-    sb.append(makeString("HandleMouse", mouseEventTypeToString(m_platformEvent.type()), "("));
-    sb.append(makeString("pagePos=[", String::number(m_platformEvent.position().x()), ",", String::number(m_platformEvent.position().y()), "];"));
-    sb.append(makeString(" globalPos=[", String::number(m_platformEvent.globalPosition().x()), ",", String::number(m_platformEvent.globalPosition().y()), "];"));
-    if (m_platformEvent.shiftKey() || m_platformEvent.ctrlKey() || m_platformEvent.altKey() || m_platformEvent.metaKey()) {
-        sb.append("key=[ ");
-        if (m_platformEvent.shiftKey())
-            sb.append("SHIFT ");
-        if (m_platformEvent.ctrlKey())
-            sb.append("CTRL ");
-        if (m_platformEvent.altKey())
-            sb.append("ALT ");
-        if (m_platformEvent.metaKey())
-            sb.append("META ");
-        sb.append("];");
-    }
-    sb.append(makeString("flags=", String::number(m_platformEvent.modifierFlags()), ";"));
-    sb.append(makeString("ts=", String::number(m_platformEvent.timestamp()), ";"));
-    sb.append(makeString("button=", mouseButtonToString(m_platformEvent.button()), ";"));
-    sb.append(")");
-    return sb.toString();
-}
 
 String HandleMouseBase::mouseButtonToString(MouseButton button)
 {

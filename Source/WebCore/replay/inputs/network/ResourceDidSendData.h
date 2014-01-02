@@ -51,7 +51,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     unsigned long long bytesSent() const { return m_bytesSent; }
     unsigned long long totalBytesToBeSent() const { return m_totalBytesToBeSent; }

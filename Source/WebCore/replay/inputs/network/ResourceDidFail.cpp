@@ -66,23 +66,6 @@ const AtomicString& ResourceDidFail::type() const
     return inputTypes().ResourceDidFail;
 }
 
-String ResourceDidFail::toString() const
-{
-    StringBuilder sb;
-    sb.appendLiteral("ResourceDidFail(id=");
-    sb.appendNumber(identifier());
-    sb.appendLiteral(";domain=");
-    sb.append(m_error.domain());
-    sb.appendLiteral(";failingURL=");
-    sb.append(m_error.failingURL());
-    sb.appendLiteral(";errorCode=");
-    sb.appendNumber(m_error.errorCode());
-    sb.appendLiteral(";localizedDescription=");
-    sb.append(m_error.localizedDescription());
-    sb.appendLiteral(")");
-    return sb.toString();
-}
-
 void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const ResourceDidFail& input)
 {
     encoder.put("identifier", input.identifier());

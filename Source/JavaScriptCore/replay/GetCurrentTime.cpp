@@ -33,7 +33,7 @@
 #if ENABLE(WEB_REPLAY)
 
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/StringConcatenate.h>
+#include <wtf/text/AtomicString.h>
 
 namespace JSC {
 
@@ -52,10 +52,6 @@ const AtomicString& GetCurrentTime::type() const
     return type;
 }
 
-String GetCurrentTime::toString() const {
-    return makeString("GetCurrentTime(", String::number(m_currentTime), ")");
-}
-
-} //namespace JSC
+} // namespace JSC
 
 #endif // ENABLE(WEB_REPLAY)

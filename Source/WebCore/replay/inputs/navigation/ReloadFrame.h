@@ -34,7 +34,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -50,7 +49,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     int frameIndex() const { return m_frameIndex; }
     bool endToEndReload() const { return m_endToEndReload; }

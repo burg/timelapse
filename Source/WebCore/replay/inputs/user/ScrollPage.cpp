@@ -38,8 +38,6 @@
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include <wtf/Assertions.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -85,20 +83,6 @@ String ScrollPage::scrollGranularityToString(ScrollGranularity granularity)
 const AtomicString& ScrollPage::type() const
 {
     return inputTypes().ScrollPage;
-}
-
-String ScrollPage::toString() const
-{
-    StringBuilder sb;
-    sb.append("ScrollPage(");
-    sb.append(makeString("type=", (isLogicalScroll()) ? "logical" : "normal", "; "));
-    if (isLogicalScroll())
-        sb.append(makeString("direction=", logicalScrollDirectionToString(logicalScrollDirection()), "; "));
-    else
-        sb.append(makeString("direction=", scrollDirectionToString(scrollDirection()), "; "));
-    sb.append(makeString("granularity=", scrollGranularityToString(scrollGranularity()), ";"));
-    sb.append(")");
-    return sb.toString();
 }
 
 void ScrollPage::dispatch(ReplayController& controller)

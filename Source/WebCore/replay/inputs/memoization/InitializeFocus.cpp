@@ -40,7 +40,6 @@
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -58,19 +57,6 @@ void InitializeFocus::dispatch(ReplayController& controller)
 const AtomicString& InitializeFocus::type() const
 {
     return inputTypes().InitializeFocus;
-}
-
-String InitializeFocus::toString() const
-{
-    StringBuilder builder;
-    builder.appendLiteral("InitializeFocus(focus=");
-    builder.append(m_focus ? "true" : "false");
-    builder.appendLiteral("; active=");
-    builder.append(m_active ? "true" : "false");
-    builder.appendLiteral("; frameIndex=");
-    builder.appendNumber(m_frameIndex);
-    builder.appendLiteral(")");
-    return builder.toString();
 }
 
 std::unique_ptr<InitializeFocus> InitializeFocus::createFromPage(const Page& page)

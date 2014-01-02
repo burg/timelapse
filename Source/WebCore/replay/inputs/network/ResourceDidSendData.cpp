@@ -60,17 +60,6 @@ const AtomicString& ResourceDidSendData::type() const
     return inputTypes().ResourceDidSendData;
 }
 
-String ResourceDidSendData::toString() const
-{
-    StringBuilder sb;
-    sb.appendLiteral("ResourceDidSendData(id=");
-    sb.appendNumber(identifier());
-    sb.appendLiteral(";bytesSent=");
-    sb.appendNumber(m_bytesSent);
-    sb.appendLiteral(")");
-    return sb.toString();
-}
-
 void InputCoder<ResourceDidSendData>::encode(EncoderContext& encoder, const ResourceDidSendData& input)
 {
     encoder.put("identifier", input.identifier());

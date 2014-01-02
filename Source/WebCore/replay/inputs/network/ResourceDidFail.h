@@ -53,7 +53,6 @@ public:
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
 
     const ResourceError& error() const { return m_error; }
 private:

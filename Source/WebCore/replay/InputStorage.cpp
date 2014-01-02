@@ -32,12 +32,14 @@
 
 #if ENABLE(WEB_REPLAY)
 
+#include "JSONEncoderContext.h"
 #include "Logging.h"
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
+namespace WebCore {
 
-#if !defined(NDEBUG)
+#if !LOG_DISABLED
 static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue, bool isLoad)
 {
     if (isLoad) {
@@ -56,9 +58,15 @@ static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue,
         }
     }
 }
-#endif
 
-namespace WebCore {
+static String jsonStringForInput(NondeterministicInput* input)
+{
+    std::unique_ptr<EncoderContext> encoder = JSONCoder::createMap();
+    encoder->encodeInput(input);
+    RefPtr<Inspector::InspectorValue> value = static_cast<JSONEncoderContext*>(encoder.get())->encodedValue();
+    return value->toJSONString();
+}
+#endif
 
 InputStorage::InputStorage()
     : m_inputCount(0)
@@ -81,8 +89,7 @@ NondeterministicInput* InputStorage::load(NondeterministicInput::QueueType queue
 
     NondeterministicInput* input = m_queues.at(queue)->at(offset).get();
 
-    LOG(DeterministicReplay, "%-20s %s: %s\n", "ReplayEvents",
-        queueTypeToMiniString(queue, true), input->toString().utf8().data());
+    LOG(DeterministicReplay, "%-20s %s: %s %s\n", "ReplayEvents", queueTypeToMiniString(queue, true), input->type().string().utf8().data(), jsonStringForInput(input).utf8().data());
 
     return input;
 }
@@ -92,9 +99,7 @@ void InputStorage::store(std::unique_ptr<NondeterministicInput> input)
     ASSERT(input);
     ASSERT(input->queue() < NondeterministicInput::QueueTypeLength);
 
-    LOG(DeterministicReplay, "%-14s#%-5u %s: %s \n", "ReplayEvents",
-        m_inputCount++, queueTypeToMiniString(input->queue(), false),
-        input->toString().utf8().data());
+    LOG(DeterministicReplay, "%-14s#%-5u %s: %s %s\n", "ReplayEvents", m_inputCount++, queueTypeToMiniString(input->queue(), false), input->type().string().utf8().data(), jsonStringForInput(input.get()).utf8().data());
 
     m_queues.at(input->queue())->append(std::move(input));
 }

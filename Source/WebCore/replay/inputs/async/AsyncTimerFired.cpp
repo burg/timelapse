@@ -40,7 +40,6 @@
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
@@ -53,11 +52,6 @@ AsyncTimerFired::AsyncTimerFired(int frameIndex, unsigned int identifier)
 const AtomicString& AsyncTimerFired::type() const
 {
     return inputTypes().AsyncTimerFired;
-}
-
-String AsyncTimerFired::toString() const
-{
-    return makeString("AsyncTimerFired(", String::number(m_frameIndex), "/", String::number(m_identifier), ")");
 }
 
 void AsyncTimerFired::dispatch(ReplayController& controller)

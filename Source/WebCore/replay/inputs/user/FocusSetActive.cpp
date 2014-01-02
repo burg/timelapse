@@ -46,11 +46,6 @@ const AtomicString& FocusSetActive::type() const
     return inputTypes().FocusSetActive;
 }
 
-String FocusSetActive::toString() const
-{
-    return m_toState ? "FocusSetActive(to=active)" : "FocusSetActive(to=inactive)";
-}
-
 void FocusSetActive::dispatch(ReplayController& controller)
 {
     controller.page().replayProxy().focusSetActive(m_toState, true);

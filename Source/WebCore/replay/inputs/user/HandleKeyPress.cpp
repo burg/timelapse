@@ -33,31 +33,13 @@
 #if ENABLE(WEB_REPLAY)
 
 #include "DecoderContext.h"
-#include "Document.h"
 #include "EncoderContext.h"
-#include "Logging.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include <wtf/Assertions.h>
-#include <wtf/text/CString.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
-
-static String keyTypeToString(PlatformKeyboardEvent::Type ty)
-{
-    switch (ty) {
-    case PlatformKeyboardEvent::KeyDown:     return "KeyDown";
-    case PlatformKeyboardEvent::KeyUp:       return "KeyUp";
-    case PlatformKeyboardEvent::RawKeyDown:  return "RawKeyDown";
-    case PlatformKeyboardEvent::Char:        return "Char";
-    default:
-        ASSERT_NOT_REACHED();
-        return String();
-    }
-}
 
 HandleKeyPress::HandleKeyPress(const PlatformKeyboardEvent& event)
     : m_platformEvent(event)
@@ -76,34 +58,6 @@ HandleKeyPress::~HandleKeyPress()
 const AtomicString& HandleKeyPress::type() const
 {
     return inputTypes().HandleKeyPress;
-}
-
-String HandleKeyPress::toString() const
-{
-    StringBuilder sb;
-    sb.append("HandleKeyPress(");
-    sb.append(makeString("type=", keyTypeToString(m_platformEvent.type()), ";"));
-    if (m_platformEvent.shiftKey() || m_platformEvent.ctrlKey() || m_platformEvent.altKey() || m_platformEvent.metaKey()) {
-        sb.append(" key=[ ");
-        if (m_platformEvent.shiftKey())
-            sb.append("SHIFT ");
-        if (m_platformEvent.ctrlKey())
-            sb.append("CTRL ");
-        if (m_platformEvent.altKey())
-            sb.append("ALT ");
-        if (m_platformEvent.metaKey())
-            sb.append("META ");
-        sb.append("];");
-    }
-    if (m_platformEvent.isAutoRepeat())
-        sb.append(" autorepeat;");
-
-    if (m_platformEvent.isKeypad())
-        sb.append(" keypad;");
-
-    sb.append(makeString("text=[", m_platformEvent.text(), "];"));
-    sb.append(")");
-    return sb.toString();
 }
 
 void HandleKeyPress::dispatch(ReplayController& controller)

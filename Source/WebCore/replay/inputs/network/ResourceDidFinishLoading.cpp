@@ -59,17 +59,6 @@ const AtomicString& ResourceDidFinishLoading::type() const
     return inputTypes().ResourceDidFinishLoading;
 }
 
-String ResourceDidFinishLoading::toString() const
-{
-    StringBuilder builder;
-    builder.appendLiteral("ResourceDidFinishLoading(id=");
-    builder.appendNumber(identifier());
-    builder.appendLiteral("; finishTime=");
-    builder.appendNumber(m_finishTime);
-    builder.appendLiteral(")");
-    return builder.toString();
-}
-
 void InputCoder<ResourceDidFinishLoading>::encode(EncoderContext& encoder, const ResourceDidFinishLoading& input)
 {
     encoder.put("identifier", input.identifier());

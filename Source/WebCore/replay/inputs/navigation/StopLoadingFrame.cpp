@@ -38,6 +38,7 @@
 #include "Frame.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -63,11 +64,6 @@ void StopLoadingFrame::dispatch(ReplayController& controller)
 const AtomicString& StopLoadingFrame::type() const
 {
     return inputTypes().StopLoadingFrame;
-}
-
-String StopLoadingFrame::toString() const
-{
-    return makeString("StopLoadingFrame(", String::number(m_frameIndex), "/_)");
 }
 
 void InputCoder<StopLoadingFrame>::encode(EncoderContext& encoder, const StopLoadingFrame& input)

@@ -45,7 +45,6 @@ public:
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
-    virtual String toString() const OVERRIDE;
 
     double currentTime() const { return m_currentTime; }
 private:

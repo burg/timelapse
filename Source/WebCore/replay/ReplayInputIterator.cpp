@@ -87,12 +87,7 @@ NondeterministicInput* ReplayInputIterator::loadInput(NondeterministicInput::Que
     NondeterministicInput* input = uncheckedLoadInput(queue);
 
     if (input->type() != type) {
-        LOG_ERROR("%-25s ERROR: Expected replay input of type %s, but got type %s (%s)\n",
-            "[ReplayInputIterator]",
-            type.string().ascii().data(),
-            input->type().string().ascii().data(),
-            input->toString().ascii().data());
-
+        LOG_ERROR("%-25s ERROR: Expected replay input of type %s, but got type %s\n", "[ReplayInputIterator]", type.string().ascii().data(), input->type().string().ascii().data());
         m_errorData.error = ErrorUnexpectedInputType;
         m_errorData.queue = queue;
         m_errorData.expectedInput = type;
@@ -111,9 +106,7 @@ NondeterministicInput* ReplayInputIterator::uncheckedLoadInput(NondeterministicI
     ASSERT(queue < NondeterministicInput::QueueTypeLength);
 
     if (m_positions[queue] >= m_storage->queueSize(queue)) {
-        LOG_ERROR("%-30s ERROR No more inputs remain for determinism queue %s, but one was requested.",
-            "[ReplayInputIterator]",
-            queueTypeToString(queue));
+        LOG_ERROR("%-30s ERROR No more inputs remain for determinism queue %s, but one was requested.", "[ReplayInputIterator]", queueTypeToString(queue));
         m_errorData.error = ErrorExhaustedQueue;
         m_errorData.queue = queue;
         return nullptr;
@@ -144,9 +137,6 @@ String ReplayInputIterator::errorMessage() const
 
         NondeterministicInput* input = m_storage->load(queue, m_positions[queue]);
         sb.append(input->type());
-        sb.append("(detail: ");
-        sb.append(input->toString());
-        sb.append(")");
         break;
     }
     default:

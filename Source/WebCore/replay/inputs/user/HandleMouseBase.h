@@ -45,12 +45,10 @@ public:
         : m_platformEvent(event) { }
     virtual ~HandleMouseBase() { }
 
-    // NondeterministicInput API
-    virtual String toString() const OVERRIDE;
-
-    const PlatformMouseEvent& platformEvent() const { return m_platformEvent; }
     static String mouseButtonToString(MouseButton);
     static String mouseEventTypeToString(PlatformEvent::Type);
+
+    const PlatformMouseEvent& platformEvent() const { return m_platformEvent; }
 private:
     PlatformMouseEvent m_platformEvent;
 };

@@ -57,16 +57,15 @@ public:
         , m_result(result) { }
     virtual ~AutoMemoized() { }
 
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
+
     const String& attributeName() const { return m_attribute; }
     T result() const { return m_result; }
     String resultString() const;
 
     virtual void encode(EncoderContext& context) const { InputCoder<AutoMemoized<T>>::encode(context, *this); }
-
-    // NondeterministicInput API
-    virtual const AtomicString& type() const OVERRIDE;
-    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
-    virtual String toString() const OVERRIDE;
 private:
     String m_attribute;
     T m_result;
@@ -130,11 +129,6 @@ template<typename T> struct InputCoder<AutoMemoized<T> > {
 template<typename T> inline const AtomicString& AutoMemoized<T>::type() const
 {
     return inputTypes().AutoMemoized;
-}
-
-template<typename T> inline String AutoMemoized<T>::toString() const
-{
-    return makeString("AutoMemoized(attribute=", attributeName(), ";result=", resultString(), ")");
 }
 
 template<typename T> inline void InputCoder<AutoMemoized<T> >::encode(EncoderContext& encoder, const AutoMemoized<T>& input)

@@ -40,18 +40,16 @@
 #include "ReplayInputTypes.h"
 #include "ResourceRequest.h"
 #include "SerializationMethods.h"
-#include <wtf/PassOwnPtr.h>
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 LoadURLRequest::LoadURLRequest(const FrameLoadRequest& request)
-    : m_request(adoptPtr(new FrameLoadRequest(request.requester()->isolatedCopy(), request.resourceRequest(), request.frameName(), request.substituteData())))
+    : m_request(std::make_unique<FrameLoadRequest>(request.requester()->isolatedCopy(), request.resourceRequest(), request.frameName(), request.substituteData()))
 {
 }
 
-LoadURLRequest::LoadURLRequest(PassOwnPtr<FrameLoadRequest> request)
-    : m_request(request)
+LoadURLRequest::LoadURLRequest(std::unique_ptr<FrameLoadRequest> request)
+    : m_request(std::move(request))
 {
 }
 
@@ -67,17 +65,6 @@ void LoadURLRequest::dispatch(ReplayController& controller)
 const AtomicString& LoadURLRequest::type() const
 {
     return inputTypes().LoadURLRequest;
-}
-
-String LoadURLRequest::toString() const
-{
-    StringBuilder sb;
-    sb.append("LoadURLRequest(requester=");
-    sb.append(m_request->requester()->toString());
-    sb.append("; url=");
-    sb.append(m_request->resourceRequest().url().string());
-    sb.append(")");
-    return sb.toString();
 }
 
 void InputCoder<FrameLoadRequest>::encode(EncoderContext& encoder, const FrameLoadRequest& request)
@@ -118,7 +105,7 @@ bool InputCoder<LoadURLRequest>::decode(DecoderContext& decoder, std::unique_ptr
     if (!InputCoder<FrameLoadRequest>::decode(decoder, request))
         return false;
 
-    input = std::make_unique<LoadURLRequest>(adoptPtr(request.release()));
+    input = std::make_unique<LoadURLRequest>(std::move(request));
     return true;
 }
 

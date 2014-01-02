@@ -34,7 +34,6 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "EventLoopInputDispatcher.h"
 #include "ReplayInputTypes.h"
 
 namespace WebCore {
