@@ -587,10 +587,10 @@ void CSSFontSelector::beginLoadingFontSoon(CachedFont* font)
     // after this font has been requested but before it began loading. Balanced by
     // decrementRequestCount() in beginLoadTimerFired() and in clearDocument().
     m_document->cachedResourceLoader()->incrementRequestCount(font);
-    m_beginLoadingTimer.startOneShot(0);
+    m_beginLoadingTimer.startOneShot(0, m_document);
 }
 
-void CSSFontSelector::beginLoadTimerFired(Timer<WebCore::CSSFontSelector>*)
+void CSSFontSelector::beginLoadTimerFired(ReplayableTimer<WebCore::CSSFontSelector>*)
 {
     Vector<CachedResourceHandle<CachedFont>> fontsToBeginLoading;
     fontsToBeginLoading.swap(m_fontsToBeginLoading);

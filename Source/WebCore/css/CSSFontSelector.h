@@ -28,8 +28,8 @@
 
 #include "CachedResourceHandle.h"
 #include "FontSelector.h"
+#include "ReplayableTimer.h"
 #include "SimpleFontData.h"
-#include "Timer.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -85,7 +85,7 @@ private:
 
     void dispatchInvalidationCallbacks();
 
-    void beginLoadTimerFired(Timer<CSSFontSelector>*);
+    void beginLoadTimerFired(ReplayableTimer<CSSFontSelector>*);
 
     Document* m_document;
     HashMap<String, OwnPtr<Vector<RefPtr<CSSFontFace>>>, CaseFoldingHash> m_fontFaces;
@@ -94,7 +94,7 @@ private:
     HashSet<FontSelectorClient*> m_clients;
 
     Vector<CachedResourceHandle<CachedFont>> m_fontsToBeginLoading;
-    Timer<CSSFontSelector> m_beginLoadingTimer;
+    ReplayableTimer<CSSFontSelector> m_beginLoadingTimer;
 
     unsigned m_uniqueId;
     unsigned m_version;
