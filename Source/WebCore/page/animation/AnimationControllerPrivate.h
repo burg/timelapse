@@ -30,7 +30,6 @@
 #define AnimationControllerPrivate_h
 
 #include "CSSPropertyNames.h"
-#include "EventSenderClient.h"
 #include "Timer.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -55,7 +54,7 @@ enum SetChanged {
     CallSetChanged = 1
 };
 
-class AnimationControllerPrivate : EventSenderClient {
+class AnimationControllerPrivate {
     WTF_MAKE_NONCOPYABLE(AnimationControllerPrivate); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit AnimationControllerPrivate(Frame&);
@@ -68,6 +67,7 @@ public:
     CompositeAnimation& ensureCompositeAnimation(RenderElement*);
     bool clear(RenderElement*);
 
+    void updateStyleIfNeededDispatcherFired(Timer<AnimationControllerPrivate>*);
     void startUpdateStyleIfNeededDispatcher();
     void addEventToDispatch(PassRefPtr<Element> element, const AtomicString& eventType, const String& name, double elapsedTime);
     void addElementChangeToDispatch(PassRef<Element>);
@@ -115,15 +115,13 @@ public:
 private:
     void animationTimerFired(Timer<AnimationControllerPrivate>*);
 
-    // EventSenderClient
-    void dispatchPendingEvent(const AtomicString& eventName);
-
     void styleAvailable();
     void fireEventsAndUpdateStyle();
     void startTimeResponse(double t);
 
     HashMap<RenderElement*, RefPtr<CompositeAnimation>> m_compositeAnimations;
     Timer<AnimationControllerPrivate> m_animationTimer;
+    Timer<AnimationControllerPrivate> m_updateStyleIfNeededDispatcher;
     Frame& m_frame;
     
     class EventToDispatch {

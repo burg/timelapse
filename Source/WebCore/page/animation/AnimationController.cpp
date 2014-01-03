@@ -35,7 +35,6 @@
 #include "CSSPropertyAnimation.h"
 #include "CompositeAnimation.h"
 #include "EventNames.h"
-#include "EventSender.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "Logging.h"
@@ -51,14 +50,9 @@ namespace WebCore {
 static const double cAnimationTimerDelay = 0.025;
 static const double cBeginAnimationUpdateTimeNotSet = -1;
 
-static const AtomicString& updateStyleEvent()
-{
-    DEFINE_STATIC_LOCAL(AtomicString, name, ("updatestyle", AtomicString::ConstructFromLiteral));
-    return name;
-}
-
 AnimationControllerPrivate::AnimationControllerPrivate(Frame& frame)
     : m_animationTimer(this, &AnimationControllerPrivate::animationTimerFired)
+    , m_updateStyleIfNeededDispatcher(this, &AnimationControllerPrivate::updateStyleIfNeededDispatcherFired)
     , m_frame(frame)
     , m_beginAnimationUpdateTime(cBeginAnimationUpdateTimeNotSet)
     , m_animationsWaitingForStyle()
@@ -160,9 +154,8 @@ void AnimationControllerPrivate::updateAnimationTimer(SetChanged callSetChanged/
     m_animationTimer.startOneShot(timeToNextService);
 }
 
-void AnimationControllerPrivate::dispatchPendingEvent(const AtomicString& eventName)
+void AnimationControllerPrivate::updateStyleIfNeededDispatcherFired(Timer<AnimationControllerPrivate>*)
 {
-    ASSERT_UNUSED(eventName, eventName == updateStyleEvent());
     fireEventsAndUpdateStyle();
 }
 
@@ -195,9 +188,8 @@ void AnimationControllerPrivate::fireEventsAndUpdateStyle()
 
 void AnimationControllerPrivate::startUpdateStyleIfNeededDispatcher()
 {
-    EventSender& scheduler = m_frame.document()->eventSender();
-    if (!scheduler.hasPendingEventsForSender(this))
-        scheduler.dispatchEventSoon(this, updateStyleEvent());
+    if (!m_updateStyleIfNeededDispatcher.isActive())
+        m_updateStyleIfNeededDispatcher.startOneShot(0);
 }
 
 void AnimationControllerPrivate::addEventToDispatch(PassRefPtr<Element> element, const AtomicString& eventType, const String& name, double elapsedTime)
