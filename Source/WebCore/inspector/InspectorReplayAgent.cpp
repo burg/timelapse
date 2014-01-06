@@ -83,6 +83,10 @@ void InspectorReplayAgent::didCreateFrontendAndBackend(InspectorFrontendChannel*
     // FIXME: set up frontend-specific state.
     m_instrumentingAgents->setInspectorReplayAgent(this);
     m_page = m_pageAgent->page();
+
+    // Keep track of the session the ReplayController has created/loaded.
+    RefPtr<CaptureSession> session = m_page->replayController().loadedSession();
+    m_sessionsMap.add(session->uid(), session);
 }
 
 void InspectorReplayAgent::willDestroyFrontendAndBackend()
@@ -123,41 +127,68 @@ void InspectorReplayAgent::willCallFunction(const String& scriptName, int script
 }
 #endif
 
-void InspectorReplayAgent::recordingUnloaded()
+void InspectorReplayAgent::sessionCreated(RefPtr<CaptureSession> session)
 {
-    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
-
-    if (m_frontendDispatcher) {
-        m_frontendDispatcher->recordingUnloaded();
-        m_frontendDispatcher->inputUnlocked();
-    }
-}
-
-void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecording)
-{
-    RefPtr<ReplayRecording> recording = prpRecording;
-    // In case we didn't know about the loaded recording, add here.
-    m_recordingsMap.add(recording->uid(), recording);
-
-    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
+    SessionsMap::AddResult result = m_sessionsMap.add(session->uid(), session);
+    // Can't have two sessions with same uid.
+    ASSERT_UNUSED(result, result.isNewEntry);
 
     if (m_frontendDispatcher)
-        m_frontendDispatcher->recordingLoaded(recording->uid());
+        m_frontendDispatcher->sessionCreated(session->uid());
 }
 
-void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecording)
+void InspectorReplayAgent::sessionLoaded(RefPtr<CaptureSession> session)
 {
-    RefPtr<ReplayRecording> recording = prpRecording;
+    // In case we didn't know about the loaded session, add here.
+    m_sessionsMap.add(session->uid(), session);
+
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->sessionLoaded(session->uid());
+}
+
+void InspectorReplayAgent::recordingCreated(RefPtr<ReplayRecording> recording)
+{
     RecordingsMap::AddResult result = m_recordingsMap.add(recording->uid(), recording);
     // Can't have two recordings with same uid.
     ASSERT_UNUSED(result, result.isNewEntry);
 
     if (m_frontendDispatcher)
-        m_frontendDispatcher->recordingAdded(recording->uid());
+        m_frontendDispatcher->recordingCreated(recording->uid());
+}
 
-    // Automatically load the created recording if nothing else is loaded.
-    if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded))
-        m_page->replayController().loadRecording(recording);
+void InspectorReplayAgent::recordingClosed(RefPtr<ReplayRecording> recording)
+{
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->recordingClosed(recording->uid());
+}
+
+void InspectorReplayAgent::recordingAddedToSession(RefPtr<CaptureSession> session, RefPtr<ReplayRecording> recording, RecordingIndex recordingIndex)
+{
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->recordingAddedToSession(session->uid(), recording->uid(), recordingIndex);
+}
+
+void InspectorReplayAgent::recordingRemovedFromSession(RefPtr<CaptureSession> session, RecordingIndex recordingIndex)
+{
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->recordingRemovedFromSession(session->uid(), recordingIndex);
+}
+
+void InspectorReplayAgent::recordingLoaded(RefPtr<ReplayRecording> recording)
+{
+    // In case we didn't know about the loaded recording, add here.
+    m_recordingsMap.add(recording->uid(), recording);
+
+    if (m_frontendDispatcher)
+        m_frontendDispatcher->recordingLoaded(recording->uid());
+}
+
+void InspectorReplayAgent::recordingUnloaded()
+{
+    if (m_frontendDispatcher) {
+        m_frontendDispatcher->recordingUnloaded();
+        m_frontendDispatcher->inputUnlocked();
+    }
 }
 
 void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
@@ -174,7 +205,7 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
     if (!input->isUserVisible())
         return;
 
-    RefPtr<TypeBuilder::Replay::ReplayInput> serializedInput = JSONCoder::serializeInput(input, newMark.index());
+    RefPtr<Inspector::TypeBuilder::Replay::ReplayInput> serializedInput = JSONCoder::serializeInput(input, newMark.index());
     if (serializedInput)
         m_frontendDispatcher->capturedInput(serializedInput.release());
 }
@@ -195,7 +226,7 @@ void InspectorReplayAgent::captureFinished()
 {
     LOG(DeterministicReplay, "-----CAPTURE STOP-----");
 
-    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::ReadyForCaptureOrReplay);
 
     if (m_frontendDispatcher)
         m_frontendDispatcher->captureStopped();
@@ -213,30 +244,30 @@ void InspectorReplayAgent::playbackStarted()
     }
 }
 
-void InspectorReplayAgent::playbackPaused(PositionMarkIndex index)
+void InspectorReplayAgent::playbackPaused(RecordingIndex recordingIndex, PositionMarkIndex index)
 {
     LOG(DeterministicReplay, "-----REPLAY PAUSED-----");
 
     m_stateMachine.advanceTo(ReplayAgentStateMachine::ReplayPaused);
     if (m_frontendDispatcher)
-        m_frontendDispatcher->playbackPaused(index);
+        m_frontendDispatcher->playbackPaused(recordingIndex, index);
 }
 
-void InspectorReplayAgent::playbackHitMark(PositionMarkIndex index)
+void InspectorReplayAgent::playbackHitLocation(RecordingIndex recordingIndex, PositionMarkIndex index)
 {
     if (m_lastHitMarkIndex == index)
         return;
     m_lastHitMarkIndex = index;
 
     if (m_frontendDispatcher)
-        m_frontendDispatcher->playbackHitMark(index);
+        m_frontendDispatcher->playbackHitLocation(recordingIndex, index);
 }
 
 void InspectorReplayAgent::playbackFinished()
 {
     LOG(DeterministicReplay, "-----REPLAY STOP-----");
 
-    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::ReadyForCaptureOrReplay);
     if (m_frontendDispatcher)
         m_frontendDispatcher->playbackFinished();
 }
@@ -293,7 +324,7 @@ void InspectorReplayAgent::stopCapture(ErrorString*, bool* wasAllowed)
     *wasAllowed = m_page->replayController().endCapturing();
 }
 
-void InspectorReplayAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool fastReplay)
+void InspectorReplayAgent::replayUpToLocation(ErrorString*, int recordingIndex, int markIndex, bool fastReplay)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER) && !defined(NDEBUG)
     // Cannot start replay from within debugger event loop.
@@ -301,7 +332,7 @@ void InspectorReplayAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForReplay);
-    m_page->replayController().replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
+    m_page->replayController().replayUpToLocation((size_t)recordingIndex, (unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
 }
 
 void InspectorReplayAgent::replayToCompletion(ErrorString*, bool fastReplay)
@@ -333,29 +364,68 @@ void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
     m_page->replayController().setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
 }
 
-void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool* wasAllowed)
+void InspectorReplayAgent::loadSession(ErrorString* errorString, int uid, bool* wasAllowed)
 {
-    RefPtr<ReplayRecording> recording = findRecording(errorString, uid);
-    if (!recording) {
+    ASSERT(m_stateMachine.canReplay());
+
+    RefPtr<CaptureSession> session = findSession(errorString, uid);
+    if (!session) {
         *wasAllowed = false;
         return;
     }
 
-    *wasAllowed = m_page->replayController().loadRecording(recording);
+    *wasAllowed = m_page->replayController().loadSession(session);
 }
 
-void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAllowed)
+void InspectorReplayAgent::addRecordingToSession(ErrorString* errorString, int sessionId, int recordingId, int recordingIndex, bool* wasAllowed)
 {
-    if (!m_page->replayController().loadedRecording().get()) {
+    ASSERT(m_stateMachine.canReplay());
+    ASSERT(recordingIndex >= 0);
+
+    RefPtr<CaptureSession> session = findSession(errorString, sessionId);
+    RefPtr<ReplayRecording> recording = findRecording(errorString, recordingId);
+
+    if (!session || !recording || static_cast<size_t>(recordingIndex) > session->size()) {
         *wasAllowed = false;
-        *errorString = "Tried to unload but no recording is currently loaded.";
         return;
     }
 
-    *wasAllowed = m_page->replayController().unloadRecording();
+    *wasAllowed = true;
+    session->insert(recordingIndex, recording);
+    recordingAddedToSession(session, recording, recordingIndex);
 }
 
-PassRefPtr<ReplayRecording> InspectorReplayAgent::findRecording(ErrorString* errorString, int uid)
+void InspectorReplayAgent::removeRecordingFromSession(ErrorString* errorString, int sessionId, int recordingIndex, bool* wasAllowed)
+{
+    ASSERT(m_stateMachine.canReplay());
+    ASSERT(recordingIndex >= 0);
+
+    RefPtr<CaptureSession> session = findSession(errorString, sessionId);
+
+    if (!session || static_cast<size_t>(recordingIndex) >= session->size()) {
+        *wasAllowed = false;
+        return;
+    }
+
+    *wasAllowed = true;
+    session->remove(recordingIndex);
+    recordingRemovedFromSession(session, recordingIndex);
+}
+
+RefPtr<CaptureSession> InspectorReplayAgent::findSession(ErrorString* errorString, int uid)
+{
+    ASSERT(uid >= 0);
+
+    SessionsMap::iterator it = m_sessionsMap.find(uid);
+    if (it == m_sessionsMap.end()) {
+        *errorString = "Couldn't find session with specified uid";
+        return nullptr;
+    }
+
+    return it->value;
+}
+
+RefPtr<ReplayRecording> InspectorReplayAgent::findRecording(ErrorString* errorString, int uid)
 {
     ASSERT(uid >= 0);
 
@@ -368,7 +438,24 @@ PassRefPtr<ReplayRecording> InspectorReplayAgent::findRecording(ErrorString* err
     return it->value;
 }
 
-void InspectorReplayAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<TypeBuilder::Replay::ReplayRecording>& serializedObject)
+void InspectorReplayAgent::getSerializedSession(ErrorString* errorString, int uid, RefPtr<Inspector::TypeBuilder::Replay::CaptureSession>& serializedObject)
+{
+    RefPtr<CaptureSession> session = findSession(errorString, uid);
+    if (!session)
+        return;
+
+    serializedObject = JSONCoder::serializeSession(session);
+}
+
+void InspectorReplayAgent::getAvailableSessions(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<int> >& sessionsList)
+{
+    sessionsList = TypeBuilder::Array<int>::create();
+    for (SessionsMap::iterator it = m_sessionsMap.begin(); it != m_sessionsMap.end(); ++it) {
+        sessionsList->addItem(it->key);
+    }
+}
+
+void InspectorReplayAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<Inspector::TypeBuilder::Replay::ReplayRecording>& serializedObject)
 {
     RefPtr<ReplayRecording> recording = findRecording(errorString, uid);
     if (!recording)
@@ -377,7 +464,7 @@ void InspectorReplayAgent::getSerializedRecording(ErrorString* errorString, int 
     serializedObject = JSONCoder::serialize(recording);
 }
 
-void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
+void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<int> >& recordingsList)
 {
     recordingsList = TypeBuilder::Array<int>::create();
     for (RecordingsMap::iterator it = m_recordingsMap.begin(); it != m_recordingsMap.end(); ++it) {

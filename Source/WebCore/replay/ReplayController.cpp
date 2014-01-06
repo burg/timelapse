@@ -34,6 +34,7 @@
 
 #include "CacheController.h"
 #include "CaptureInputIterator.h"
+#include "CaptureSession.h"
 #include "DOMWindow.h"
 #include "DisableCache.h"
 #include "DocumentLoader.h"
@@ -90,6 +91,8 @@ ReplayController::ReplayController(Page& page)
     : m_page(page)
     , m_nextRecordingId(1)
     , m_loadedRecording(nullptr)
+    , m_loadedSession(CaptureSession::create())
+    , m_recordingsIterator(nullptr)
     , m_cacheController(std::make_unique<CacheController>())
     , m_stopBeforeMarkIndex(0)
     , m_status(CannotReplay)
@@ -103,13 +106,12 @@ ReplayController::~ReplayController()
 
 void ReplayController::beginCapturing()
 {
-    if (m_loadedRecording) {
-        LOG_ERROR("Tried to begin capturing a replay recording, but another recording is still loaded.");
-        cancelPlayback();
-        return;
-    }
-
     m_status = CannotReplay;
+
+    // FIXME: Shouldn't send this every time capture starts--should only send
+    // when the loaded session changes or when a client initally connects.
+    InspectorInstrumentation::sessionLoaded(&m_page, m_loadedSession);
+
     m_loadedRecording = ReplayRecording::create(m_nextRecordingId++);
     m_activeIterator = m_loadedRecording->createCaptureIterator(m_page);
     changeProxyMode(ReplayProxy::Capturing);
@@ -120,6 +122,8 @@ void ReplayController::beginCapturing()
 #endif
 
     InspectorInstrumentation::captureStarted(&m_page);
+    InspectorInstrumentation::recordingCreated(&m_page, m_loadedRecording);
+
     // Combine the following inputs into a single extent, since they are synchronous.
     EventLoopInputExtent extent(m_activeIterator.get());
 
@@ -163,12 +167,16 @@ bool ReplayController::endCapturing()
     // Hold on to a reference so unloading the recording doesn't deallocate it.
     RefPtr<ReplayRecording> recording = m_loadedRecording;
     unloadRecording(true);
+    InspectorInstrumentation::recordingClosed(&m_page, recording);
     m_cacheController->enableCache();
 
     // Now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
+
+    m_loadedSession->append(recording);
+    InspectorInstrumentation::recordingAddedToSession(&m_page, m_loadedSession, recording, m_loadedSession->size()-1);
+
     InspectorInstrumentation::captureFinished(&m_page);
-    InspectorInstrumentation::recordingCreated(&m_page, recording);
 
     // Permanently "suspend" active objects, such as timers, marquees, loaders, etc.
     for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext())
@@ -182,24 +190,31 @@ void ReplayController::pauseAtNextMark()
     ASSERT(replaying());
     // Finish all inputs with the current mark index. If the dispatcher starts to
     // dispatch an input with a different index, we will pause it first.
-    m_status = ReplayUpToMarkIndex;
+    m_status = ReplayUpToLocation;
     m_stopBeforeMarkIndex = dispatcher().currentMark().index() + 1;
 }
 
-void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode mode)
+void ReplayController::replayUpToLocation(size_t recordingIndex, PositionMarkIndex index, ReplayMode mode)
 {
     ASSERT(m_status != CannotReplay);
 
-    LOG(DeterministicReplay, "%-20s About to begin replay to mark %d.\n", "ReplayController", index);
+    RefPtr<ReplayRecording> recording = m_loadedSession->at(recordingIndex);
 
-    bool isBackwardsMovement = replaying() && dispatcher().currentMark().index() > index;
-    if (m_status == PlaybackUninitialized || m_status == PlaybackFinished || isBackwardsMovement) {
-        cancelPlayback();
-        changeProxyMode(ReplayProxy::Replaying);
-        m_activeIterator = m_loadedRecording->createReplayIterator(m_page, this);
+    LOG(DeterministicReplay, "%-20s About to begin replay to mark %d in recording %d.\n", "ReplayController", index, recording->uid());
+
+    if (recording != m_loadedRecording)
+        switchToRecording(recording);
+    else {
+        bool isBackwardsMovement = replaying() && dispatcher().currentMark().index() > index;
+        if ((m_status == PlaybackUninitialized || m_status == PlaybackFinished || isBackwardsMovement)) {
+            cancelPlayback();
+            changeProxyMode(ReplayProxy::Replaying);
+            m_activeIterator = m_loadedRecording->createReplayIterator(m_page, this);
+            m_recordingsIterator = m_loadedSession->iteratorAtRecording(m_loadedRecording);
+        }
     }
 
-    m_status = ReplayUpToMarkIndex;
+    m_status = ReplayUpToLocation;
     m_stopBeforeMarkIndex = index;
 
     InspectorInstrumentation::playbackStarted(&m_page);
@@ -216,6 +231,8 @@ void ReplayController::replayToCompletion(ReplayMode mode)
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished) {
         cancelPlayback();
         changeProxyMode(ReplayProxy::Replaying);
+        m_recordingsIterator = m_loadedSession->begin();
+        loadRecording(*m_recordingsIterator);
         m_activeIterator = m_loadedRecording->createReplayIterator(m_page, this);
     }
 
@@ -226,7 +243,7 @@ void ReplayController::replayToCompletion(ReplayMode mode)
 }
 
 
-void ReplayController::cancelPlayback()
+void ReplayController::cancelPlayback(bool suppressNotifications)
 {
     switch (m_status) {
     case CannotReplay:
@@ -239,19 +256,20 @@ void ReplayController::cancelPlayback()
     //
     //    running --> paused --> finished --> cancelled
     case ReplayToStart:
-    case ReplayUpToMarkIndex:
+    case ReplayUpToLocation:
     case ReplayToCompletion:
     case PlaybackResetting:
         // This cancels any pending timers, and fires instrumentation.
-        pauseReplay();
+        pauseReplay(suppressNotifications);
 
     case PlaybackPaused:
         // This disconnects the determinism log from global object, and fires instrumentation.
-        finishReplay();
+        finishReplay(suppressNotifications);
 
     case PlaybackFinished:
         changeProxyMode(ReplayProxy::Open);
-        InspectorInstrumentation::playbackCancelled(&m_page);
+        if (!suppressNotifications)
+            InspectorInstrumentation::playbackCancelled(&m_page);
     }
 }
 
@@ -292,7 +310,12 @@ CacheController& ReplayController::cacheController() const
     return *m_cacheController;
 }
 
-PassRefPtr<ReplayRecording> ReplayController::loadedRecording() const
+RefPtr<CaptureSession> ReplayController::loadedSession() const
+{
+    return m_loadedSession;
+}
+
+RefPtr<ReplayRecording> ReplayController::loadedRecording() const
 {
     return m_loadedRecording;
 }
@@ -323,19 +346,30 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
 
 void ReplayController::willDispatchInput(const EventLoopInput& input)
 {
-    bool pauseAtSpecificMark = (m_status == ReplayUpToMarkIndex && m_stopBeforeMarkIndex == input.mark().index());
+    bool pauseAtSpecificMark = (m_status == ReplayUpToLocation && m_stopBeforeMarkIndex == input.mark().index());
     if (m_status == ReplayToStart || pauseAtSpecificMark)
         pauseReplay();
 }
 
 void ReplayController::didDispatchInput(const EventLoopInput& input)
 {
-    InspectorInstrumentation::playbackHitMark(&m_page, input.mark().index());
+    size_t recordingIndex = m_recordingsIterator - m_loadedSession->begin();
+    InspectorInstrumentation::playbackHitLocation(&m_page, recordingIndex, input.mark().index());
 }
 
 void ReplayController::didDispatchFinalInput()
 {
-    finishReplay();
+    ASSERT(m_status == ReplayToCompletion);
+
+    m_recordingsIterator++;
+
+    if (m_recordingsIterator == m_loadedSession->end())
+        finishReplay();
+    else {
+        ReplayMode mode = dispatcher().mode();
+        switchToRecording(*m_recordingsIterator);
+        replayToCompletion(mode);
+    }
 }
 
 void ReplayController::resetReplayState()
@@ -349,32 +383,73 @@ void ReplayController::resetReplayState()
     }
 }
 
-void ReplayController::pauseReplay()
+void ReplayController::pauseReplay(bool suppressNotifications)
 {
     dispatcher().pause();
 
     m_status = PlaybackPaused;
-    InspectorInstrumentation::playbackPaused(&m_page, dispatcher().currentMark().index());
+    if (!suppressNotifications) {
+        size_t recordingIndex = m_recordingsIterator - m_loadedSession->begin();
+        InspectorInstrumentation::playbackPaused(&m_page, recordingIndex, dispatcher().currentMark().index());
+    }
 }
 
-void ReplayController::finishReplay()
+void ReplayController::finishReplay(bool suppressNotifications)
 {
     m_status = PlaybackFinished;
     resetReplayState();
-    InspectorInstrumentation::playbackFinished(&m_page);
+    if (!suppressNotifications)
+        InspectorInstrumentation::playbackFinished(&m_page);
+}
+
+void ReplayController::switchToRecording(RefPtr<ReplayRecording> recording)
+{
+    // Cancel playback silently.
+    cancelPlayback(true);
+
+    if (m_loadedRecording)
+        unloadRecording();
+    loadRecording(recording);
+    changeProxyMode(ReplayProxy::Replaying);
+    m_activeIterator = m_loadedRecording->createReplayIterator(m_page, this);
+    m_recordingsIterator = m_loadedSession->iteratorAtRecording(recording);
+}
+
+void ReplayController::unloadSession()
+{
+    if (!m_loadedSession) {
+        LOG_ERROR("Tried to unload session, but none was loaded.");
+        return;
+    }
+
+    LOG(DeterministicReplay, "%-20sUnloading session: %p.\n", "ReplayController", (void*)m_loadedSession.get());
+
+    resetReplayState();
+    m_loadedSession = nullptr;
+    m_recordingsIterator = nullptr;
+    changeProxyMode(ReplayProxy::Open);
+}
+
+bool ReplayController::loadSession(RefPtr<CaptureSession> session, bool suppressNotifications)
+{
+    ASSERT(!capturing());
+
+    ASSERT(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay);
+
+    unloadSession();
+
+    LOG(DeterministicReplay, "%-20sLoading session: %p.\n", "ReplayController", (void*)session.get());
+
+    m_loadedSession = session;
+    if (!suppressNotifications)
+        InspectorInstrumentation::sessionLoaded(&m_page, session);
+    return true;
 }
 
 bool ReplayController::unloadRecording(bool suppressNotifications)
 {
-    ASSERT(!capturing());
-
     if (!m_loadedRecording) {
         LOG_ERROR("Tried to unload recording, but none was loaded.");
-        return false;
-    }
-
-    if (!(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay)) {
-        LOG_ERROR("Tried to unload recording that was capturing or replaying.");
         return false;
     }
 
@@ -390,12 +465,9 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
 
 }
 
-bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, bool suppressNotifications)
+bool ReplayController::loadRecording(RefPtr<ReplayRecording> recording, bool suppressNotifications)
 {
     ASSERT(!capturing());
-
-    RefPtr<ReplayRecording> recording = prpRecording;
-    ASSERT(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay);
 
     if (m_loadedRecording && m_loadedRecording != recording) {
         LOG_ERROR("Tried to load recording, but a recording is already loaded.");

@@ -346,9 +346,6 @@ InspectorBackend.registerCommand("Worker.connectToWorker", [{"name": "workerId",
 InspectorBackend.registerCommand("Worker.disconnectFromWorker", [{"name": "workerId", "type": "number", "optional": false}], []);
 InspectorBackend.registerCommand("Worker.setAutoconnectToWorkers", [{"name": "value", "type": "boolean", "optional": false}], []);
 
-// Recordings.
-InspectorBackend.registerRecordingsDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Recordings");
-
 // Replay.
 InspectorBackend.registerReplayDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Replay");
 InspectorBackend.registerEvent("Replay.replayEnabled", []);
@@ -356,28 +353,37 @@ InspectorBackend.registerEvent("Replay.replayDisabled", []);
 InspectorBackend.registerEvent("Replay.captureStarted", []);
 InspectorBackend.registerEvent("Replay.captureStopped", []);
 InspectorBackend.registerEvent("Replay.capturedInput", ["input"]);
-InspectorBackend.registerEvent("Replay.playbackHitMark", ["mark"]);
+InspectorBackend.registerEvent("Replay.playbackHitLocation", ["recordingIndex", "mark"]);
 InspectorBackend.registerEvent("Replay.playbackStarted", []);
-InspectorBackend.registerEvent("Replay.playbackPaused", ["mark"]);
+InspectorBackend.registerEvent("Replay.playbackPaused", ["recordingIndex", "mark"]);
 InspectorBackend.registerEvent("Replay.playbackFinished", []);
 InspectorBackend.registerEvent("Replay.playbackError", ["isFatal", "error"]);
 InspectorBackend.registerEvent("Replay.inputLocked", []);
 InspectorBackend.registerEvent("Replay.inputUnlocked", []);
-InspectorBackend.registerEvent("Replay.recordingLoaded", ["uid"]);
+InspectorBackend.registerEvent("Replay.sessionCreated", ["sessionId"]);
+InspectorBackend.registerEvent("Replay.sessionRemoved", ["sessionId"]);
+InspectorBackend.registerEvent("Replay.sessionLoaded", ["sessionId"]);
+InspectorBackend.registerEvent("Replay.recordingCreated", ["recordingId"]);
+InspectorBackend.registerEvent("Replay.recordingRemoved", ["recordingId"]);
+InspectorBackend.registerEvent("Replay.recordingClosed", ["recordingId"]);
+InspectorBackend.registerEvent("Replay.recordingAddedToSession", ["sessionId", "recordingId", "recordingIndex"]);
+InspectorBackend.registerEvent("Replay.recordingRemovedFromSession", ["sessionId", "recordingIndex"]);
+InspectorBackend.registerEvent("Replay.recordingLoaded", ["recordingId"]);
 InspectorBackend.registerEvent("Replay.recordingUnloaded", []);
-InspectorBackend.registerEvent("Replay.recordingAdded", ["uid"]);
-InspectorBackend.registerEvent("Replay.recordingRemoved", ["uid"]);
 InspectorBackend.registerCommand("Replay.enable", [], []);
 InspectorBackend.registerCommand("Replay.disable", [], []);
 InspectorBackend.registerCommand("Replay.isEnabled", [], ["state"]);
 InspectorBackend.registerCommand("Replay.startCapture", [], []);
 InspectorBackend.registerCommand("Replay.stopCapture", [], ["wasAllowed"]);
-InspectorBackend.registerCommand("Replay.replayUpToMarkIndex", [{"name": "markIndex", "type": "number", "optional": false}, {"name": "fastReplay", "type": "boolean", "optional": false}], []);
+InspectorBackend.registerCommand("Replay.replayUpToLocation", [{"name": "recordingIndex", "type": "number", "optional": false}, {"name": "markIndex", "type": "number", "optional": false}, {"name": "fastReplay", "type": "boolean", "optional": false}], []);
 InspectorBackend.registerCommand("Replay.replayToCompletion", [{"name": "fastReplay", "type": "boolean", "optional": false}], []);
 InspectorBackend.registerCommand("Replay.pausePlayback", [], []);
 InspectorBackend.registerCommand("Replay.stopPlayback", [{"name": "unlock", "type": "boolean", "optional": false}], []);
 InspectorBackend.registerCommand("Replay.setPauseOnError", [{"name": "shouldPause", "type": "boolean", "optional": false}], []);
-InspectorBackend.registerCommand("Replay.loadRecording", [{"name": "uid", "type": "number", "optional": false}], ["wasAllowed"]);
-InspectorBackend.registerCommand("Replay.unloadRecording", [], ["wasAllowed"]);
-InspectorBackend.registerCommand("Replay.getSerializedRecording", [{"name": "uid", "type": "number", "optional": false}], ["recording"]);
-InspectorBackend.registerCommand("Replay.getAvailableRecordings", [], ["recordingUids"]);
+InspectorBackend.registerCommand("Replay.loadSession", [{"name": "sessionId", "type": "number", "optional": false}], ["wasAllowed"]);
+InspectorBackend.registerCommand("Replay.addRecordingToSession", [{"name": "sessionId", "type": "number", "optional": false}, {"name": "recordingId", "type": "number", "optional": false}, {"name": "recordingIndex", "type": "number", "optional": false}], ["wasAllowed"]);
+InspectorBackend.registerCommand("Replay.removeRecordingFromSession", [{"name": "sessionId", "type": "number", "optional": false}, {"name": "recordingIndex", "type": "number", "optional": false}], ["wasAllowed"]);
+InspectorBackend.registerCommand("Replay.getSerializedSession", [{"name": "sessionId", "type": "number", "optional": false}], ["session"]);
+InspectorBackend.registerCommand("Replay.getAvailableSessions", [], ["sessionIds"]);
+InspectorBackend.registerCommand("Replay.getSerializedRecording", [{"name": "recordingId", "type": "number", "optional": false}], ["recording"]);
+InspectorBackend.registerCommand("Replay.getAvailableRecordings", [], ["recordingIds"]);

@@ -32,7 +32,8 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "EventLoopInput.h"
+#include "AllReplayInputs.h"
+#include "CaptureSession.h"
 #include "FunctorInputIterator.h"
 #include "Logging.h"
 #include "ReplayRecording.h"
@@ -183,6 +184,21 @@ private:
     RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Replay::ReplayInput> > m_inputs;
 };
 
+RefPtr<Inspector::TypeBuilder::Replay::CaptureSession> JSONCoder::serializeSession(RefPtr<CaptureSession> session)
+{
+    RefPtr<Inspector::TypeBuilder::Array<int> > recordings = Inspector::TypeBuilder::Array<int>::create();
+
+    for (auto it = session->begin(); it < session->end(); ++it)
+        recordings->addItem((*it)->uid());
+
+    RefPtr<Inspector::TypeBuilder::Replay::CaptureSession> sessionObject = Inspector::TypeBuilder::Replay::CaptureSession::create()
+        .setSessionId(session->uid())
+        .setDateCreated(session->creationTimestamp())
+        .setRecordings(recordings.release());
+
+    return sessionObject;
+}
+
 PassRefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
@@ -201,7 +217,7 @@ PassRefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> JSONCoder::serialize
     }
 
     RefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> recordingObject = Inspector::TypeBuilder::Replay::ReplayRecording::create()
-        .setUid(recording->uid())
+        .setRecordingId(recording->uid())
         .setDateCreated(recording->creationTimestamp())
         .setQueues(queues.release());
 

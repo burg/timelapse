@@ -44,6 +44,7 @@ class InputIterator;
 namespace WebCore {
 
 class CacheController;
+class CaptureSession;
 class DOMWindow;
 class Document;
 class DocumentLoader;
@@ -57,7 +58,7 @@ class ReplayRecording;
 enum ReplayStatus {
     CannotReplay,
     ReplayToStart,
-    ReplayUpToMarkIndex,
+    ReplayUpToLocation,
     ReplayToCompletion,
     PlaybackUninitialized,
     PlaybackResetting,
@@ -80,9 +81,9 @@ public:
     void beginCapturing();
     bool endCapturing();
     void pauseAtNextMark();
-    void replayUpToMarkIndex(PositionMarkIndex, ReplayMode = FullSpeed);
+    void replayUpToLocation(size_t recordingIndex, PositionMarkIndex, ReplayMode = FullSpeed);
     void replayToCompletion(ReplayMode = FullSpeed);
-    void cancelPlayback();
+    void cancelPlayback(bool suppressNotifications = false);
 
     // Callbacks from InspectorReplayAgent.
     void willDispatchEvent(const Event&, Frame*, const PositionMark&);
@@ -104,15 +105,20 @@ public:
 
     Page& page() const { return m_page; }
     CacheController& cacheController() const;
-    PassRefPtr<ReplayRecording> loadedRecording() const;
+    RefPtr<CaptureSession> loadedSession() const;
+    RefPtr<ReplayRecording> loadedRecording() const;
 
-    bool loadRecording(PassRefPtr<ReplayRecording>, bool suppressNotifications = false);
+    bool loadSession(RefPtr<CaptureSession>, bool suppressNotifications = false);
+    void unloadSession();
+
+    bool loadRecording(RefPtr<ReplayRecording>, bool suppressNotifications = false);
     bool unloadRecording(bool suppressNotifications = false);
 
 private:
     void resetReplayState();
-    void pauseReplay();
-    void finishReplay();
+    void pauseReplay(bool suppressNotifications = false);
+    void finishReplay(bool suppressNotifications = false);
+    void switchToRecording(RefPtr<ReplayRecording>);
     void changeProxyMode(ReplayProxy::ProxyMode);
 
     // private accessor-- only cares if *some* JSDOMWindow in this Page is capturing/replaying
@@ -126,6 +132,8 @@ private:
 
     int m_nextRecordingId;
     RefPtr<ReplayRecording> m_loadedRecording;
+    RefPtr<CaptureSession> m_loadedSession;
+    Vector<RefPtr<ReplayRecording>>::const_iterator m_recordingsIterator;
     std::unique_ptr<WTF::InputIterator> m_activeIterator;
     const std::unique_ptr<CacheController> m_cacheController;
     PositionMarkIndex m_stopBeforeMarkIndex;

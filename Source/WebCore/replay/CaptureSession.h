@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +27,53 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ReplayAgentStateMachine_h
-#define ReplayAgentStateMachine_h
+#ifndef CaptureSession_h
+#define CaptureSession_h
 
 #if ENABLE(WEB_REPLAY)
 
 #include <wtf/Noncopyable.h>
+#include <wtf/RefCounted.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-class ReplayAgentStateMachine {
-    WTF_MAKE_NONCOPYABLE(ReplayAgentStateMachine);
+class ReplayRecording;
+
+typedef Vector<RefPtr<ReplayRecording>>::const_iterator RecordingIterator;
+
+class CaptureSession : public RefCounted<CaptureSession> {
+    WTF_MAKE_NONCOPYABLE(CaptureSession);
 public:
-    ReplayAgentStateMachine();
+    static RefPtr<CaptureSession> create();
+    ~CaptureSession();
 
-    enum State {
-        ReadyForCapture,
-        ReadyForCaptureOrReplay,
-        WaitingForCapture,
-        Capturing,
-        WaitingForReplay,
-        Replaying,
-        ReplayPaused
-    };
+    int uid() const { return m_uid; };
+    double creationTimestamp() const { return m_timestamp; }
 
-    bool canCapture() const;
-    bool canReplay() const;
-    bool replayPaused() const;
-    bool capturing() const;
-    bool replaying() const;
+    size_t size() const { return m_recordings.size(); }
+    RefPtr<ReplayRecording> at(size_t position) const { return m_recordings.at(position); }
 
-    bool inState(State state) const { return m_state == state; }
-    void advanceTo(State);
+    RecordingIterator begin() const { return m_recordings.begin(); };
+    RecordingIterator end() const { return m_recordings.end(); };
+    RecordingIterator iteratorAtRecording(RefPtr<ReplayRecording>) const;
+
+    void append(RefPtr<ReplayRecording>);
+    void insert(size_t position, RefPtr<ReplayRecording>);
+    void remove(size_t position);
 
 private:
-    const char* stateNameFor(State);
-    State m_state;
+    CaptureSession();
+
+    static int s_nextUid;
+
+    Vector<RefPtr<ReplayRecording>> m_recordings;
+    int m_uid;
+    double m_timestamp;
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 
-#endif // ReplayAgentStateMachine_h
+#endif // CaptureSession_h

@@ -2900,6 +2900,8 @@
 		8AF4E55511DC5A36000ED3DE /* PerformanceNavigation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8AF4E55211DC5A36000ED3DE /* PerformanceNavigation.cpp */; };
 		8AF4E55611DC5A36000ED3DE /* PerformanceNavigation.h in Headers */ = {isa = PBXBuildFile; fileRef = 8AF4E55311DC5A36000ED3DE /* PerformanceNavigation.h */; };
 		8AF4E55C11DC5A63000ED3DE /* PerformanceTiming.h in Headers */ = {isa = PBXBuildFile; fileRef = 8AF4E55911DC5A63000ED3DE /* PerformanceTiming.h */; };
+		8B6E4EC518286832004AEF0C /* CaptureSession.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B6E4EC318286832004AEF0C /* CaptureSession.cpp */; };
+		8B6E4EC618286832004AEF0C /* CaptureSession.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B6E4EC418286832004AEF0C /* CaptureSession.h */; };
 		8C0E334D138A92C7008DA94F /* LevelDBTransaction.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C0E3349138A92C7008DA94F /* LevelDBTransaction.h */; };
 		8C0E334F138A92C7008DA94F /* LevelDBWriteBatch.h in Headers */ = {isa = PBXBuildFile; fileRef = 8C0E334B138A92C7008DA94F /* LevelDBWriteBatch.h */; };
 		8C6EA61911EF7E0400FD8EE3 /* RuntimeEnabledFeatures.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C6EA61711EF7E0400FD8EE3 /* RuntimeEnabledFeatures.cpp */; };
@@ -9815,6 +9817,8 @@
 		8AF4E55411DC5A36000ED3DE /* PerformanceNavigation.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PerformanceNavigation.idl; sourceTree = "<group>"; };
 		8AF4E55911DC5A63000ED3DE /* PerformanceTiming.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PerformanceTiming.h; sourceTree = "<group>"; };
 		8AF4E55A11DC5A63000ED3DE /* PerformanceTiming.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PerformanceTiming.idl; sourceTree = "<group>"; };
+		8B6E4EC318286832004AEF0C /* CaptureSession.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CaptureSession.cpp; path = replay/CaptureSession.cpp; sourceTree = "<group>"; };
+		8B6E4EC418286832004AEF0C /* CaptureSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CaptureSession.h; path = replay/CaptureSession.h; sourceTree = "<group>"; };
 		8C0E3349138A92C7008DA94F /* LevelDBTransaction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LevelDBTransaction.h; sourceTree = "<group>"; };
 		8C0E334B138A92C7008DA94F /* LevelDBWriteBatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LevelDBWriteBatch.h; sourceTree = "<group>"; };
 		8C6EA61711EF7E0400FD8EE3 /* RuntimeEnabledFeatures.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RuntimeEnabledFeatures.cpp; path = generic/RuntimeEnabledFeatures.cpp; sourceTree = "<group>"; };
@@ -20666,6 +20670,8 @@
 				C481087B17052FF100AB4BAA /* CacheController.h */,
 				C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */,
 				C41D35541712064800E40FB7 /* CaptureInputIterator.h */,
+				8B6E4EC318286832004AEF0C /* CaptureSession.cpp */,
+				8B6E4EC418286832004AEF0C /* CaptureSession.h */,
 				C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */,
 				C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */,
 				C48EA71517178087001A8BB4 /* FunctorInputIterator.h */,
@@ -25850,6 +25856,7 @@
 				A7D6B3490F61104500B79FD1 /* WorkerScriptLoader.h in Headers */,
 				2EA768040FE7126400AB9C8A /* WorkerScriptLoaderClient.h in Headers */,
 				2E4346550F546A8200B0F1BA /* WorkerThread.h in Headers */,
+				8B6E4EC618286832004AEF0C /* CaptureSession.h in Headers */,
 				0B9056F90F2685F30095FF6A /* WorkerThreadableLoader.h in Headers */,
 				97AABD2D14FA09D5007457AE /* WorkerThreadableWebSocketChannel.h in Headers */,
 				93309E24099E64920056E581 /* WrapContentsInDummySpanCommand.h in Headers */,
@@ -27503,6 +27510,7 @@
 				BC5823F50C0A98DF0053F1B5 /* JSHTMLElementCustom.cpp in Sources */,
 				CD336F6717FA0AC600DDDCD0 /* VideoTrackPrivateAVFObjC.cpp in Sources */,
 				938E65F709F0985D008A48EC /* JSHTMLElementWrapperFactory.cpp in Sources */,
+				8B6E4EC518286832004AEF0C /* CaptureSession.cpp in Sources */,
 				BC6D44EC0C07F2ED0072D2C9 /* JSHTMLEmbedElement.cpp in Sources */,
 				E19AC3EE1824DC7900349426 /* CryptoAlgorithmSHA224.cpp in Sources */,
 				BC6D44BE0C07EFB60072D2C9 /* JSHTMLEmbedElementCustom.cpp in Sources */,

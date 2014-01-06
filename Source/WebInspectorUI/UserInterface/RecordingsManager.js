@@ -34,16 +34,24 @@ WebInspector.RecordingsManager = function()
     // this manager is not reset when the main frame reloads,
     // so initialization is inlined into the constructor.
 
+    this._sessions = [];
+    this._sessionsByUID = {};
+
     this._recordings = [];
     this._recordingsByUID = {};
 
-    // load recordings that may already be available on backend.
+    // load recordings and sessions that may already be available on backend.
     ReplayAgent.getAvailableRecordings(this._updateAvailableRecordings.bind(this));
+    ReplayAgent.getAvailableSessions(this._updateAvailableSessions.bind(this));
 }
 
 WebInspector.RecordingsManager.Event = {
+    SessionAdded: "recordings-manager-session-added",
+    SessionRemoved: "recordings-manager-session-removed",
     RecordingAdded: "recordings-manager-recording-added",
-    RecordingRemoved: "recordings-manager-recording-removed"
+    RecordingRemoved: "recordings-manager-recording-removed",
+    RecordingAddedToSession: "recordings-manager-recording-added-to-session",
+    RecordingRemovedFromSession: "recordings-manager-recording-removed-from-session"
 };
 
 WebInspector.RecordingsManager.prototype = {
@@ -51,6 +59,10 @@ WebInspector.RecordingsManager.prototype = {
     __proto__: WebInspector.Object.prototype,
 
     // Public
+
+    get sessions() {
+        return this._sessions.slice();
+    },
 
     get recordings() {
         return this._recordings.slice();
@@ -81,7 +93,46 @@ WebInspector.RecordingsManager.prototype = {
         });
     },
 
-    addRecording: function(uid) {
+    addSession: function(uid)
+    {
+        console.assert(uid >= 0, "tried to add session with invalid uid: "+uid);
+
+        if (this._sessionsByUID[uid])
+            return;
+
+        // asynchronously load all data for each new session as it's added, and
+        // defer any events that cause the data to be accessed.
+        var newSession = new WebInspector.CaptureSessionObject(uid);
+        this._sessionsByUID[uid] = newSession;
+        this._sessions.push(newSession);
+
+        var loadDataForSession = function(session, error, data) {
+            if (error) {
+                console.error("Couldn't load data for session "+session.uid+":"+error);
+                return;
+            }
+
+            session.loadData(data);
+            this.dispatchEventToListeners(WebInspector.RecordingsManager.Event.SessionAdded, session);
+        };
+
+        ReplayAgent.getSerializedSession(uid, loadDataForSession.bind(this, newSession));
+    },
+
+    removeSession: function(uid)
+    {
+        // FIXME: implement this.
+    },
+
+    getSessionWithUID: function(uid)
+    {
+        console.assert(uid >= 0, "invalid uid in request for session.");
+        console.assert(this._sessionsByUID[uid], "no session exists with the requested uid: "+uid);
+        return this._sessionsByUID[uid];
+    },
+
+    addRecording: function(uid)
+    {
         console.assert(uid > 0, "tried to add recording with invalid uid: "+uid);
 
         if (this._recordingsByUID[uid])
@@ -108,7 +159,8 @@ WebInspector.RecordingsManager.prototype = {
         ReplayAgent.getSerializedRecording(uid, loadDataForRecording.bind(this, newRecording));
     },
 
-    removeRecording: function(recording) {
+    removeRecording: function(recording)
+    {
         // FIXME: implement this (see old RecordingsModel.js).
         // It depends on AsyncTaskScheduler to safely remove recordings that may be already loaded.
     },
@@ -116,10 +168,46 @@ WebInspector.RecordingsManager.prototype = {
     getRecordingWithUID: function(uid)
     {
         console.assert(uid > 0, "invalid uid in request for recording.");
+        console.assert(this._recordingsByUID[uid], "no recording exists with the requested uid: "+uid);
         return this._recordingsByUID[uid];
     },
 
+    addRecordingToSession: function(sessionId, recordingId, recordingIndex)
+    {
+        var session = this.getSessionWithUID(sessionId);
+        var recording = this.getRecordingWithUID(recordingId);
+        session.insert(recordingIndex, recording);
+        this.dispatchEventToListeners(WebInspector.RecordingsManager.Event.RecordingAddedToSession, {
+            session: session,
+            recording: recording
+        });
+    },
+
+    removeRecordingFromSession: function(sessionId, recordingIndex)
+    {
+        var session = this.getSessionWithUID(sessionId);
+        var recording = session.recordings[recordingIndex];
+        session.remove(recordingIndex);
+        this.dispatchEventToListeners(WebInspector.RecordingsManager.Event.RecordingRemovedFromSession, {
+            session: session,
+            recording: recording
+        });
+    },
+
     // Private
+
+    _deleteEntryForSession: function(session)
+    {
+        this._sessions.splice(this._sessions.indexOf(session), 1);
+        delete this._sessionsByUID[session.uid];
+    },
+
+    _updateAvailableSessions: function(error, data)
+    {
+        for (var i = 0; i < data.length; ++i) {
+            this.addSession(data[i]);
+        }
+    },
 
     _deleteEntryForRecording: function(recording)
     {
