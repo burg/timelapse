@@ -49,9 +49,9 @@ WebInspector.ReplayObserver.prototype = {
         WebInspector.replayManager.createdRecording.addInput(input);
     },
 
-    playbackHitMark: function(markIndex)
+    playbackHitLocation: function(recordingIndex, mark)
     {
-        WebInspector.replayManager.playbackHitMark(markIndex);
+        WebInspector.replayManager.playbackHitLocation(recordingIndex, mark);
     },
 
     playbackStarted: function()
@@ -59,7 +59,7 @@ WebInspector.ReplayObserver.prototype = {
         WebInspector.replayManager.playbackStarted();
     },
 
-    playbackPaused: function(mark)
+    playbackPaused: function(recordingIndex, mark)
     {
         WebInspector.replayManager.playbackPaused();
     },
@@ -84,23 +84,53 @@ WebInspector.ReplayObserver.prototype = {
         // Not handled yet.
     },
 
-    recordingLoaded: function(uid)
+    sessionCreated: function(sessionId)
     {
-        WebInspector.replayManager.recordingLoaded(uid);
+        WebInspector.recordingsManager.addSession(sessionId);
+    },
+
+    sessionRemoved: function(sessionId)
+    {
+        // Not handled yet.
+    },
+
+    sessionLoaded: function(sessionId)
+    {
+        WebInspector.replayManager.sessionLoaded(sessionId);
+    },
+
+    recordingCreated: function(recordingId)
+    {
+        WebInspector.recordingsManager.addRecording(recordingId);
+    },
+
+    recordingRemoved: function(recordingId)
+    {
+        WebInspector.recordingsManager.removeRecording(recordingId);
+    },
+
+    recordingClosed: function(recordingId)
+    {
+        // Not handled yet.
+    },
+
+    recordingAddedToSession: function(sessionId, recordingId, recordingIndex)
+    {
+        WebInspector.recordingsManager.addRecordingToSession(sessionId, recordingId, recordingIndex);
+    },
+
+    recordingRemovedFromSession: function(sessionId, recordingIndex)
+    {
+        WebInspector.recordingsManager.removeRecordingFromSession(sessionId, recordingIndex);
+    },
+
+    recordingLoaded: function(recordingId)
+    {
+        WebInspector.replayManager.recordingLoaded(recordingId);
     },
 
     recordingUnloaded: function()
     {
         WebInspector.replayManager.recordingUnloaded();
-    },
-
-    recordingAdded: function(uid)
-    {
-        WebInspector.recordingsManager.addRecording(uid);
-    },
-
-    recordingRemoved: function(uid)
-    {
-        WebInspector.recordingsManager.removeRecording(uid);
     }
 };

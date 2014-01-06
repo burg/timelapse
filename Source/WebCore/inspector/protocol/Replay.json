@@ -3,9 +3,19 @@
     "description": "Controls deterministic record/replay behaviors, and manages replayable recordings and sessions.",
     "types": [
         {
-            "id": "RecordingId",
+            "id": "RecordingIdentifier",
             "type": "integer",
             "description": "Unique replay recording identifier."
+        },
+        {
+            "id": "SessionIdentifier",
+            "type": "integer",
+            "description": "Unique capture session identifier."
+        },
+        {
+            "id": "RecordingIndex",
+            "type": "integer",
+            "description": "The position of a recording in a session."
         },
         {
             "id": "MarkIndex",
@@ -41,11 +51,21 @@
             "id": "ReplayRecording",
             "type": "object",
             "properties": [
-                { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
+                { "name": "recordingId", "$ref": "RecordingIdentifier", "description": "Unique recording id." },
                 { "name": "dateCreated", "type": "number", "description": "Creation time of recording, in milliseconds since the epoch." },
                 { "name": "queues", "type": "array", "items": { "$ref": "ReplayInputQueue"} }
             ],
             "description": "A replay recording serialized to JSON."
+        },
+        {
+            "id": "CaptureSession",
+            "type": "object",
+            "properties": [
+                { "name": "sessionId", "$ref": "SessionIdentifier", "description": "Unique session id." },
+                { "name": "dateCreated", "type": "number", "description": "Creation time of session, in milliseconds since the epoch." },
+                { "name": "recordings", "type": "array", "items": { "$ref": "RecordingIdentifier" } }
+            ],
+            "description": "A series of replay recording identifiers representing a capture session."
         }
     ],
     "commands": [
@@ -61,9 +81,10 @@
             ]
         },
         {
-            "name": "replayUpToMarkIndex",
-            "description": "Replays the program up to a specific point, called a mark.  command will bring the replay execution up to the point before the first input with the specified mark is used.",
+            "name": "replayUpToLocation",
+            "description": "Replays the program up to a specific location. The command will bring the replay execution up to the point before the first input in the specified recording with the specified mark is used.",
             "parameters": [
+                { "name": "recordingIndex", "$ref": "RecordingIndex" },
                 { "name": "markIndex", "$ref": "MarkIndex" },
                 { "name": "fastReplay", "type": "boolean" }
             ]
@@ -94,27 +115,60 @@
             ]
         },
         {
-            "name": "loadRecording",
-            "description": "Loads the specified recording",
+            "name": "loadSession",
+            "description": "Unloads the currently loaded capture session and loads the specified session",
             "parameters": [
-                { "name": "uid", "$ref": "RecordingId" }
+                { "name": "sessionId", "$ref": "SessionIdentifier" }
             ],
             "returns": [
                 { "name": "wasAllowed", "type": "boolean" }
             ]
         },
         {
-            "name": "unloadRecording",
-            "description": "Unloads the currently loaded recording, if any is loaded.",
+            "name": "addRecordingToSession",
+            "description": "Adds the specified recording to the given session at the given position.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier" },
+                { "name": "recordingId", "$ref": "RecordingIdentifier" },
+                { "name": "recordingIndex", "$ref": "RecordingIndex" }
+            ],
             "returns": [
                 { "name": "wasAllowed", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "removeRecordingFromSession",
+            "description": "Removes the recording at the given position from the specified session.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier" },
+                { "name": "recordingIndex", "$ref": "RecordingIndex" }
+            ],
+            "returns": [
+                { "name": "wasAllowed", "type": "boolean" }
+            ]
+        },
+        {
+            "name": "getSerializedSession",
+            "description": "Returns the specified session serialized to a JSON object.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier" }
+            ],
+            "returns": [
+                { "name": "session", "$ref": "CaptureSession", "description": "the requested session", "optional": true }
+            ]
+        },
+        {
+            "name": "getAvailableSessions",
+            "description": "Returns sessionIds for all available sessions.",
+            "returns": [
+                { "name": "sessionIds", "type": "array", "items": { "$ref": "SessionIdentifier" } }
             ]
         },
         {
             "name": "getSerializedRecording",
             "description": "Returns the recording serialized to a JSON object.",
             "parameters": [
-                { "name": "uid", "$ref": "RecordingId" }
+                { "name": "recordingId", "$ref": "RecordingIdentifier" }
             ],
             "returns": [
                 { "name": "recording", "$ref": "ReplayRecording", "description": "the requested recording", "optional": true }
@@ -122,9 +176,9 @@
         },
         {
             "name": "getAvailableRecordings",
-            "description": "Returns uids for all available recordings.",
+            "description": "Returns recordingIds for all available recordings.",
             "returns": [
-                { "name": "recordingUids", "type": "array", "items": { "$ref": "RecordingId" } }
+                { "name": "recordingIds", "type": "array", "items": { "$ref": "RecordingIdentifier" } }
             ]
         }
     ],
@@ -146,9 +200,10 @@
             ]
         },
         {
-            "name": "playbackHitMark",
-            "description": "A mark was reached during the replay.",
+            "name": "playbackHitLocation",
+            "description": "A mark was reached during replay of a recording.",
             "parameters": [
+                { "name": "recordingIndex", "$ref": "RecordingIndex", "description": "The position of the recording in which a mark was hit in the currently loaded capture session." },
                 { "name": "mark", "$ref": "MarkIndex", "description": "The mark that was hit." }
             ]
         },
@@ -160,6 +215,7 @@
             "name": "playbackPaused",
             "description": "Fired when replaying has paused, but not finished.",
             "parameters": [
+                { "name": "recordingIndex", "$ref": "RecordingIndex", "description": "The position of the recording in which replaying has paused in the currently loaded capture session." },
                 { "name": "mark", "$ref": "MarkIndex", "description": "The mark of the input at which we paused, but has not yet been executed." }
             ]
         },
@@ -184,29 +240,74 @@
             "description": "Fired when user input has been unlocked (will no longer be ignored)."
         },
         {
+            "name": "sessionCreated",
+            "description": "Fired when a new session is created or found on the filesystem.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier", "description": "Id for the created session." }
+            ]
+        },
+        {
+            "name": "sessionRemoved",
+            "description": "Fired when a session is removed and can no longer be loaded.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier", "description": "Id for the created session." }
+            ]
+        },
+        {
+            "name": "sessionLoaded",
+            "description": "Fired when a session is loaded.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier", "description": "Id for the loaded session." }
+            ]
+        },
+        {
+            "name": "recordingCreated",
+            "description": "Fired when a new recording is created or found on the filesystem.",
+            "parameters": [
+                { "name": "recordingId", "$ref": "RecordingIdentifier", "description": "Id for the created recording." }
+            ]
+        },
+        {
+            "name": "recordingRemoved",
+            "description": "Fired when a recording is removed and can no longer be replayed as part of a session.",
+            "parameters": [
+                { "name": "recordingId", "$ref": "RecordingIdentifier", "description": "Id for the removed recording." }
+            ]
+        },
+        {
+            "name": "recordingClosed",
+            "description": "Fired when a recording is completed and can no longer have inputs added to it.",
+            "parameters": [
+                { "name": "recordingId", "$ref": "RecordingIdentifier", "description": "Id for the closed recording." }
+            ]
+        },
+        {
+            "name": "recordingAddedToSession",
+            "description": "Fired when a recording is inserted into a capture session.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier", "description": "Id for the session the recording was added to." },
+                { "name": "recordingId", "$ref": "RecordingIdentifier", "description": "Id for the added recording." },
+                { "name": "recordingIndex", "$ref": "RecordingIndex", "description": "Index of the added recording in the capture session." }
+            ]
+        },
+        {
+            "name": "recordingRemovedFromSession",
+            "description": "Fired when a recording is removed from a capture session.",
+            "parameters": [
+                { "name": "sessionId", "$ref": "SessionIdentifier", "description": "Id for the session the recording was added to." },
+                { "name": "recordingIndex", "$ref": "RecordingIndex", "description": "Index of the removed recording in the capture session." }
+            ]
+        },
+        {
             "name": "recordingLoaded",
             "description": "Fired when a recording is loaded.",
             "parameters": [
-                { "name": "uid", "$ref": "RecordingId", "description": "Id for the loaded recording." }
+                { "name": "recordingId", "$ref": "RecordingIdentifier", "description": "Id for the loaded recording." }
             ]
         },
         {
             "name": "recordingUnloaded",
             "description": "Fired when a recording is unloaded."
-        },
-        {
-            "name": "recordingAdded",
-            "description": "Fired when a new recording is created or found on the filesystem.",
-            "parameters": [
-                { "name": "uid", "$ref": "RecordingId", "description": "Id for the added recording." }
-            ]
-        },
-        {
-            "name": "recordingRemoved",
-            "description": "Fired when a recording is removed and can no longer be loaded.",
-            "parameters": [
-                { "name": "uid", "$ref": "RecordingId", "description": "Id for the removed recording." }
-            ]
         }
     ]
 }

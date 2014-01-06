@@ -46,6 +46,7 @@
 #include <wtf/RefPtr.h>
 
 #if ENABLE(WEB_REPLAY)
+#include "CaptureSession.h"
 #include "ReplayRecording.h"
 #endif // ENABLE(WEB_REPLAY)
 
@@ -275,15 +276,20 @@ public:
     static void willEvaluateWorkerScript(WorkerGlobalScope*, int workerThreadStartMode);
 
 #if ENABLE(WEB_REPLAY)
-    static void recordingLoaded(Page*, PassRefPtr<ReplayRecording>);
+    static void sessionCreated(Page*, RefPtr<CaptureSession>);
+    static void sessionLoaded(Page*, RefPtr<CaptureSession>);
+    static void recordingCreated(Page*, RefPtr<ReplayRecording>);
+    static void recordingClosed(Page*, RefPtr<ReplayRecording>);
+    static void recordingAddedToSession(Page*, RefPtr<CaptureSession>, RefPtr<ReplayRecording>, size_t position);
+    static void recordingRemovedFromSession(Page*, RefPtr<CaptureSession>, size_t recordingIndex);
+    static void recordingLoaded(Page*, RefPtr<ReplayRecording>);
     static void recordingUnloaded(Page*);
-    static void recordingCreated(Page*, PassRefPtr<ReplayRecording>);
     static void capturedEventLoopInput(Page*, EventLoopInput*);
     static void captureStarted(Page*);
     static void captureFinished(Page*);
     static void playbackStarted(Page*);
-    static void playbackPaused(Page*, unsigned);
-    static void playbackHitMark(Page*, unsigned);
+    static void playbackPaused(Page*, size_t recordingIndex, unsigned mark);
+    static void playbackHitLocation(Page*, size_t recordingIndex, unsigned mark);
     static void playbackFinished(Page*);
     static void playbackCancelled(Page*);
     static void playbackError(Page*, bool isFatal, const String& errorMessage);
@@ -500,15 +506,20 @@ private:
 #endif
 
 #if ENABLE(WEB_REPLAY)
-    static void recordingLoadedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
+    static void sessionCreatedImpl(InstrumentingAgents*, RefPtr<CaptureSession>);
+    static void sessionLoadedImpl(InstrumentingAgents*, RefPtr<CaptureSession>);
+    static void recordingCreatedImpl(InstrumentingAgents*, RefPtr<ReplayRecording>);
+    static void recordingClosedImpl(InstrumentingAgents*, RefPtr<ReplayRecording>);
+    static void recordingAddedToSessionImpl(InstrumentingAgents*, RefPtr<CaptureSession>, RefPtr<ReplayRecording>, size_t position);
+    static void recordingRemovedFromSessionImpl(InstrumentingAgents*, RefPtr<CaptureSession>, size_t position);
+    static void recordingLoadedImpl(InstrumentingAgents*, RefPtr<ReplayRecording>);
     static void recordingUnloadedImpl(InstrumentingAgents*);
-    static void recordingCreatedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
     static void capturedEventLoopInputImpl(InstrumentingAgents*, EventLoopInput*);
     static void captureStartedImpl(InstrumentingAgents*);
     static void captureFinishedImpl(InstrumentingAgents*);
     static void playbackStartedImpl(InstrumentingAgents*);
-    static void playbackPausedImpl(InstrumentingAgents*, unsigned);
-    static void playbackHitMarkImpl(InstrumentingAgents*, unsigned);
+    static void playbackPausedImpl(InstrumentingAgents*, size_t recordingIndex, unsigned mark);
+    static void playbackHitLocationImpl(InstrumentingAgents*, size_t recordingIndex, unsigned mark);
     static void playbackFinishedImpl(InstrumentingAgents*);
     static void playbackCancelledImpl(InstrumentingAgents*);
     static void playbackErrorImpl(InstrumentingAgents*, bool isFatal, const String& errorMessage);
@@ -1982,15 +1993,55 @@ inline void InspectorInstrumentation::didSendWebSocketFrame(Document* document, 
 #endif
 
 #if ENABLE(WEB_REPLAY)
-inline void InspectorInstrumentation::recordingUnloaded(Page* page)
+inline void InspectorInstrumentation::sessionCreated(Page* page, RefPtr<CaptureSession> session)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        recordingUnloadedImpl(instrumentingAgents);
+        sessionCreatedImpl(instrumentingAgents, session);
 #endif
 }
 
-inline void InspectorInstrumentation::recordingLoaded(Page* page, PassRefPtr<ReplayRecording> recording)
+inline void InspectorInstrumentation::sessionLoaded(Page* page, RefPtr<CaptureSession> session)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        sessionLoadedImpl(instrumentingAgents, session);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingCreated(Page* page, RefPtr<ReplayRecording> recording)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingCreatedImpl(instrumentingAgents, recording);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingClosed(Page* page, RefPtr<ReplayRecording> recording)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingClosedImpl(instrumentingAgents, recording);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingAddedToSession(Page* page, RefPtr<CaptureSession> session, RefPtr<ReplayRecording> recording, size_t position)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingAddedToSessionImpl(instrumentingAgents, session, recording, position);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingRemovedFromSession(Page* page, RefPtr<CaptureSession> session, size_t position)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingRemovedFromSessionImpl(instrumentingAgents, session, position);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingLoaded(Page* page, RefPtr<ReplayRecording> recording)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
@@ -1998,11 +2049,11 @@ inline void InspectorInstrumentation::recordingLoaded(Page* page, PassRefPtr<Rep
 #endif
 }
 
-inline void InspectorInstrumentation::recordingCreated(Page* page, PassRefPtr<ReplayRecording> recording)
+inline void InspectorInstrumentation::recordingUnloaded(Page* page)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        recordingCreatedImpl(instrumentingAgents, recording);
+        recordingUnloadedImpl(instrumentingAgents);
 #endif
 }
 
@@ -2038,19 +2089,19 @@ inline void InspectorInstrumentation::playbackStarted(Page* page)
 #endif
 }
 
-inline void InspectorInstrumentation::playbackPaused(Page* page, unsigned mark)
+inline void InspectorInstrumentation::playbackPaused(Page* page, size_t recordingIndex, unsigned mark)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        playbackPausedImpl(instrumentingAgents, mark);
+        playbackPausedImpl(instrumentingAgents, recordingIndex, mark);
 #endif
 }
 
-inline void InspectorInstrumentation::playbackHitMark(Page* page, unsigned mark)
+inline void InspectorInstrumentation::playbackHitLocation(Page* page, size_t recordingIndex, unsigned mark)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        playbackHitMarkImpl(instrumentingAgents, mark);
+        playbackHitLocationImpl(instrumentingAgents, recordingIndex, mark);
 #endif
 }
 

@@ -59,8 +59,8 @@
 #include "InspectorLayerTreeAgent.h"
 #include "InspectorPageAgent.h"
 #include "InspectorProfilerAgent.h"
-#include "InspectorResourceAgent.h"
 #include "InspectorReplayAgent.h"
+#include "InspectorResourceAgent.h"
 #include "InspectorTimelineAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
@@ -1214,22 +1214,52 @@ void InspectorInstrumentation::didSendWebSocketFrameImpl(InstrumentingAgents* in
 #endif
 
 #if ENABLE(WEB_REPLAY)
-void InspectorInstrumentation::recordingUnloadedImpl(InstrumentingAgents* instrumentingAgents)
+void InspectorInstrumentation::sessionCreatedImpl(InstrumentingAgents* instrumentingAgents, RefPtr<CaptureSession> session)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->recordingUnloaded();
+        replayAgent->sessionCreated(session);
 }
 
-void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
+void InspectorInstrumentation::sessionLoadedImpl(InstrumentingAgents* instrumentingAgents, RefPtr<CaptureSession> session)
+{
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->sessionLoaded(session);
+}
+
+void InspectorInstrumentation::recordingCreatedImpl(InstrumentingAgents* instrumentingAgents, RefPtr<ReplayRecording> recording)
+{
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingCreated(recording);
+}
+
+void InspectorInstrumentation::recordingClosedImpl(InstrumentingAgents* instrumentingAgents, RefPtr<ReplayRecording> recording)
+{
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingClosed(recording);
+}
+
+void InspectorInstrumentation::recordingAddedToSessionImpl(InstrumentingAgents* instrumentingAgents, RefPtr<CaptureSession> session, RefPtr<ReplayRecording> recording, size_t position)
+{
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingAddedToSession(session, recording, position);
+}
+
+void InspectorInstrumentation::recordingRemovedFromSessionImpl(InstrumentingAgents* instrumentingAgents, RefPtr<CaptureSession> session, size_t position)
+{
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingRemovedFromSession(session, position);
+}
+
+void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, RefPtr<ReplayRecording> recording)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->recordingLoaded(recording);
 }
 
-void InspectorInstrumentation::recordingCreatedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
+void InspectorInstrumentation::recordingUnloadedImpl(InstrumentingAgents* instrumentingAgents)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->recordingCreated(recording);
+        replayAgent->recordingUnloaded();
 }
 
 void InspectorInstrumentation::capturedEventLoopInputImpl(InstrumentingAgents* instrumentingAgents, EventLoopInput* input)
@@ -1256,16 +1286,16 @@ void InspectorInstrumentation::playbackStartedImpl(InstrumentingAgents* instrume
         replayAgent->playbackStarted();
 }
 
-void InspectorInstrumentation::playbackPausedImpl(InstrumentingAgents* instrumentingAgents, PositionMarkIndex mark)
+void InspectorInstrumentation::playbackPausedImpl(InstrumentingAgents* instrumentingAgents, size_t recordingIndex, PositionMarkIndex mark)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->playbackPaused(mark);
+        replayAgent->playbackPaused(recordingIndex, mark);
 }
 
-void InspectorInstrumentation::playbackHitMarkImpl(InstrumentingAgents* instrumentingAgents, PositionMarkIndex mark)
+void InspectorInstrumentation::playbackHitLocationImpl(InstrumentingAgents* instrumentingAgents, size_t recordingIndex, PositionMarkIndex mark)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->playbackHitMark(mark);
+        replayAgent->playbackHitLocation(recordingIndex, mark);
 }
 
 void InspectorInstrumentation::playbackFinishedImpl(InstrumentingAgents* instrumentingAgents)
