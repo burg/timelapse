@@ -28,12 +28,12 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 100px;
+    height: 125px;
 }
 
 .content-view.timelines > .data-grid {
     position: absolute;
-    top: 100px;
+    top: 126px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -244,4 +244,22 @@
     border-top: 1px solid rgb(200, 200, 200);
     border-bottom: 1px solid rgb(179, 179, 179);
     background-color: white;
+}
+
+.content-view.timelines > .data-grid img.screenshot {
+    height: 300px;
+}
+
+.content-view.timelines > .data-grid.screenshot-data-grid tr.offscreen {
+    height: 300px;
+}
+
+.content-view.timelines > .data-grid.screenshot-data-grid tr.offscreen td {
+    display: block;
+}
+
+.content-view.timelines > .data-grid.screenshot-data-grid table.data {
+    background-size: auto 600px;
+    background-image: -webkit-linear-gradient(top, #ccc, #ccc 50%, rgb(90%, 90%, 90%) 50%, rgb(90%, 90%, 90%));
+
 }

@@ -66,6 +66,10 @@
     border-image-source: -webkit-image-set(url(Images/TimelineBarOrange.png) 1x, url(Images/TimelineBarOrange@2x.png) 2x);
 }
 
+.timeline-overview > .timeline.timeline-record-type-screenshot .bar {
+    border-image-source: -webkit-image-set(url(Images/TimelineBarGreen.png) 1x, url(Images/TimelineBarGreen@2x.png) 2x);
+}
+
 .timeline-overview .timeline-decorations > .event-markers {
     height: 78px;
     bottom: 22px;

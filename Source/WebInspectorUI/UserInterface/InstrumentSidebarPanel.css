@@ -56,7 +56,7 @@
     outline: none;
     color: transparent;
     overflow: hidden;
-    
+
     -webkit-appearance: none;
 
     background-color: transparent;
@@ -98,7 +98,7 @@
     top: 22px;
     left: 0;
     right: 0;
-    height: 78px;
+    height: 104px;
 }
 
 .sidebar > .panel.instrument > .navigation-sidebar-panel-content-tree-outline.timelines .item:not(:first-child):not(.selected) {
@@ -110,7 +110,7 @@
 }
 
 .sidebar > .panel.instrument > .title-bar.profiles {
-    top: 100px;
+    top: 126px;
     border-top: 1px solid rgb(179, 179, 179);
     height: 23px;
 }

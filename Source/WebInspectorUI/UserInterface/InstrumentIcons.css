@@ -31,6 +31,10 @@
     content: -webkit-image-set(url(Images/Colors.png) 1x, url(Images/Colors@2x.png) 2x);
 }
 
+.screenshot-icon .icon {
+    content: -webkit-image-set(url(Images/Log.png) 1x, url(Images/Log@2x.png) 2x);
+}
+
 .script-icon .icon {
     content: -webkit-image-set(url(Images/Script.png) 1x, url(Images/Script@2x.png) 2x);
 }
