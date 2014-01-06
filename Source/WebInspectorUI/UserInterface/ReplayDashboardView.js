@@ -167,7 +167,7 @@ WebInspector.ReplayDashboardView.prototype = {
 
     _ejectButtonClicked: function(event)
     {
-        WebInspector.replayManager.unloadRecordingSoon();
+        WebInspector.replayManager.ejectRecordingSoon();
     },
 
     _captureStarted: function()

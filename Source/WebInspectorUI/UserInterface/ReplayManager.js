@@ -108,6 +108,11 @@ WebInspector.ReplayManager.prototype = {
         return this._replayState === WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput;
     },
 
+    get activeSession()
+    {
+        return this._activeSession;
+    },
+
     get createdRecording()
     {
         console.assert(this.isCapturing, "ReplayManager.createdRecording only available when capturing is in progress.");
@@ -130,6 +135,11 @@ WebInspector.ReplayManager.prototype = {
         this._replaySpeed = value;
     },
 
+    get currentRecordingIndex()
+    {
+        return this._currentRecordingIndex;
+    },
+
     get currentMarkIndex()
     {
         return this._currentMarkIndex;
@@ -145,9 +155,9 @@ WebInspector.ReplayManager.prototype = {
         this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.StopCapture());
     },
 
-    unloadRecordingSoon: function()
+    ejectRecordingSoon: function()
     {
-        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.UnloadRecording());
+        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.EjectRecording());
     },
 
     pausePlaybackSoon: function()
@@ -184,6 +194,9 @@ WebInspector.ReplayManager.prototype = {
         delete this._activeRecording;
         this.unsuppressBreakpoints();
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureStopped);
+
+        this.recordingLoaded(this._activeSession.recordings[0].uid);
+        this._currentRecordingIndex = 0;
     },
 
     playbackStarted: function()
@@ -224,8 +237,9 @@ WebInspector.ReplayManager.prototype = {
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackError, data);
     },
 
-    playbackHitMark: function(markIndex)
+    playbackHitLocation: function(recordingIndex, markIndex)
     {
+        this._currentRecordingIndex = recordingIndex;
         this._setReplayCursor(markIndex);
     },
 
@@ -236,6 +250,15 @@ WebInspector.ReplayManager.prototype = {
         var unloadedRecording = this._activeRecording;
         delete this._activeRecording;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.RecordingUnloaded, unloadedRecording);
+    },
+
+    sessionLoaded: function(sessionId)
+    {
+        var session = WebInspector.recordingsManager.getSessionWithUID(sessionId);
+        console.assert(session, "Unknown session loaded:", session);
+
+        this._activeSession = session;
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.SessionLoaded, this.activeSession);
     },
 
     recordingLoaded: function(uid)
@@ -291,11 +314,12 @@ WebInspector.ReplayManager.prototype = {
         ReplayAgent.loadRecording(recording.uid);
     },
 
-    unloadRecording: function()
+    ejectRecording: function()
     {
-        console.assert(this.loadedRecording, "Can't unload recording because none is loaded");
+        console.assert(this.loadedRecording, "Can't eject recording because none is loaded");
         // TODO: receiving !wasAllowed should trigger task error.
-        ReplayAgent.unloadRecording();
+        ReplayAgent.removeRecordingFromSession(this._activeSession.uid, this._currentRecordingIndex);
+        this.recordingUnloaded();
     },
 
     createRecording: function()
@@ -316,7 +340,7 @@ WebInspector.ReplayManager.prototype = {
     {
         // TODO: save replay start and end mark indices here
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackWillStart);
-        ReplayAgent.replayUpToMarkIndex(index, this.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking);
+        ReplayAgent.replayUpToLocation(this._currentRecordingIndex, index, this.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking);
     },
 
     replayToCompletion: function()
@@ -352,7 +376,6 @@ WebInspector.ReplayManager.AsyncTasks.StartCapture = function() {
     var task = new WebInspector.AsyncTask("StartCapture")
     // if replaying, stop playback as the first subtask.
     .chain("stopPlaybackIfNeeded", WebInspector.ReplayManager.AsyncTaskSteps.StopPlaybackIfNeeded)
-    .chain("unloadRecordingIfNeeded", WebInspector.ReplayManager.AsyncTaskSteps.UnloadRecordingIfNeeded)
     .chain("suppressBreakpoints", WebInspector.ReplayManager.AsyncTaskSteps.SuppressBreakpoints)
     .chain("resumeDebuggerIfPaused", WebInspector.ReplayManager.AsyncTaskSteps.ResumeDebuggerIfPaused)
     .chain("requestStartCapture", function(cb) {
@@ -383,11 +406,11 @@ WebInspector.ReplayManager.AsyncTasks.LoadRecording = function()
     return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
 };
 
-WebInspector.ReplayManager.AsyncTasks.UnloadRecording = function()
+WebInspector.ReplayManager.AsyncTasks.EjectRecording = function()
 {
-    return new WebInspector.AsyncTask("UnloadRecording")
+    return new WebInspector.AsyncTask("EjectRecording")
     .chain("stopPlaybackIfNeeded", WebInspector.ReplayManager.AsyncTaskSteps.StopPlaybackIfNeeded)
-    .chain("unloadRecordingIfNeeded", WebInspector.ReplayManager.AsyncTaskSteps.UnloadRecordingIfNeeded);
+    .chain("doEjectRecording", WebInspector.ReplayManager.AsyncTaskSteps.DoEjectRecording);
 };
 
 WebInspector.ReplayManager.AsyncTasks.ReplayToIndex = function()
@@ -490,11 +513,11 @@ WebInspector.ReplayManager.AsyncTaskSteps.UnsuppressBreakpoints = function(cb)
     DebuggerAgent.causesRecompilation(cb);
 };
 
-WebInspector.ReplayManager.AsyncTaskSteps.UnloadRecordingIfNeeded = function(cb)
+WebInspector.ReplayManager.AsyncTaskSteps.DoEjectRecording = function(cb)
 {
     if (!WebInspector.replayManager.canReplay)
         return cb();
 
     WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, cb);
-    WebInspector.replayManager.unloadRecording();
+    WebInspector.replayManager.ejectRecording();
 };
