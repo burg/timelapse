@@ -45,9 +45,11 @@ class InspectorValue;
 namespace WebCore {
 
 class ReplayRecording;
+class CaptureSession;
 
 class JSONCoder {
 public:
+    static RefPtr<Inspector::TypeBuilder::Replay::CaptureSession> serializeSession(RefPtr<CaptureSession>);
     static PassRefPtr<Inspector::TypeBuilder::Replay::ReplayRecording> serialize(PassRefPtr<ReplayRecording>);
     static PassRefPtr<Inspector::TypeBuilder::Replay::ReplayInput> serializeInput(const NondeterministicInput*, int index = 0);
     static std::unique_ptr<EncoderContext> createMap();

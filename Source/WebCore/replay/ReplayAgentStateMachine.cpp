@@ -38,8 +38,8 @@
 namespace WebCore {
 
 namespace ReplayAgentStateNames {
-static const char* RecordingUnloaded = "RecordingUnloaded";
-static const char* RecordingLoaded =  "RecordingLoaded";
+static const char* ReadyForCapture = "ReadyForCapture";
+static const char* ReadyForCaptureOrReplay =  "ReadyForCaptureOrReplay";
 static const char* WaitingForCapture = "WaitingForCapture";
 static const char* Capturing = "Capturing";
 static const char* WaitingForReplay = "WaitingForReplay";
@@ -50,11 +50,11 @@ static const char* ReplayPaused = "ReplayPaused";
 const char* ReplayAgentStateMachine::stateNameFor(ReplayAgentStateMachine::State state)
 {
     switch (state) {
-    case ReplayAgentStateMachine::RecordingUnloaded:
-        return ReplayAgentStateNames::RecordingUnloaded;
+    case ReplayAgentStateMachine::ReadyForCapture:
+        return ReplayAgentStateNames::ReadyForCapture;
 
-    case ReplayAgentStateMachine::RecordingLoaded:
-        return ReplayAgentStateNames::RecordingLoaded;
+    case ReplayAgentStateMachine::ReadyForCaptureOrReplay:
+        return ReplayAgentStateNames::ReadyForCaptureOrReplay;
 
     case ReplayAgentStateMachine::WaitingForCapture:
         return ReplayAgentStateNames::WaitingForCapture;
@@ -76,18 +76,18 @@ const char* ReplayAgentStateMachine::stateNameFor(ReplayAgentStateMachine::State
 }
 
 ReplayAgentStateMachine::ReplayAgentStateMachine()
-    : m_state(RecordingUnloaded)
+    : m_state(ReadyForCapture)
 {
 }
 
 bool ReplayAgentStateMachine::canCapture() const
 {
-    return inState(RecordingUnloaded);
+    return inState(ReadyForCapture) || inState(ReadyForCaptureOrReplay);
 }
 
 bool ReplayAgentStateMachine::canReplay() const
 {
-    return inState(RecordingLoaded);
+    return inState(ReadyForCaptureOrReplay);
 }
 
 bool ReplayAgentStateMachine::replayPaused() const
@@ -108,26 +108,26 @@ bool ReplayAgentStateMachine::replaying() const
 void ReplayAgentStateMachine::advanceTo(State newState)
 {
     switch (newState) {
-    case RecordingUnloaded: // Can always get to this state; not idempotent.
-        if (!inState(RecordingUnloaded))
+    case ReadyForCapture: // Can always get to this state; not idempotent.
+        if (!inState(ReadyForCapture))
             goto commit;
 
         break;
 
-    case RecordingLoaded:
-        if (inState(Replaying) || inState(ReplayPaused) || inState(RecordingUnloaded))
+    case ReadyForCaptureOrReplay:
+        if (inState(Capturing) || inState(Replaying) || inState(ReplayPaused) || inState(ReadyForCapture))
             goto commit;
 
         break;
 
     case WaitingForCapture:
-        if (inState(RecordingUnloaded))
+        if (inState(ReadyForCapture) || inState(ReadyForCaptureOrReplay))
             goto commit;
 
         break;
 
     case WaitingForReplay:
-        if (inState(RecordingLoaded) || inState(ReplayPaused))
+        if (inState(ReadyForCaptureOrReplay) || inState(ReplayPaused))
             goto commit;
 
         break;

@@ -32,6 +32,7 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
+#include "CaptureSession.h"
 #include "EventLoopInput.h"
 #include "InspectorWebAgentBase.h"
 #include "InspectorWebBackendDispatchers.h"
@@ -40,7 +41,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
-#include <wtf/PassRefPtr.h>
+#include <wtf/RefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
@@ -63,6 +64,7 @@ class Page;
 class ReplayRecording;
 
 typedef String ErrorString;
+typedef size_t RecordingIndex;
 
 class InspectorReplayAgent
     : public InspectorAgentBase
@@ -85,15 +87,20 @@ public:
 #ifndef NDEBUG
     void willCallFunction(const String&, int scriptLine, Frame*);
 #endif
+    void sessionCreated(RefPtr<CaptureSession>);
+    void sessionLoaded(RefPtr<CaptureSession>);
+    void recordingCreated(RefPtr<ReplayRecording>);
+    void recordingClosed(RefPtr<ReplayRecording>);
+    void recordingAddedToSession(RefPtr<CaptureSession>, RefPtr<ReplayRecording>, RecordingIndex);
+    void recordingRemovedFromSession(RefPtr<CaptureSession>, RecordingIndex);
+    void recordingLoaded(RefPtr<ReplayRecording>);
     void recordingUnloaded();
-    void recordingLoaded(PassRefPtr<ReplayRecording>);
-    void recordingCreated(PassRefPtr<ReplayRecording>);
     void capturedEventLoopInput(EventLoopInput*);
     void captureStarted();
     void captureFinished();
     void playbackStarted();
-    void playbackPaused(PositionMarkIndex);
-    void playbackHitMark(PositionMarkIndex);
+    void playbackPaused(RecordingIndex, PositionMarkIndex);
+    void playbackHitLocation(RecordingIndex, PositionMarkIndex);
     void playbackFinished();
     void playbackCancelled();
     void playbackError(bool isFatal, const String&);
@@ -107,14 +114,17 @@ public:
     // Calls from the frontend.
     void startCapture(ErrorString*);
     void stopCapture(ErrorString*, bool*);
-    void replayUpToMarkIndex(ErrorString*, int, bool);
+    void replayUpToLocation(ErrorString*, int, int, bool);
     void replayToCompletion(ErrorString*, bool);
     void pausePlayback(ErrorString*);
     void stopPlayback(ErrorString*, bool);
     void setPauseOnError(ErrorString*, bool);
-    void loadRecording(ErrorString*, int, bool*);
-    void unloadRecording(ErrorString*, bool*);
+    void loadSession(ErrorString*, int, bool*);
+    void addRecordingToSession(ErrorString*, int, int, int, bool*);
+    void removeRecordingFromSession(ErrorString*, int, int, bool*);
 
+    void getSerializedSession(ErrorString*, int, RefPtr<Inspector::TypeBuilder::Replay::CaptureSession>&);
+    void getAvailableSessions(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<int>>&);
     void getSerializedRecording(ErrorString*, int, RefPtr<Inspector::TypeBuilder::Replay::ReplayRecording>&);
     void getAvailableRecordings(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<int>>&);
 
@@ -124,8 +134,9 @@ private:
     PositionMark reuseMark() const;
     void reset();
 
-    // Helper method that's also shared with InspectorReplayAgent.
-    PassRefPtr<ReplayRecording> findRecording(ErrorString*, int uid);
+    // Helper methods
+    RefPtr<CaptureSession> findSession(ErrorString*, int uid);
+    RefPtr<ReplayRecording> findRecording(ErrorString*, int uid);
 
     std::unique_ptr<Inspector::InspectorReplayFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::InspectorReplayBackendDispatcher> m_backendDispatcher;
@@ -135,6 +146,9 @@ private:
     unsigned m_nextMarkIndex;
     unsigned m_lastHitMarkIndex;
     bool m_inputLocked;
+
+    typedef HashMap<int, RefPtr<CaptureSession>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > SessionsMap;
+    SessionsMap m_sessionsMap;
 
     typedef HashMap<int, RefPtr<ReplayRecording>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > RecordingsMap;
     RecordingsMap m_recordingsMap;

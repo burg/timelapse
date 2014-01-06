@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 University of Washington. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +27,69 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ReplayAgentStateMachine_h
-#define ReplayAgentStateMachine_h
+#include "config.h"
+#include "CaptureSession.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include <wtf/Noncopyable.h>
+#include "EventLoopInput.h"
+#include "InputStorage.h"
+#include "InspectorInstrumentation.h"
+#include "Logging.h"
+#include "Page.h"
+#include <wtf/Vector.h>
+#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
-class ReplayAgentStateMachine {
-    WTF_MAKE_NONCOPYABLE(ReplayAgentStateMachine);
-public:
-    ReplayAgentStateMachine();
+RefPtr<CaptureSession> CaptureSession::create()
+{
+    return adoptRef(new CaptureSession());
+}
 
-    enum State {
-        ReadyForCapture,
-        ReadyForCaptureOrReplay,
-        WaitingForCapture,
-        Capturing,
-        WaitingForReplay,
-        Replaying,
-        ReplayPaused
-    };
+CaptureSession::CaptureSession()
+    : m_recordings(Vector<RefPtr<ReplayRecording>>())
+    , m_uid(s_nextUid++)
+    , m_timestamp(WTF::currentTimeMS())
+{
+}
 
-    bool canCapture() const;
-    bool canReplay() const;
-    bool replayPaused() const;
-    bool capturing() const;
-    bool replaying() const;
+CaptureSession::~CaptureSession()
+{
+}
 
-    bool inState(State state) const { return m_state == state; }
-    void advanceTo(State);
+RecordingIterator CaptureSession::iteratorAtRecording(RefPtr<ReplayRecording> recording) const
+{
+    size_t idx = m_recordings.find(recording);
+    ASSERT(idx != notFound);
+    return begin() + idx;
+}
 
-private:
-    const char* stateNameFor(State);
-    State m_state;
-};
+void CaptureSession::append(RefPtr<ReplayRecording> recording)
+{
+    // For now, only support one recording.
+    ASSERT(!m_recordings.size());
 
-} // namespace WebCore
+    // Since replay locations are specified with recording IDs, we can only
+    // have one instance of a recording in the session.
+    size_t idx = m_recordings.find(recording);
+    ASSERT_UNUSED(idx, idx == notFound);
+
+    m_recordings.append(recording);
+}
+
+void CaptureSession::insert(size_t position, RefPtr<ReplayRecording> recording)
+{
+    m_recordings.insert(position, recording);
+}
+
+void CaptureSession::remove(size_t position)
+{
+    m_recordings.remove(position);
+}
+
+int CaptureSession::s_nextUid = 1;
+
+}; // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // ReplayAgentStateMachine_h
